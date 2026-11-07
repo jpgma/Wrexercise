@@ -109,7 +109,7 @@ The user cannot change the e-mail.
 - The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
 - The names of the members are in a layer above all the avatars. No avatar hides the name of another one.
 - On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
-- `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado" }] }`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
+- `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado", "recebeCartas": true }] }`. `recebeCartas` is true when the member is in the mode `Jogo`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
 - The pose is `treinando` if the member has an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
 - Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.
 - In all other cases, the pose is `parado`. From time to time, a member that is `parado` stretches (`alongar`) or looks around (`olhar`). The moments are random and differ for each member. The animation stops when the page is hidden.
@@ -122,13 +122,14 @@ The user cannot change the e-mail.
 
 - Energy (EN) is the currency of the game. Each user has one balance for all groups. All users get Energy, also in the mode `App`.
 - The server calculates the Energy at each read. There is no wallet table. Energy that the user earned never decreases.
-- In this phase, the balance is equal to the earned Energy. The user cannot spend Energy yet.
-- `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0 } }`. A user without a session gets 401.
+- The balance is the earned Energy minus the prices of all the cards that the user bought (see 3.3.4).
+- `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0, "jogadas": 0 } }`. A user without a session gets 401.
 - Sources of Energy:
   - Each `Verificada` activity gives 10 EN, in each group.
   - A week with the goal met gives 20 EN. It counts one time for each user and week, also if the user met the goal in more than one group.
   - The best streak in one challenge gives 25 EN at 4 weeks, 50 EN at 8 weeks and 100 EN at 12 weeks. Each milestone counts one time for each user. The streaks of different challenges do not add.
   - A challenge that is `Encerrado`, with all the weeks that counted for the user met, gives 75 EN, one time for each challenge.
+  - A completed card play (`Jogada`) gives the price of the card to the recipient and half of the price, rounded down, to the sender.
   - Activities in groups that the user left continue to count.
 - Bonus for each activity, at most 10 EN for each activity:
   - First activity of the week: 3 EN.
@@ -140,6 +141,43 @@ The user cannot change the e-mail.
 - Days and weeks use the time zone of the group of each activity. A week runs from Monday to Sunday.
 - The Profile page shows the section "Energia" with the balance and the Energy for each source. It shows the section only in the mode `Jogo`.
 - Energy does not change the ranking. There is no Energy ranking.
+
+### 3.3.4. Cards (`Carta`, `Loja`, `Mao`, `Jogada`)
+
+- The user buys cards with Energy in the shop (`Loja`). The shop sells the 5 challenge cards (`Provocacao`):
+
+  | Code name | Name | Price | Goal for the recipient |
+  |---|---|---:|---|
+  | `Mais10Min` | +10 MIN | 30 | One activity with at least the minimum duration of the active challenge + 10 minutes. |
+  | `Mais20Min` | +20 MIN | 45 | One activity with at least the minimum duration of the active challenge + 20 minutes. |
+  | `Variedade` | VARIEDADE | 35 | One activity of a type that is different from the last `Verificada` activity of the recipient in the group. |
+  | `FimDeSemana` | FIM DE SEMANA | 35 | One activity that starts on Saturday or Sunday. |
+  | `AntesDas8` | ANTES DAS 8 | 40 | One activity that starts before 08:00. |
+
+- `GET /api/jogo/loja` returns the balance, the cards for sale and the hand (`Mao`): `{ "saldo": 80, "limiteMao": 5, "catalogo": [ … ], "mao": [{ "id": "…", "codigo": "Variedade", "nome": "VARIEDADE", "tipo": "Provocacao", "preco": 35, "efeito": "…", "emJogo": false }] }`.
+- `POST /api/jogo/cartas` with `{ "codigo": "Variedade" }` buys a card and returns 201 with the card. Errors: `CARTA_INVALIDA` (400, the card is not for sale), `SALDO_INSUFICIENTE` (409), `MAO_CHEIA` (409).
+- The hand has at most 5 cards. The limit counts all cards that are not spent, also the cards in open plays. The card keeps the price that the user paid.
+- The user plays a card from the hand to another member of the same group: `POST /api/grupos/{id}/jogadas` with `{ "cartaId": "…", "destinatarioId": "…" }`. The response is 201 with `{ "id": "…", "expiraEm": "…" }`. The recipient gets the notification `CartaRecebida`.
+- The sender and the recipient must be in the mode `Jogo`. Errors: `MODO_JOGO_NECESSARIO`, `DESTINATARIO_FORA_DO_JOGO`, `DESTINATARIO_INVALIDO` (the recipient is the sender or is not a member), `CARTA_NAO_ENCONTRADA`, `CARTA_EM_JOGO`, `SEM_DESAFIO_ATIVO` (`Mais10Min` and `Mais20Min` need an active challenge).
+- Limits (409): 2 active received plays for each recipient (`LIMITE_JOGADAS_RECEBIDAS`), 2 active sent plays for each sender (`LIMITE_JOGADAS_ENVIADAS`), 1 active play between two persons (`JOGADA_ATIVA_COM_PESSOA`) and 1 new play to the same person in 24 hours (`JOGADA_RECENTE`). An active play is `Enviada` or `Aceita`.
+- The target duration (`Mais10Min`, `Mais20Min`) and the type to avoid (`Variedade`) are fixed when the user plays the card.
+- Deadline, in the time zone of the group: 48 hours after the play. `FimDeSemana`: the end of the next Sunday (a play on a Sunday ends on the next Sunday). `AntesDas8`: 08:00 on the second day after the play.
+- The recipient answers with `PUT /api/jogadas/{id}/resposta` and `{ "resposta": "Aceita" }` or `{ "resposta": "Recusada" }`. The answer is free. Only the recipient can answer, and only before the deadline. Errors: `JOGADA_NAO_ENCONTRADA` (404), `JOGADA_ENCERRADA` (409). The sender gets the notification `CartaAceita` or `CartaRecusada`.
+- The server calculates the state of a play at each read:
+
+  | State | Condition |
+  |---|---|
+  | `Enviada` | No answer, before the deadline. |
+  | `Recusada` | The recipient refused. |
+  | `Aceita` | Accepted, no activity that counts yet. |
+  | `AguardandoVerificacao` | Accepted, an activity that counts is not `Verificada` yet. |
+  | `Concluida` | Accepted, an activity that counts is `Verificada`. |
+  | `Expirada` | No answer before the deadline, or accepted with no activity that counts before the deadline. |
+
+- An activity counts if it is not `Rejeitada`, belongs to the recipient and to the group of the play, starts between the play and the deadline, and meets the goal of the card. The verification can occur after the deadline. One activity can complete more than one play.
+- When a play becomes `Concluida`, the sender and the recipient get the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
+- `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient) and `nova` (the user did not see the new card or the answer yet).
+- `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
 
 ### 3.4. Forgotten password
 
@@ -419,8 +457,13 @@ The system makes a notification for these events:
 | A member writes a comment. | The author, the administrators and the persons who wrote comments, but not the writer. | `Comentario` |
 | The activity becomes `Verificada`, `Rejeitada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
 | The activity becomes `EmRevisao`. | The administrators, but not the author. | `Disputa` |
+| A member plays a card to the user. | The recipient. | `CartaRecebida` |
+| The recipient accepts the card. | The sender. | `CartaAceita` |
+| The recipient refuses the card. | The sender. | `CartaRecusada` |
+| An activity completes a play. | The sender and the recipient. | `JogadaConcluida` |
 
 - The system joins unread reactions and comments of one activity into one notification with a total.
+- A card notification opens the home screen of the group.
 - The bell on the home page and on the profile page shows the number of unread notifications.
 - The notifications page shows the 50 most recent notifications. When the user opens a notification, it becomes read. "Marcar todas como lidas" marks all as read.
 - The bell and the list update when the window becomes active again. The application does not poll the server.

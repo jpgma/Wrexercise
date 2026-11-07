@@ -1,4 +1,5 @@
 using Npgsql;
+using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Database;
 
@@ -79,6 +80,11 @@ internal static class VerificacaoAtividade
         if (nova == SituacaoVerificacao.EmRevisao)
         {
             await NotificacoesAtividade.NotificarDisputaAsync(connection, transaction, atividadeId, cancellationToken);
+        }
+
+        if (nova == SituacaoVerificacao.Verificada)
+        {
+            await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
         }
     }
 

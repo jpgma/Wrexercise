@@ -14,9 +14,14 @@ internal sealed record DesafioEnergia(
     bool Encerrado,
     IReadOnlyList<int> SemanasCumpridas);
 
-internal sealed record EnergiaGanha(int Atividades, int Bonus, int Metas, int Sequencias, int Desafios)
+/// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
+/// <param name="Preco">O preço pago pela Provocação.</param>
+/// <param name="ComoDestinatario">Se a pessoa cumpriu o objetivo; senão, foi quem enviou.</param>
+internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario);
+
+internal sealed record EnergiaGanha(int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0)
 {
-    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios;
+    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas;
 }
 
 /// <summary>
@@ -41,7 +46,11 @@ internal static class CalculoEnergia
     private static readonly (int Semanas, int Energia)[] MarcosSequencia = [(4, 25), (8, 50), (12, 100)];
 
     /// <param name="atividades">As atividades não rejeitadas de todos os grupos, em ordem de registro.</param>
-    public static EnergiaGanha Calcular(IReadOnlyList<AtividadeEnergia> atividades, IReadOnlyList<DesafioEnergia> desafios)
+    /// <param name="jogadas">As Jogadas concluídas de que a pessoa participou.</param>
+    public static EnergiaGanha Calcular(
+        IReadOnlyList<AtividadeEnergia> atividades,
+        IReadOnlyList<DesafioEnergia> desafios,
+        IReadOnlyList<RecompensaJogada>? jogadas = null)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -53,8 +62,15 @@ internal static class CalculoEnergia
             CalculateBonus(atividades),
             CountSemanasCumpridas(desafios) * PorMeta,
             MarcosSequencia.Where(m => melhorSequencia >= m.Semanas).Sum(m => m.Energia),
-            desafios.Count(IsConcluido) * PorDesafioConcluido);
+            desafios.Count(IsConcluido) * PorDesafioConcluido,
+            (jogadas ?? []).Sum(GetRecompensa));
     }
+
+    /// <summary>
+    /// Quem cumpriu ganha 1 × o preço; quem enviou, metade, arredondada para baixo (decisão 0035).
+    /// </summary>
+    public static int GetRecompensa(RecompensaJogada jogada) =>
+        jogada.ComoDestinatario ? jogada.Preco : jogada.Preco / 2;
 
     /// <summary>
     /// Toda atividade não rejeitada ocupa a sua posição, mas só as verificadas recebem o crédito.

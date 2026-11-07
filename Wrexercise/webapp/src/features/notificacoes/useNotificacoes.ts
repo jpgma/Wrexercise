@@ -4,8 +4,18 @@ import { getJson, postEmpty } from "@/services/api";
 export type Notificacao = {
   id: string;
   tipo:
-    "NovaAtividade" | "Reacao" | "Comentario" | "SituacaoAlterada" | "Disputa";
-  atividadeId: string;
+    | "NovaAtividade"
+    | "Reacao"
+    | "Comentario"
+    | "SituacaoAlterada"
+    | "Disputa"
+    | "CartaRecebida"
+    | "CartaAceita"
+    | "CartaRecusada"
+    | "JogadaConcluida";
+  /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`. */
+  atividadeId: string | null;
+  jogadaId: string | null;
   grupoId: string;
   grupoNome: string;
   atorNome: string | null;

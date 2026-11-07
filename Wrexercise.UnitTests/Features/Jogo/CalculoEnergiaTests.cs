@@ -28,6 +28,15 @@ public class CalculoEnergiaTests
     public void SemNada_NaoGanhaEnergia() => Assert.Equal(0, CalculoEnergia.Calcular([], []).Total);
 
     [Fact]
+    public void Jogadas_DestinatarioGanhaOPrecoERemetenteAMetadeParaBaixo()
+    {
+        var ganha = CalculoEnergia.Calcular([], [], [new(45, ComoDestinatario: true), new(45, ComoDestinatario: false)]);
+
+        Assert.Equal(45 + 22, ganha.Jogadas);
+        Assert.Equal(67, ganha.Total);
+    }
+
+    [Fact]
     public void SemanaTipica_RendeSetentaETresDasFontesDaG2()
     {
         // Meta de 3: segunda 07:00 Corrida, quarta Musculação, sábado Corrida, todas verificadas.

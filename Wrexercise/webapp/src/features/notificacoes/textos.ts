@@ -41,6 +41,16 @@ export function getTextoNotificacao({
       if (situacao === "Verificada") return "Seu treino foi verificado";
       if (situacao === "Rejeitada") return "Seu treino foi rejeitado";
       return "Seu treino entrou em revisão";
+    case "CartaRecebida":
+      return `${primeiroNome(atorNome)} te mandou uma carta. Topa?`;
+    case "CartaAceita":
+      return `${primeiroNome(atorNome)} aceitou a sua carta`;
+    case "CartaRecusada":
+      return `${primeiroNome(atorNome)} recusou a sua carta. Ela voltou para a sua Mão`;
+    case "JogadaConcluida":
+      return atorNome
+        ? `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`
+        : "Você cumpriu uma carta. Energia para os dois!";
   }
 }
 
@@ -49,6 +59,8 @@ export function getDestinoNotificacao({
   grupoId,
   atividadeId,
 }: Notificacao): string {
+  // As cartas aparecem na cena do grupo.
+  if (atividadeId === null) return `/grupos/${grupoId}/inicio`;
   return tipo === "NovaAtividade"
     ? `/grupos/${grupoId}/revisar/${atividadeId}`
     : `/atividades/${atividadeId}`;

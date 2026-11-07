@@ -1,6 +1,7 @@
 using Npgsql;
 using NpgsqlTypes;
 using Wrexercise.Features.Grupos.Contracts;
+using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Json;
@@ -103,7 +104,10 @@ internal static class CriarAtividade
             """, connection, transaction))
         {
             verificar.Parameters.AddWithValue(id);
-            await verificar.ExecuteNonQueryAsync(cancellationToken);
+            if (await verificar.ExecuteNonQueryAsync(cancellationToken) > 0)
+            {
+                await JogadasConcluidas.NotificarAsync(connection, transaction, id, cancellationToken);
+            }
         }
 
         await NotificacoesAtividade.NotificarNovaAtividadeAsync(connection, transaction, id, cancellationToken);

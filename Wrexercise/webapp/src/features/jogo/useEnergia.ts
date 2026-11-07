@@ -7,6 +7,7 @@ export type DetalhamentoEnergia = {
   metas: number;
   sequencias: number;
   desafios: number;
+  jogadas: number;
 };
 
 export type Energia = {

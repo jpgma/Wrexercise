@@ -33,6 +33,7 @@ const origens: { chave: keyof DetalhamentoEnergia; rotulo: string }[] = [
   { chave: "metas", rotulo: "Semanas com a meta cumprida" },
   { chave: "sequencias", rotulo: "Sequências de semanas" },
   { chave: "desafios", rotulo: "Desafios concluídos" },
+  { chave: "jogadas", rotulo: "Cartas cumpridas" },
 ];
 
 /** Seção do Perfil: saldo e de onde veio a Energia ganha. */

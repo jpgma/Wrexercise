@@ -10,7 +10,7 @@ namespace Wrexercise.Features.Jogo;
 
 internal static class ObterCena
 {
-    private sealed record MembroCena(Guid UsuarioId, string NomeExibicao, DateOnly EntradaLocal);
+    private sealed record MembroCena(Guid UsuarioId, string NomeExibicao, DateOnly EntradaLocal, bool ModoJogo);
 
     public static async Task<IResult> HandleAsync(
         Guid grupoId,
@@ -33,7 +33,8 @@ internal static class ObterCena
             .Select(m => new MembroCenaResponse(
                 m.UsuarioId,
                 m.NomeExibicao,
-                PoseAvatar.Calcular(comPendentes.Contains(m.UsuarioId), comMeta.Contains(m.UsuarioId))))
+                PoseAvatar.Calcular(comPendentes.Contains(m.UsuarioId), comMeta.Contains(m.UsuarioId)),
+                m.ModoJogo))
             .ToList();
 
         return Results.Json(new CenaResponse(grupoId, resposta), AppJsonContext.Default.CenaResponse);
@@ -45,7 +46,8 @@ internal static class ObterCena
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT m.usuario_id, u.nome_exibicao, (m.joined_at AT TIME ZONE g.fuso_horario)::date
+            SELECT m.usuario_id, u.nome_exibicao, (m.joined_at AT TIME ZONE g.fuso_horario)::date,
+                u.modo_inicio = 'Jogo'
             FROM membros_grupo m
             JOIN grupos g ON g.id = m.grupo_id
             JOIN usuarios u ON u.id = m.usuario_id
@@ -58,7 +60,8 @@ internal static class ObterCena
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            membros.Add(new MembroCena(reader.GetGuid(0), reader.GetString(1), reader.GetFieldValue<DateOnly>(2)));
+            membros.Add(new MembroCena(
+                reader.GetGuid(0), reader.GetString(1), reader.GetFieldValue<DateOnly>(2), reader.GetBoolean(3)));
         }
 
         return membros;

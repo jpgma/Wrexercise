@@ -1,5 +1,6 @@
 using Npgsql;
 using NpgsqlTypes;
+using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
@@ -197,7 +198,13 @@ internal static class AnexarEvidencia
             """, connection, transaction))
         {
             autoVerificar.Parameters.AddWithValue(atividadeId);
-            await autoVerificar.ExecuteNonQueryAsync(cancellationToken);
+            var verificou = await autoVerificar.ExecuteNonQueryAsync(cancellationToken) > 0;
+
+            // As evidências seguintes de uma atividade já verificada não a concluem de novo.
+            if (verificou && situacao != SituacaoVerificacao.Verificada)
+            {
+                await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
+            }
         }
 
         await transaction.CommitAsync(cancellationToken);

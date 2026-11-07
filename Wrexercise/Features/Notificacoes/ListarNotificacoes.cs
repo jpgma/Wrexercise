@@ -17,7 +17,7 @@ internal static class ListarNotificacoes
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand($"""
-            SELECT n.id, n.tipo, n.atividade_id, n.grupo_id, g.nome, u.nome_exibicao, n.situacao,
+            SELECT n.id, n.tipo, n.atividade_id, n.jogada_id, n.grupo_id, g.nome, u.nome_exibicao, n.situacao,
                 n.total, n.read_at IS NOT NULL, n.updated_at
             FROM notificacoes n
             JOIN membros_grupo m ON m.grupo_id = n.grupo_id AND m.usuario_id = n.usuario_id AND m.removed_at IS NULL
@@ -36,14 +36,15 @@ internal static class ListarNotificacoes
             notificacoes.Add(new NotificacaoResponse(
                 reader.GetGuid(0),
                 reader.GetString(1),
-                reader.GetGuid(2),
-                reader.GetGuid(3),
-                reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetString(5),
+                reader.IsDBNull(2) ? null : reader.GetGuid(2),
+                reader.IsDBNull(3) ? null : reader.GetGuid(3),
+                reader.GetGuid(4),
+                reader.GetString(5),
                 reader.IsDBNull(6) ? null : reader.GetString(6),
-                reader.GetInt32(7),
-                reader.GetBoolean(8),
-                TimestampLeitura.FromReader(reader, 9)));
+                reader.IsDBNull(7) ? null : reader.GetString(7),
+                reader.GetInt32(8),
+                reader.GetBoolean(9),
+                TimestampLeitura.FromReader(reader, 10)));
         }
 
         return Results.Json(new NotificacoesResponse(notificacoes), AppJsonContext.Default.NotificacoesResponse);

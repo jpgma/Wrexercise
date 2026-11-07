@@ -6,12 +6,19 @@ internal static class JogoRoutes
 {
     public static void MapJogoRoutes(this IEndpointRouteBuilder routes)
     {
-        routes.MapGroup("/api/grupos")
-            .RequireSessao()
-            .MapGet("/{grupoId:guid}/cena", ObterCena.HandleAsync);
+        var grupos = routes.MapGroup("/api/grupos").RequireSessao();
+        grupos.MapGet("/{grupoId:guid}/cena", ObterCena.HandleAsync);
+        grupos.MapGet("/{grupoId:guid}/jogadas", ListarJogadas.HandleAsync);
+        grupos.MapPost("/{grupoId:guid}/jogadas", JogarCarta.HandleAsync);
+        grupos.MapPost("/{grupoId:guid}/jogadas/vistas", MarcarJogadasVistas.HandleAsync);
 
-        routes.MapGroup("/api/jogo")
+        var jogo = routes.MapGroup("/api/jogo").RequireSessao();
+        jogo.MapGet("/energia", ObterEnergia.HandleAsync);
+        jogo.MapGet("/loja", ObterLoja.HandleAsync);
+        jogo.MapPost("/cartas", ComprarCarta.HandleAsync);
+
+        routes.MapGroup("/api/jogadas")
             .RequireSessao()
-            .MapGet("/energia", ObterEnergia.HandleAsync);
+            .MapPut("/{id:guid}/resposta", ResponderJogada.HandleAsync);
     }
 }

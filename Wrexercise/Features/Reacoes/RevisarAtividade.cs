@@ -1,5 +1,6 @@
 using Npgsql;
 using Wrexercise.Features.Grupos.Contracts;
+using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Database;
@@ -112,6 +113,11 @@ internal static class RevisarAtividade
             atividadeId,
             decisao,
             cancellationToken);
+
+        if (decisao == SituacaoVerificacao.Verificada)
+        {
+            await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
+        }
 
         await transaction.CommitAsync(cancellationToken);
         return (null, new RevisaoRegistradaResponse(decisao, decisao, registradaEm));

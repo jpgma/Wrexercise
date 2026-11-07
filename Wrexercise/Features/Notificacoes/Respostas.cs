@@ -3,7 +3,8 @@ namespace Wrexercise.Features.Notificacoes;
 internal sealed record NotificacaoResponse(
     Guid Id,
     string Tipo,
-    Guid AtividadeId,
+    Guid? AtividadeId,
+    Guid? JogadaId,
     Guid GrupoId,
     string GrupoNome,
     string? AtorNome,

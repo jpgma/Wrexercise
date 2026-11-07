@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena) e G2 (Energia) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md` e a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia) e G3 (cartas) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md` a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md` e os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -110,7 +110,7 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 - Tocar na tela pula a encenação. Ela nunca bloqueia a navegação nem o registro de atividade.
 - Com `prefers-reduced-motion`, as poses ficam estáticas e as cartas aparecem no lugar final, sem voo.
 - As animações só rodam com a página visível.
-- A cena sabe o que já foi visto pelas colunas `vista_em` (destinatário) e `resultado_visto_em` (remetente) da Jogada.
+- A cena sabe o que já foi visto pelas colunas `vista_em` (destinatário) e `resultado_visto_em` (remetente) da Jogada. Por isso, na G3, só "carta recebida", "carta aceita" e "carta recusada" têm encenação; Jogadas concluídas ou expiradas aparecem já no estado final, com o carimbo (`decisoes/0035-cartas-e-jogadas.md`).
 
 ## 4. Avatar
 
@@ -246,7 +246,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 |---|---|---:|---|
 | +10 MIN | `Provocacao` | 30 | Uma atividade com pelo menos a duração mínima do desafio + 10 minutos. |
 | +20 MIN | `Provocacao` | 45 | Uma atividade com pelo menos a duração mínima do desafio + 20 minutos. |
-| VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente da última atividade do destinatário já verificada no momento do envio. |
+| VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente da última atividade do destinatário, neste grupo, já verificada no momento do envio. |
 | FIM DE SEMANA | `Provocacao` | 35 | Uma atividade que comece no sábado ou no domingo. |
 | ANTES DAS 8 | `Provocacao` | 40 | Uma atividade que comece antes das 08:00. |
 | DESAFIO DUPLO | `Resposta` | 40 | Aceita a Provocação e devolve o mesmo objetivo para o remetente, como uma Jogada nova. |
@@ -254,7 +254,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | PRAZO EXTRA | `Resposta` | 20 | Aceita a Provocação com 24 horas a mais de prazo. |
 | MUDANÇA DE PLANOS | `Resposta` | 25 | Aceita a Provocação trocando o objetivo por um equivalente, conforme uma tabela fixa (§12, item 1). |
 
-- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo.
+- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 
@@ -272,7 +272,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 - Uma Provocação é jogada da Mão para outro membro do mesmo grupo que esteja no modo Jogo.
 - O destinatário recebe uma `Notificacao` no aplicativo (`decisoes/0020-notificacoes-no-aplicativo.md`) e vê a encenação na próxima visita à cena.
-- O remetente recebe uma `Notificacao` quando a carta é aceita, recusada ou concluída. A conclusão também avisa o destinatário. Ela é gravada por `VerificacaoAtividade`, por um contrato de `Features/Jogo/Contracts/`, na mesma transação da verificação. A expiração não gera aviso, porque é calculada na leitura.
+- O remetente recebe uma `Notificacao` quando a carta é aceita, recusada ou concluída. A conclusão também avisa o destinatário. Ela é gravada pelo contrato `Features/Jogo/Contracts/JogadasConcluidas.cs`, chamado em todo lugar que deixa uma atividade `Verificada`, na mesma transação. A expiração não gera aviso, porque é calculada na leitura.
 - Diante de uma Provocação, o destinatário pode:
   - **Aceitar**, de graça;
   - **Aceitar com uma Resposta** da própria Mão (DESAFIO DUPLO, APOSTA, PRAZO EXTRA ou MUDANÇA DE PLANOS), no máximo uma por Jogada;
@@ -312,8 +312,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - Uma atividade feita antes de aceitar, mas depois do envio, conta.
 - A verificação pode acontecer depois de `expira_em`: o que importa é o `started_at`.
 - A mesma atividade pode concluir várias Jogadas e missões.
-- **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo. ANTES DAS 8 vale até as 08:00 da segunda manhã depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
-- **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente ganha 0,5 × o preço. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
+- **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo (enviada num domingo, vale até o domingo seguinte). ANTES DAS 8 vale até as 08:00 do segundo dia depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
+- **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente ganha 0,5 × o preço, arredondado para baixo. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
 - **Custo para quem enviou:** só uma Jogada `Concluida` gasta a Provocação. Com a recompensa de 0,5 ×, uma carta concluída custa na prática metade do preço. Uma carta recusada ou expirada volta para a Mão (§6.2).
 
 ## 7. Missões semanais

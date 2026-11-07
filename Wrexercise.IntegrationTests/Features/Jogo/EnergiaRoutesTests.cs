@@ -62,7 +62,7 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
 
         var energia = await GetEnergiaAsync(ana);
 
-        Assert.Equal(new EnergiaDetalhamentoResponse(20, 6, 0, 0, 0), energia.Detalhamento);
+        Assert.Equal(new EnergiaDetalhamentoResponse(20, 6, 0, 0, 0, 0), energia.Detalhamento);
         Assert.Equal(26, energia.Saldo);
     }
 
