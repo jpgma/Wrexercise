@@ -91,6 +91,14 @@ The Settings page ("Configurações") has these functions:
 
 The user cannot change the e-mail.
 
+### 3.3.1. Home screen mode (`ModoInicio`)
+
+- Each account has a home screen mode: `App` or `Jogo`. The mode is a setting of the account. It is the same on all devices.
+- The default mode is `App`. A new account starts in `App`.
+- `PUT /api/usuarios/eu/modo-inicio` changes the mode. The body is `{ "modoInicio": "App" }` or `{ "modoInicio": "Jogo" }`. Any other value gives the code `DADOS_INVALIDOS`. The response is the session, as for the change of the display name.
+- The session (`GET /api/autenticacao/sessao`) has the field `modoInicio`.
+- The mode does not change the goal, the verification, the ranking or the streaks.
+
 ### 3.4. Forgotten password
 
 - The login page does not have a "forgot password" function.

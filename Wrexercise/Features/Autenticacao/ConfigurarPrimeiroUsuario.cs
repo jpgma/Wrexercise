@@ -103,6 +103,6 @@ internal static class ConfigurarPrimeiroUsuario
         var token = await Sessoes.InsertAsync(connection, transaction, usuarioId, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-        return (new UsuarioResponse(usuarioId, nomeExibicao, email), token);
+        return (new UsuarioResponse(usuarioId, nomeExibicao, email, ModoInicio.App), token);
     }
 }

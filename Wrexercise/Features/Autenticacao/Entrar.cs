@@ -6,7 +6,12 @@ namespace Wrexercise.Features.Autenticacao;
 
 internal sealed record EntrarRequest(string? Email, string? Senha);
 
-internal sealed record UsuarioCredenciais(Guid Id, string NomeExibicao, string Email, string PasswordHash);
+internal sealed record UsuarioCredenciais(
+    Guid Id,
+    string NomeExibicao,
+    string Email,
+    string PasswordHash,
+    string ModoInicio);
 
 internal static class Entrar
 {
@@ -53,7 +58,11 @@ internal static class Entrar
         logger.LogInformation("Usuário {UsuarioId} entrou.", credenciais.Id);
 
         return Results.Ok(new SessaoResponse(
-            new UsuarioResponse(credenciais.Id, credenciais.NomeExibicao, credenciais.Email)));
+            new UsuarioResponse(
+                credenciais.Id,
+                credenciais.NomeExibicao,
+                credenciais.Email,
+                credenciais.ModoInicio)));
     }
 
     private static async Task<UsuarioCredenciais?> GetCredenciaisByEmailAsync(
@@ -62,7 +71,7 @@ internal static class Entrar
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand("""
-            SELECT id, nome_exibicao, email, password_hash
+            SELECT id, nome_exibicao, email, password_hash, modo_inicio
             FROM usuarios
             WHERE lower(email) = lower($1)
             """);
@@ -70,7 +79,7 @@ internal static class Entrar
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken)
-            ? new UsuarioCredenciais(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3))
+            ? new UsuarioCredenciais(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4))
             : null;
     }
 

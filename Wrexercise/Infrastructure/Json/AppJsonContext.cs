@@ -16,6 +16,7 @@ namespace Wrexercise.Infrastructure.Json;
 
 // Todo tipo serializado pela API precisa estar registrado aqui (exigência do Native AOT).
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(AlterarModoInicioRequest))]
 [JsonSerializable(typeof(AlterarNomeRequest))]
 [JsonSerializable(typeof(AlterarPapelRequest))]
 [JsonSerializable(typeof(AlterarSenhaRequest))]

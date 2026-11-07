@@ -8,10 +8,13 @@ import {
   putJson,
 } from "@/services/api";
 
+export type ModoInicio = "App" | "Jogo";
+
 export type Usuario = {
   id: string;
   nomeExibicao: string;
   email: string;
+  modoInicio: ModoInicio;
 };
 
 export type EntrarData = {
@@ -139,6 +142,16 @@ export function useAlterarNome() {
         predicate: (query) => query.queryKey[0] !== sessaoKey[0],
       });
     },
+  });
+}
+
+export function useAlterarModoInicio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (modoInicio: ModoInicio) =>
+      putJson<SessaoResponse>("/api/usuarios/eu/modo-inicio", { modoInicio }),
+    // O modo só muda a tela inicial: não há nada a recarregar além da sessão.
+    onSuccess: ({ usuario }) => queryClient.setQueryData(sessaoKey, usuario),
   });
 }
 

@@ -52,6 +52,68 @@ public sealed class ContaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ModoInicio_PadraoEApp_EAlteracaoPersiste()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+
+        var antes = await ana.Client.GetFromJsonAsync(
+            "/api/autenticacao/sessao",
+            AppJsonContext.Default.SessaoResponse,
+            Token);
+        Assert.Equal(ModoInicio.App, antes!.Usuario.ModoInicio);
+
+        var response = await ana.Client.PutAsJsonAsync(
+            "/api/usuarios/eu/modo-inicio",
+            new AlterarModoInicioRequest(ModoInicio.Jogo),
+            AppJsonContext.Default.AlterarModoInicioRequest,
+            Token);
+
+        response.EnsureSuccessStatusCode();
+        var sessao = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.SessaoResponse, Token);
+        Assert.Equal(ModoInicio.Jogo, sessao!.Usuario.ModoInicio);
+
+        var depois = await ana.Client.GetFromJsonAsync(
+            "/api/autenticacao/sessao",
+            AppJsonContext.Default.SessaoResponse,
+            Token);
+        Assert.Equal(ModoInicio.Jogo, depois!.Usuario.ModoInicio);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("jogo")]
+    [InlineData("Outro")]
+    public async Task ModoInicio_Invalido_RecusadoSemAlterar(string? modo)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+
+        var response = await ana.Client.PutAsJsonAsync(
+            "/api/usuarios/eu/modo-inicio",
+            new AlterarModoInicioRequest(modo),
+            AppJsonContext.Default.AlterarModoInicioRequest,
+            Token);
+
+        await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.BadRequest, "DADOS_INVALIDOS");
+        Assert.Equal(
+            ModoInicio.App,
+            await _host.ScalarAsync<string>("SELECT modo_inicio FROM usuarios WHERE id = $1", ana.Id));
+    }
+
+    [Fact]
+    public async Task ModoInicio_ExigeSessao()
+    {
+        await ApiTestHost.AssertProblemAsync(
+            await _host.CreateAnonimo().PutAsJsonAsync(
+                "/api/usuarios/eu/modo-inicio",
+                new AlterarModoInicioRequest(ModoInicio.Jogo),
+                AppJsonContext.Default.AlterarModoInicioRequest,
+                Token),
+            HttpStatusCode.Unauthorized,
+            "NAO_AUTENTICADO");
+    }
+
+    [Fact]
     public async Task Conta_ExigeSessao()
     {
         var anonimo = _host.CreateAnonimo();

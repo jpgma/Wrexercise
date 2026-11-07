@@ -1,4 +1,5 @@
 export {
+  useAlterarModoInicio,
   useAlterarNome,
   useAlterarSenha,
   useConfiguracaoInicial,
@@ -9,4 +10,9 @@ export {
   useSair,
   useSessao,
 } from "./useSessao";
-export type { EntrarData, RegistrarData, Usuario } from "./useSessao";
+export type {
+  EntrarData,
+  ModoInicio,
+  RegistrarData,
+  Usuario,
+} from "./useSessao";

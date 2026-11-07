@@ -145,7 +145,7 @@ internal static class Registrar
         var token = await Sessoes.InsertAsync(connection, transaction, usuarioId, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
-        return new RegistroResult(RegistroStatus.Criado, new UsuarioResponse(usuarioId, nomeExibicao, email), token);
+        return new RegistroResult(RegistroStatus.Criado, new UsuarioResponse(usuarioId, nomeExibicao, email, ModoInicio.App), token);
     }
 
     private static IResult InvalidData() => ApiProblem.Create(

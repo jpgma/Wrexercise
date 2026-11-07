@@ -104,12 +104,12 @@ internal static class Sessoes
         CancellationToken cancellationToken)
     {
         await using var command = dataSource.CreateCommand(
-            "SELECT id, nome_exibicao, email FROM usuarios WHERE id = $1");
+            "SELECT id, nome_exibicao, email, modo_inicio FROM usuarios WHERE id = $1");
         command.Parameters.AddWithValue(usuarioId);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken)
-            ? new UsuarioResponse(reader.GetGuid(0), reader.GetString(1), reader.GetString(2))
+            ? new UsuarioResponse(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3))
             : null;
     }
 }
