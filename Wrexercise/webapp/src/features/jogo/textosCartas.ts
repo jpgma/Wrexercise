@@ -3,16 +3,25 @@ import {
   tipoAtividadeLabels,
   type TipoAtividade,
 } from "@/features/atividades";
-import type { Jogada, SituacaoJogada } from "./useCartas";
+import type { CodigoProvocacao, Jogada, SituacaoJogada } from "./useCartas";
 
-/** O objetivo de uma Jogada, já com o que foi fixado no envio. */
+/** O objetivo em poucas palavras, para escolher a troca da MUDANÇA DE PLANOS. */
+export const objetivoCurto: Record<CodigoProvocacao, string> = {
+  Mais10Min: "Treino 10 min mais longo",
+  Mais20Min: "Treino 20 min mais longo",
+  Variedade: "Treino de outro tipo",
+  FimDeSemana: "Treino no fim de semana",
+  AntesDas8: "Treino antes das 8h",
+};
+
+/** O objetivo de uma Jogada, já com o que foi fixado no envio ou no aceite. */
 export function getObjetivo(jogada: Jogada): string {
-  switch (jogada.carta.codigo) {
+  switch (jogada.objetivo) {
     case "Mais10Min":
     case "Mais20Min":
       return jogada.duracaoAlvoSegundos
         ? `Um treino de ${formatarDuracao(jogada.duracaoAlvoSegundos)} ou mais`
-        : jogada.carta.efeito;
+        : objetivoCurto[jogada.objetivo];
     case "Variedade":
       return jogada.tipoEvitar
         ? `Um treino que não seja ${tipoAtividadeLabels[jogada.tipoEvitar as TipoAtividade] ?? jogada.tipoEvitar}`

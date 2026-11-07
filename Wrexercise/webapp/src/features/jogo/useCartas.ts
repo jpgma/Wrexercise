@@ -2,8 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { shouldRetry } from "@/features/grupos";
 import { getJson, postJson, postJsonEmpty, putJsonEmpty } from "@/services/api";
 
-export type CodigoCarta =
+export type CodigoProvocacao =
   "Mais10Min" | "Mais20Min" | "Variedade" | "FimDeSemana" | "AntesDas8";
+
+export type CodigoResposta =
+  "DesafioDuplo" | "Aposta" | "PrazoExtra" | "MudancaDePlanos";
+
+export type CodigoCarta = CodigoProvocacao | CodigoResposta;
 
 export type Carta = {
   codigo: CodigoCarta;
@@ -38,6 +43,14 @@ export type Jogada = {
   destinatarioId: string;
   destinatarioNome: string;
   carta: Carta;
+  /** O objetivo em vigor: o da carta ou o trocado pela MUDANÇA DE PLANOS. */
+  objetivo: CodigoProvocacao;
+  /** A Resposta usada no aceite, se houver. */
+  cartaResposta: Carta | null;
+  /** A Jogada foi devolvida por um DESAFIO DUPLO. */
+  desafioDuplo: boolean;
+  /** Os objetivos que a MUDANÇA DE PLANOS pode escolher; só na Jogada recebida que espera resposta. */
+  objetivosEquivalentes: CodigoProvocacao[];
   situacao: SituacaoJogada;
   enviadaEm: string;
   expiraEm: string;
@@ -106,20 +119,25 @@ export function useJogarCarta(grupoId: string) {
   });
 }
 
+export type RespostaJogada = {
+  id: string;
+  resposta: "Aceita" | "Recusada";
+  /** A Resposta da Mão usada para aceitar. */
+  cartaRespostaId?: string;
+  /** O objetivo novo, só com a MUDANÇA DE PLANOS. */
+  objetivo?: CodigoProvocacao;
+};
+
 export function useResponderJogada(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      resposta,
-    }: {
-      id: string;
-      resposta: "Aceita" | "Recusada";
-    }) => putJsonEmpty(`/api/jogadas/${id}/resposta`, { resposta }),
+    mutationFn: ({ id, ...corpo }: RespostaJogada) =>
+      putJsonEmpty(`/api/jogadas/${id}/resposta`, corpo),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: jogadasKey(grupoId) }),
         queryClient.invalidateQueries({ queryKey: notificacoesKey }),
+        queryClient.invalidateQueries({ queryKey: lojaKey }),
       ]);
     },
   });

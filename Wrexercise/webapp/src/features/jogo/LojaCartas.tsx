@@ -23,7 +23,7 @@ function ItemLoja({
       <CartaJogo carta={carta} />
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="badge self-start bg-surface-muted text-foreground shadow-none">
-          Provocação
+          {carta.tipo === "Provocacao" ? "Provocação" : "Resposta"}
         </span>
         <p className="mt-2 text-sm">{carta.efeito}</p>
         <div className="mt-auto pt-3">
@@ -54,7 +54,38 @@ function ItemLoja({
   );
 }
 
-/** A Loja: as Provocações à venda e a Mão de quem compra. */
+function SecaoLoja({
+  titulo,
+  descricao,
+  cartas,
+  saldo,
+  maoCheia,
+}: {
+  titulo: string;
+  descricao: string;
+  cartas: Carta[];
+  saldo: number;
+  maoCheia: boolean;
+}) {
+  return (
+    <section>
+      <SectionTitle>{titulo}</SectionTitle>
+      <p className="-mt-1 mb-3 text-sm text-muted">{descricao}</p>
+      <ul className="space-y-3">
+        {cartas.map((carta) => (
+          <ItemLoja
+            key={carta.codigo}
+            carta={carta}
+            saldo={saldo}
+            maoCheia={maoCheia}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** A Loja: as Provocações e as Respostas à venda e a Mão de quem compra. */
 export function LojaCartas() {
   const loja = useLoja();
 
@@ -100,17 +131,20 @@ export function LojaCartas() {
           : "Compre uma Provocação e jogue para um colega na praça. Se ele cumprir, os dois ganham Energia."}
       </p>
 
-      <SectionTitle>Provocações</SectionTitle>
-      <ul className="space-y-3">
-        {catalogo.map((carta) => (
-          <ItemLoja
-            key={carta.codigo}
-            carta={carta}
-            saldo={saldo}
-            maoCheia={maoCheia}
-          />
-        ))}
-      </ul>
+      <SecaoLoja
+        titulo="Provocações"
+        descricao="Jogue para um colega tocando no avatar dele."
+        cartas={catalogo.filter((c) => c.tipo === "Provocacao")}
+        saldo={saldo}
+        maoCheia={maoCheia}
+      />
+      <SecaoLoja
+        titulo="Respostas"
+        descricao="Use ao aceitar uma Provocação. A carta é gasta quando você a usa."
+        cartas={catalogo.filter((c) => c.tipo === "Resposta")}
+        saldo={saldo}
+        maoCheia={maoCheia}
+      />
     </>
   );
 }

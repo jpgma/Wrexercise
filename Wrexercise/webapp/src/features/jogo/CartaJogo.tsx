@@ -24,7 +24,8 @@ export function IconeCarta({
 
 /**
  * A carta em 4× (96×128): moldura em pixel, nome na faixa, ícone e preço como etiqueta de placar
- * (docs/gamificacao.md §1.3). A moldura e o giz são os mesmos nos dois temas.
+ * (docs/gamificacao.md §1.3). A Provocação tem acento coral, e a Resposta, violeta. A moldura e o giz são os
+ * mesmos nos dois temas.
  */
 export function CartaJogo({
   carta,
@@ -37,7 +38,10 @@ export function CartaJogo({
     <div
       className={`relative h-32 w-24 shrink-0 text-on-carta ${apagada ? "opacity-55" : ""}`}
       style={{
-        backgroundImage: "url(/carta-provocacao.png)",
+        backgroundImage:
+          carta.tipo === "Resposta"
+            ? "url(/carta-resposta.png)"
+            : "url(/carta-provocacao.png)",
         backgroundSize: "100% 100%",
         imageRendering: "pixelated",
       }}

@@ -33,11 +33,14 @@ function JogarCarta({
   }
 
   if (!loja.data) return null;
-  const disponiveis = loja.data.mao.filter((c) => !c.emJogo);
+  // Só Provocações são jogadas para um colega; as Respostas ficam para aceitar uma carta.
+  const disponiveis = loja.data.mao.filter(
+    (c) => c.tipo === "Provocacao" && !c.emJogo,
+  );
   if (disponiveis.length === 0) {
     return (
       <p className="text-sm text-muted">
-        Você não tem cartas livres na Mão.{" "}
+        Você não tem Provocações livres na Mão.{" "}
         <Link to="/jogo/loja" className="font-semibold text-link">
           Ir para a Loja
         </Link>
