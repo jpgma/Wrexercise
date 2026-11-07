@@ -48,6 +48,7 @@ export type ResumoGrupo = {
   } | null;
   classificacao: {
     posicao: number;
+    usuarioId: string;
     nomeExibicao: string;
     semanasCumpridas: number;
   }[];

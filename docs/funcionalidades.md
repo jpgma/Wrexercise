@@ -330,7 +330,8 @@ The application does not use points.
 ### 9.4. History
 
 - The challenge page shows a chart with the history of the weeks of the current user.
-- The group summary shows the featured challenge, the weekly progress of the user and the first 3 members of the ranking.
+- The group summary shows the featured challenge, the weekly progress of the user and the first 3 members of the ranking. Each ranking item has the `usuarioId` of the member.
+- Each `Avatar` that has a user ID shows the portrait (row 0, column 0) of a default sheet. The sheet comes from a hash of the user ID, out of 6 sheets in the app bundle. If the ID is missing, the `Avatar` shows the initials.
 
 ## 10. Profile, member page and achievements
 

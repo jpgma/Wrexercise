@@ -43,6 +43,7 @@ internal sealed record ProgressoResumoResponse(
 
 internal sealed record ClassificacaoResumoItemResponse(
     int Posicao,
+    Guid UsuarioId,
     string NomeExibicao,
     int SemanasCumpridas);
 

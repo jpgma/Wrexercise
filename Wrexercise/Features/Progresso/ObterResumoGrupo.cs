@@ -45,6 +45,7 @@ internal static class ObterResumoGrupo
 
         var top = ranking.Take(3).Select((item, index) => new ClassificacaoResumoItemResponse(
             index + 1,
+            item.UsuarioId,
             item.NomeExibicao,
             item.SemanasCumpridas)).ToList();
 
