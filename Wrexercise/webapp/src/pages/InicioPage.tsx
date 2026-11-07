@@ -242,13 +242,6 @@ function InicioJogo({
           </p>
         )
       )}
-      <Link
-        to={`/grupos/${grupoId}/atividades/nova`}
-        className="btn-primary w-full"
-      >
-        <Plus aria-hidden="true" className="size-5" />
-        Registrar atividade
-      </Link>
     </div>
   );
 }

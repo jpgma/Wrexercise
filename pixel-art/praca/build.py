@@ -3,7 +3,7 @@
 Quadra urbana vista de cima: asfalto, linhas tracejadas de giz, alambrado e mureta ao fundo
 (com uma assinatura discreta), círculo central e uma barra de calistenia no canto.
 
-Mestre 1× de 180×150. O app mostra em 2× (360×300), com `image-rendering: pixelated`.
+Mestre 1× de 180×230. O app mostra em 2× (360×460), com `image-rendering: pixelated`.
 Uso: python build.py   (gera saida/praca.png e preview/praca-2x.png)
 """
 
@@ -15,7 +15,8 @@ AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/scripts"))
 from pixelstudio import Sprite  # noqa: E402
 
-L, A = 180, 150
+L, A = 180, 230
+D = A - 150  # o que a quadra ganhou em altura: ancora o que fica embaixo
 
 # Rampa da paleta `wrexercise` (blue-grey do asfalto ao concreto) e acentos da marca.
 A0, A1, A2, A3, A4, A5, A6, A7, A8, A9 = (
@@ -59,16 +60,16 @@ s.noise(0, 0, L - 1, A - 1, A1, density=0.05, seed=2)
 s.noise(0, 0, L - 1, A - 1, A4, density=0.012, seed=3)
 # Uma rachadura, para não parecer carpete.
 for (x0, y0, x1, y1) in [(140, 104, 146, 108), (146, 108, 149, 107), (149, 107, 156, 112)]:
-    s.line(x0, y0, x1, y1, A1)
+    s.line(x0, y0 + D, x1, y1 + D, A1)
 
 # --- Quadra: círculo central pintado e linhas de giz -------------------------
-CX, CY, R = 90, 78, 22
+M = 9  # margem das linhas de fundo
+CX, CY, R = 90, (28 + (A - 1 - M)) // 2, 22
 for y in range(CY - R, CY + R + 1):
     for x in range(CX - R, CX + R + 1):
         if (x - CX) ** 2 + (y - CY) ** 2 <= R * R and x % 2 == 0 and y % 2 == 0:
             s.px(x, y, VIOLETA_PROFUNDO)
 
-M = 9  # margem das linhas de fundo
 tracejado(M, 28, L - 1 - M, 28, GIZ)
 tracejado(M, A - 1 - M, L - 1 - M, A - 1 - M, GIZ)
 tracejado(M, 28, M, A - 1 - M, GIZ)
@@ -119,21 +120,21 @@ letra(X, 133, 11, VIOLETA, VIOLETA_PROFUNDO)
 
 # --- Barra de calistenia no canto inferior esquerdo ---------------------------
 # Tapete de borracha no chão, depois a barra (postes, travessa e sombra para a direita).
-s.rect(5, 126, 41, 146, A1)
-s.rect(5, 126, 41, 126, A0)
-s.rect(5, 146, 41, 146, A0)
-s.rect(5, 126, 5, 146, A0)
-s.rect(41, 126, 41, 146, A0)
+s.rect(5, 126 + D, 41, 146 + D, A1)
+s.rect(5, 126 + D, 41, 126 + D, A0)
+s.rect(5, 146 + D, 41, 146 + D, A0)
+s.rect(5, 126 + D, 5, 146 + D, A0)
+s.rect(41, 126 + D, 41, 146 + D, A0)
 for poste_x in (11, 33):
-    s.rect(poste_x, 106, poste_x + 1, 140, A6)   # corpo do poste
-    s.rect(poste_x, 106, poste_x, 140, A8)       # luz à esquerda
-    s.rect(poste_x + 1, 106, poste_x + 1, 140, A4)  # lado na sombra
-    s.rect(poste_x - 1, 140, poste_x + 2, 141, A5)  # base chumbada
-    s.rect(poste_x + 2, 141, poste_x + 6, 142, A0)  # sombra no chão
-s.rect(10, 106, 36, 106, A9)   # travessa: topo claro
-s.rect(10, 107, 36, 107, A6)
-s.rect(10, 108, 36, 108, A4)   # e sua sombra
-s.rect(37, 108, 40, 109, A0)
+    s.rect(poste_x, 106 + D, poste_x + 1, 140 + D, A6)   # corpo do poste
+    s.rect(poste_x, 106 + D, poste_x, 140 + D, A8)       # luz à esquerda
+    s.rect(poste_x + 1, 106 + D, poste_x + 1, 140 + D, A4)  # lado na sombra
+    s.rect(poste_x - 1, 140 + D, poste_x + 2, 141 + D, A5)  # base chumbada
+    s.rect(poste_x + 2, 141 + D, poste_x + 6, 142 + D, A0)  # sombra no chão
+s.rect(10, 106 + D, 36, 106 + D, A9)   # travessa: topo claro
+s.rect(10, 107 + D, 36, 107 + D, A6)
+s.rect(10, 108 + D, 36, 108 + D, A4)   # e sua sombra
+s.rect(37, 108 + D, 40, 109 + D, A0)
 
 s.preview(str(AQUI / "preview" / "praca-2x.png"), scale=2, bg=None, labels=False)
 s.save_png(str(AQUI / "saida" / "praca.png"))

@@ -6,7 +6,7 @@
 
 O modo **Jogo** é uma tela inicial alternativa, leve e bem-humorada, para quem gosta de um toque de jogo. Cada pessoa escolhe entre **App** (a tela inicial de hoje) e **Jogo**. Nada muda para quem continua no App.
 
-No Jogo, os membros do grupo aparecem como avatares em pixel-art, num círculo. Os treinos verificados rendem **Energia**. A Energia compra **cartas**, que viram provocações amistosas entre colegas: objetivos extras e opcionais que, quando cumpridos, rendem Energia para os dois. Missões semanais e o Rival da semana completam a experiência.
+No Jogo, os membros do grupo aparecem como avatares em pixel-art, numa praça. Os treinos verificados rendem **Energia**. A Energia compra **cartas**, que viram provocações amistosas entre colegas: objetivos extras e opcionais que, quando cumpridos, rendem Energia para os dois. Missões semanais e o Rival da semana completam a experiência.
 
 ### 1.1. Princípios
 
@@ -64,15 +64,16 @@ A tela Jogo mostra:
 - a cena com o avatar de cada membro ativo do grupo;
 - o seu progresso na semana (o mesmo anel da tela App, em versão compacta);
 - o saldo de Energia e a sua Mão de cartas (a partir das fases G2 e G3);
-- o botão "Registrar atividade";
 - o aviso de atividades para avaliar, como hoje.
+
+A tela não tem um botão próprio de "Registrar atividade": o registro já está na navegação inferior (celular) e na lateral (computador).
 
 ### 3.1. Layout
 
 - Vista 2,5D, de cima e de lado: o chão é uma praça vista de cima, e os avatares são desenhados de lado.
-- Os avatares ficam num **círculo**, virados para o centro. Quem está à esquerda do centro olha para a direita, e quem está à direita aparece espelhado (`scaleX(-1)`).
+- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça, virados para o centro. Quem está à esquerda do centro olha para a direita, e quem está à direita aparece espelhado (`scaleX(-1)`).
 - A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente.
-- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). Num celular de 360 px, o círculo tem raio de cerca de 130 px e cabem 10 avatares a cerca de 80 px de distância. Grupos de até 5 pessoas usam 3×.
+- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. Grupos de até 5 pessoas usam 3×.
 - O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
 - Tocar num avatar mostra a vitrine de Enfeites e dá acesso à página do membro. No modo Jogo, também permite jogar uma carta da Mão para esse colega.
 
@@ -168,7 +169,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Peça | Tamanho | Quantidade |
 |---|---|---:|
 | Folhas padrão de avatar (pele clara, morena e negra; corpo masculino e feminino) | 256×384 | 6 |
-| Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×150 (mestre 1×, mostrado em 2×, ou seja, 360×300) | 1 |
+| Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×230 (mestre 1×, mostrado em 2×, ou seja, 360×460) | 1 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 16×16 | 9 |
 | Enfeite | 16×16 ou 32×32 | 19 (§9.1) |
@@ -415,7 +416,7 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 - Opção na página Configurações e cartão de convite único na tela App.
 - `InicioPage` escolhe entre a visão App atual e a cena, na mesma rota.
 - As folhas padrão (geradas em `pixel-art/avatar-base/saida/`), o chão da praça e o `LICENSE` CC0 no bundle.
-- Cena em círculo com as poses `parado`, `treinando` e `comemorando` e as variações de `parado`.
+- Cena em elipse com as poses `parado`, `treinando` e `comemorando` e as variações de `parado`.
 - O `Avatar` mostra o `retrato` da folha padrão.
 
 ### G2 — Energia

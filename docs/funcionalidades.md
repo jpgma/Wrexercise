@@ -103,10 +103,12 @@ The user cannot change the e-mail.
 
 ### 3.3.2. Game home screen (scene)
 
-- In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring, the button "Registrar atividade" and the notice of activities to review. The screen does not show the list of recent activities.
-- The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on an ellipse. The current user stands at the front (bottom). The other members follow in the order of joining.
+- In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring and the notice of activities to review. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
+- The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on a tall ellipse that uses the full height of the plaza (360 by 460 px). The current user stands at the front (bottom). The other members follow in the order of joining.
 - Each `Avatar` has the first name below it. A tap opens the page of the member. The `Avatar` of a member on the right side of the scene is mirrored, to face the centre.
 - The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
+- The names of the members are in a layer above all the avatars. No avatar hides the name of another one.
+- On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
 - `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado" }] }`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
 - The pose is `treinando` if the member has an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
 - Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.

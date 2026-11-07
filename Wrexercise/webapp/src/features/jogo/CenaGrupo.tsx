@@ -6,14 +6,21 @@ import { SpriteAvatar } from "./SpriteAvatar";
 import { useCena, type MembroCena } from "./useCena";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 
-// O chão tem 180×150 px e é mostrado em 2×.
+// O chão tem 180×230 px e é mostrado em 2×.
 const largura = 360;
-const altura = 300;
+const altura = 460;
 const centroX = largura / 2;
-const centroY = 185;
 const raioX = 130;
-/** Achata o círculo numa elipse: dá a sensação de visão de cima, em perspectiva. */
-const fatorVertical = 0.6;
+/** Onde os pés podem pisar: abaixo da mureta e com espaço para o nome embaixo. */
+const topoDosPes = 46;
+const folgaInferior = 22;
+
+/** Elipse em pé: ocupa a altura toda da praça, deixando espaço para o avatar (31 px de altura × escala) e o nome. */
+function getElipse(escala: number) {
+  const minY = topoDosPes + 31 * escala;
+  const maxY = altura - folgaInferior;
+  return { centroY: (minY + maxY) / 2, raioY: (maxY - minY) / 2 };
+}
 
 function mulberry32(semente: number): () => number {
   let a = semente;
@@ -29,8 +36,13 @@ function mulberry32(semente: number): () => number {
 type Posicao = { x: number; y: number };
 
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
-function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
+function posicionar(
+  membros: MembroCena[],
+  usuarioId: string,
+  escala: number,
+): Posicao[] {
   const n = membros.length;
+  const { centroY, raioY } = getElipse(escala);
   if (n === 1) return [{ x: centroX, y: centroY }];
   const outros = membros.filter((m) => m.usuarioId !== usuarioId);
   const ordenados = [
@@ -42,7 +54,7 @@ function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
     const angulo = Math.PI / 2 + (i * 2 * Math.PI) / n;
     posicoes.set(m.usuarioId, {
       x: centroX + raioX * Math.cos(angulo),
-      y: centroY + raioX * fatorVertical * Math.sin(angulo),
+      y: centroY + raioY * Math.sin(angulo),
     });
   });
   return membros.map(
@@ -100,30 +112,57 @@ function AvatarCena({
   const primeiroNome = membro.nomeExibicao.trim().split(/\s+/)[0];
 
   return (
-    <Link
-      to={`/grupos/${grupoId}/membros/${membro.usuarioId}`}
-      className="absolute flex flex-col items-center"
-      style={{
-        left: posicao.x - 16 * escala,
-        top: posicao.y - 31 * escala,
-        width: 32 * escala,
-        zIndex: Math.round(posicao.y),
-      }}
-    >
-      <SpriteAvatar
-        key={animacao}
-        folha={folhaPadrao(membro.usuarioId)}
-        animacao={animacao}
-        escala={escala}
-        estatico={reduzido}
-        espelhar={espelhar}
-        onFim={() => setVariacao(null)}
-      />
-      <span className="mt-0.5 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground">
+    <>
+      <Link
+        to={`/grupos/${grupoId}/membros/${membro.usuarioId}`}
+        aria-label={membro.nomeExibicao}
+        className="absolute block"
+        style={{
+          left: posicao.x - 16 * escala,
+          top: posicao.y - 31 * escala,
+          width: 32 * escala,
+          zIndex: Math.round(posicao.y),
+        }}
+      >
+        <SpriteAvatar
+          key={animacao}
+          folha={folhaPadrao(membro.usuarioId)}
+          animacao={animacao}
+          escala={escala}
+          estatico={reduzido}
+          espelhar={espelhar}
+          onFim={() => setVariacao(null)}
+        />
+      </Link>
+      {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
+        style={{ left: posicao.x, top: posicao.y + 3, zIndex: 1000 }}
+      >
         {primeiroNome}
       </span>
-    </Link>
+    </>
   );
+}
+
+/** Em telas mais estreitas que a praça, ela encolhe inteira em vez de ser cortada. */
+function useFatorDeEncaixe() {
+  // Ref em estado: a praça só existe depois que a cena carrega, e o efeito precisa esperar por ela.
+  const [elemento, setElemento] = useState<HTMLDivElement | null>(null);
+  const [fator, setFator] = useState(1);
+
+  useEffect(() => {
+    if (!elemento) return;
+    const medir = () =>
+      setFator(Math.min(1, elemento.clientWidth / largura) || 1);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [elemento]);
+
+  return { ref: setElemento, fator };
 }
 
 export function CenaGrupo({
@@ -135,14 +174,15 @@ export function CenaGrupo({
 }) {
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
+  const { ref, fator } = useFatorDeEncaixe();
 
   if (cena.isError) return null;
   if (!cena.data) {
     return (
       <div
         role="status"
-        className="mx-auto grid max-w-full place-items-center rounded-xl bg-surface-muted text-sm text-muted"
-        style={{ width: largura, height: altura }}
+        className="mx-auto grid w-full place-items-center rounded-xl bg-surface-muted text-sm text-muted"
+        style={{ maxWidth: largura, height: altura }}
       >
         Carregando a praça…
       </div>
@@ -150,31 +190,39 @@ export function CenaGrupo({
   }
 
   const { membros } = cena.data;
-  const posicoes = posicionar(membros, usuarioId);
   const escala = membros.length <= 5 ? 3 : 2;
+  const posicoes = posicionar(membros, usuarioId, escala);
 
   return (
-    <section
-      aria-label="Praça do grupo"
-      className="relative mx-auto max-w-full overflow-hidden rounded-xl"
-      style={{
-        width: largura,
-        height: altura,
-        backgroundImage: "url(/praca.png)",
-        backgroundSize: `${largura}px ${altura}px`,
-        imageRendering: "pixelated",
-      }}
+    <div
+      ref={ref}
+      className="mx-auto w-full"
+      style={{ maxWidth: largura, height: altura * fator }}
     >
-      {membros.map((membro, i) => (
-        <AvatarCena
-          key={membro.usuarioId}
-          grupoId={grupoId}
-          membro={membro}
-          posicao={posicoes[i] ?? { x: centroX, y: centroY }}
-          escala={escala}
-          reduzido={reduzido}
-        />
-      ))}
-    </section>
+      <section
+        aria-label="Praça do grupo"
+        className="relative overflow-hidden rounded-xl"
+        style={{
+          width: largura,
+          height: altura,
+          transform: `scale(${fator})`,
+          transformOrigin: "top left",
+          backgroundImage: "url(/praca.png)",
+          backgroundSize: `${largura}px ${altura}px`,
+          imageRendering: "pixelated",
+        }}
+      >
+        {membros.map((membro, i) => (
+          <AvatarCena
+            key={membro.usuarioId}
+            grupoId={grupoId}
+            membro={membro}
+            posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
+            escala={escala}
+            reduzido={reduzido}
+          />
+        ))}
+      </section>
+    </div>
   );
 }
