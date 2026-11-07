@@ -8,6 +8,19 @@ internal static class PrazoJogada
 {
     public static readonly TimeSpan Padrao = TimeSpan.FromHours(48);
 
+    /// <summary>O tempo a mais do PRAZO EXTRA, uma vez por Jogada.</summary>
+    public static readonly TimeSpan Extra = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// O prazo depois da MUDANÇA DE PLANOS: o maior entre o atual e o da carta nova a partir do envio, para que
+    /// a troca nunca encurte o prazo nem deixe o objetivo novo impossível (decisão 0036).
+    /// </summary>
+    public static DateTime ComMudanca(string novoCodigo, DateTime enviadaLocal, DateTime expiraLocalAtual)
+    {
+        var novo = Calcular(novoCodigo, enviadaLocal);
+        return novo > expiraLocalAtual ? novo : expiraLocalAtual;
+    }
+
     public static DateTime Calcular(string codigo, DateTime enviadaLocal) => codigo switch
     {
         // Até o fim do primeiro domingo depois do dia do envio: enviada num domingo, vale até o seguinte.

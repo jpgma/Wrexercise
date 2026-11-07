@@ -19,7 +19,7 @@ internal static class ObterLoja
             new LojaResponse(
                 estado.Saldo,
                 LimitesJogada.CartasNaMao,
-                CatalogoCartas.ParaVenda.Select(ErrosJogo.ToResponse).ToList(),
+                CatalogoCartas.Todas.Select(ErrosJogo.ToResponse).ToList(),
                 estado.Mao.Select(c => ToMaoResponse(c, estado.IsEmJogo(c.Id))).ToList()),
             AppJsonContext.Default.LojaResponse);
     }

@@ -15,6 +15,16 @@ internal static class ErrosJogo
         "CARTA_INVALIDA",
         "Esta carta não está disponível.");
 
+    public static IResult CartaNaoEncontrada() => ApiProblem.Create(
+        StatusCodes.Status404NotFound,
+        "CARTA_NAO_ENCONTRADA",
+        "Carta não encontrada.");
+
+    public static IResult DestinatarioForaDoJogo() => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "DESTINATARIO_FORA_DO_JOGO",
+        "Esta pessoa não está no modo Jogo.");
+
     public static IResult JogadaNaoEncontrada() => ApiProblem.Create(
         StatusCodes.Status404NotFound,
         "JOGADA_NAO_ENCONTRADA",

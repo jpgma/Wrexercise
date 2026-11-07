@@ -14,7 +14,7 @@ internal static class ComprarCarta
         NpgsqlDataSource dataSource,
         CancellationToken cancellationToken)
     {
-        var carta = CatalogoCartas.ParaVenda.FirstOrDefault(c => c.Codigo == request.Codigo);
+        var carta = CatalogoCartas.Find(request.Codigo);
         if (carta is null)
         {
             return ErrosJogo.CartaInvalida();

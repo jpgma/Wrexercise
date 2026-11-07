@@ -37,6 +37,17 @@ public class CalculoEnergiaTests
     }
 
     [Fact]
+    public void Jogadas_ApostaDobraSoAParteDeQuemRecebeu()
+    {
+        var ganha = CalculoEnergia.Calcular(
+            [],
+            [],
+            [new(35, ComoDestinatario: true, Aposta: true), new(35, ComoDestinatario: false, Aposta: true)]);
+
+        Assert.Equal(70 + 17, ganha.Jogadas);
+    }
+
+    [Fact]
     public void SemanaTipica_RendeSetentaETresDasFontesDaG2()
     {
         // Meta de 3: segunda 07:00 Corrida, quarta Musculação, sábado Corrida, todas verificadas.

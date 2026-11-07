@@ -1,11 +1,7 @@
 using Npgsql;
-using NpgsqlTypes;
-using Wrexercise.Features.Desafios.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
-using Wrexercise.Features.Progresso.Contracts;
 using Wrexercise.Infrastructure.Authentication;
-using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Errors;
 using Wrexercise.Infrastructure.Json;
 
@@ -50,7 +46,7 @@ internal static class JogarCarta
         }
 
         var (remetenteNoJogo, destinatarioNoJogo) =
-            await LoadModoJogoAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
+            await Jogadas.LoadModoJogoAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
         if (!remetenteNoJogo)
         {
             return ApiProblem.Create(
@@ -61,17 +57,14 @@ internal static class JogarCarta
 
         if (!destinatarioNoJogo)
         {
-            return ApiProblem.Create(
-                StatusCodes.Status409Conflict,
-                "DESTINATARIO_FORA_DO_JOGO",
-                "Esta pessoa não está no modo Jogo.");
+            return ErrosJogo.DestinatarioForaDoJogo();
         }
 
         var estado = await EstadoJogo.LoadAsync(connection, transaction, remetenteId, cancellationToken);
         var comprada = estado.Cartas.FirstOrDefault(c => c.Id == cartaId);
         if (comprada is null || estado.IsGasta(comprada.Id))
         {
-            return ApiProblem.Create(StatusCodes.Status404NotFound, "CARTA_NAO_ENCONTRADA", "Carta não encontrada.");
+            return ErrosJogo.CartaNaoEncontrada();
         }
 
         var carta = CatalogoCartas.Find(comprada.Codigo)!;
@@ -89,59 +82,26 @@ internal static class JogarCarta
         }
 
         var jogadas = await Jogadas.LoadAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
-        var agora = await LoadAgoraAsync(connection, transaction, grupoId, cancellationToken);
+        var agora = await Jogadas.LoadAgoraAsync(connection, transaction, grupoId, cancellationToken);
         if (LimitesJogada.Verificar(remetenteId, destinatarioId, jogadas.Select(j => j.ToLimite()).ToList(), agora.Utc)
             is { } limite)
         {
             return ErrosJogo.Limite(limite);
         }
 
-        int? duracaoAlvo = null;
-        if (CatalogoCartas.IsDuracao(carta.Codigo))
+        var (parametros, erro) = await Jogadas.FixarObjetivoAsync(
+            connection, transaction, carta.Codigo, grupoId, destinatarioId, cancellationToken);
+        if (erro is not null)
         {
-            var desafio = await DesafioDestaqueGrupo.LoadAsync(connection, grupoId, cancellationToken);
-            if (desafio is null || desafio.Situacao != SituacaoDesafio.Ativo)
-            {
-                return ApiProblem.Create(
-                    StatusCodes.Status409Conflict,
-                    "SEM_DESAFIO_ATIVO",
-                    "Esta carta só pode ser jogada com um desafio ativo no grupo.");
-            }
-
-            duracaoAlvo = desafio.DuracaoMinimaSegundos + (CatalogoCartas.GetMinutosExtras(carta.Codigo) * 60);
+            return erro;
         }
 
-        var tipoEvitar = carta.Codigo == CodigoCarta.Variedade
-            ? await LoadUltimoTipoVerificadoAsync(connection, transaction, grupoId, destinatarioId, cancellationToken)
-            : null;
-
-        var expiraLocal = PrazoJogada.Calcular(carta.Codigo, agora.Local);
-
-        Guid jogadaId;
-        DateTimeOffset expiraEm;
-        await using (var insert = new NpgsqlCommand("""
-            INSERT INTO jogadas (
-                grupo_id, remetente_id, destinatario_id, carta_id, enviada_em, expira_em,
-                duracao_alvo_segundos, tipo_evitar)
-            SELECT g.id, $2, $3, $4, $5, $6 AT TIME ZONE g.fuso_horario, $7, $8
-            FROM grupos g
-            WHERE g.id = $1
-            RETURNING id, expira_em
-            """, connection, transaction))
-        {
-            insert.Parameters.AddWithValue(grupoId);
-            insert.Parameters.AddWithValue(remetenteId);
-            insert.Parameters.AddWithValue(destinatarioId);
-            insert.Parameters.AddWithValue(cartaId);
-            insert.Parameters.AddWithValue(agora.Utc);
-            insert.Parameters.AddWithValue(DateTime.SpecifyKind(expiraLocal, DateTimeKind.Unspecified));
-            insert.Parameters.AddWithValue(NpgsqlDbType.Integer, (object?)duracaoAlvo ?? DBNull.Value);
-            insert.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)tipoEvitar ?? DBNull.Value);
-            await using var reader = await insert.ExecuteReaderAsync(cancellationToken);
-            await reader.ReadAsync(cancellationToken);
-            jogadaId = reader.GetGuid(0);
-            expiraEm = TimestampLeitura.FromReader(reader, 1);
-        }
+        var (jogadaId, expiraEm) = await Jogadas.InsertAsync(
+            connection,
+            transaction,
+            new NovaJogada(grupoId, remetenteId, destinatarioId, cartaId, null, agora.Utc,
+                PrazoJogada.Calcular(carta.Codigo, agora.Local), parametros!),
+            cancellationToken);
 
         await NotificacoesJogada.NotificarAsync(
             connection,
@@ -163,62 +123,4 @@ internal static class JogarCarta
         StatusCodes.Status400BadRequest,
         "DESTINATARIO_INVALIDO",
         "Escolha outro membro do grupo para receber a carta.");
-
-    private static async Task<(bool Remetente, bool Destinatario)> LoadModoJogoAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Guid remetenteId,
-        Guid destinatarioId,
-        CancellationToken cancellationToken)
-    {
-        await using var command = new NpgsqlCommand("""
-            SELECT
-                bool_or(id = $1 AND modo_inicio = 'Jogo'),
-                bool_or(id = $2 AND modo_inicio = 'Jogo')
-            FROM usuarios
-            WHERE id IN ($1, $2)
-            """, connection, transaction);
-        command.Parameters.AddWithValue(remetenteId);
-        command.Parameters.AddWithValue(destinatarioId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
-        return (reader.GetBoolean(0), reader.GetBoolean(1));
-    }
-
-    /// <summary>O instante atual, também no horário local do grupo, de onde sai o prazo.</summary>
-    private static async Task<(DateTimeOffset Utc, DateTime Local)> LoadAgoraAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Guid grupoId,
-        CancellationToken cancellationToken)
-    {
-        await using var command = new NpgsqlCommand(
-            "SELECT now(), now() AT TIME ZONE fuso_horario FROM grupos WHERE id = $1",
-            connection,
-            transaction);
-        command.Parameters.AddWithValue(grupoId);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
-        return (TimestampLeitura.FromReader(reader, 0), reader.GetDateTime(1));
-    }
-
-    /// <summary>O tipo da última atividade verificada do destinatário neste grupo, fixado no envio da VARIEDADE.</summary>
-    private static async Task<string?> LoadUltimoTipoVerificadoAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction transaction,
-        Guid grupoId,
-        Guid destinatarioId,
-        CancellationToken cancellationToken)
-    {
-        await using var command = new NpgsqlCommand("""
-            SELECT tipo
-            FROM atividades
-            WHERE grupo_id = $1 AND usuario_id = $2 AND situacao_verificacao = 'Verificada'
-            ORDER BY started_at DESC, created_at DESC, id
-            LIMIT 1
-            """, connection, transaction);
-        command.Parameters.AddWithValue(grupoId);
-        command.Parameters.AddWithValue(destinatarioId);
-        return (string?)await command.ExecuteScalarAsync(cancellationToken);
-    }
 }

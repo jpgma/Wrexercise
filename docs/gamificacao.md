@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia) e G3 (cartas) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md` a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md` e os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas) e G4 (Respostas) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` e as Respostas de `decisoes/0036-respostas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -252,8 +252,10 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | DESAFIO DUPLO | `Resposta` | 40 | Aceita a Provocação e devolve o mesmo objetivo para o remetente, como uma Jogada nova. |
 | APOSTA | `Resposta` | 25 | Aceita a Provocação. Se a Jogada for concluída, a recompensa do destinatário dobra. Se não for, a carta está perdida. |
 | PRAZO EXTRA | `Resposta` | 20 | Aceita a Provocação com 24 horas a mais de prazo. |
-| MUDANÇA DE PLANOS | `Resposta` | 25 | Aceita a Provocação trocando o objetivo por um equivalente, conforme uma tabela fixa (§12, item 1). |
+| MUDANÇA DE PLANOS | `Resposta` | 25 | Aceita a Provocação trocando o objetivo por um equivalente da mesma faixa de preço, à escolha de quem aceita. |
 
+- **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
+- **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que continua sendo de quem a comprou. A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o de quem vai cumprir e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
 - Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
@@ -295,7 +297,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 ### 6.4. Ciclo de vida de uma Jogada
 
-**Gravado:** remetente, destinatário, grupo, carta, `enviada_em`, `expira_em`, `resposta` (`Aceita` ou `Recusada`), `respondida_em`, carta de resposta usada, `origem_id` (a Jogada original, no DESAFIO DUPLO), o tipo-alvo da VARIEDADE (o tipo a evitar, fixado no envio), `vista_em` e `resultado_visto_em`.
+**Gravado:** remetente, destinatário, grupo, carta, `enviada_em`, `expira_em`, `resposta` (`Aceita` ou `Recusada`), `respondida_em`, carta de resposta usada, `origem_id` (a Jogada original, no DESAFIO DUPLO), o objetivo trocado pela MUDANÇA DE PLANOS (`codigo_objetivo`), o tipo-alvo da VARIEDADE (o tipo a evitar, fixado no envio), `vista_em` e `resultado_visto_em`.
 
 **Calculado na leitura**, sem tarefa agendada:
 
@@ -437,7 +439,8 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 
 ### G4 — Respostas
 
-- DESAFIO DUPLO, APOSTA, PRAZO EXTRA e MUDANÇA DE PLANOS.
+- DESAFIO DUPLO, APOSTA, PRAZO EXTRA e MUDANÇA DE PLANOS, à venda na Loja e usadas ao aceitar uma Provocação.
+- Migração `017-add-objetivo-jogada.sql`, moldura violeta da Resposta e os quatro ícones.
 
 ### G5 — Missões semanais
 
@@ -489,9 +492,9 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 
 ## 12. Questões em aberto
 
-Fechadas em `decisoes/0033-regras-de-energia-e-jogadas.md`: valores das recompensas, desafio concluído, Energia com vários grupos, marcos de sequência, carta recusada, Jogada ativa, alvo da VARIEDADE e notificações para quem enviou.
+Fechadas em `decisoes/0033-regras-de-energia-e-jogadas.md`: valores das recompensas, desafio concluído, Energia com vários grupos, marcos de sequência, carta recusada, Jogada ativa, alvo da VARIEDADE e notificações para quem enviou. A tabela da MUDANÇA DE PLANOS foi fechada em `decisoes/0036-respostas.md` (§6.1).
 
-1. **Tabela da MUDANÇA DE PLANOS** (G4). Recomendação: trocar dentro da mesma faixa de preço (+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA; +20 MIN ↔ ANTES DAS 8), e a pessoa escolhe entre os equivalentes.
+1. ~~Tabela da MUDANÇA DE PLANOS~~ — fechada (§6.1).
 2. **Semana das missões para quem está em vários grupos** (G5). Recomendação: avaliar cada atividade na semana do fuso do seu grupo. Falta definir qual grupo serve de referência para a semana, porque o aplicativo não tem um "grupo em destaque".
 3. **Madrugada.** O bônus antes das 06:00 somado à carta ANTES DAS 8 pode estimular treino de madrugada em vez de constância. Revisar depois de observar o uso.
 4. **Enfeite e cena com 10 pessoas.** Conferir num celular de 360 px se o Enfeite ao lado do avatar não polui o círculo. Se poluir, mostrar só ao tocar no avatar.

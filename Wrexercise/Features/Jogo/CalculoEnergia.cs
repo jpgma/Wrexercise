@@ -17,7 +17,8 @@ internal sealed record DesafioEnergia(
 /// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
 /// <param name="Preco">O preço pago pela Provocação.</param>
 /// <param name="ComoDestinatario">Se a pessoa cumpriu o objetivo; senão, foi quem enviou.</param>
-internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario);
+/// <param name="Aposta">Se quem recebeu aceitou com a APOSTA.</param>
+internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false);
 
 internal sealed record EnergiaGanha(int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0)
 {
@@ -67,10 +68,15 @@ internal static class CalculoEnergia
     }
 
     /// <summary>
-    /// Quem cumpriu ganha 1 × o preço; quem enviou, metade, arredondada para baixo (decisão 0035).
+    /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou, metade, arredondada para baixo
+    /// (decisões 0033 e 0035).
     /// </summary>
-    public static int GetRecompensa(RecompensaJogada jogada) =>
-        jogada.ComoDestinatario ? jogada.Preco : jogada.Preco / 2;
+    public static int GetRecompensa(RecompensaJogada jogada) => jogada switch
+    {
+        { ComoDestinatario: true, Aposta: true } => jogada.Preco * 2,
+        { ComoDestinatario: true } => jogada.Preco,
+        _ => jogada.Preco / 2,
+    };
 
     /// <summary>
     /// Toda atividade não rejeitada ocupa a sua posição, mas só as verificadas recebem o crédito.

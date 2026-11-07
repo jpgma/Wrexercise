@@ -24,8 +24,8 @@ internal static class JogadasConcluidas
             List<(Guid AtividadeId, AtividadeJogada Atividade)> Verificadas)>();
 
         // Para cada Jogada aceita cuja janela contém a atividade, todas as verificadas na mesma janela.
-        await using (var command = new NpgsqlCommand("""
-            SELECT j.id, j.remetente_id, j.destinatario_id, c.codigo, j.enviada_em, j.expira_em, j.resposta,
+        await using (var command = new NpgsqlCommand($"""
+            SELECT j.id, j.remetente_id, j.destinatario_id, {Jogadas.ObjetivoSql}, j.enviada_em, j.expira_em, j.resposta,
                 j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
                 o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos
             FROM atividades x

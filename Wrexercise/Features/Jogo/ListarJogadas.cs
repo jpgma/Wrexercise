@@ -33,6 +33,12 @@ internal static class ListarJogadas
             .ToList();
 
         var nomes = await LoadNomesAsync(connection, grupoId, cancellationToken);
+
+        // As trocas para +10 MIN e +20 MIN só valem com um desafio ativo no grupo.
+        var temDesafioAtivo = jogadas.Any(x => x.Jogada.DestinatarioId == usuarioId
+                && x.Jogada.Situacao == SituacaoJogada.Enviada)
+            && await Jogadas.LoadDuracaoMinimaAtivaAsync(connection, grupoId, cancellationToken) is not null;
+
         var resposta = jogadas
             .Select(x => new JogadaResponse(
                 x.Jogada.Id,
@@ -41,7 +47,17 @@ internal static class ListarJogadas
                 nomes.GetValueOrDefault(x.Jogada.RemetenteId, "Ex-membro"),
                 x.Jogada.DestinatarioId,
                 nomes.GetValueOrDefault(x.Jogada.DestinatarioId, "Ex-membro"),
-                ErrosJogo.ToResponse(CatalogoCartas.Find(x.Jogada.Estado.Codigo)! with { Preco = x.Jogada.Preco }),
+                ErrosJogo.ToResponse(CatalogoCartas.Find(x.Jogada.CodigoCarta)! with { Preco = x.Jogada.Preco }),
+                x.Jogada.Estado.Codigo,
+                x.Jogada.CodigoResposta is { } codigoResposta
+                    ? ErrosJogo.ToResponse(CatalogoCartas.Find(codigoResposta)!)
+                    : null,
+                x.Jogada.OrigemId is not null,
+                x.Jogada.DestinatarioId == usuarioId && x.Jogada.Situacao == SituacaoJogada.Enviada
+                    ? CatalogoCartas.GetEquivalentes(x.Jogada.Estado.Codigo)
+                        .Where(c => temDesafioAtivo || !CatalogoCartas.IsDuracao(c))
+                        .ToList()
+                    : [],
                 x.Jogada.Situacao,
                 x.Jogada.Estado.EnviadaEm,
                 x.Jogada.Estado.ExpiraEm,

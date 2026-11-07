@@ -46,12 +46,23 @@ internal static class CatalogoCartas
             "Aceita a Provocação trocando o objetivo por um equivalente."),
     ];
 
-    /// <summary>As cartas à venda. As Respostas entram na G4.</summary>
-    public static IEnumerable<Carta> ParaVenda => Todas.Where(c => c.Tipo == TipoCarta.Provocacao);
-
     public static Carta? Find(string? codigo) => Todas.FirstOrDefault(c => c.Codigo == codigo);
 
     public static bool IsDuracao(string codigo) => codigo is CodigoCarta.Mais10Min or CodigoCarta.Mais20Min;
+
+    /// <summary>
+    /// Os objetivos que a MUDANÇA DE PLANOS pode pôr no lugar de uma Provocação: os da mesma faixa de preço
+    /// (decisão 0036).
+    /// </summary>
+    public static IReadOnlyList<string> GetEquivalentes(string codigo) => codigo switch
+    {
+        CodigoCarta.Mais10Min => [CodigoCarta.Variedade, CodigoCarta.FimDeSemana],
+        CodigoCarta.Variedade => [CodigoCarta.Mais10Min, CodigoCarta.FimDeSemana],
+        CodigoCarta.FimDeSemana => [CodigoCarta.Mais10Min, CodigoCarta.Variedade],
+        CodigoCarta.Mais20Min => [CodigoCarta.AntesDas8],
+        CodigoCarta.AntesDas8 => [CodigoCarta.Mais20Min],
+        _ => [],
+    };
 
     /// <summary>Os minutos a mais sobre a duração mínima do desafio, nas cartas de duração.</summary>
     public static int GetMinutosExtras(string codigo) => codigo switch

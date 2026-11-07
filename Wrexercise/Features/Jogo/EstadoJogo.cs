@@ -22,12 +22,16 @@ internal sealed record EstadoJogo(
     /// <summary>As cartas não gastas, inclusive as que estão em Jogadas abertas (docs/gamificacao.md §6.2).</summary>
     public IReadOnlyList<CartaComprada> Mao => Cartas.Where(c => !IsGasta(c.Id)).ToList();
 
-    /// <summary>Uma Provocação só é gasta quando a Jogada fica <c>Concluida</c>.</summary>
+    /// <summary>
+    /// Uma Provocação só é gasta quando a Jogada fica <c>Concluida</c>; uma Resposta, quando é usada
+    /// (docs/gamificacao.md §6.2). A Jogada devolvida pelo DESAFIO DUPLO usa a Provocação original, mas não a gasta.
+    /// </summary>
     public bool IsGasta(Guid cartaId) =>
-        Jogadas.Any(j => j.CartaId == cartaId && j.Situacao == SituacaoJogada.Concluida);
+        Jogadas.Any(j => j.CartaRespostaId == cartaId
+            || (j.CartaId == cartaId && j.IsCartaDoRemetente && j.Situacao == SituacaoJogada.Concluida));
 
     public bool IsEmJogo(Guid cartaId) =>
-        Jogadas.Any(j => j.CartaId == cartaId && SituacaoJogada.IsAberta(j.Situacao));
+        Jogadas.Any(j => j.CartaId == cartaId && j.IsCartaDoRemetente && SituacaoJogada.IsAberta(j.Situacao));
 
     /// <summary>
     /// Trava as linhas dos usuários até o fim da transação, sempre na mesma ordem, para evitar deadlock.
@@ -64,7 +68,10 @@ internal sealed record EstadoJogo(
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
-            .Select(j => new RecompensaJogada(j.Preco, j.DestinatarioId == usuarioId))
+            .Select(j => new RecompensaJogada(
+                j.Preco,
+                j.DestinatarioId == usuarioId,
+                j.CodigoResposta == CodigoCarta.Aposta))
             .ToList();
 
         return new EstadoJogo(usuarioId, CalculoEnergia.Calcular(atividades, desafios, recompensas), cartas, jogadas);

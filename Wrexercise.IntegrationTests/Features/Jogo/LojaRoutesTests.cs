@@ -24,14 +24,15 @@ public sealed class LojaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Loja_MostraSoAsProvocacoes()
+    public async Task Loja_MostraProvocacoesERespostas()
     {
         var ana = await _host.CreateUsuarioAsync();
 
         var loja = await JogoTestes.GetLojaAsync(ana);
 
-        Assert.Equal(5, loja.Catalogo.Count);
-        Assert.All(loja.Catalogo, c => Assert.Equal(TipoCarta.Provocacao, c.Tipo));
+        Assert.Equal(9, loja.Catalogo.Count);
+        Assert.Equal(5, loja.Catalogo.Count(c => c.Tipo == TipoCarta.Provocacao));
+        Assert.Equal(4, loja.Catalogo.Count(c => c.Tipo == TipoCarta.Resposta));
         Assert.Equal(LimitesJogada.CartasNaMao, loja.LimiteMao);
         Assert.Empty(loja.Mao);
     }
@@ -82,15 +83,27 @@ public sealed class LojaRoutesTests : IAsyncLifetime
             "MAO_CHEIA");
     }
 
-    [Theory]
-    [InlineData(CodigoCarta.Aposta)]
-    [InlineData("Inexistente")]
-    public async Task Comprar_CartaForaDaVenda_Recusa(string codigo)
+    [Fact]
+    public async Task Comprar_Resposta_VaiParaAMao()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await JogoTestes.DarEnergiaAsync(_host, ana, grupoId, 3);
+
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Aposta);
+
+        Assert.Equal(TipoCarta.Resposta, carta.Tipo);
+        Assert.Equal(25, carta.Preco);
+        Assert.Single((await JogoTestes.GetLojaAsync(ana)).Mao);
+    }
+
+    [Fact]
+    public async Task Comprar_CartaInexistente_Recusa()
     {
         var ana = await _host.CreateUsuarioAsync();
 
         await ApiTestHost.AssertProblemAsync(
-            await JogoTestes.PostCompraAsync(ana, codigo),
+            await JogoTestes.PostCompraAsync(ana, "Inexistente"),
             HttpStatusCode.BadRequest,
             "CARTA_INVALIDA");
     }

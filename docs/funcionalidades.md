@@ -117,7 +117,7 @@ The user cannot change the e-mail.
 - Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
 - The scene uses the default avatar sheets in the app bundle.
 - Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3). A tap on the badge opens the shop.
-- Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". Each play shows the card, the goal, the deadline and a state label.
+- Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". If the hand has answer cards, the panel "Aceitar com uma Resposta" shows them. With "MUDANÇA DE PLANOS", the user selects the new goal. Each play shows the card, the goal, the deadline, a state label and the answer card that the recipient used. A play that `DesafioDuplo` created shows "devolveu o desafio". The menu of an avatar shows only the challenge cards of the hand.
 - When the user opens the scene, the scene plays the card events that the user did not see yet, one at a time, at most 3:
   - A received card: the sender walks to the centre (`andar`), throws the card (`arremessar`), the card flies to the user, the user catches it (`receber`) and the sender walks back.
   - An answer to a card that the user sent: the recipient accepts (`aceitar`, the card jumps above the head and folds) or refuses (`recusar`, the card slides out).
@@ -136,7 +136,7 @@ The user cannot change the e-mail.
   - A week with the goal met gives 20 EN. It counts one time for each user and week, also if the user met the goal in more than one group.
   - The best streak in one challenge gives 25 EN at 4 weeks, 50 EN at 8 weeks and 100 EN at 12 weeks. Each milestone counts one time for each user. The streaks of different challenges do not add.
   - A challenge that is `Encerrado`, with all the weeks that counted for the user met, gives 75 EN, one time for each challenge.
-  - A completed card play (`Jogada`) gives the price of the card to the recipient and half of the price, rounded down, to the sender.
+  - A completed card play (`Jogada`) gives the price of the card to the recipient and half of the price, rounded down, to the sender. If the recipient accepted with `Aposta`, the recipient gets 2 × the price.
   - Activities in groups that the user left continue to count.
 - Bonus for each activity, at most 10 EN for each activity:
   - First activity of the week: 3 EN.
@@ -151,7 +151,7 @@ The user cannot change the e-mail.
 
 ### 3.3.4. Cards (`Carta`, `Loja`, `Mao`, `Jogada`)
 
-- The user buys cards with Energy in the shop (`Loja`). The shop sells the 5 challenge cards (`Provocacao`):
+- The user buys cards with Energy in the shop (`Loja`). The shop sells 9 cards: 5 challenge cards (`Provocacao`) and 4 answer cards (`Resposta`). Challenge cards:
 
   | Code name | Name | Price | Goal for the recipient |
   |---|---|---:|---|
@@ -161,15 +161,27 @@ The user cannot change the e-mail.
   | `FimDeSemana` | FIM DE SEMANA | 35 | One activity that starts on Saturday or Sunday. |
   | `AntesDas8` | ANTES DAS 8 | 40 | One activity that starts before 08:00. |
 
+- Answer cards. The recipient uses one answer card when they accept a challenge card. The answer card is spent when the user uses it:
+
+  | Code name | Name | Price | Effect |
+  |---|---|---:|---|
+  | `DesafioDuplo` | DESAFIO DUPLO | 40 | Accepts the play and sends the same goal back to the sender, as a new play. |
+  | `Aposta` | APOSTA | 25 | Accepts the play. If the play becomes `Concluida`, the reward of the recipient is 2 × the price. |
+  | `PrazoExtra` | PRAZO EXTRA | 20 | Accepts the play and adds 24 hours to the deadline. |
+  | `MudancaDePlanos` | MUDANÇA DE PLANOS | 25 | Accepts the play and changes the goal to an equivalent goal that the recipient selects. |
+
 - `GET /api/jogo/loja` returns the balance, the cards for sale and the hand (`Mao`): `{ "saldo": 80, "limiteMao": 5, "catalogo": [ … ], "mao": [{ "id": "…", "codigo": "Variedade", "nome": "VARIEDADE", "tipo": "Provocacao", "preco": 35, "efeito": "…", "emJogo": false }] }`.
-- `POST /api/jogo/cartas` with `{ "codigo": "Variedade" }` buys a card and returns 201 with the card. Errors: `CARTA_INVALIDA` (400, the card is not for sale), `SALDO_INSUFICIENTE` (409), `MAO_CHEIA` (409).
+- `POST /api/jogo/cartas` with `{ "codigo": "Variedade" }` buys a card and returns 201 with the card. Errors: `CARTA_INVALIDA` (400, the card does not exist), `SALDO_INSUFICIENTE` (409), `MAO_CHEIA` (409).
 - The hand has at most 5 cards. The limit counts all cards that are not spent, also the cards in open plays. The card keeps the price that the user paid.
-- The user plays a card from the hand to another member of the same group: `POST /api/grupos/{id}/jogadas` with `{ "cartaId": "…", "destinatarioId": "…" }`. The response is 201 with `{ "id": "…", "expiraEm": "…" }`. The recipient gets the notification `CartaRecebida`.
+- The user plays a challenge card from the hand to another member of the same group: `POST /api/grupos/{id}/jogadas` with `{ "cartaId": "…", "destinatarioId": "…" }`. The response is 201 with `{ "id": "…", "expiraEm": "…" }`. The recipient gets the notification `CartaRecebida`.
 - The sender and the recipient must be in the mode `Jogo`. Errors: `MODO_JOGO_NECESSARIO`, `DESTINATARIO_FORA_DO_JOGO`, `DESTINATARIO_INVALIDO` (the recipient is the sender or is not a member), `CARTA_NAO_ENCONTRADA`, `CARTA_EM_JOGO`, `SEM_DESAFIO_ATIVO` (`Mais10Min` and `Mais20Min` need an active challenge).
 - Limits (409): 2 active received plays for each recipient (`LIMITE_JOGADAS_RECEBIDAS`), 2 active sent plays for each sender (`LIMITE_JOGADAS_ENVIADAS`), 1 active play between two persons (`JOGADA_ATIVA_COM_PESSOA`) and 1 new play to the same person in 24 hours (`JOGADA_RECENTE`). An active play is `Enviada` or `Aceita`.
 - The target duration (`Mais10Min`, `Mais20Min`) and the type to avoid (`Variedade`) are fixed when the user plays the card.
 - Deadline, in the time zone of the group: 48 hours after the play. `FimDeSemana`: the end of the next Sunday (a play on a Sunday ends on the next Sunday). `AntesDas8`: 08:00 on the second day after the play.
 - The recipient answers with `PUT /api/jogadas/{id}/resposta` and `{ "resposta": "Aceita" }` or `{ "resposta": "Recusada" }`. The answer is free. Only the recipient can answer, and only before the deadline. Errors: `JOGADA_NAO_ENCONTRADA` (404), `JOGADA_ENCERRADA` (409). The sender gets the notification `CartaAceita` or `CartaRecusada`.
+- To accept with an answer card, the recipient adds `"cartaRespostaId": "…"`. With `MudancaDePlanos`, the recipient also adds `"objetivo": "FimDeSemana"`. Only one answer card for each play. A refusal cannot use a card (`DADOS_INVALIDOS`, 400). Errors: `CARTA_NAO_ENCONTRADA` (404, the card is not in the hand of the recipient or is spent), `CARTA_INVALIDA` (400, the card is not an answer card, or `objetivo` without `MudancaDePlanos`), `OBJETIVO_INVALIDO` (400), `SEM_DESAFIO_ATIVO` (409), `DESAFIO_DUPLO_INVALIDO` (409), `DESTINATARIO_FORA_DO_JOGO` (409, the sender is not in the mode `Jogo`), `REMETENTE_FORA_DO_GRUPO` (409).
+- `MudancaDePlanos` changes the goal only in the same price range: `Mais10Min`, `Variedade` and `FimDeSemana` are equivalent; `Mais20Min` and `AntesDas8` are equivalent. `Mais10Min` and `Mais20Min` need an active challenge. The target duration and the type to avoid of the new goal are fixed when the recipient accepts. The new deadline is the later of the current deadline and the deadline of the new goal from the time of the play. The rewards use the price of the challenge card.
+- `DesafioDuplo` creates a new play from the recipient to the sender, with the same challenge card and goal. The target duration is the same. The type to avoid of `Variedade` is the type of the last `Verificada` activity of the sender in the group. The deadline starts when the recipient accepts. The limits of plays do not apply. The sender gets the notification `CartaRecebida`. A play that `DesafioDuplo` created cannot get one more `DesafioDuplo`. The new play does not spend the challenge card of the sender.
 - The server calculates the state of a play at each read:
 
   | State | Condition |
@@ -183,10 +195,10 @@ The user cannot change the e-mail.
 
 - An activity counts if it is not `Rejeitada`, belongs to the recipient and to the group of the play, starts between the play and the deadline, and meets the goal of the card. The verification can occur after the deadline. One activity can complete more than one play.
 - When a play becomes `Concluida`, the sender and the recipient get the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
-- `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient) and `nova` (the user did not see the new card or the answer yet).
+- `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient), `nova` (the user did not see the new card or the answer yet), `objetivo` (the goal now), `cartaResposta` (the answer card that the recipient used, or `null`), `desafioDuplo` (`DesafioDuplo` created the play) and `objetivosEquivalentes` (the goals that `MudancaDePlanos` can select; only for a received play that is `Enviada`, and without `Mais10Min` and `Mais20Min` if the group has no active challenge).
 - `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
-- The shop page (`/jogo/loja`) shows the balance, the number of cards in the hand and the cards for sale. Each card has the effect and the button "Comprar por N EN". The button is disabled when the balance is too low (the page shows the missing Energy) or when the hand is full.
-- A card shows a pixel frame with the name, the icon and the price. The frame and the icons are CC0 art in the app bundle (`carta-*.png`).
+- The shop page (`/jogo/loja`) shows the balance, the number of cards in the hand and the cards for sale, in two sections: "Provocações" and "Respostas". Each card has the effect and the button "Comprar por N EN". The button is disabled when the balance is too low (the page shows the missing Energy) or when the hand is full.
+- A card shows a pixel frame with the name, the icon and the price. A challenge card has a coral frame. An answer card has a violet frame. The frame and the icons are CC0 art in the app bundle (`carta-*.png`).
 
 ### 3.4. Forgotten password
 

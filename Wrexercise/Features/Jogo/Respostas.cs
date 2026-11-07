@@ -31,10 +31,18 @@ internal sealed record ComprarCartaRequest(string? Codigo);
 
 internal sealed record JogarCartaRequest(Guid? CartaId, Guid? DestinatarioId);
 
-internal sealed record ResponderJogadaRequest(string? Resposta);
+/// <param name="CartaRespostaId">A Resposta da Mão usada para aceitar, se houver.</param>
+/// <param name="Objetivo">O objetivo novo, só com a MUDANÇA DE PLANOS.</param>
+internal sealed record ResponderJogadaRequest(string? Resposta, Guid? CartaRespostaId = null, string? Objetivo = null);
 
 internal sealed record MarcarJogadasVistasRequest(IReadOnlyList<Guid>? Ids);
 
+/// <param name="Objetivo">O código do objetivo em vigor: o da carta ou o trocado pela MUDANÇA DE PLANOS.</param>
+/// <param name="CartaResposta">A Resposta usada no aceite, se houver.</param>
+/// <param name="DesafioDuplo">Se a Jogada foi devolvida por um DESAFIO DUPLO.</param>
+/// <param name="ObjetivosEquivalentes">
+/// Os objetivos que a MUDANÇA DE PLANOS pode escolher. Só na Jogada recebida que espera resposta.
+/// </param>
 /// <param name="Recebida">Se quem consulta é o destinatário.</param>
 /// <param name="Nova">Se quem consulta ainda não viu o que mudou: o envio (destinatário) ou a resposta (remetente).</param>
 internal sealed record JogadaResponse(
@@ -45,6 +53,10 @@ internal sealed record JogadaResponse(
     Guid DestinatarioId,
     string DestinatarioNome,
     CartaCatalogoResponse Carta,
+    string Objetivo,
+    CartaCatalogoResponse? CartaResposta,
+    bool DesafioDuplo,
+    IReadOnlyList<string> ObjetivosEquivalentes,
     string Situacao,
     DateTimeOffset EnviadaEm,
     DateTimeOffset ExpiraEm,
