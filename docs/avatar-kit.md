@@ -33,6 +33,8 @@ O `build.py` só relê o rig quando `rig.aseprite` muda (cerca de 2 minutos). Se
 
 As folhas de `saida/` entram no bundle do frontend na G1, junto do `LICENSE` CC0. Elas não podem ir para uma subpasta de `webapp/public/`, porque o plugin do Service Worker em `vite.config.ts` lê só arquivos na raiz de `public/` e põe todos no pré-cache.
 
+A cópia é manual e acontece sempre que a arte muda. Cada folha vira `webapp/public/avatar-<nome>.png` (`bia`, `caio`, `davi`, `jonas`, `lara`, `nina`). O chão da praça, gerado por `pixel-art/praca/build.py`, vira `webapp/public/praca.png` (mestre 1× de 180×150, mostrado em 2×). O texto CC0 das duas artes fica em `webapp/public/LICENSE-arte.txt`. O conjunto soma cerca de 47 KB no pré-cache. A paleta `wrexercise` (§1.3 de `gamificacao.md`) fica na skill `pixel-art-studio`, em `references/learned/palettes.json`.
+
 ## 2. O que mudar e onde
 
 | Para mudar | Onde |

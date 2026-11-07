@@ -168,7 +168,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Peça | Tamanho | Quantidade |
 |---|---|---:|
 | Folhas padrão de avatar (pele clara, morena e negra; corpo masculino e feminino) | 256×384 | 6 |
-| Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | cerca de 180×150, em 2× | 1 |
+| Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×150 (mestre 1×, mostrado em 2×, ou seja, 360×300) | 1 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 16×16 | 9 |
 | Enfeite | 16×16 ou 32×32 | 19 (§9.1) |
