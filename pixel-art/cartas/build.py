@@ -3,9 +3,9 @@
 - Moldura da Provocação, 24×32: contorno grosso escuro, cantos recortados, faixa coral no topo
   com "linhas de movimento" e corpo em giz. Feita para `border-image` (fatias de 10/6 px): a
   faixa e as bordas repetem a cada 8 px, então a carta pode ter qualquer tamanho.
-- Ícones 16×16 das cinco Provocações.
+- Moldura da Resposta, 24×32: a mesma forma, com faixa violeta em halftone (G4).
+- Ícones 16×16 das cinco Provocações e das quatro Respostas.
 
-A moldura da Resposta (acento violeta, faixa em halftone) e os ícones das Respostas entram na G4.
 Uso: python build.py   (gera saida/*.png e preview/*.png)
 """
 
@@ -19,7 +19,7 @@ from pixelstudio import Sprite  # noqa: E402
 TINTA = "#14161f"  # contorno
 GIZ, GIZ_SOMBRA, GIZ_FUNDO = "#f5f1e8", "#d6d0c0", "#a9a392"
 CORAL, CORAL_ESCURO, CORAL_CLARO = "#ff684a", "#c4432c", "#ff9c80"
-VIOLETA, VIOLETA_CLARO = "#7957e8", "#a58cf4"
+VIOLETA, VIOLETA_ESCURO, VIOLETA_CLARO = "#7957e8", "#4b35a6", "#a58cf4"
 AMARELO, AMARELO_ESCURO = "#ffd34e", "#d9a02b"
 LIMA, LIMA_ESCURO = "#a8d978", "#67a24b"
 CINZA = "#5f6783"
@@ -30,7 +30,8 @@ CINZA = "#5f6783"
 
 # --- Moldura -----------------------------------------------------------------
 
-def moldura_provocacao():
+def moldura(faixa, faixa_escura):
+    """A forma comum das duas molduras, com a faixa do topo na cor do tipo."""
     w, h = 24, 32
     s = Sprite(w, h, palette="wrexercise")
 
@@ -59,14 +60,20 @@ def moldura_provocacao():
             if borda(x, y, 2):
                 cor = TINTA
             elif y <= 8:
-                cor = CORAL
+                cor = faixa
             elif y == 9:
-                cor = CORAL_ESCURO
+                cor = faixa_escura
             elif y == h - 3:
                 cor = GIZ_SOMBRA
             else:
                 cor = GIZ
             s.px(x, y, cor)
+    return s
+
+
+def moldura_provocacao():
+    s = moldura(CORAL, CORAL_ESCURO)
+    w = 24
 
     # Linhas de movimento: traços claros com período de 8 px, deslocados a cada linha.
     # Dois traços longos e um curto, afinando para a direita, como num quadrinho.
@@ -75,6 +82,16 @@ def moldura_provocacao():
             if (x - inicio) % 8 < comprimento and y <= 8 and 2 <= x <= 21:
                 s.px(x, y, CORAL_CLARO)
 
+    return s
+
+
+def moldura_resposta():
+    s = moldura(VIOLETA, VIOLETA_ESCURO)
+    # Halftone: pontos claros que rareiam de cima para baixo, com período de 8 px na horizontal.
+    for y, passo, desvio in [(3, 2, 0), (5, 2, 1), (7, 4, 1)]:
+        for x in range(2, 22):
+            if (x - desvio) % passo == 0 and s.get(x, y) == s.get(12, 5):
+                s.px(x, y, VIOLETA_CLARO)
     return s
 
 
@@ -173,10 +190,90 @@ def antes_das_8():
     return s
 
 
+def desafio_duplo():
+    """Duas setas em sentidos opostos: o mesmo desafio vai e volta."""
+    s = icone()
+    # Seta coral para a direita, em cima.
+    s.rect(1, 3, 10, 4, CORAL)
+    for i in range(3):
+        s.rect(11 + i, 1 + i, 11 + i, 6 - i, CORAL)
+    # Seta violeta para a esquerda, embaixo, com uma linha de folga entre as duas.
+    s.rect(4, 11, 14, 12, VIOLETA)
+    for i in range(3):
+        s.rect(4 - i, 9 + i, 4 - i, 14 - i, VIOLETA)
+    s.outline(TINTA, where="outside")
+    return s
+
+
+def aposta():
+    """Ficha amarela com um 2: a recompensa dobra."""
+    import math
+
+    s = icone()
+    cx, cy, r = 7.5, 7.5, 6.6
+    for y in range(16):
+        for x in range(16):
+            d = math.hypot(x - cx, y - cy)
+            if d <= r:
+                s.px(x, y, AMARELO_ESCURO if d > r - 1.2 else AMARELO)
+    s.outline(TINTA, where="outside")
+    # Algarismo 2 em 4×6, em tinta.
+    for x, y in [(6, 4), (7, 4), (8, 4), (9, 5), (9, 6), (8, 7), (7, 8), (6, 9),
+                 (6, 10), (7, 10), (8, 10), (9, 10), (5, 5)]:
+        s.px(x, y, TINTA)
+    return s
+
+
+def prazo_extra():
+    """Ampulheta com um sinal de mais: 24 horas a mais."""
+    s = icone()
+    # Tampas.
+    s.rect(2, 1, 11, 2, CINZA)
+    s.rect(2, 13, 11, 14, CINZA)
+    # Vidro: dois triângulos que se tocam no meio.
+    for i in range(5):
+        s.rect(3 + i, 3 + i, 10 - i, 3 + i, GIZ)
+        s.rect(3 + i, 12 - i, 10 - i, 12 - i, GIZ)
+    # Areia: pouca em cima, monte embaixo.
+    s.rect(5, 5, 8, 5, AMARELO)
+    s.rect(6, 6, 7, 6, AMARELO)
+    s.rect(6, 7, 7, 9, AMARELO_ESCURO)
+    s.rect(5, 11, 8, 11, AMARELO)
+    s.rect(4, 12, 9, 12, AMARELO)
+    s.outline(TINTA, where="outside")
+    # Mais, em lima, no canto.
+    s.rect(11, 9, 15, 11, TINTA)
+    s.rect(12, 7, 14, 13, TINTA)
+    s.rect(12, 10, 14, 10, LIMA)
+    s.rect(13, 8, 13, 12, LIMA)
+    return s
+
+
+def mudanca_de_planos():
+    """Placa de rua com duas setas para lados opostos: trocar o objetivo."""
+    s = icone()
+    s.rect(7, 2, 8, 15, CINZA)  # poste
+    # Placa de cima, para a direita (lima).
+    s.rect(3, 2, 12, 5, LIMA)
+    s.rect(13, 3, 13, 4, LIMA)
+    # Placa de baixo, para a esquerda (coral).
+    s.rect(4, 8, 12, 11, CORAL)
+    s.rect(3, 9, 3, 10, CORAL)
+    s.outline(TINTA, where="outside")
+    s.rect(4, 3, 10, 3, LIMA_ESCURO)
+    s.rect(6, 9, 11, 9, CORAL_ESCURO)
+    return s
+
+
 # --- Exportação --------------------------------------------------------------
 
 pecas = {
     "carta-provocacao": moldura_provocacao(),
+    "carta-resposta": moldura_resposta(),
+    "carta-desafioduplo": desafio_duplo(),
+    "carta-aposta": aposta(),
+    "carta-prazoextra": prazo_extra(),
+    "carta-mudancadeplanos": mudanca_de_planos(),
     "carta-mais10min": cronometro(60),
     "carta-mais20min": cronometro(120),
     "carta-variedade": variedade(),
@@ -186,5 +283,5 @@ pecas = {
 
 for nome, sprite in pecas.items():
     sprite.save_png(str(AQUI / "saida" / f"{nome}.png"))
-    sprite.preview(str(AQUI / "preview" / f"{nome}-8x.png"), scale=8, bg="#f5f1e8" if nome != "carta-provocacao" else "#222633", labels=False)
+    sprite.preview(str(AQUI / "preview" / f"{nome}-8x.png"), scale=8, bg="#222633" if nome in ("carta-provocacao", "carta-resposta") else "#f5f1e8", labels=False)
     print(nome, len(sprite.used_colors()), "cores")
