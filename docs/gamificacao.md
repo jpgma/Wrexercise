@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; a fase G1 (modo Jogo e cena) está implementada, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md` e as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena) e G2 (Energia) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md` e a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -208,12 +208,13 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Fim de semana | 3 |
 | Primeira atividade da semana | 3 |
 | Primeira atividade num dia da semana ainda sem treino | 3 |
-| Primeiro tipo de atividade novo na semana | 5 |
+| Primeiro tipo de atividade novo na semana, a partir do 2º tipo | 5 |
 
 - Máximo de **10 EN de bônus por atividade**.
 - Horários e semanas no fuso do grupo da atividade. Toda semana vai de segunda a domingo, como no desafio.
 - Os qualificadores de "primeira" (da semana, num dia novo, tipo novo) consideram as atividades da pessoa em **todos os grupos**.
-- Os bônus de horário (antes das 06:00, entre 06:00 e 08:00, fim de semana) contam no máximo uma vez por pessoa por dia.
+- O tipo da primeira atividade da semana só é registrado: o bônus de tipo novo vale para o 2º tipo em diante.
+- O bônus de madrugada (antes das 06:00 ou entre 06:00 e 08:00) conta no máximo uma vez por pessoa por dia. O bônus de fim de semana também, de forma independente (`decisoes/0034-ordem-dos-bonus-de-energia.md`).
 - Várias atividades no mesmo dia rendem o bônus de dia novo só uma vez.
 
 ### 5.3. Cálculo na leitura
@@ -227,13 +228,13 @@ saldo = Energia ganha (calculada) − soma de cartas.preco
 Regras que garantem um saldo estável:
 
 - Só atividades `Verificada` geram Energia. `Verificada` é final, então um crédito nunca desaparece.
-- Os qualificadores ("primeira da semana", "dia novo", "tipo novo") são calculados sobre as atividades **não rejeitadas**, em ordem de `started_at`. Uma atividade pendente já ocupa sua posição. Se ela for rejeitada, a seguinte pode ganhar o bônus, mas nenhum crédito é perdido.
+- Os qualificadores ("primeira da semana", "dia novo", "tipo novo") e os bônus de horário são calculados sobre as atividades **não rejeitadas**, em **ordem de registro** (`created_at`, `id`), e não de `started_at`: assim uma atividade registrada com data passada nunca toma o bônus de outra já verificada (`decisoes/0034-ordem-dos-bonus-de-energia.md`). Uma atividade pendente já ocupa sua posição. Se ela for rejeitada, a seguinte pode ganhar o bônus, mas nenhum crédito é perdido.
 - Uma Jogada só rende Energia quando fica `Concluida`, e isso depende de uma atividade `Verificada`. Esse crédito também nunca desaparece.
 - Por isso a Energia ganha **só cresce**, e o saldo nunca fica negativo se cada compra verificar `saldo >= preço`.
 - Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação devolvida à Mão (§6.2) também não muda o saldo, porque continua comprada.
 - Atividades de grupos que a pessoa deixou continuam valendo, como as conquistas.
 
-A regra fica numa função pura (`CalculoEnergia`), que recebe as atividades de todos os grupos da pessoa, com testes unitários. Um dos testes simula uma semana típica e confere o alvo de §5.1. Outro confere que o mesmo treino registrado em dois grupos não dobra os bônus nem a meta.
+A regra fica numa função pura (`CalculoEnergia`), que recebe as atividades de todos os grupos da pessoa, com testes unitários. Um dos testes simula uma semana típica: as fontes da G2 rendem 73 EN, e Missões, Rival e Jogadas completam o alvo de §5.1. Outro confere que o mesmo treino registrado em dois grupos não dobra os bônus nem a meta.
 
 ## 6. Loja e cartas
 
@@ -422,7 +423,8 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 ### G2 — Energia
 
 - Regra pura `CalculoEnergia` e a consulta SQL que a alimenta.
-- Saldo na cena e no Perfil, só leitura.
+- `GET /api/jogo/energia` devolve o saldo e a Energia ganha por origem.
+- Saldo na cena e no Perfil, só leitura. No Perfil, só para quem está no modo Jogo.
 
 ### G3 — Cartas
 

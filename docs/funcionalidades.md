@@ -116,6 +116,30 @@ The user cannot change the e-mail.
 - If the device asks for reduced motion, the scene does not animate. Each pose shows one fixed frame. The frames of `treinando` and `comemorando` differ from the frame of `parado`.
 - Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
 - The scene uses the default avatar sheets in the app bundle.
+- Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3).
+
+### 3.3.3. Energy (`Energia`)
+
+- Energy (EN) is the currency of the game. Each user has one balance for all groups. All users get Energy, also in the mode `App`.
+- The server calculates the Energy at each read. There is no wallet table. Energy that the user earned never decreases.
+- In this phase, the balance is equal to the earned Energy. The user cannot spend Energy yet.
+- `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0 } }`. A user without a session gets 401.
+- Sources of Energy:
+  - Each `Verificada` activity gives 10 EN, in each group.
+  - A week with the goal met gives 20 EN. It counts one time for each user and week, also if the user met the goal in more than one group.
+  - The best streak in one challenge gives 25 EN at 4 weeks, 50 EN at 8 weeks and 100 EN at 12 weeks. Each milestone counts one time for each user. The streaks of different challenges do not add.
+  - A challenge that is `Encerrado`, with all the weeks that counted for the user met, gives 75 EN, one time for each challenge.
+  - Activities in groups that the user left continue to count.
+- Bonus for each activity, at most 10 EN for each activity:
+  - First activity of the week: 3 EN.
+  - First activity on a day: 3 EN.
+  - A type of activity that is new in the week: 5 EN. The type of the first activity of the week does not get this bonus.
+  - Start before 06:00: 5 EN. Start from 06:00 to 08:00: 3 EN. This bonus counts one time for each user and day.
+  - Saturday or Sunday: 3 EN. This bonus counts one time for each user and day.
+- The bonus rules use all the activities of the user that are not `Rejeitada`, from all groups, in the order of registration (`created_at`). Only `Verificada` activities get the bonus. A pending activity keeps its position. If a reviewer rejects it, the next activity can get the bonus.
+- Days and weeks use the time zone of the group of each activity. A week runs from Monday to Sunday.
+- The Profile page shows the section "Energia" with the balance and the Energy for each source. It shows the section only in the mode `Jogo`.
+- Energy does not change the ranking. There is no Energy ranking.
 
 ### 3.4. Forgotten password
 

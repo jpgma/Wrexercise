@@ -9,5 +9,9 @@ internal static class JogoRoutes
         routes.MapGroup("/api/grupos")
             .RequireSessao()
             .MapGet("/{grupoId:guid}/cena", ObterCena.HandleAsync);
+
+        routes.MapGroup("/api/jogo")
+            .RequireSessao()
+            .MapGet("/energia", ObterEnergia.HandleAsync);
     }
 }
