@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { folhaPadrao, hashFnv1a } from "@/components/folhaAvatar";
 import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
+import { MenuAvatar } from "./MenuAvatar";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useCena, type MembroCena } from "./useCena";
@@ -64,17 +65,17 @@ function posicionar(
 }
 
 function AvatarCena({
-  grupoId,
   membro,
   posicao,
   escala,
   reduzido,
+  onToque,
 }: {
-  grupoId: string;
   membro: MembroCena;
   posicao: Posicao;
   escala: number;
   reduzido: boolean;
+  onToque: () => void;
 }) {
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   const parado = membro.pose === "parado";
@@ -114,10 +115,12 @@ function AvatarCena({
 
   return (
     <>
-      <Link
-        to={`/grupos/${grupoId}/membros/${membro.usuarioId}`}
+      <button
+        type="button"
         aria-label={membro.nomeExibicao}
-        className="absolute block"
+        aria-haspopup="dialog"
+        onClick={onToque}
+        className="absolute block cursor-pointer rounded-md focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none"
         style={{
           left: posicao.x - 16 * escala,
           top: posicao.y - 31 * escala,
@@ -134,7 +137,7 @@ function AvatarCena({
           espelhar={espelhar}
           onFim={() => setVariacao(null)}
         />
-      </Link>
+      </button>
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
       <span
         aria-hidden="true"
@@ -176,6 +179,7 @@ export function CenaGrupo({
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
   const { ref, fator } = useFatorDeEncaixe();
+  const [tocado, setTocado] = useState<MembroCena | null>(null);
 
   if (cena.isError) return null;
   if (!cena.data) {
@@ -197,7 +201,9 @@ export function CenaGrupo({
   return (
     <div className="mx-auto w-full" style={{ maxWidth: largura }}>
       <div className="mb-2 flex min-h-6 justify-end">
-        <SaldoEnergia />
+        <Link to="/jogo/loja" aria-label="Energia e Loja" className="tap">
+          <SaldoEnergia />
+        </Link>
       </div>
       <div ref={ref} className="w-full" style={{ height: altura * fator }}>
         <section
@@ -216,15 +222,21 @@ export function CenaGrupo({
           {membros.map((membro, i) => (
             <AvatarCena
               key={membro.usuarioId}
-              grupoId={grupoId}
               membro={membro}
               posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
               escala={escala}
               reduzido={reduzido}
+              onToque={() => setTocado(membro)}
             />
           ))}
         </section>
       </div>
+      <MenuAvatar
+        grupoId={grupoId}
+        membro={tocado}
+        usuarioId={usuarioId}
+        onClose={() => setTocado(null)}
+      />
     </div>
   );
 }

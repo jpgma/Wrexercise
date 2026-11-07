@@ -8,6 +8,8 @@ export type MembroCena = {
   usuarioId: string;
   nomeExibicao: string;
   pose: PoseCena;
+  /** Está no modo Jogo: só assim recebe cartas. */
+  recebeCartas: boolean;
 };
 
 export type Cena = {

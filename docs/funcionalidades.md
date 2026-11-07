@@ -105,7 +105,7 @@ The user cannot change the e-mail.
 
 - In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring and the notice of activities to review. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
 - The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on a tall ellipse that uses the full height of the plaza (360 by 460 px). The current user stands at the front (bottom). The other members follow in the order of joining.
-- Each `Avatar` has the first name below it. A tap opens the page of the member. The `Avatar` of a member on the right side of the scene is mirrored, to face the centre.
+- Each `Avatar` has the first name below it. A tap opens a window with a link to the page of the member. For another member in the mode `Jogo`, the window also shows the free cards of the hand: the user selects one card and taps "Jogar". For a member in the mode `App`, the window says that the member does not receive cards. The `Avatar` of a member on the right side of the scene is mirrored, to face the centre.
 - The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
 - The names of the members are in a layer above all the avatars. No avatar hides the name of another one.
 - On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
@@ -116,7 +116,9 @@ The user cannot change the e-mail.
 - If the device asks for reduced motion, the scene does not animate. Each pose shows one fixed frame. The frames of `treinando` and `comemorando` differ from the frame of `parado`.
 - Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
 - The scene uses the default avatar sheets in the app bundle.
-- Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3).
+- Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3). A tap on the badge opens the shop.
+- Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". Each play shows the card, the goal, the deadline and a state label. When the user sees the list, the new cards and answers become seen.
+- Under it, the section "Sua Mão" shows the cards of the hand, the count (for example "2/5") and a link to the shop. A card in an open play is dimmed and has the label "Em jogo".
 
 ### 3.3.3. Energy (`Energia`)
 
@@ -178,6 +180,8 @@ The user cannot change the e-mail.
 - When a play becomes `Concluida`, the sender and the recipient get the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
 - `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient) and `nova` (the user did not see the new card or the answer yet).
 - `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
+- The shop page (`/jogo/loja`) shows the balance, the number of cards in the hand and the cards for sale. Each card has the effect and the button "Comprar por N EN". The button is disabled when the balance is too low (the page shows the missing Energy) or when the hand is full.
+- A card shows a pixel frame with the name, the icon and the price. The frame and the icons are CC0 art in the app bundle (`carta-*.png`).
 
 ### 3.4. Forgotten password
 
@@ -494,6 +498,7 @@ The system makes a notification for these events:
 | Profile | `/perfil` | See 10.1. |
 | Settings | `/perfil/configuracoes` | See 3.3. |
 | Notifications | `/notificacoes` | See 11. |
+| Shop ("Loja") | `/jogo/loja` | See 3.3.4. |
 
 - On a phone, a tab bar at the bottom shows "Início", "Atividades", "Grupo", "Perfil" and a button to record an activity.
 - On a large screen, a side bar shows the same items.

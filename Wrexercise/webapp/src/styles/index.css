@@ -124,6 +124,10 @@
   /* A galeria em tela cheia é escura nos dois temas, para não competir com a foto. */
   --color-lightbox: #161922;
   --color-on-lightbox: #f5f1e8;
+  /* As cartas do Jogo são de papel giz com tinta escura nos dois temas, como a arte em pixel. */
+  --color-on-carta: #14161f;
+  --color-carta-tinta: #14161f;
+  --color-carta-giz: #f5f1e8;
   --shadow-card: var(--card-shadow);
   --shadow-float: var(--float-shadow);
   /* Sombra sólida e deslocada, de adesivo: só para destaques. */

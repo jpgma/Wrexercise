@@ -1,4 +1,5 @@
-Arte do Jogo do Wrexercise: folhas de avatar (avatar-*.png) e chão da praça (praca.png).
+Arte do Jogo do Wrexercise: folhas de avatar (avatar-*.png) e chão da praça (praca.png) e
+molduras e ícones das cartas (carta-*.png).
 
 Dedicada ao domínio público sob CC0 1.0 Universal:
 https://creativecommons.org/publicdomain/zero/1.0/
@@ -8,5 +9,5 @@ autorais e conexos sobre estas imagens. Você pode copiá-las, modificá-las,
 distribuí-las e usá-las, inclusive para fins comerciais, sem pedir permissão.
 
 As folhas de avatar derivam do "2D Platformer Character Template", distribuído
-sob CC0 pelo autor original. O chão da praça é gerado por código, sem arte de
+sob CC0 pelo autor original. O chão da praça e as cartas são gerados por código, sem arte de
 terceiros. As fontes ficam em pixel-art/.

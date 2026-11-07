@@ -17,7 +17,7 @@ import {
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import { useGrupo } from "@/features/grupos";
-import { CenaGrupo, ConviteJogo } from "@/features/jogo";
+import { CartasDoGrupo, CenaGrupo, ConviteJogo } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
   LinhaParticipante,
@@ -242,6 +242,7 @@ function InicioJogo({
           </p>
         )
       )}
+      <CartasDoGrupo grupoId={grupoId} />
     </div>
   );
 }
