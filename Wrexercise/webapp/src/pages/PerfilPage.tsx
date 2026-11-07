@@ -16,6 +16,7 @@ import { useSessao } from "@/features/autenticacao";
 import { ConviteForm } from "@/features/convites";
 import { formatarSemanaCurta } from "@/features/desafios";
 import { papelLabels, useGrupos } from "@/features/grupos";
+import { EnergiaPerfil } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import { useMeuPerfil } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
@@ -127,6 +128,9 @@ export function PerfilPage() {
         </div>
 
         <div>
+          {/* Quem está no modo App não vê a Energia, embora a acumule. */}
+          {usuario.modoInicio === "Jogo" && <EnergiaPerfil />}
+
           {perfil.data && (
             <>
               <SectionTitle>Conquistas</SectionTitle>

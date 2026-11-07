@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { folhaPadrao, hashFnv1a } from "@/components/folhaAvatar";
 import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
+import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useCena, type MembroCena } from "./useCena";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
@@ -194,35 +195,36 @@ export function CenaGrupo({
   const posicoes = posicionar(membros, usuarioId, escala);
 
   return (
-    <div
-      ref={ref}
-      className="mx-auto w-full"
-      style={{ maxWidth: largura, height: altura * fator }}
-    >
-      <section
-        aria-label="Praça do grupo"
-        className="relative overflow-hidden rounded-xl"
-        style={{
-          width: largura,
-          height: altura,
-          transform: `scale(${fator})`,
-          transformOrigin: "top left",
-          backgroundImage: "url(/praca.png)",
-          backgroundSize: `${largura}px ${altura}px`,
-          imageRendering: "pixelated",
-        }}
-      >
-        {membros.map((membro, i) => (
-          <AvatarCena
-            key={membro.usuarioId}
-            grupoId={grupoId}
-            membro={membro}
-            posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
-            escala={escala}
-            reduzido={reduzido}
-          />
-        ))}
-      </section>
+    <div className="mx-auto w-full" style={{ maxWidth: largura }}>
+      <div className="mb-2 flex min-h-6 justify-end">
+        <SaldoEnergia />
+      </div>
+      <div ref={ref} className="w-full" style={{ height: altura * fator }}>
+        <section
+          aria-label="Praça do grupo"
+          className="relative overflow-hidden rounded-xl"
+          style={{
+            width: largura,
+            height: altura,
+            transform: `scale(${fator})`,
+            transformOrigin: "top left",
+            backgroundImage: "url(/praca.png)",
+            backgroundSize: `${largura}px ${altura}px`,
+            imageRendering: "pixelated",
+          }}
+        >
+          {membros.map((membro, i) => (
+            <AvatarCena
+              key={membro.usuarioId}
+              grupoId={grupoId}
+              membro={membro}
+              posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
+              escala={escala}
+              reduzido={reduzido}
+            />
+          ))}
+        </section>
+      </div>
     </div>
   );
 }
