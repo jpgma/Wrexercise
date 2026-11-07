@@ -1,5 +1,4 @@
 import { Store } from "lucide-react";
-import { useEffect } from "react";
 import { Link } from "react-router";
 import { SectionTitle } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
@@ -15,7 +14,6 @@ import {
   type Jogada,
   useJogadas,
   useLoja,
-  useMarcarJogadasVistas,
   useResponderJogada,
 } from "./useCartas";
 
@@ -158,17 +156,6 @@ function JogadaItem({ jogada, grupoId }: { jogada: Jogada; grupoId: string }) {
 /** As Jogadas de quem está vendo a cena neste grupo: recebidas primeiro. */
 function MesaJogadas({ grupoId }: { grupoId: string }) {
   const jogadas = useJogadas(grupoId);
-  const marcar = useMarcarJogadasVistas(grupoId);
-  const { mutate: marcarVistas, isPending: marcando } = marcar;
-
-  const novas = (jogadas.data ?? []).filter((j) => j.nova).map((j) => j.id);
-  const chaveNovas = novas.join(",");
-
-  // Ver a lista já conta como ter visto a chegada da carta ou a resposta.
-  useEffect(() => {
-    if (chaveNovas && !marcando) marcarVistas(chaveNovas.split(","));
-  }, [chaveNovas, marcando, marcarVistas]);
-
   const lista = [...(jogadas.data ?? [])].sort((a, b) => ordem(a) - ordem(b));
   if (lista.length === 0) return null;
 

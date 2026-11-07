@@ -491,6 +491,72 @@
     }
   }
 
+  /* Carta nas encenações da cena (docs/gamificacao.md §3.3). As posições vêm em --de-* e --para-*. */
+  .carta-encenacao {
+    transform: translate(var(--de-x), var(--de-y));
+  }
+
+  .carta-voo {
+    animation: carta-voo 600ms ease-in-out forwards;
+  }
+
+  .carta-aceita {
+    animation: carta-aceita 900ms ease-out forwards;
+  }
+
+  .carta-sai {
+    animation: carta-sai 900ms ease-in forwards;
+  }
+
+  @keyframes carta-voo {
+    from {
+      transform: translate(var(--de-x), var(--de-y)) rotate(-20deg) scale(0.7);
+    }
+    50% {
+      transform: translate(
+          calc((var(--de-x) + var(--para-x)) / 2),
+          calc((var(--de-y) + var(--para-y)) / 2 - 36px)
+        )
+        rotate(160deg);
+    }
+    to {
+      transform: translate(var(--para-x), var(--para-y)) rotate(360deg) scale(1);
+    }
+  }
+
+  /* Aceita: a carta salta sobre a cabeça e se dobra num objetivo. */
+  @keyframes carta-aceita {
+    from {
+      transform: translate(var(--de-x), var(--de-y)) scale(0.4);
+      opacity: 0;
+    }
+    30% {
+      transform: translate(var(--de-x), calc(var(--de-y) - 28px)) scale(1.15);
+      opacity: 1;
+    }
+    75% {
+      transform: translate(var(--de-x), calc(var(--de-y) - 28px)) scale(1);
+      opacity: 1;
+    }
+    to {
+      transform: translate(var(--de-x), calc(var(--de-y) - 28px)) scaleX(0);
+      opacity: 0;
+    }
+  }
+
+  /* Recusada: a carta desliza para fora. */
+  @keyframes carta-sai {
+    from {
+      transform: translate(var(--de-x), var(--de-y));
+      opacity: 1;
+    }
+    to {
+      transform: translate(calc(var(--de-x) + 72px), calc(var(--de-y) + 24px))
+        rotate(35deg);
+      opacity: 0;
+    }
+  }
+
   .input-field {
     @apply h-12 w-full rounded-lg border-2 border-border-strong bg-surface px-3.5 text-[15px] text-foreground transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-placeholder focus:border-focus focus:ring-3 focus:ring-focus/20 aria-invalid:border-danger;
   }

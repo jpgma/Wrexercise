@@ -117,7 +117,12 @@ The user cannot change the e-mail.
 - Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
 - The scene uses the default avatar sheets in the app bundle.
 - Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3). A tap on the badge opens the shop.
-- Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". Each play shows the card, the goal, the deadline and a state label. When the user sees the list, the new cards and answers become seen.
+- Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". Each play shows the card, the goal, the deadline and a state label.
+- When the user opens the scene, the scene plays the card events that the user did not see yet, one at a time, at most 3:
+  - A received card: the sender walks to the centre (`andar`), throws the card (`arremessar`), the card flies to the user, the user catches it (`receber`) and the sender walks back.
+  - An answer to a card that the user sent: the recipient accepts (`aceitar`, the card jumps above the head and folds) or refuses (`recusar`, the card slides out).
+  - A tap on the plaza skips the scene. After the scene, or after a skip, the events become seen (`POST /api/grupos/{id}/jogadas/vistas`). If the user leaves the page during the scene, the events stay new.
+  - If the device asks for reduced motion, or the page is hidden, the scene does not play, and the events become seen at once. The list shows the final state.
 - Under it, the section "Sua Mão" shows the cards of the hand, the count (for example "2/5") and a link to the shop. A card in an open play is dimmed and has the label "Em jogo".
 
 ### 3.3.3. Energy (`Energia`)

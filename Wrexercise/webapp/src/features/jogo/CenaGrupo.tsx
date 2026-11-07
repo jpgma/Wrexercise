@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { folhaPadrao, hashFnv1a } from "@/components/folhaAvatar";
 import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
+import { IconeCarta } from "./CartaJogo";
 import { MenuAvatar } from "./MenuAvatar";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
-import { useCena, type MembroCena } from "./useCena";
+import { useJogadas, useMarcarJogadasVistas } from "./useCartas";
+import { useCena, type Cena, type MembroCena } from "./useCena";
+import { type Atuacao, type CartaEmCena, useEncenacoes } from "./useEncenacoes";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 
 // O chão tem 180×230 px e é mostrado em 2×.
@@ -69,12 +72,14 @@ function AvatarCena({
   posicao,
   escala,
   reduzido,
+  atuacao,
   onToque,
 }: {
   membro: MembroCena;
   posicao: Posicao;
   escala: number;
   reduzido: boolean;
+  atuacao: Atuacao | undefined;
   onToque: () => void;
 }) {
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
@@ -109,8 +114,15 @@ function AvatarCena({
     return () => window.clearTimeout(temporizador);
   }, [parado, reduzido, sorteio, variacao]);
 
-  const animacao: NomeAnimacao = parado ? (variacao ?? "parado") : membro.pose;
-  const espelhar = posicao.x > centroX + 1;
+  const animacao: NomeAnimacao =
+    atuacao?.animacao ?? (parado ? (variacao ?? "parado") : membro.pose);
+  const espelhar = atuacao?.espelhar ?? posicao.x > centroX + 1;
+  const deslocamento = {
+    transform: atuacao
+      ? `translate(${atuacao.dx}px, ${atuacao.dy}px)`
+      : undefined,
+    transition: `transform ${atuacao?.passoMs ?? 0}ms linear`,
+  };
   const primeiroNome = membro.nomeExibicao.trim().split(/\s+/)[0];
 
   return (
@@ -125,7 +137,8 @@ function AvatarCena({
           left: posicao.x - 16 * escala,
           top: posicao.y - 31 * escala,
           width: 32 * escala,
-          zIndex: Math.round(posicao.y),
+          zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)),
+          ...deslocamento,
         }}
       >
         <SpriteAvatar
@@ -142,7 +155,12 @@ function AvatarCena({
       <span
         aria-hidden="true"
         className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
-        style={{ left: posicao.x, top: posicao.y + 3, zIndex: 1000 }}
+        style={{
+          left: posicao.x,
+          top: posicao.y + 3,
+          zIndex: 1000,
+          ...deslocamento,
+        }}
       >
         {primeiroNome}
       </span>
@@ -178,8 +196,6 @@ export function CenaGrupo({
 }) {
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
-  const { ref, fator } = useFatorDeEncaixe();
-  const [tocado, setTocado] = useState<MembroCena | null>(null);
 
   if (cena.isError) return null;
   if (!cena.data) {
@@ -194,9 +210,84 @@ export function CenaGrupo({
     );
   }
 
-  const { membros } = cena.data;
+  return (
+    <Praca
+      cena={cena.data}
+      grupoId={grupoId}
+      usuarioId={usuarioId}
+      reduzido={reduzido}
+    />
+  );
+}
+
+/** A carta da encenação: voa até quem recebe, cai no lugar ao ser aceita ou sai pelo lado. */
+function CartaVoando({
+  carta,
+  escala,
+}: {
+  carta: CartaEmCena;
+  escala: number;
+}) {
+  // A carta (40 px) fica na altura das mãos, centrada no avatar.
+  const acima = 15 * escala + 20;
+  return (
+    <span
+      aria-hidden="true"
+      className={`carta-encenacao carta-${carta.efeito} pointer-events-none absolute grid size-10 place-items-center rounded-md border-2 border-carta-tinta bg-carta-giz`}
+      style={
+        {
+          left: 0,
+          top: 0,
+          zIndex: 1001,
+          "--de-x": `${carta.de.x - 20}px`,
+          "--de-y": `${carta.de.y - acima}px`,
+          "--para-x": `${carta.para.x - 20}px`,
+          "--para-y": `${carta.para.y - acima}px`,
+        } as CSSProperties
+      }
+    >
+      <IconeCarta codigo={carta.jogada.carta.codigo} />
+    </span>
+  );
+}
+
+function Praca({
+  cena,
+  grupoId,
+  usuarioId,
+  reduzido,
+}: {
+  cena: Cena;
+  grupoId: string;
+  usuarioId: string;
+  reduzido: boolean;
+}) {
+  const { ref, fator } = useFatorDeEncaixe();
+  const [tocado, setTocado] = useState<MembroCena | null>(null);
+  const jogadas = useJogadas(grupoId);
+  const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
+
+  const { membros } = cena;
   const escala = membros.length <= 5 ? 3 : 2;
-  const posicoes = posicionar(membros, usuarioId, escala);
+  const posicoes = useMemo(
+    () => posicionar(membros, usuarioId, escala),
+    [membros, usuarioId, escala],
+  );
+  const porUsuario = useMemo(
+    () => new Map(membros.map((m, i) => [m.usuarioId, posicoes[i]!])),
+    [membros, posicoes],
+  );
+  const centro = useMemo(
+    () => ({ x: centroX, y: getElipse(escala).centroY }),
+    [escala],
+  );
+  const encenacao = useEncenacoes({
+    jogadas: jogadas.data,
+    posicoes: porUsuario,
+    centro,
+    reduzido,
+    onVistas: marcarVistas,
+  });
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: largura }}>
@@ -226,9 +317,24 @@ export function CenaGrupo({
               posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
               escala={escala}
               reduzido={reduzido}
+              atuacao={encenacao.atuacoes.get(membro.usuarioId)}
               onToque={() => setTocado(membro)}
             />
           ))}
+          {encenacao.carta && (
+            <CartaVoando carta={encenacao.carta} escala={escala} />
+          )}
+          {encenacao.ativa && (
+            // Tocar na praça pula a encenação: ela nunca prende a pessoa.
+            <button
+              type="button"
+              className="absolute inset-0 cursor-pointer"
+              style={{ zIndex: 1002 }}
+              onClick={encenacao.pular}
+            >
+              <span className="sr-only">Pular a encenação</span>
+            </button>
+          )}
         </section>
       </div>
       <MenuAvatar
