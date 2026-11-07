@@ -17,8 +17,13 @@ import {
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import { useGrupo } from "@/features/grupos";
+import { CenaGrupo, ConviteJogo } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
-import { LinhaParticipante, useResumoGrupo } from "@/features/progresso";
+import {
+  LinhaParticipante,
+  useResumoGrupo,
+  type ResumoGrupo,
+} from "@/features/progresso";
 import { getErrorMessage } from "@/services/api";
 
 function getSaudacao(agora: Date): string {
@@ -189,12 +194,70 @@ function SuaSemana({
   );
 }
 
+function InicioJogo({
+  grupoId,
+  usuarioId,
+  resumo,
+}: {
+  grupoId: string;
+  usuarioId: string;
+  resumo: ResumoGrupo | undefined;
+}) {
+  const progresso = resumo?.meuProgresso;
+  const meta = resumo?.sessoesPorSemana;
+
+  return (
+    <div className="mt-6 space-y-4">
+      <CenaGrupo grupoId={grupoId} usuarioId={usuarioId} />
+      {progresso && meta ? (
+        <div className="card flex items-center gap-4 p-4">
+          <ProgressRing
+            label="Seu progresso nesta semana"
+            valor={progresso.sessoesVerificadas}
+            provisorio={progresso.sessoesProvisorias}
+            max={meta}
+            size={72}
+          >
+            <p className="font-display text-xl leading-none">
+              {Math.min(progresso.sessoesVerificadas, meta)}
+              <span className="text-sm text-muted">/{meta}</span>
+            </p>
+          </ProgressRing>
+          <p className="min-w-0 flex-1 font-display text-lg leading-tight uppercase">
+            {getMotivacao(
+              progresso.sessoesVerificadas,
+              progresso.sessoesProvisorias,
+              meta,
+            )}
+          </p>
+        </div>
+      ) : (
+        resumo && (
+          <p className="card p-4 text-sm text-muted">
+            {!resumo.desafio
+              ? "O grupo está sem desafio no momento."
+              : resumo.desafio.situacao === "Agendado"
+                ? `O desafio ${resumo.desafio.nome} ainda não começou.`
+                : "Sem meta para você nesta semana."}
+          </p>
+        )
+      )}
+      <Link
+        to={`/grupos/${grupoId}/atividades/nova`}
+        className="btn-primary w-full"
+      >
+        <Plus aria-hidden="true" className="size-5" />
+        Registrar atividade
+      </Link>
+    </div>
+  );
+}
+
 export function InicioPage() {
   const { id = "" } = useParams();
   const { data: usuario } = useSessao();
   const grupo = useGrupo(id);
   const resumo = useResumoGrupo(id);
-  const feed = useAtividadesFeed(id, 4);
 
   if (grupo.isPending || !usuario) return <SplashScreen />;
 
@@ -224,8 +287,6 @@ export function InicioPage() {
     .format(agora)
     .replace(".", "");
   const primeiroNome = usuario.nomeExibicao.trim().split(/\s+/)[0];
-  const desafio = resumo.data?.desafio;
-  const atividades = feed.data?.pages[0]?.atividades ?? [];
 
   return (
     <>
@@ -240,6 +301,46 @@ export function InicioPage() {
         <SinoNotificacoes />
       </header>
 
+      {usuario.modoInicio === "Jogo" ? (
+        <>
+          <InicioJogo
+            grupoId={id}
+            usuarioId={usuario.id}
+            resumo={resumo.data}
+          />
+          <AvisoAvaliacao grupoId={id} />
+        </>
+      ) : (
+        <InicioApp
+          grupoId={id}
+          papel={grupo.data.papel}
+          usuarioId={usuario.id}
+          resumo={resumo}
+        />
+      )}
+    </>
+  );
+}
+
+function InicioApp({
+  grupoId: id,
+  papel,
+  usuarioId,
+  resumo,
+}: {
+  grupoId: string;
+  papel: Parameters<typeof canGerenciarDesafios>[0];
+  usuarioId: string;
+  resumo: ReturnType<typeof useResumoGrupo>;
+}) {
+  const feed = useAtividadesFeed(id, 4);
+  const desafio = resumo.data?.desafio;
+  const atividades = feed.data?.pages[0]?.atividades ?? [];
+
+  return (
+    <>
+      <ConviteJogo />
+
       <div className="mt-6">
         {resumo.isError && (
           <p role="alert" className="form-error">
@@ -250,7 +351,7 @@ export function InicioPage() {
           <SuaSemana
             grupoId={id}
             desafioId={desafio.id}
-            usuarioId={usuario.id}
+            usuarioId={usuarioId}
           />
         )}
         {resumo.data && !desafio && (
@@ -259,12 +360,12 @@ export function InicioPage() {
               icon={Target}
               title="Ninguém lançou um desafio ainda"
               description={
-                canGerenciarDesafios(grupo.data.papel)
+                canGerenciarDesafios(papel)
                   ? "O grupo está sem meta no momento. Crie um desafio para começar."
                   : "O grupo está sem meta no momento. Peça a um administrador para criar um desafio."
               }
               action={
-                canGerenciarDesafios(grupo.data.papel) ? (
+                canGerenciarDesafios(papel) ? (
                   <Link
                     to={`/grupos/${id}/desafios/novo`}
                     className="btn-primary"

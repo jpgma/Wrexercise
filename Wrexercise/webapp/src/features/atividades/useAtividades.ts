@@ -113,6 +113,8 @@ export function useCriarAtividade(grupoId: string) {
         queryKey: [...atividadesKey, "recentes"],
       });
       void queryClient.invalidateQueries({ queryKey: ["desafios"] });
+      // Poses da cena do Jogo (chave de features/jogo; uma feature não importa o miolo da outra).
+      void queryClient.invalidateQueries({ queryKey: ["jogo"] });
     },
   });
 }

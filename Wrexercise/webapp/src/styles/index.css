@@ -463,6 +463,30 @@
     color: oklch(var(--avatar-fg-l) 0.09 var(--avatar-hue));
   }
 
+  /* Folha de avatar do Jogo: o quadro anda na horizontal, em passos inteiros (docs/avatar-formato.md). */
+  .sprite-avatar {
+    display: block;
+    background-repeat: no-repeat;
+    background-position-x: 0;
+    image-rendering: pixelated;
+  }
+
+  .sprite-repete {
+    animation: sprite-quadros calc(var(--quadros) * var(--ms))
+      steps(var(--quadros)) infinite;
+  }
+
+  .sprite-uma-vez {
+    animation: sprite-quadros calc(var(--quadros) * var(--ms))
+      steps(var(--quadros)) 1;
+  }
+
+  @keyframes sprite-quadros {
+    to {
+      background-position-x: calc(var(--quadros) * var(--celula) * -1);
+    }
+  }
+
   .input-field {
     @apply h-12 w-full rounded-lg border-2 border-border-strong bg-surface px-3.5 text-[15px] text-foreground transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-placeholder focus:border-focus focus:ring-3 focus:ring-focus/20 aria-invalid:border-danger;
   }

@@ -15,6 +15,7 @@ import { PageHeader, SectionTitle } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { useToast } from "@/components/Toast";
 import {
+  useAlterarModoInicio,
   useAlterarNome,
   useAlterarSenha,
   useSair,
@@ -173,6 +174,69 @@ function SenhaForm() {
   );
 }
 
+const opcoesModo = [
+  {
+    valor: "App",
+    titulo: "App",
+    descricao: "Sua semana, o desafio e as atividades recentes.",
+  },
+  {
+    valor: "Jogo",
+    titulo: "Jogo",
+    descricao: "A praça do grupo, com os avatares em cena.",
+  },
+] as const;
+
+function TelaInicial({ modoAtual }: { modoAtual: "App" | "Jogo" }) {
+  const alterar = useAlterarModoInicio();
+  const { showToast } = useToast();
+
+  return (
+    <>
+      <SectionTitle>Tela inicial</SectionTitle>
+      <div
+        role="radiogroup"
+        aria-label="Tela inicial"
+        className="card space-y-2 p-3"
+      >
+        {opcoesModo.map((opcao) => (
+          <label
+            key={opcao.valor}
+            className="flex cursor-pointer items-start gap-3 rounded-lg p-2 has-[:checked]:bg-surface-muted"
+          >
+            <input
+              type="radio"
+              name="modo-inicio"
+              className="mt-1"
+              checked={modoAtual === opcao.valor}
+              disabled={alterar.isPending}
+              onChange={() =>
+                alterar.mutate(opcao.valor, {
+                  onSuccess: () =>
+                    showToast(`Tela inicial: modo ${opcao.titulo}.`),
+                })
+              }
+            />
+            <span>
+              <span className="block text-sm font-semibold">
+                {opcao.titulo}
+              </span>
+              <span className="block text-sm text-muted">
+                {opcao.descricao}
+              </span>
+            </span>
+          </label>
+        ))}
+        {alterar.isError && (
+          <p role="alert" className="form-error">
+            {getErrorMessage(alterar.error)}
+          </p>
+        )}
+      </div>
+    </>
+  );
+}
+
 function Instalacao() {
   const modo = useSyncExternalStore(subscribeInstalacao, getModoInstalacao);
 
@@ -220,6 +284,8 @@ export function ConfiguracoesPage() {
       <PageHeader title="Configurações" back="/perfil" />
 
       <NomeForm key={usuario.nomeExibicao} nomeAtual={usuario.nomeExibicao} />
+
+      <TelaInicial modoAtual={usuario.modoInicio} />
 
       <SectionTitle>Senha</SectionTitle>
       <SenhaForm />

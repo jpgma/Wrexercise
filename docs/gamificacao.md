@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada, ainda sem código. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md` e as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; a fase G1 (modo Jogo e cena) está implementada, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md` e as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -78,7 +78,7 @@ A tela Jogo mostra:
 
 ### 3.2. Poses
 
-A pose de cada avatar vem do status semanal no desafio em destaque, com os dados que `useProgresso` já entrega, e das atividades da semana:
+A pose de cada avatar vem de `GET /api/grupos/{id}/cena`, calculada a partir do status semanal no desafio em destaque e das atividades **deste grupo na semana corrente** (segunda a domingo, no fuso do grupo):
 
 | Situação | Pose |
 |---|---|
@@ -410,7 +410,8 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 ### G1 — Modo Jogo e cena
 
 - Migração: `usuarios.modo_inicio text NOT NULL DEFAULT 'App'`, com `CHECK` para `App` e `Jogo`.
-- `PUT /api/usuarios/eu/modo-inicio` e o campo `modoInicio` na sessão (fatias `Usuarios` e `Autenticacao`).
+- `PUT /api/usuarios/eu/modo-inicio` e o campo `modoInicio` na sessão (ambos na fatia `Autenticacao`).
+- `GET /api/grupos/{id}/cena` (fatia `Jogo`) devolve as poses. A regra do desafio em destaque ficou em `Progresso/Contracts/DesafioDestaque.cs`, compartilhada com o resumo do grupo.
 - Opção na página Configurações e cartão de convite único na tela App.
 - `InicioPage` escolhe entre a visão App atual e a cena, na mesma rota.
 - As folhas padrão (geradas em `pixel-art/avatar-base/saida/`), o chão da praça e o `LICENSE` CC0 no bundle.

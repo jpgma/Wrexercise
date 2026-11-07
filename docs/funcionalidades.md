@@ -98,6 +98,22 @@ The user cannot change the e-mail.
 - `PUT /api/usuarios/eu/modo-inicio` changes the mode. The body is `{ "modoInicio": "App" }` or `{ "modoInicio": "Jogo" }`. Any other value gives the code `DADOS_INVALIDOS`. The response is the session, as for the change of the display name.
 - The session (`GET /api/autenticacao/sessao`) has the field `modoInicio`.
 - The mode does not change the goal, the verification, the ranking or the streaks.
+- The page Settings has the section "Tela inicial" with the two modes. The change is saved at once, and the page shows a message.
+- The `App` home screen shows an invitation card once. The card has the buttons "Experimentar" (changes the mode to `Jogo`) and "Agora não". The button "Agora não" hides the card for 400 days. The app saves this choice in the cookie `wx_convite_jogo_dispensado`.
+
+### 3.3.2. Game home screen (scene)
+
+- In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring, the button "Registrar atividade" and the notice of activities to review. The screen does not show the list of recent activities.
+- The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on an ellipse. The current user stands at the front (bottom). The other members follow in the order of joining.
+- Each `Avatar` has the first name below it. A tap opens the page of the member. The `Avatar` of a member on the right side of the scene is mirrored, to face the centre.
+- The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
+- `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado" }] }`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
+- The pose is `treinando` if the member has an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
+- Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.
+- In all other cases, the pose is `parado`. From time to time, a member that is `parado` stretches (`alongar`) or looks around (`olhar`). The moments are random and differ for each member. The animation stops when the page is hidden.
+- If the device asks for reduced motion, the scene does not animate. Each pose shows one fixed frame. The frames of `treinando` and `comemorando` differ from the frame of `parado`.
+- Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
+- The scene uses the default avatar sheets in the app bundle.
 
 ### 3.4. Forgotten password
 

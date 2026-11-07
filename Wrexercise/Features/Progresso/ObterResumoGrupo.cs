@@ -1,6 +1,7 @@
 using Npgsql;
 using Wrexercise.Features.Desafios.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
+using Wrexercise.Features.Progresso.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 
 namespace Wrexercise.Features.Progresso;
@@ -20,7 +21,7 @@ internal static class ObterResumoGrupo
         }
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        var destacado = await LoadDesafioDestaqueAsync(connection, grupoId, cancellationToken);
+        var destacado = await DesafioDestaqueGrupo.LoadAsync(connection, grupoId, cancellationToken);
         if (destacado is null)
         {
             return Results.Ok(new ResumoGrupoResponse(grupoId, null, null, null, []));
@@ -81,60 +82,5 @@ internal static class ObterResumoGrupo
             desafio.SessoesPorSemana,
             meuProgresso,
             top));
-    }
-
-    private sealed record DesafioDestaque(Guid Id, string Nome, string Situacao, int DuracaoMinimaSegundos);
-
-    private static async Task<DesafioDestaque?> LoadDesafioDestaqueAsync(
-        NpgsqlConnection connection,
-        Guid grupoId,
-        CancellationToken cancellationToken)
-    {
-        await using var command = new NpgsqlCommand("""
-            SELECT d.id, d.nome, d.data_inicio, d.data_fim, d.cancelled_at IS NOT NULL,
-                (now() AT TIME ZONE g.fuso_horario)::date, d.duracao_minima_segundos
-            FROM desafios d
-            JOIN grupos g ON g.id = d.grupo_id
-            WHERE d.grupo_id = $1
-            ORDER BY
-                d.cancelled_at IS NOT NULL,
-                d.data_fim < (now() AT TIME ZONE g.fuso_horario)::date,
-                CASE WHEN d.data_fim >= (now() AT TIME ZONE g.fuso_horario)::date THEN d.data_inicio END,
-                d.data_inicio DESC,
-                d.id
-            """, connection);
-        command.Parameters.AddWithValue(grupoId);
-
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            if (reader.GetBoolean(4))
-            {
-                continue;
-            }
-
-            var inicio = reader.GetFieldValue<DateOnly>(2);
-            var fim = reader.GetFieldValue<DateOnly>(3);
-            var hoje = reader.GetFieldValue<DateOnly>(5);
-            var situacao = GetSituacao(inicio, fim, cancelado: false, hoje);
-            return new DesafioDestaque(reader.GetGuid(0), reader.GetString(1), situacao, reader.GetInt32(6));
-        }
-
-        return null;
-    }
-
-    private static string GetSituacao(DateOnly inicio, DateOnly fim, bool cancelado, DateOnly hoje)
-    {
-        if (cancelado)
-        {
-            return SituacaoDesafio.Cancelado;
-        }
-
-        if (hoje < inicio)
-        {
-            return SituacaoDesafio.Agendado;
-        }
-
-        return hoje > fim ? SituacaoDesafio.Encerrado : SituacaoDesafio.Ativo;
     }
 }

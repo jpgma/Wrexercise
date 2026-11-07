@@ -8,7 +8,7 @@ const nomesFolhasPadrao = [
 ] as const;
 
 /** FNV-1a de 32 bits: estável entre execuções e sem dependências. */
-function hashFnv1a(texto: string): number {
+export function hashFnv1a(texto: string): number {
   let hash = 0x811c9dc5;
   for (let i = 0; i < texto.length; i++) {
     hash ^= texto.charCodeAt(i);

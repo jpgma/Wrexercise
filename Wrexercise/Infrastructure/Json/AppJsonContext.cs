@@ -6,6 +6,7 @@ using Wrexercise.Features.Convites;
 using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Grupos;
 using Wrexercise.Features.Health;
+using Wrexercise.Features.Jogo;
 using Wrexercise.Features.Notificacoes;
 using Wrexercise.Features.Progresso;
 using Wrexercise.Features.Reacoes;
@@ -57,6 +58,8 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(DesafioDestaqueResponse))]
 [JsonSerializable(typeof(HistoricoSemanaResponse))]
 [JsonSerializable(typeof(HistoricoSemanalResponse))]
+[JsonSerializable(typeof(CenaResponse))]
+[JsonSerializable(typeof(MembroCenaResponse))]
 [JsonSerializable(typeof(ProgressoResumoResponse))]
 [JsonSerializable(typeof(ProgressoResponse))]
 [JsonSerializable(typeof(ResumoGrupoResponse))]
