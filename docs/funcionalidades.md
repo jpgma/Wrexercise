@@ -462,6 +462,11 @@ The system calculates the achievements each time. It does not keep them in the d
 | Streak of 4, 8 and 12 weeks | The best streak in one challenge. The system does not add streaks from different challenges. |
 | 10, 50 and 100 activities | Number of verified activities. |
 | Madrugador | 10 verified activities that started before 07:00 in the time zone of the group. |
+| `DesafioCompleto` | One `Encerrado` challenge in which the user met the goal in every week that counted for the user. |
+| `RatoDeAcademia`, `Corredor`, `Andarilho`, `Ciclista`, `Peixe`, `Boleiro`, `Zen`, `PesoDoCorpo` | 10 verified activities of one type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Esporte`, `Yoga` or `Calistenia`. The type `Outro` has no achievement. |
+| `Noturno` | 10 verified activities that started at 20:00 or later in the time zone of the group. |
+| `FimDeSemana` | 10 verified activities that started on Saturday or Sunday in the time zone of the group. |
+| `Ecletico` | Verified activities of 5 different types. The type `Outro` does not count. |
 
 - Achievements do not change the ranking.
 - Only the user sees his or her achievements.

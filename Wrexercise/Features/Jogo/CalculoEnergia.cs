@@ -1,18 +1,10 @@
 using Wrexercise.Features.Desafios.Contracts;
+using Wrexercise.Features.Progresso.Contracts;
 
 namespace Wrexercise.Features.Jogo;
 
 /// <summary>Uma atividade não rejeitada da pessoa, com o início no fuso do grupo dela.</summary>
 internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool Verificada);
-
-/// <summary>Um desafio já iniciado de um grupo de que a pessoa é ou foi membro.</summary>
-/// <param name="SemanasCumpridas">Índices (a partir de 0) das semanas em que a pessoa cumpriu a meta.</param>
-internal sealed record DesafioEnergia(
-    DateOnly DataInicio,
-    DateOnly DataFim,
-    DateOnly EntradaLocal,
-    bool Encerrado,
-    IReadOnlyList<int> SemanasCumpridas);
 
 /// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
 /// <param name="Preco">O preço pago pela Provocação.</param>
@@ -50,7 +42,7 @@ internal static class CalculoEnergia
     /// <param name="jogadas">As Jogadas concluídas de que a pessoa participou.</param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
-        IReadOnlyList<DesafioEnergia> desafios,
+        IReadOnlyList<DesafioDaPessoa> desafios,
         IReadOnlyList<RecompensaJogada>? jogadas = null)
     {
         var melhorSequencia = desafios
@@ -63,7 +55,7 @@ internal static class CalculoEnergia
             CalculateBonus(atividades),
             CountSemanasCumpridas(desafios) * PorMeta,
             MarcosSequencia.Where(m => melhorSequencia >= m.Semanas).Sum(m => m.Energia),
-            desafios.Count(IsConcluido) * PorDesafioConcluido,
+            desafios.Count(d => d.IsConcluido()) * PorDesafioConcluido,
             (jogadas ?? []).Sum(GetRecompensa));
     }
 
@@ -138,39 +130,11 @@ internal static class CalculoEnergia
     }
 
     /// <summary>A meta paga uma vez por semana, mesmo cumprida em vários grupos ou desafios.</summary>
-    private static int CountSemanasCumpridas(IReadOnlyList<DesafioEnergia> desafios) =>
+    private static int CountSemanasCumpridas(IReadOnlyList<DesafioDaPessoa> desafios) =>
         desafios
             .SelectMany(d => d.SemanasCumpridas.Select(indice => d.DataInicio.AddDays(indice * 7)))
             .Distinct()
             .Count();
-
-    /// <summary>Encerrado, com todas as semanas que contavam para a pessoa cumpridas.</summary>
-    private static bool IsConcluido(DesafioEnergia desafio)
-    {
-        if (!desafio.Encerrado)
-        {
-            return false;
-        }
-
-        var cumpridas = desafio.SemanasCumpridas.ToHashSet();
-        var contavam = 0;
-        for (var indice = 0; indice < CalculoSemanaDesafio.CountSemanas(desafio.DataInicio, desafio.DataFim); indice++)
-        {
-            if (!CalculoSemanaDesafio.ParticipaDaSemana(desafio.DataInicio.AddDays(indice * 7), desafio.EntradaLocal))
-            {
-                continue;
-            }
-
-            if (!cumpridas.Contains(indice))
-            {
-                return false;
-            }
-
-            contavam++;
-        }
-
-        return contavam > 0;
-    }
 
     private static DateOnly GetSegunda(DateOnly dia) =>
         dia.AddDays(-(((int)dia.DayOfWeek + 6) % 7));

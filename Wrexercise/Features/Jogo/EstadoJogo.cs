@@ -1,5 +1,5 @@
 using Npgsql;
-using Wrexercise.Features.Desafios.Contracts;
+using Wrexercise.Features.Progresso.Contracts;
 using Wrexercise.Infrastructure.Database;
 
 namespace Wrexercise.Features.Jogo;
@@ -62,7 +62,7 @@ internal sealed record EstadoJogo(
         CancellationToken cancellationToken)
     {
         var atividades = await LoadAtividadesAsync(connection, transaction, usuarioId, cancellationToken);
-        var desafios = await LoadDesafiosAsync(connection, transaction, usuarioId, cancellationToken);
+        var desafios = await DesafiosDaPessoa.LoadAsync(connection, transaction, usuarioId, cancellationToken);
         var jogadas = await Jogo.Jogadas.LoadAsync(connection, transaction, usuarioId, usuarioId, cancellationToken);
         var cartas = await LoadCartasAsync(connection, transaction, usuarioId, cancellationToken);
 
@@ -132,72 +132,5 @@ internal sealed record EstadoJogo(
         }
 
         return atividades;
-    }
-
-    /// <summary>
-    /// Os desafios já iniciados dos grupos de que a pessoa é ou foi membro, com as semanas em que
-    /// cumpriu a meta, pelas mesmas regras de elegibilidade da classificação.
-    /// </summary>
-    private static async Task<List<DesafioEnergia>> LoadDesafiosAsync(
-        NpgsqlConnection connection,
-        NpgsqlTransaction? transaction,
-        Guid usuarioId,
-        CancellationToken cancellationToken)
-    {
-        var desafios = new Dictionary<Guid, (DateOnly Inicio, DateOnly Fim, DateOnly Entrada, bool Encerrado)>();
-        await using (var command = new NpgsqlCommand("""
-            SELECT d.id, d.data_inicio, d.data_fim,
-                (m.joined_at AT TIME ZONE g.fuso_horario)::date,
-                (now() AT TIME ZONE g.fuso_horario)::date > d.data_fim
-            FROM desafios d
-            JOIN grupos g ON g.id = d.grupo_id
-            JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = $1
-            WHERE d.cancelled_at IS NULL
-              AND d.data_inicio <= (now() AT TIME ZONE g.fuso_horario)::date
-            """, connection, transaction))
-        {
-            command.Parameters.AddWithValue(usuarioId);
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                desafios[reader.GetGuid(0)] = (
-                    reader.GetFieldValue<DateOnly>(1),
-                    reader.GetFieldValue<DateOnly>(2),
-                    reader.GetFieldValue<DateOnly>(3),
-                    reader.GetBoolean(4));
-            }
-        }
-
-        var cumpridas = desafios.Keys.ToDictionary(id => id, _ => new List<int>());
-        await using (var command = new NpgsqlCommand($"""
-            SELECT d.id, {ContagensAtividadeDesafio.IndiceSemanaSql}
-            FROM atividades a
-            JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
-            JOIN grupos g ON g.id = d.grupo_id
-            JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
-            WHERE a.usuario_id = $1
-              AND a.situacao_verificacao = 'Verificada'
-              AND a.duracao_segundos >= d.duracao_minima_segundos
-              AND (a.started_at AT TIME ZONE g.fuso_horario)::date >= d.data_inicio
-              AND (a.started_at AT TIME ZONE g.fuso_horario)::date <= d.data_fim
-              AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
-            GROUP BY d.id, d.sessoes_por_semana, {ContagensAtividadeDesafio.IndiceSemanaSql}
-            HAVING count(*) >= d.sessoes_por_semana
-            """, connection, transaction))
-        {
-            command.Parameters.AddWithValue(usuarioId);
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                if (cumpridas.TryGetValue(reader.GetGuid(0), out var indices))
-                {
-                    indices.Add(reader.GetInt32(1));
-                }
-            }
-        }
-
-        return desafios
-            .Select(d => new DesafioEnergia(d.Value.Inicio, d.Value.Fim, d.Value.Entrada, d.Value.Encerrado, cumpridas[d.Key]))
-            .ToList();
     }
 }

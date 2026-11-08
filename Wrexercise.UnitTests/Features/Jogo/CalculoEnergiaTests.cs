@@ -1,4 +1,5 @@
 using Wrexercise.Features.Jogo;
+using Wrexercise.Features.Progresso.Contracts;
 
 namespace Wrexercise.UnitTests.Features.Jogo;
 
@@ -10,7 +11,7 @@ public class CalculoEnergiaTests
     private static AtividadeEnergia Atividade(int dia, int hora, string tipo = "Corrida", bool verificada = true) =>
         new(Segunda.AddDays(dia).ToDateTime(new TimeOnly(hora, 0)), tipo, verificada);
 
-    private static DesafioEnergia Desafio(
+    private static DesafioDaPessoa Desafio(
         int[] cumpridas,
         bool encerrado = false,
         int semanas = 4,
