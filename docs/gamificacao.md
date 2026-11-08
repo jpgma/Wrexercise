@@ -122,6 +122,8 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 
 ### 4.1. Formato
 
+> **Em revisão:** folha vista de cima, em 8 direções, proposta em `decisoes/0039-avatar-em-8-direcoes.md` (Q034).
+
 Resumo de `avatar-formato.md`:
 
 - PNG RGBA de 8 bits, exatamente **256×384 px**: 8 colunas × 12 linhas de células de **32×32**.

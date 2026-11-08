@@ -724,6 +724,20 @@ A interface deve distinguir progresso confirmado de progresso provisório.
 
 **Decidido para o MVP (Fase 7):** barras definitivo/provisório na Desafio e Início; classificação e sequência na tabela de ranking; histórico semanal por semana do desafio. A página Perfil, antes fora do escopo inicial, entrou com a decisão 0018.
 
+## Q034 — Como será a folha de avatar em 8 direções?
+
+**Status:** PROPOSTA — ver `decisoes/0039-avatar-em-8-direcoes.md`.
+
+A folha atual é de lado (256×384, células de 32×32, espelhada para a esquerda). A proposta é trocar por personagens vistos de cima, em 8 direções, gerados no PixelLab.
+
+Investigar:
+
+- Tamanho da célula e limite de importação.
+- Direções com ou sem espelho.
+- Substituição das 6 folhas padrão.
+- O que acontece com as folhas já importadas.
+- Tamanho do avatar na cena.
+
 ---
 
 # 11. Critérios para encerrar a pesquisa
@@ -769,6 +783,7 @@ Questões sem impacto sobre o MVP podem permanecer adiadas.
 - Q025: Orçamento de recursos.
 - Q026: Consultas SQL.
 - Q030: Privacidade de imagens.
+- Q034: Avatar em 8 direções.
 
 ### Prioridade baixa — após o MVP
 

@@ -1,6 +1,8 @@
 # Formato da folha de avatar — Wrexercise
 
 > Especificação pública da folha de sprites usada pelos avatares do modo Jogo (`gamificacao.md` §4). Qualquer pessoa pode desenhar uma folha neste formato e importá-la no aplicativo.
+>
+> **Em revisão:** a troca por uma folha vista de cima, em 8 direções, está proposta em `decisoes/0039-avatar-em-8-direcoes.md`. Até a decisão, este formato continua valendo.
 
 ## 1. Arquivo
 
