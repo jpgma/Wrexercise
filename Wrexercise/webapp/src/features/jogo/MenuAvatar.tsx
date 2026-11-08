@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Dialog } from "@/components/Dialog";
+import { useVitrine } from "@/components/folhaAvatar";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
 import { CartaJogo } from "./CartaJogo";
+import { EnfeiteIcone } from "./EnfeiteIcone";
 import { primeiroNome } from "./textosCartas";
 import { useJogarCarta, useLoja } from "./useCartas";
 import type { MembroCena } from "./useCena";
@@ -108,6 +110,25 @@ function JogarCarta({
   );
 }
 
+/** A vitrine de Enfeites de quem foi tocado; sem Enfeites, não mostra nada. */
+function Vitrine({ usuarioId }: { usuarioId: string }) {
+  const vitrine = useVitrine(usuarioId);
+  if (vitrine.length === 0) return null;
+  return (
+    <div>
+      <p className="eyebrow mb-2">Vitrine</p>
+      <ul className="flex gap-4">
+        {vitrine.map((enfeite) => (
+          <li key={enfeite.codigo} className="flex flex-col items-center gap-1">
+            <EnfeiteIcone conquista={enfeite.conquista} tamanho={48} />
+            <span className="text-2xs text-muted">{enfeite.nome}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Tocar num avatar: acesso à página do membro e, para um colega, jogar uma carta. */
 export function MenuAvatar({
   grupoId,
@@ -128,6 +149,7 @@ export function MenuAvatar({
     >
       {membro && (
         <div className="space-y-5">
+          <Vitrine usuarioId={membro.usuarioId} />
           {membro.usuarioId !== usuarioId && (
             <JogarCarta grupoId={grupoId} membro={membro} onJogada={onClose} />
           )}

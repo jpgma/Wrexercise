@@ -593,3 +593,26 @@
     @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg border-2 border-danger-soft-border bg-danger-soft px-5 text-sm font-bold text-on-danger-soft tap hover:bg-danger-soft-hover disabled:pointer-events-none disabled:opacity-50;
   }
 }
+
+@layer components {
+  /* Enfeite novo: um brilho que pulsa enquanto a encenação toca (docs/gamificacao.md §9.2). */
+  .enfeite-brilho {
+    animation: enfeite-brilho 700ms ease-in-out infinite alternate;
+  }
+
+  @keyframes enfeite-brilho {
+    from {
+      filter: drop-shadow(0 0 1px var(--color-reward, #ffd34e));
+    }
+    to {
+      filter: drop-shadow(0 0 6px var(--color-reward, #ffd34e)) brightness(1.25);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .enfeite-brilho {
+      animation: none;
+      filter: drop-shadow(0 0 4px var(--color-reward, #ffd34e));
+    }
+  }
+}

@@ -1,17 +1,24 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { hashFnv1a, useFolhaAvatar } from "@/components/folhaAvatar";
+import {
+  hashFnv1a,
+  useFolhaAvatar,
+  useVitrine,
+} from "@/components/folhaAvatar";
 import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
+import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MenuAvatar } from "./MenuAvatar";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
+import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { useJogadas, useMarcarJogadasVistas } from "./useCartas";
 import { useCena, type Cena, type MembroCena } from "./useCena";
 import { type Atuacao, type CartaEmCena, useEncenacoes } from "./useEncenacoes";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 
 // O chão tem 180×230 px e é mostrado em 2×.
+const semNovos: string[] = [];
 const largura = 360;
 const altura = 460;
 const centroX = largura / 2;
@@ -73,6 +80,7 @@ function AvatarCena({
   escala,
   reduzido,
   atuacao,
+  brilho,
   onToque,
 }: {
   membro: MembroCena;
@@ -80,9 +88,14 @@ function AvatarCena({
   escala: number;
   reduzido: boolean;
   atuacao: Atuacao | undefined;
+  /** O Enfeite do avatar brilha: é o Enfeite novo de quem vê a cena. */
+  brilho: boolean;
   onToque: () => void;
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
+  const enfeite = useVitrine(membro.usuarioId)[0];
+  // O Enfeite (16 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
+  const escalaEnfeite = escala >= 3 ? 2 : 1;
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   const parado = membro.pose === "parado";
 
@@ -152,6 +165,20 @@ function AvatarCena({
           onFim={() => setVariacao(null)}
         />
       </button>
+      {enfeite && (
+        <EnfeiteIcone
+          conquista={enfeite.conquista}
+          tamanho={16 * escalaEnfeite}
+          brilho={brilho}
+          className="pointer-events-none absolute block"
+          style={{
+            left: posicao.x + 6 * escala,
+            top: posicao.y - 16 * escalaEnfeite - 2,
+            zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)) + 1,
+            ...deslocamento,
+          }}
+        />
+      )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
       <span
         aria-hidden="true"
@@ -267,6 +294,8 @@ function Praca({
   const [tocado, setTocado] = useState<MembroCena | null>(null);
   const jogadas = useJogadas(grupoId);
   const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
+  const meuAvatar = useMeuAvatar();
+  const { mutate: marcarEnfeitesVistos } = useMarcarEnfeitesVistos();
 
   const { membros } = cena;
   const escala = membros.length <= 5 ? 3 : 2;
@@ -288,6 +317,9 @@ function Praca({
     centro,
     reduzido,
     onVistas: marcarVistas,
+    usuarioId,
+    enfeitesNovos: meuAvatar.data?.novos ?? semNovos,
+    onEnfeitesVistos: marcarEnfeitesVistos,
   });
 
   return (
@@ -319,6 +351,7 @@ function Praca({
               escala={escala}
               reduzido={reduzido}
               atuacao={encenacao.atuacoes.get(membro.usuarioId)}
+              brilho={encenacao.brilho && membro.usuarioId === usuarioId}
               onToque={() => setTocado(membro)}
             />
           ))}

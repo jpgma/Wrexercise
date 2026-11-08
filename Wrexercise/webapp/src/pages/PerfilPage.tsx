@@ -1,5 +1,4 @@
 import {
-  Award,
   ChevronRight,
   Flame,
   Plus,
@@ -16,7 +15,7 @@ import { useSessao } from "@/features/autenticacao";
 import { ConviteForm } from "@/features/convites";
 import { formatarSemanaCurta } from "@/features/desafios";
 import { papelLabels, useGrupos } from "@/features/grupos";
-import { EnergiaPerfil } from "@/features/jogo";
+import { EnergiaPerfil, EnfeiteIcone } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import { useMeuPerfil } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
@@ -157,7 +156,10 @@ export function PerfilPage() {
                       <div
                         className={`relative grid size-12 shrink-0 place-items-center rounded-lg border-2 border-outline bg-reward text-on-reward ${indice % 2 ? "rotate-3" : "-rotate-3"}`}
                       >
-                        <Award aria-hidden="true" className="size-6" />
+                        <EnfeiteIcone
+                          conquista={conquista.codigo}
+                          tamanho={32}
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="font-display text-lg leading-tight uppercase">

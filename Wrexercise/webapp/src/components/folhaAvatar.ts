@@ -29,22 +29,27 @@ export function folhaPadrao(usuarioId: string): string {
 
 export const avataresKey = ["jogo", "avatares"] as const;
 
+/** Um Enfeite: `conquista` é a do nível que define o desenho (`/enfeite-<conquista em minúsculas>.png`). */
+export type Enfeite = { codigo: string; conquista: string; nome: string };
+
 type AvataresResponse = {
-  avatares: { usuarioId: string; folha: string }[];
+  avatares: { usuarioId: string; folha: string | null; vitrine: Enfeite[] }[];
 };
 
-function paraMapa(resposta: AvataresResponse): Map<string, string> {
-  return new Map(resposta.avatares.map((a) => [a.usuarioId, a.folha]));
+function paraMapa(resposta: AvataresResponse) {
+  return new Map(resposta.avatares.map((a) => [a.usuarioId, a]));
 }
+
+const semEnfeites: Enfeite[] = [];
 
 /**
  * A folha de uma pessoa: a que ela importou, se quem vê divide um grupo com ela, ou a padrão.
  * Um mapa só para o aplicativo todo, buscado uma vez e compartilhado por todos os avatares. Sem sessão
  * (a prévia pública do convite), não busca nada.
  */
-export function useFolhaAvatar(usuarioId: string): string {
+function useMapaAvatares() {
   const { data: usuario } = useSessao();
-  const { data } = useQuery({
+  return useQuery({
     queryKey: avataresKey,
     queryFn: ({ signal }) =>
       getJson<AvataresResponse>("/api/jogo/avatares", signal),
@@ -52,5 +57,15 @@ export function useFolhaAvatar(usuarioId: string): string {
     enabled: Boolean(usuario),
     staleTime: 5 * 60_000,
   });
-  return data?.get(usuarioId) ?? folhaPadrao(usuarioId);
+}
+
+export function useFolhaAvatar(usuarioId: string): string {
+  const { data } = useMapaAvatares();
+  return data?.get(usuarioId)?.folha ?? folhaPadrao(usuarioId);
+}
+
+/** A vitrine de Enfeites de uma pessoa (vazia para quem está no modo App). */
+export function useVitrine(usuarioId: string): Enfeite[] {
+  const { data } = useMapaAvatares();
+  return data?.get(usuarioId)?.vitrine ?? semEnfeites;
 }

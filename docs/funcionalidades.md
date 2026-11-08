@@ -212,6 +212,19 @@ The user cannot change the e-mail.
 - The `Proprietario` or an `Administrador` of a group can use "Voltar o avatar ao padrão" on the page of a member. This deletes the imported file of that member. The action is not for the own avatar of the actor.
 - An import is limited to 10 per minute for each user.
 
+### 3.3.6. Ornaments (`Enfeite`) and showcase (`Vitrine`)
+
+- Each achievement unlocks one `Enfeite`: a 16 by 16 px object. The system calculates the `Enfeite` items from the achievements each time. No purchase is possible.
+- The plant and the medal evolve. The best streak gives the plant: `Sequencia4` the seedling, `Sequencia8` the plant with a flower, `Sequencia12` the small tree. The number of activities gives the medal: `Treinos10` bronze, `Treinos50` silver, `Treinos100` gold. The user has the highest level only.
+- The other `Enfeite` items are: trophy (`DesafioCompleto`), dumbbell (`RatoDeAcademia`), stopwatch (`Corredor`), dog on a leash (`Andarilho`), bicycle (`Ciclista`), buoy (`Peixe`), ball (`Boleiro`), yoga mat (`Zen`), parallel bars (`PesoDoCorpo`), alarm clock (`Madrugador`), street lamp (`Noturno`), portable speaker (`FimDeSemana`), gym backpack (`Ecletico`).
+- The user has a `Vitrine` of up to 3 `Enfeite` items. It stores the code of the `Enfeite` and not the code of the achievement. An evolution keeps its place.
+- A new `Enfeite` enters the `Vitrine` alone if there is room. An `Enfeite` that the user removes does not return alone.
+- On the page `/perfil/avatar`, the user selects up to 3 `Enfeite` items, changes their order, or empties the `Vitrine`. The API is `GET /api/jogo/avatar`, `PUT /api/jogo/avatar/vitrine` (error `VITRINE_INVALIDA`) and `POST /api/jogo/enfeites/vistos`.
+- The scene shows the first `Enfeite` of the `Vitrine` next to each `Avatar`. The menu of an `Avatar` shows the full `Vitrine`.
+- Only users in the mode `Jogo` show a `Vitrine`. It is visible to the people who share an active group with the user. A user in the mode `App` shows nothing.
+- When a new `Enfeite` exists, the next visit to the scene plays an animation for the user only: the `Avatar` does `comemorando` and the `Enfeite` glows. The animation counts in the limit of 3 per visit. It does not play with reduced motion. Then the system marks the `Enfeite` as seen. Other members see the `Enfeite` in place, with no animation.
+- The profile page shows the `Enfeite` image on each achievement.
+
 ### 3.4. Forgotten password
 
 - The login page does not have a "forgot password" function.
@@ -481,7 +494,7 @@ The system calculates the achievements each time. It does not keep them in the d
 | `Ecletico` | Verified activities of 5 different types. The type `Outro` does not count. |
 
 - Achievements do not change the ranking.
-- Only the user sees his or her achievements.
+- Only the user sees his or her achievements. Other members see only the `Enfeite` items in the `Vitrine` (see 3.3.6).
 - When a user leaves a group, the user keeps the achievements from that group.
 
 ## 11. Notifications

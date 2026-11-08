@@ -84,5 +84,7 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(SessaoResponse))]
 [JsonSerializable(typeof(TransferirGrupoRequest))]
 [JsonSerializable(typeof(AvataresResponse))]
+[JsonSerializable(typeof(MeuAvatarResponse))]
+[JsonSerializable(typeof(SalvarVitrineRequest))]
 [JsonSerializable(typeof(FolhaEnviadaResponse))]
 internal sealed partial class AppJsonContext : JsonSerializerContext;

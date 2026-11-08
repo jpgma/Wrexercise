@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/PageHeader";
-import { EditorAvatar } from "@/features/jogo";
+import { EditorAvatar, EditorVitrine } from "@/features/jogo";
 
 export function AvatarPage() {
   return (
@@ -9,7 +9,10 @@ export function AvatarPage() {
         subtitle="Importe a sua folha de sprites"
         back="/perfil"
       />
-      <EditorAvatar />
+      <div className="space-y-4">
+        <EditorAvatar />
+        <EditorVitrine />
+      </div>
     </div>
   );
 }

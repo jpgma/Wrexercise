@@ -13,6 +13,8 @@ internal static class DataSourceFactory
         }
 
         // O builder slim evita recursos do Npgsql que não usamos e reduz o binário nativo.
-        return new NpgsqlSlimDataSourceBuilder(connectionString).Build();
+        var builder = new NpgsqlSlimDataSourceBuilder(connectionString);
+        builder.EnableArrays();
+        return builder.Build();
     }
 }

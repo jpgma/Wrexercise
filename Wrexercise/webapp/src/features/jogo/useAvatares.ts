@@ -1,6 +1,12 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { avataresKey } from "@/components/folhaAvatar";
-import { deleteEmpty, putFormData } from "@/services/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { avataresKey, type Enfeite } from "@/components/folhaAvatar";
+import {
+  deleteEmpty,
+  getJson,
+  postEmpty,
+  putJsonEmpty,
+  putFormData,
+} from "@/services/api";
 
 type FolhaEnviada = { folha: string };
 
@@ -36,6 +42,50 @@ export function useRedefinirAvatarMembro(grupoId: string) {
   return useMutation({
     mutationFn: (usuarioId: string) =>
       deleteEmpty(`/api/grupos/${grupoId}/membros/${usuarioId}/avatar`),
+    onSuccess: invalidar,
+  });
+}
+
+export const meuAvatarKey = ["jogo", "meu-avatar"] as const;
+
+export type MeuAvatar = {
+  folha: string | null;
+  vitrine: Enfeite[];
+  liberados: Enfeite[];
+  /** Códigos dos Enfeites que a pessoa ainda não viu. */
+  novos: string[];
+};
+
+export function useMeuAvatar() {
+  return useQuery({
+    queryKey: meuAvatarKey,
+    queryFn: ({ signal }) => getJson<MeuAvatar>("/api/jogo/avatar", signal),
+  });
+}
+
+function useInvalidarVitrine() {
+  const queryClient = useQueryClient();
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: avataresKey }),
+      queryClient.invalidateQueries({ queryKey: meuAvatarKey }),
+    ]);
+}
+
+export function useSalvarVitrine() {
+  const invalidar = useInvalidarVitrine();
+  return useMutation({
+    mutationFn: (enfeites: string[]) =>
+      putJsonEmpty("/api/jogo/avatar/vitrine", { enfeites }),
+    onSuccess: invalidar,
+  });
+}
+
+/** Depois da encenação de Enfeite novo. */
+export function useMarcarEnfeitesVistos() {
+  const invalidar = useInvalidarVitrine();
+  return useMutation({
+    mutationFn: () => postEmpty("/api/jogo/enfeites/vistos"),
     onSuccess: invalidar,
   });
 }

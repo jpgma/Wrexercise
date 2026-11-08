@@ -31,6 +31,9 @@ internal static class JogoRoutes
         jogo.MapGet("/loja", ObterLoja.HandleAsync);
         jogo.MapPost("/cartas", ComprarCarta.HandleAsync);
         jogo.MapGet("/avatares", ObterAvatares.HandleAsync);
+        jogo.MapGet("/avatar", ObterMeuAvatar.HandleAsync);
+        jogo.MapPut("/avatar/vitrine", SalvarVitrine.HandleAsync);
+        jogo.MapPost("/enfeites/vistos", MarcarEnfeitesVistos.HandleAsync);
         jogo.MapPut("/avatar/folha", EnviarFolhaAvatar.HandleAsync).RequireRateLimiting(AvatarPolicy);
         jogo.MapDelete("/avatar/folha", RestaurarAvatar.HandleAsync);
 

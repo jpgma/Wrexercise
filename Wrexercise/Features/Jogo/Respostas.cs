@@ -68,7 +68,19 @@ internal sealed record JogadaResponse(
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
 
 /// <param name="Folha">O endereço da folha importada; quem não importou nem aparece no mapa.</param>
-internal sealed record AvatarMembroResponse(Guid UsuarioId, string Folha);
+/// <param name="Codigo">O Enfeite (a família).</param>
+/// <param name="Conquista">A conquista do nível que define o desenho: <c>/enfeite-{conquista em minúsculas}.png</c>.</param>
+internal sealed record EnfeiteResponse(string Codigo, string Conquista, string Nome);
+
+/// <param name="Folha">O endereço da folha importada; sem ela vale a folha padrão.</param>
+/// <param name="Vitrine">Os Enfeites da vitrine; vazia para quem está no modo <c>App</c>.</param>
+internal sealed record AvatarMembroResponse(Guid UsuarioId, string? Folha, IReadOnlyList<EnfeiteResponse> Vitrine);
+
+internal sealed record MeuAvatarResponse(
+    string? Folha,
+    IReadOnlyList<EnfeiteResponse> Vitrine,
+    IReadOnlyList<EnfeiteResponse> Liberados,
+    IReadOnlyList<string> Novos);
 
 internal sealed record AvataresResponse(IReadOnlyList<AvatarMembroResponse> Avatares);
 
