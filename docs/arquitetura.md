@@ -1055,6 +1055,7 @@ Estrutura sugerida:
 ```text
 /dados/
 ├── postgres/
+├── avatares/        # folhas de avatar importadas (nome aleatório .png)
 └── evidencias/
     ├── 2026/
     │   ├── 11/
@@ -1182,6 +1183,7 @@ Volumes:
 ```text
 /srv/wrexercise/postgres
 /srv/wrexercise/evidencias
+/srv/wrexercise/avatares
 ```
 
 Implementar:
@@ -1218,6 +1220,7 @@ services:
         condition: service_healthy
     volumes:
       - /srv/wrexercise/evidencias:/dados/evidencias
+      - /srv/wrexercise/avatares:/dados/avatares
     mem_limit: 384m
     cpus: 0.50
 

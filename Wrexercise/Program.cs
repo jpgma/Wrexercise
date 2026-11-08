@@ -36,6 +36,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSingleton<NpgsqlDataSource>(DataSourceFactory.Create);
 builder.Services.Configure<EvidenciasOptions>(builder.Configuration.GetSection(EvidenciasOptions.Section));
 builder.Services.AddSingleton<ArmazenamentoEvidencias>();
+builder.Services.Configure<AvataresOptions>(builder.Configuration.GetSection(AvataresOptions.Section));
+builder.Services.AddSingleton<ArmazenamentoAvatares>();
 
 // JSON malformado responde 400 em qualquer ambiente, em vez de virar exceção em Development.
 builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = false);
@@ -49,6 +51,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 builder.Services.AddAutenticacaoRateLimiter();
 builder.Services.AddAtividadesRateLimiter();
+builder.Services.AddJogoRateLimiter();
 builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 
 var app = builder.Build();

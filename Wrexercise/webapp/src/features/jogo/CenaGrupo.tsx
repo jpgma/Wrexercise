@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { folhaPadrao, hashFnv1a } from "@/components/folhaAvatar";
+import { hashFnv1a, useFolhaAvatar } from "@/components/folhaAvatar";
 import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { MenuAvatar } from "./MenuAvatar";
@@ -82,6 +82,7 @@ function AvatarCena({
   atuacao: Atuacao | undefined;
   onToque: () => void;
 }) {
+  const folha = useFolhaAvatar(membro.usuarioId);
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   const parado = membro.pose === "parado";
 
@@ -143,7 +144,7 @@ function AvatarCena({
       >
         <SpriteAvatar
           key={animacao}
-          folha={folhaPadrao(membro.usuarioId)}
+          folha={folha}
           animacao={animacao}
           escala={escala}
           estatico={reduzido}

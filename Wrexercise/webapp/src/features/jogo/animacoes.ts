@@ -33,6 +33,13 @@ export const animacoes = {
   receber: { linha: 8, quadros: 4, ms: 100, repete: false, quadroEstatico: 2 },
   aceitar: { linha: 9, quadros: 4, ms: 120, repete: false, quadroEstatico: 3 },
   recusar: { linha: 10, quadros: 3, ms: 150, repete: false, quadroEstatico: 2 },
+  provocar: {
+    linha: 11,
+    quadros: 4,
+    ms: 120,
+    repete: false,
+    quadroEstatico: 2,
+  },
 } as const satisfies Record<string, Animacao>;
 
 /** Duração total de uma animação que toca uma vez. */

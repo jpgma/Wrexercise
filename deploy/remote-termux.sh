@@ -92,6 +92,7 @@ iniciar_banco() {
 ambiente_app() {
   export ConnectionStrings__Database="Host=127.0.0.1;Port=5432;Database=wrexercise;Username=wrexercise;Password=$DB_PASSWORD;Maximum Pool Size=10"
   export Evidencias__Diretorio=$dados/evidencias
+  export Avatares__Diretorio=$dados/avatares
   export ASPNETCORE_URLS=http://127.0.0.1:8080
   # Sem isto o ASP.NET usa o diretório atual (o pai de app/) e não acha wwwroot nem appsettings.json.
   export ASPNETCORE_CONTENTROOT=$base/app
@@ -99,7 +100,7 @@ ambiente_app() {
 
 iniciar() {
   exigir
-  mkdir -p run log "$dados/evidencias" "$dados/backups"
+  mkdir -p run log "$dados/evidencias" "$dados/avatares" "$dados/backups"
   ler_env
   # Sem o wake lock, o Android suspende a CPU com a tela apagada.
   command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock || true
@@ -135,7 +136,7 @@ implantar() {
   chmod +x app/Wrexercise
   iniciar_banco
   ambiente_app
-  mkdir -p "$dados/evidencias"
+  mkdir -p "$dados/evidencias" "$dados/avatares"
   grun "$base/app/Wrexercise" migrate
   iniciar
   # Termux:Boot roda tudo em ~/.termux/boot/ ao ligar o telefone.
@@ -280,10 +281,11 @@ SQL
 
   titulo "Disco"
   df -h "$base" 2>/dev/null | tail -n 1 | awk '{printf "Partição do app: %s usados de %s (%s), %s livres\n", $3, $2, $5, $4}'
-  for d in postgres evidencias backups; do
+  for d in postgres evidencias avatares backups; do
     printf '%-10s %s\n' "$d" "$(du -sh "$dados/$d" 2>/dev/null | cut -f1)"
   done
   echo "Arquivos de evidência: $(find "$dados/evidencias" -type f 2>/dev/null | wc -l)"
+  echo "Avatares importados: $(find "$dados/avatares" -type f 2>/dev/null | wc -l)"
   echo "Logs: $(du -sh log 2>/dev/null | cut -f1)"
 
   titulo "Backups"
@@ -300,7 +302,7 @@ SQL
 backup_sh() {
   ler_env
   PGHOST=127.0.0.1 PGUSER=wrexercise PGDATABASE=wrexercise PGPASSWORD=$DB_PASSWORD \
-    BACKUP_DESTINO=$dados/backups EVIDENCIAS_DIR=$dados/evidencias \
+    BACKUP_DESTINO=$dados/backups EVIDENCIAS_DIR=$dados/evidencias AVATARES_DIR=$dados/avatares \
     sh "$base/deploy/backup.sh" "$@"
 }
 

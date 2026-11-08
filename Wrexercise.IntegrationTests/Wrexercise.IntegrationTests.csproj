@@ -16,6 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Wrexercise.UnitTests\Infrastructure\Files\PngFolha.cs" Link="PngFolha.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Wrexercise\Wrexercise.csproj" />
   </ItemGroup>
 

@@ -88,6 +88,13 @@ export function PerfilPage() {
             </div>
           </div>
 
+          <Link
+            to="/perfil/avatar"
+            className="btn-secondary mt-3 w-full justify-center"
+          >
+            Trocar avatar
+          </Link>
+
           {perfil.isError && (
             <p role="alert" className="form-error mt-4">
               {getErrorMessage(perfil.error)}

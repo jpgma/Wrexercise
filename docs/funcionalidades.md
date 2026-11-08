@@ -115,7 +115,7 @@ The user cannot change the e-mail.
 - In all other cases, the pose is `parado`. From time to time, a member that is `parado` stretches (`alongar`) or looks around (`olhar`). The moments are random and differ for each member. The animation stops when the page is hidden.
 - If the device asks for reduced motion, the scene does not animate. Each pose shows one fixed frame. The frames of `treinando` and `comemorando` differ from the frame of `parado`.
 - Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
-- The scene uses the default avatar sheets in the app bundle.
+- The scene uses the sheet that each member imported (see 3.3.5). A member without an imported sheet uses a default sheet from the app bundle.
 - Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3). A tap on the badge opens the shop.
 - Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". If the hand has answer cards, the panel "Aceitar com uma Resposta" shows them. With "MUDANÇA DE PLANOS", the user selects the new goal. Each play shows the card, the goal, the deadline, a state label and the answer card that the recipient used. A play that `DesafioDuplo` created shows "devolveu o desafio". The menu of an avatar shows only the challenge cards of the hand.
 - When the user opens the scene, the scene plays the card events that the user did not see yet, one at a time, at most 3:
@@ -199,6 +199,18 @@ The user cannot change the e-mail.
 - `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
 - The shop page (`/jogo/loja`) shows the balance, the number of cards in the hand and the cards for sale, in two sections: "Provocações" and "Respostas". Each card has the effect and the button "Comprar por N EN". The button is disabled when the balance is too low (the page shows the missing Energy) or when the hand is full.
 - A card shows a pixel frame with the name, the icon and the price. A challenge card has a coral frame. An answer card has a violet frame. The frame and the icons are CC0 art in the app bundle (`carta-*.png`).
+
+### 3.3.5. Imported avatar (`Avatar`)
+
+- The page `/perfil/avatar` lets the user import a sprite sheet. A link "Trocar avatar" on the profile page opens it.
+- The sheet is a PNG with 256 by 384 px (8 columns, 12 rows of 32 px), colour type RGBA, 8 bits, and at most 64 KB. An animated PNG is not valid.
+- The browser opens the file, checks the size, and writes the PNG again. The server checks the file again and refuses an invalid one with `FOLHA_INVALIDA`. The server gives the file a random name.
+- Before saving, the page shows a preview of the portrait and of all the animation rows.
+- "Voltar ao avatar padrão" deletes the imported file. The default sheet returns.
+- `GET /api/jogo/avatares` returns the sheet URL of the user and of each active member of the groups of the user. The app shows these sheets in every `Avatar` and in the scene.
+- `GET /api/avatares/{arquivo}` returns the file only to its owner and to people who share an active group with the owner. For anyone else, it returns 404.
+- The `Proprietario` or an `Administrador` of a group can use "Voltar o avatar ao padrão" on the page of a member. This deletes the imported file of that member. The action is not for the own avatar of the actor.
+- An import is limited to 10 per minute for each user.
 
 ### 3.4. Forgotten password
 
@@ -432,7 +444,7 @@ The application does not use points.
 
 - The challenge page shows a chart with the history of the weeks of the current user.
 - The group summary shows the featured challenge, the weekly progress of the user and the first 3 members of the ranking. Each ranking item has the `usuarioId` of the member.
-- Each `Avatar` that has a user ID shows the portrait (row 0, column 0) of a default sheet. The sheet comes from a hash of the user ID, out of 6 sheets in the app bundle. If the ID is missing, the `Avatar` shows the initials.
+- Each `Avatar` that has a user ID shows the portrait (row 0, column 0) of the imported sheet of that user (see 3.3.5). Without one, it shows a default sheet. The default sheet comes from a hash of the user ID, out of 6 sheets in the app bundle. If the ID is missing, the `Avatar` shows the initials.
 
 ## 10. Profile, member page and achievements
 

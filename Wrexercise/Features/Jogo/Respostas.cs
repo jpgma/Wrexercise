@@ -66,3 +66,10 @@ internal sealed record JogadaResponse(
     bool Nova);
 
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
+
+/// <param name="Folha">O endereço da folha importada; quem não importou nem aparece no mapa.</param>
+internal sealed record AvatarMembroResponse(Guid UsuarioId, string Folha);
+
+internal sealed record AvataresResponse(IReadOnlyList<AvatarMembroResponse> Avatares);
+
+internal sealed record FolhaEnviadaResponse(string Folha);

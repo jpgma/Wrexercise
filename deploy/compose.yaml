@@ -14,6 +14,7 @@ services:
         condition: service_healthy
     volumes:
       - ${DATA_DIR:-/srv/wrexercise}/evidencias:/dados/evidencias
+      - ${DATA_DIR:-/srv/wrexercise}/avatares:/dados/avatares
     mem_limit: 384m
     cpus: 0.50
 
@@ -67,6 +68,7 @@ services:
     volumes:
       - ./backup.sh:/backup.sh:ro
       - ${DATA_DIR:-/srv/wrexercise}/evidencias:/dados/evidencias
+      - ${DATA_DIR:-/srv/wrexercise}/avatares:/dados/avatares
       - ${BACKUP_DIR:-/srv/wrexercise/backups}:/backups
     mem_limit: 256m
     cpus: 0.50

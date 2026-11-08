@@ -1,3 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
+import { useSessao } from "@/features/autenticacao";
+import { getJson } from "@/services/api";
+
 const nomesFolhasPadrao = [
   "bia",
   "caio",
@@ -21,4 +25,32 @@ export function hashFnv1a(texto: string): number {
 export function folhaPadrao(usuarioId: string): string {
   const indice = hashFnv1a(usuarioId) % nomesFolhasPadrao.length;
   return `/avatar-${nomesFolhasPadrao[indice]}.png`;
+}
+
+export const avataresKey = ["jogo", "avatares"] as const;
+
+type AvataresResponse = {
+  avatares: { usuarioId: string; folha: string }[];
+};
+
+function paraMapa(resposta: AvataresResponse): Map<string, string> {
+  return new Map(resposta.avatares.map((a) => [a.usuarioId, a.folha]));
+}
+
+/**
+ * A folha de uma pessoa: a que ela importou, se quem vê divide um grupo com ela, ou a padrão.
+ * Um mapa só para o aplicativo todo, buscado uma vez e compartilhado por todos os avatares. Sem sessão
+ * (a prévia pública do convite), não busca nada.
+ */
+export function useFolhaAvatar(usuarioId: string): string {
+  const { data: usuario } = useSessao();
+  const { data } = useQuery({
+    queryKey: avataresKey,
+    queryFn: ({ signal }) =>
+      getJson<AvataresResponse>("/api/jogo/avatares", signal),
+    select: paraMapa,
+    enabled: Boolean(usuario),
+    staleTime: 5 * 60_000,
+  });
+  return data?.get(usuarioId) ?? folhaPadrao(usuarioId);
 }

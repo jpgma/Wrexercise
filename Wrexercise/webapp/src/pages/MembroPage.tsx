@@ -21,6 +21,7 @@ import {
   useRemoverMembro,
   useTransferirGrupo,
 } from "@/features/grupos";
+import { RedefinirAvatar } from "@/features/jogo";
 import { SituacaoParticipante } from "@/features/progresso";
 import { usePerfilMembro } from "@/features/usuarios";
 import { ApiError, getErrorMessage } from "@/services/api";
@@ -105,6 +106,8 @@ export function MembroPage() {
   const podeRemover =
     !voce && meuPapel !== undefined && canRemover(meuPapel, papel);
   const podeTransferir = !voce && meuPapel === "Proprietario";
+  const podeRedefinirAvatar =
+    !voce && (meuPapel === "Proprietario" || meuPapel === "Administrador");
   const atividades = feed.data?.pages[0]?.atividades ?? [];
 
   const mutacaoAtiva =
@@ -228,6 +231,14 @@ export function MembroPage() {
                 }))}
               />
             </>
+          )}
+
+          {podeRedefinirAvatar && (
+            <RedefinirAvatar
+              grupoId={grupoId}
+              usuarioId={usuarioId}
+              nome={primeiroNome}
+            />
           )}
 
           {(podeAlterar || podeRemover || podeTransferir) && (

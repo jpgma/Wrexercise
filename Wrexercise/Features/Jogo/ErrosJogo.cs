@@ -10,6 +10,21 @@ internal static class ErrosJogo
         "DADOS_INVALIDOS",
         "Verifique os dados informados.");
 
+    public static IResult FolhaInvalida() => ApiProblem.Create(
+        StatusCodes.Status400BadRequest,
+        "FOLHA_INVALIDA",
+        "A folha de sprites precisa ser um PNG RGBA de 256×384 px, com até 64 KB.");
+
+    public static IResult AvatarNaoEncontrado() => ApiProblem.Create(
+        StatusCodes.Status404NotFound,
+        "AVATAR_NAO_ENCONTRADO",
+        "Avatar não encontrado.");
+
+    public static IResult MembroNaoEncontrado() => ApiProblem.Create(
+        StatusCodes.Status404NotFound,
+        "MEMBRO_NAO_ENCONTRADO",
+        "Membro não encontrado.");
+
     public static IResult CartaInvalida() => ApiProblem.Create(
         StatusCodes.Status400BadRequest,
         "CARTA_INVALIDA",

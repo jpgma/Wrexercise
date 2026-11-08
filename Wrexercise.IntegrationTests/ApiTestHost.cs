@@ -24,16 +24,21 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     internal Npgsql.NpgsqlDataSource DataSource => _database.DataSource;
 
-    private ApiTestHost(TestDatabase database, string evidenciasDiretorio)
+    private ApiTestHost(TestDatabase database, string evidenciasDiretorio, string avataresDiretorio)
     {
         _database = database;
+        AvataresDiretorio = avataresDiretorio;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("ConnectionStrings:Database", database.ConnectionString);
             builder.UseSetting("Evidencias:Diretorio", evidenciasDiretorio);
+            builder.UseSetting("Avatares:Diretorio", avataresDiretorio);
         });
     }
+
+    /// <summary>Onde o servidor de teste guarda as folhas de avatar importadas.</summary>
+    public string AvataresDiretorio { get; }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
@@ -43,7 +48,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
         await MigrationRunner.RunAsync(database.DataSource, MigrationCatalog.LoadEmbedded(), NullLogger.Instance, Token);
         var evidenciasDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-evidencias", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(evidenciasDiretorio);
-        return new ApiTestHost(database, evidenciasDiretorio);
+        var avataresDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-avatares", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(avataresDiretorio);
+        return new ApiTestHost(database, evidenciasDiretorio, avataresDiretorio);
     }
 
     public HttpClient CreateAnonimo()
