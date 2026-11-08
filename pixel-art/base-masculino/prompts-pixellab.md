@@ -91,7 +91,7 @@ A pele e o cabelo vêm das rampas do `jpgma`. A camiseta e a calça seguem a ram
 
 ### `rotations` prontas
 
-`build.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Use `saida/rotations/<direcao>.png` como referência no PixelLab, ou importe as 8 como as rotações do personagem. `saida/rotacao-48.png` é a mesma faixa já recortada na célula de 48×48 da folha.
+`build.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Os acertos à mão de olhos e sobrancelhas ficam em `RETOQUES`, no próprio script. Use `saida/rotations/<direcao>.png` (nome sem hífen, por exemplo `northeast.png`) como referência no PixelLab, ou importe as 8 como as rotações do personagem.
 
 ### Conferência da `rotations`
 

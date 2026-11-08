@@ -7,8 +7,8 @@ fundo escuro com brilho, desenhada numa escala bem maior que a do Jogo. Este scr
 - redesenha o contorno de 1 px e põe os pés na linha 45 de um quadro de 64×64, centrado.
 
 Uso: python build.py   (exige Pillow)
-Gera saida/rotations/<direcao>.png (64×64, referência para o PixelLab), saida/rotations.png
-(faixa 512×64), saida/rotacao-48.png (faixa de células 48×48, como a folha) e preview/.
+Gera saida/rotations/<direcao>.png (64×64, referência para o PixelLab; o nome da direção vai
+sem hífen, por exemplo northeast.png) e preview/rotacao-6x.png.
 """
 
 from __future__ import annotations
@@ -45,12 +45,36 @@ PALETA = {
     "calca_sombra": "#2a2830",
     "branco": "#d3cfd1",  # tênis e branco dos olhos
 }
+
+# Retoques à mão depois da redução, em coordenadas do quadro de 64: {(x, y): cor de PALETA,
+# "contorno" ou None (transparente)}. Acertam olhos e sobrancelhas onde a redução os borrou.
+RETOQUES: dict[str, dict[tuple[int, int], str | None]] = {
+    "west": {
+        (24, 22): "contorno", (25, 22): "pele",
+        (24, 23): "contorno", (25, 23): "pele", (26, 23): "contorno", (27, 23): "contorno",
+        (24, 24): "contorno", (25, 24): "pele", (28, 24): "branco",
+        (27, 25): "contorno", (28, 25): "branco",
+    },
+    "south-west": {
+        (23, 18): None,
+        (25, 22): "cabelo_sombra", (26, 22): "cabelo_sombra", (27, 22): "cabelo_sombra",
+        (32, 22): "cabelo_sombra",
+        (26, 23): "contorno", (30, 23): "contorno", (31, 23): "contorno",
+        (25, 24): "contorno", (27, 24): "branco", (31, 24): "contorno", (32, 24): "branco",
+        (25, 25): "contorno", (27, 25): "branco", (31, 25): "contorno", (32, 25): "branco",
+    },
+}
 LIMIAR_LINHA = 0.55  # fração de escuro nos votos do bloco para virar linha interna
 PUREZA = 3  # distância (px da fonte) dos vizinhos que precisam ter a mesma cor para votar
 
 
 def hex_rgb(h: str) -> tuple[int, int, int]:
     return int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+
+
+def cor_de(nome: str) -> tuple[int, int, int]:
+    """Cor de um nome de PALETA ou "contorno"."""
+    return CONTORNO if nome == "contorno" else hex_rgb(PALETA[nome])
 
 
 def escuro(p) -> bool:
@@ -235,12 +259,12 @@ def main() -> None:
             borda = any((tx + dx, ty + dy) not in grade for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             cor = CONTORNO if borda or k < 0 else paleta[k]
             q.putpixel((ox + tx, oy + ty), cor + (255,))
-        q.save(saida / "rotations" / f"{nome}.png")
+        for (x, y), nome_cor in RETOQUES.get(nome, {}).items():
+            q.putpixel((x, y), (0, 0, 0, 0) if nome_cor is None else cor_de(nome_cor) + (255,))
+        q.save(saida / "rotations" / f"{nome.replace('-', '')}.png")
         faixa.paste(q, (i * QUADRO, 0))
         faixa48.paste(q.crop((OX, OY, OX + CELULA, OY + CELULA)), (i * CELULA, 0))
         print(f"{nome:11s} {tw}×{th} px, caixa no quadro {q.getbbox()}")
-    faixa.save(saida / "rotations.png")
-    faixa48.save(saida / "rotacao-48.png")
 
     # Prévia: 6× sobre o asfalto da cena, com o jpgma embaixo para comparar o tamanho.
     linhas = [faixa48]
@@ -252,7 +276,7 @@ def main() -> None:
         p.alpha_composite(linha, (0, k * CELULA))
     p.resize((p.width * 6, p.height * 6), Image.NEAREST).save(prev / "rotacao-6x.png")
     usadas = {c for c in faixa.get_flattened_data() if c[3]}
-    print(f"{len(usadas)} cores; saida/rotations.png, saida/rotacao-48.png, preview/rotacao-6x.png")
+    print(f"{len(usadas)} cores; saida/rotations/*.png, preview/rotacao-6x.png")
 
 
 if __name__ == "__main__":
