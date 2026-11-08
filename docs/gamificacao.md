@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas) e G4 (Respostas) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` e as Respostas de `decisoes/0036-respostas.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas) e G6 (avatar importado e Enfeites) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` e o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -359,7 +359,7 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `Treinos100` | 100 atividades | Medalha de ouro (substitui a de prata) |
 | `DesafioCompleto` (nova) | Um desafio `Encerrado` com todas as semanas que contavam cumpridas (a mesma regra do desafio concluído, §5.1) | Troféu |
 
-**Tipo de atividade**, uma por tipo, com **20 atividades** daquele tipo. `Outro` não tem conquista.
+**Tipo de atividade**, uma por tipo, com **10 atividades** daquele tipo. `Outro` não tem conquista.
 
 | Conquista | Tipo | Enfeite |
 |---|---|---|
@@ -383,7 +383,7 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 
 - São 19 conquistas e 19 desenhos de Enfeite. A planta e a medalha evoluem, então a cena mostra no máximo 15 objetos diferentes.
 - Nenhuma conquista usa distância, ritmo ou carga: só contagem de atividades, horário e semanas cumpridas. Uma pessoa que faz 20 caminhadas tem a mesma chance de um Enfeite que uma pessoa que faz 20 corridas.
-- Os nomes e os limites (20 por tipo, 10 por hábito) ficam em constantes, como os demais marcos.
+- Os nomes e os limites (10 por tipo, 10 por hábito) ficam em constantes, como os demais marcos.
 - `Madrugador` e `Noturno` cobrem as duas pontas do dia, para que treinar cedo não seja o único horário premiado (ver §12, item 3).
 
 ### 9.2. Vitrine
@@ -395,9 +395,9 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 - Só aparecem Enfeites de quem está no modo Jogo. Quem está no modo App não expõe nada.
 - **Enfeite novo:** na próxima visita à cena, o avatar faz `comemorando` e o Enfeite aparece com o mesmo brilho em CSS da missão (§3.3). Os colegas veem o Enfeite já no lugar, sem encenação.
 
-A vitrine é uma lista de códigos de conquista, guardada na tabela `avatares` (G6). Um código cuja conquista não vale mais é ignorado na leitura.
+A vitrine é uma lista de **códigos de Enfeite** (a família: `planta`, `medalha`…), e não de conquista, guardada na tabela `avatares`. Assim a evolução mantém o lugar. Um código que não vale mais é ignorado na leitura, e os Enfeites já vistos (`enfeites_vistos`) que a pessoa tirou não voltam sozinhos.
 
-**Privacidade.** Hoje as conquistas aparecem só no próprio Perfil (`decisoes/0018-perfil-e-pagina-do-membro.md`). A vitrine mostra aos colegas apenas o que está nela, só para quem escolheu o modo Jogo, e a pessoa pode esvaziá-la. Essa mudança precisa de um ADR na G6.
+**Privacidade.** Hoje as conquistas aparecem só no próprio Perfil (`decisoes/0018-perfil-e-pagina-do-membro.md`). A vitrine mostra aos colegas apenas o que está nela, só para quem escolheu o modo Jogo, e a pessoa pode esvaziá-la. Decidido em `decisoes/0037-avatar-importado-e-enfeites.md`.
 
 ### 9.3. Calistenia na praça
 
@@ -451,10 +451,10 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 
 - Tabela `avatares`: uma linha por usuário, com o caminho da folha importada.
 - Editor em `/perfil/avatar`, upload validado e redefinição pelo `Proprietario` ou por um `Administrador`.
-- `GET /api/grupos/{id}/avatares` e o download da folha.
+- Um mapa global `GET /api/jogo/avatares` (folha e vitrine de quem consulta e dos colegas de grupo) e o download da folha em `GET /api/avatares/{arquivo}`. Também `GET /api/jogo/avatar`, `PUT /api/jogo/avatar/vitrine` e `POST /api/jogo/enfeites/vistos`.
 - As conquistas novas de §9.1 em `ConquistasUsuario` (fatia `Usuarios`), visíveis no Perfil para todos, inclusive no modo App.
 - Enfeites liberados pelas conquistas, vitrine e encenação de Enfeite novo.
-- ADR sobre mostrar a vitrine aos colegas (§9.2).
+- ADR 0037 sobre mostrar a vitrine aos colegas (§9.2).
 
 ### G7 — Rival da semana
 
@@ -497,8 +497,8 @@ Fechadas em `decisoes/0033-regras-de-energia-e-jogadas.md`: valores das recompen
 1. ~~Tabela da MUDANÇA DE PLANOS~~ — fechada (§6.1).
 2. **Semana das missões para quem está em vários grupos** (G5). Recomendação: avaliar cada atividade na semana do fuso do seu grupo. Falta definir qual grupo serve de referência para a semana, porque o aplicativo não tem um "grupo em destaque".
 3. **Madrugada.** O bônus antes das 06:00 somado à carta ANTES DAS 8 pode estimular treino de madrugada em vez de constância. Revisar depois de observar o uso.
-4. **Enfeite e cena com 10 pessoas.** Conferir num celular de 360 px se o Enfeite ao lado do avatar não polui o círculo. Se poluir, mostrar só ao tocar no avatar.
-5. **Limites das conquistas novas.** 20 por tipo pode ser muito para tipos raros, como `Natacao`. Recomendação: começar com 20 e conferir com os dados reais dos grupos antes da G6.
+4. **Enfeite e cena com 10 pessoas.** Aberta: implementado com o Enfeite de 16 px ao lado do avatar na escala 2; falta conferir num celular de 360 px se o Enfeite ao lado do avatar não polui o círculo. Se poluir, mostrar só ao tocar no avatar.
+5. ~~Limites das conquistas novas~~ — fechada: 10 por tipo (`decisoes/0037-avatar-importado-e-enfeites.md`). Rever com os dados reais.
 6. **Atividades antigas de "Treino em casa".** A migração 014 as trocou por `Calistenia`, então elas contam para `PesoDoCorpo`. Recomendação: aceitar, porque quase sempre eram treinos com o peso do corpo.
 
 ## 13. Critérios de sucesso
