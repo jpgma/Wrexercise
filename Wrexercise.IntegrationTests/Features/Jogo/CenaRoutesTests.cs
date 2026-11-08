@@ -95,7 +95,7 @@ public sealed class CenaRoutesTests : IAsyncLifetime
         await PostAtividadeAsync(ana, grupoId);
         // Uma atividade verificada cumpre a meta; a outra segue em revisão.
         await _host.ExecuteAsync($"""
-            UPDATE atividades SET situacao_verificacao = 'Verificada'
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
             WHERE usuario_id = '{ana.Id}'
             """);
         await _host.ExecuteAsync($"""
@@ -143,7 +143,7 @@ public sealed class CenaRoutesTests : IAsyncLifetime
 
     private async Task DefinirSituacaoAsync(TestUsuario usuario, string situacao) =>
         await _host.ExecuteAsync($"""
-            UPDATE atividades SET situacao_verificacao = '{situacao}'
+            UPDATE atividades SET situacao_verificacao = '{situacao}', verified_at = now()
             WHERE usuario_id = '{usuario.Id}'
             """);
 

@@ -12,9 +12,10 @@ internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool 
 /// <param name="Aposta">Se quem recebeu aceitou com a APOSTA.</param>
 internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false);
 
-internal sealed record EnergiaGanha(int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0)
+internal sealed record EnergiaGanha(
+    int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0, int Rivais = 0)
 {
-    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas;
+    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais;
 }
 
 /// <summary>
@@ -40,10 +41,14 @@ internal static class CalculoEnergia
 
     /// <param name="atividades">As atividades não rejeitadas de todos os grupos, em ordem de registro.</param>
     /// <param name="jogadas">As Jogadas concluídas de que a pessoa participou.</param>
+    /// <param name="rivaisVencidos">
+    /// Quantas vezes a pessoa venceu o Rival que escolheu. Cada grupo conta à parte (decisão 0038).
+    /// </param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
         IReadOnlyList<DesafioDaPessoa> desafios,
-        IReadOnlyList<RecompensaJogada>? jogadas = null)
+        IReadOnlyList<RecompensaJogada>? jogadas = null,
+        int rivaisVencidos = 0)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -56,7 +61,8 @@ internal static class CalculoEnergia
             CountSemanasCumpridas(desafios) * PorMeta,
             MarcosSequencia.Where(m => melhorSequencia >= m.Semanas).Sum(m => m.Energia),
             desafios.Count(d => d.IsConcluido()) * PorDesafioConcluido,
-            (jogadas ?? []).Sum(GetRecompensa));
+            (jogadas ?? []).Sum(GetRecompensa),
+            rivaisVencidos * ResultadoRival.Energia);
     }
 
     /// <summary>

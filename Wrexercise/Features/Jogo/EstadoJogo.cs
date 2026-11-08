@@ -65,6 +65,8 @@ internal sealed record EstadoJogo(
         var desafios = await DesafiosDaPessoa.LoadAsync(connection, transaction, usuarioId, cancellationToken);
         var jogadas = await Jogo.Jogadas.LoadAsync(connection, transaction, usuarioId, usuarioId, cancellationToken);
         var cartas = await LoadCartasAsync(connection, transaction, usuarioId, cancellationToken);
+        var rivais = await Rivais.LoadAsync(connection, transaction, usuarioId, null, cancellationToken);
+        var rivaisVencidos = rivais.Count(r => r.EscolhedorId == usuarioId && r.Situacao == ResultadoRival.Venceu);
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
@@ -74,7 +76,7 @@ internal sealed record EstadoJogo(
                 j.CodigoResposta == CodigoCarta.Aposta))
             .ToList();
 
-        return new EstadoJogo(usuarioId, CalculoEnergia.Calcular(atividades, desafios, recompensas), cartas, jogadas);
+        return new EstadoJogo(usuarioId, CalculoEnergia.Calcular(atividades, desafios, recompensas, rivaisVencidos), cartas, jogadas);
     }
 
     private static async Task<List<CartaComprada>> LoadCartasAsync(

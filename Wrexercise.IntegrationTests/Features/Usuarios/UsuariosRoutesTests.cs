@@ -29,7 +29,7 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
         var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Administrador, "Bia");
         await CriarAtividadeSoloAsync(ana, outroGrupoId);
         await CriarAtividadeAsync(ana, grupoId);
-        await _host.ExecuteAsync("UPDATE atividades SET situacao_verificacao = 'Verificada'");
+        await _host.ExecuteAsync("UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()");
 
         var response = await bia.Client.GetAsync($"/api/grupos/{grupoId}/membros/{ana.Id}/perfil", Token);
 
@@ -89,7 +89,7 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
             WHERE usuario_id = '{bia.Id}'
             """);
         await CriarAtividadeAsync(ana, grupoId);
-        await _host.ExecuteAsync("UPDATE atividades SET situacao_verificacao = 'Verificada'");
+        await _host.ExecuteAsync("UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()");
 
         var doAna = await GetPerfilAsync(bia, grupoId, ana.Id);
         Assert.Equal("Atual", doAna.Desafio!.Nome);

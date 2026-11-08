@@ -122,9 +122,9 @@ internal static class JogoTestes
         host.ExecuteAsync($"""
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
-                situacao_verificacao, created_at)
+                situacao_verificacao, verified_at, created_at)
             SELECT '{grupoId}', '{usuario.Id}', 'Outro', 1800, now() - interval '60 days' - s * interval '1 hour',
-                'RegistroManual', 'Verificada', now() - interval '60 days'
+                'RegistroManual', 'Verificada', now() - interval '60 days', now() - interval '60 days'
             FROM generate_series(1, {atividades}) s
             """);
 

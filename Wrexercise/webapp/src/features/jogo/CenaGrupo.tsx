@@ -9,13 +9,25 @@ import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MenuAvatar } from "./MenuAvatar";
+import { RivalDaSemana } from "./RivalDaSemana";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { useJogadas, useMarcarJogadasVistas } from "./useCartas";
 import { useCena, type Cena, type MembroCena } from "./useCena";
-import { type Atuacao, type CartaEmCena, useEncenacoes } from "./useEncenacoes";
+import {
+  type Atuacao,
+  type CartaEmCena,
+  type RivalEmCena,
+  useEncenacoes,
+} from "./useEncenacoes";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
+import {
+  getVencedorId,
+  type Rival,
+  useMarcarRivaisVistos,
+  useRivais,
+} from "./useRivais";
 
 // O chão tem 180×230 px e é mostrado em 2×.
 const semNovos: string[] = [];
@@ -46,6 +58,40 @@ function mulberry32(semente: number): () => number {
 }
 
 type Posicao = { x: number; y: number };
+
+/** Prefixo da provocação de quem acabou de escolher: só existe na tela, o servidor não a conhece. */
+const idLocal = "agora-";
+
+/**
+ * O que ainda não foi visto do Rival: a provocação, para quem foi escolhido; o resultado, para quem
+ * escolheu. A provocação de quem acabou de escolher toca na hora e não tem o que registrar.
+ */
+function getRivaisEmCena(
+  rivais: Rival[] | undefined,
+  usuarioId: string,
+  escolhidoAgora: string | null,
+): RivalEmCena[] {
+  const daApi: RivalEmCena[] = (rivais ?? [])
+    .filter((r) => r.nova)
+    .map((r) => ({
+      id: r.id,
+      escolhedorId: r.escolhedorId,
+      rivalId: r.rivalId,
+      efeito: r.escolhido ? "resultado" : "provocacao",
+      vencedorId: r.escolhido ? getVencedorId(r) : null,
+    }));
+  if (!escolhidoAgora) return daApi;
+  return [
+    {
+      id: `${idLocal}${escolhidoAgora}`,
+      escolhedorId: usuarioId,
+      rivalId: escolhidoAgora,
+      efeito: "provocacao",
+      vencedorId: null,
+    },
+    ...daApi,
+  ];
+}
 
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
 function posicionar(
@@ -296,6 +342,13 @@ function Praca({
   const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
   const meuAvatar = useMeuAvatar();
   const { mutate: marcarEnfeitesVistos } = useMarcarEnfeitesVistos();
+  const rivais = useRivais(grupoId);
+  const { mutate: marcarRivaisVistos } = useMarcarRivaisVistos(grupoId);
+  const [escolhidoAgora, setEscolhidoAgora] = useState<string | null>(null);
+  const rivaisEmCena = useMemo(
+    () => getRivaisEmCena(rivais.data?.rivais, usuarioId, escolhidoAgora),
+    [rivais.data, usuarioId, escolhidoAgora],
+  );
 
   const { membros } = cena;
   const escala = membros.length <= 5 ? 3 : 2;
@@ -320,6 +373,12 @@ function Praca({
     usuarioId,
     enfeitesNovos: meuAvatar.data?.novos ?? semNovos,
     onEnfeitesVistos: marcarEnfeitesVistos,
+    rivais: rivaisEmCena,
+    onRivaisVistos: (ids) => {
+      const doServidor = ids.filter((id) => !id.startsWith(idLocal));
+      if (doServidor.length > 0) marcarRivaisVistos(doServidor);
+      if (doServidor.length < ids.length) setEscolhidoAgora(null);
+    },
   });
 
   return (
@@ -376,7 +435,9 @@ function Praca({
         membro={tocado}
         usuarioId={usuarioId}
         onClose={() => setTocado(null)}
+        onRival={setEscolhidoAgora}
       />
+      <RivalDaSemana grupoId={grupoId} />
     </div>
   );
 }

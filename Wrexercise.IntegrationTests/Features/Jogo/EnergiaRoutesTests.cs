@@ -51,7 +51,7 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
         await _host.ExecuteAsync($"""
             UPDATE atividades
             SET started_at = timestamp '2026-11-03 15:00' AT TIME ZONE 'America/Sao_Paulo',
-                situacao_verificacao = 'Verificada'
+                situacao_verificacao = 'Verificada', verified_at = now()
             WHERE usuario_id = '{ana.Id}'
             """);
         // A primeira registrada é rejeitada: a seguinte passa a ser a primeira da semana.
@@ -62,7 +62,7 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
 
         var energia = await GetEnergiaAsync(ana);
 
-        Assert.Equal(new EnergiaDetalhamentoResponse(20, 6, 0, 0, 0, 0), energia.Detalhamento);
+        Assert.Equal(new EnergiaDetalhamentoResponse(20, 6, 0, 0, 0, 0, 0), energia.Detalhamento);
         Assert.Equal(26, energia.Saldo);
     }
 
@@ -74,7 +74,7 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
         await IniciarDesafioAsync(ana, grupoId);
         await PostAtividadeAsync(ana, grupoId);
         await _host.ExecuteAsync($"""
-            UPDATE atividades SET situacao_verificacao = 'Verificada'
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
             WHERE usuario_id = '{ana.Id}'
             """);
 
@@ -91,7 +91,7 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
         var bia = await _host.AddMembroAsync(grupoId);
         await PostAtividadeAsync(bia, grupoId);
         await _host.ExecuteAsync($"""
-            UPDATE atividades SET situacao_verificacao = 'Verificada'
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
             WHERE usuario_id = '{bia.Id}'
             """);
 

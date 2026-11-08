@@ -64,7 +64,12 @@ internal static class VerificacaoAtividade
         }
 
         await using var update = new NpgsqlCommand(
-            "UPDATE atividades SET situacao_verificacao = $2 WHERE id = $1",
+            """
+            UPDATE atividades
+            SET situacao_verificacao = $2,
+                verified_at = CASE WHEN $2 = 'Verificada' THEN coalesce(verified_at, now()) ELSE verified_at END
+            WHERE id = $1
+            """,
             connection,
             transaction);
         update.Parameters.AddWithValue(atividadeId);

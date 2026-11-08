@@ -192,7 +192,7 @@ internal static class AnexarEvidencia
 
         await using (var autoVerificar = new NpgsqlCommand("""
             UPDATE atividades a
-            SET situacao_verificacao = 'Verificada'
+            SET situacao_verificacao = 'Verificada', verified_at = coalesce(a.verified_at, now())
             WHERE a.id = $1
               AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = a.id)
             """, connection, transaction))

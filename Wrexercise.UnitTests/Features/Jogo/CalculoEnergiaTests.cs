@@ -29,6 +29,15 @@ public class CalculoEnergiaTests
     public void SemNada_NaoGanhaEnergia() => Assert.Equal(0, CalculoEnergia.Calcular([], []).Total);
 
     [Fact]
+    public void Rivais_CadaVitoriaRende15()
+    {
+        var ganha = CalculoEnergia.Calcular([], [], rivaisVencidos: 2);
+
+        Assert.Equal(30, ganha.Rivais);
+        Assert.Equal(30, ganha.Total);
+    }
+
+    [Fact]
     public void Jogadas_DestinatarioGanhaOPrecoERemetenteAMetadeParaBaixo()
     {
         var ganha = CalculoEnergia.Calcular([], [], [new(45, ComoDestinatario: true), new(45, ComoDestinatario: false)]);

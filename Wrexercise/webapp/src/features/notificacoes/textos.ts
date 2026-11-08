@@ -51,6 +51,8 @@ export function getTextoNotificacao({
       return atorNome
         ? `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`
         : "Você cumpriu uma carta. Energia para os dois!";
+    case "RivalEscolhido":
+      return `${primeiroNome(atorNome)} escolheu você como Rival da semana. Quem cumpre a meta primeiro?`;
   }
 }
 
@@ -59,7 +61,7 @@ export function getDestinoNotificacao({
   grupoId,
   atividadeId,
 }: Notificacao): string {
-  // As cartas aparecem na cena do grupo.
+  // As cartas e o Rival aparecem na cena do grupo.
   if (atividadeId === null) return `/grupos/${grupoId}/inicio`;
   return tipo === "NovaAtividade"
     ? `/grupos/${grupoId}/revisar/${atividadeId}`

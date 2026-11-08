@@ -24,6 +24,9 @@ internal static class JogoRoutes
         grupos.MapGet("/{grupoId:guid}/jogadas", ListarJogadas.HandleAsync);
         grupos.MapPost("/{grupoId:guid}/jogadas", JogarCarta.HandleAsync);
         grupos.MapPost("/{grupoId:guid}/jogadas/vistas", MarcarJogadasVistas.HandleAsync);
+        grupos.MapGet("/{grupoId:guid}/rivais", ListarRivais.HandleAsync);
+        grupos.MapPost("/{grupoId:guid}/rivais", EscolherRival.HandleAsync);
+        grupos.MapPost("/{grupoId:guid}/rivais/vistos", MarcarRivaisVistos.HandleAsync);
         grupos.MapDelete("/{grupoId:guid}/membros/{usuarioId:guid}/avatar", RedefinirAvatarMembro.HandleAsync);
 
         var jogo = routes.MapGroup("/api/jogo").RequireSessao();

@@ -12,8 +12,9 @@ export type Notificacao = {
     | "CartaRecebida"
     | "CartaAceita"
     | "CartaRecusada"
-    | "JogadaConcluida";
-  /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`. */
+    | "JogadaConcluida"
+    | "RivalEscolhido";
+  /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;
   grupoId: string;

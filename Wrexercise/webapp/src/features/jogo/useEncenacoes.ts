@@ -23,16 +23,32 @@ export type CartaEmCena = {
   para: Ponto;
 };
 
+/**
+ * Uma encenação do Rival da semana: a provocação (os dois avançam um passo e fazem `provocar`) ou o
+ * resultado (o vencedor comemora).
+ */
+export type RivalEmCena = {
+  id: string;
+  escolhedorId: string;
+  rivalId: string;
+  efeito: "provocacao" | "resultado";
+  /** No resultado, quem comemora; `null` quando não houve vencedor. */
+  vencedorId: string | null;
+};
+
 /** No máximo 3 encenações por visita (docs/gamificacao.md §3.3). */
 const MaxPorVisita = 3;
 const PassoMs = 900;
 const VooMs = 600;
 const EnfeiteMs = 1800;
+/** O passo dos rivais em direção ao centro, em fração da distância. */
+const PassoRival = 0.3;
+const PassoRivalMs = 500;
 
 type Etapa = { em: number; executar: () => void };
 
 /**
- * Toca, uma de cada vez, as encenações das Jogadas que quem vê a cena ainda não viu:
+ * Toca, uma de cada vez, as encenações das Jogadas e do Rival que quem vê a cena ainda não viu:
  * a chegada de uma carta (para o destinatário) e a resposta (para o remetente). Depois vem a do
  * Enfeite novo de quem vê: o avatar comemora e o Enfeite brilha. No fim, ou ao pular, marca tudo como visto.
  */
@@ -45,6 +61,8 @@ export function useEncenacoes({
   usuarioId,
   enfeitesNovos,
   onEnfeitesVistos,
+  rivais,
+  onRivaisVistos,
 }: {
   jogadas: Jogada[] | undefined;
   posicoes: Map<string, Ponto>;
@@ -55,6 +73,8 @@ export function useEncenacoes({
   /** Códigos dos Enfeites que quem vê ainda não viu. */
   enfeitesNovos: string[];
   onEnfeitesVistos: () => void;
+  rivais: RivalEmCena[];
+  onRivaisVistos: (ids: string[]) => void;
 }) {
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const [carta, setCarta] = useState<CartaEmCena | null>(null);
@@ -65,11 +85,14 @@ export function useEncenacoes({
   const pendenteEnfeites = useRef(false);
   const avisar = useRef(onVistas);
   const avisarEnfeites = useRef(onEnfeitesVistos);
+  const pendentesRivais = useRef<string[]>([]);
+  const avisarRivais = useRef(onRivaisVistos);
 
   useEffect(() => {
     avisar.current = onVistas;
     avisarEnfeites.current = onEnfeitesVistos;
-  }, [onVistas, onEnfeitesVistos]);
+    avisarRivais.current = onRivaisVistos;
+  }, [onVistas, onEnfeitesVistos, onRivaisVistos]);
 
   const encerrar = useCallback(() => {
     temporizadores.current.forEach((t) => window.clearTimeout(t));
@@ -86,18 +109,25 @@ export function useEncenacoes({
       pendenteEnfeites.current = false;
       avisarEnfeites.current();
     }
+    if (pendentesRivais.current.length > 0) {
+      avisarRivais.current(pendentesRivais.current);
+      pendentesRivais.current = [];
+    }
   }, []);
 
   const chave = `${(jogadas ?? [])
     .filter((j) => j.nova)
     .map((j) => j.id)
-    .join(",")}|${enfeitesNovos.join(",")}`;
+    .join(",")}|${enfeitesNovos.join(",")}|${rivais
+    .map((r) => `${r.id}:${r.efeito}`)
+    .join(",")}`;
 
   useEffect(() => {
-    if (chave === "|") return;
+    if (chave === "||") return;
     const fila = (jogadas ?? []).filter((j) => j.nova);
     pendentes.current = fila.map((j) => j.id);
     pendenteEnfeites.current = enfeitesNovos.length > 0;
+    pendentesRivais.current = rivais.map((r) => r.id);
 
     // Sem movimento, ou com a página escondida, tudo aparece direto no estado final.
     const avisarJa = () => {
@@ -105,6 +135,9 @@ export function useEncenacoes({
       pendentes.current = [];
       if (pendenteEnfeites.current) avisarEnfeites.current();
       pendenteEnfeites.current = false;
+      if (pendentesRivais.current.length > 0)
+        avisarRivais.current(pendentesRivais.current);
+      pendentesRivais.current = [];
     };
     if (reduzido || document.visibilityState !== "visible") {
       avisarJa();
@@ -123,9 +156,10 @@ export function useEncenacoes({
 
     const meuPonto = posicoes.get(usuarioId);
     const comEnfeite = enfeitesNovos.length > 0 && meuPonto !== undefined;
+    let vagas = comEnfeite ? MaxPorVisita - 1 : MaxPorVisita;
     for (const jogada of [...fila]
       .sort((a, b) => a.enviadaEm.localeCompare(b.enviadaEm))
-      .slice(0, comEnfeite ? MaxPorVisita - 1 : MaxPorVisita)) {
+      .slice(0, vagas)) {
       const remetente = posicoes.get(jogada.remetenteId);
       const destinatario = posicoes.get(jogada.destinatarioId);
       if (!remetente || !destinatario) continue;
@@ -133,6 +167,23 @@ export function useEncenacoes({
         ? encenarChegada(etapas, tempo, jogada, remetente, destinatario)
         : encenarResposta(etapas, tempo, jogada, destinatario);
       tempo += 400;
+      vagas--;
+    }
+
+    for (const rival of rivais) {
+      if (vagas <= 0) break;
+      const escolhedor = posicoes.get(rival.escolhedorId);
+      const outro = posicoes.get(rival.rivalId);
+      if (!escolhedor || !outro) continue;
+      if (rival.efeito === "provocacao") {
+        tempo = encenarProvocacao(etapas, tempo, rival, escolhedor, outro);
+      } else if (rival.vencedorId) {
+        tempo = encenarVitoria(etapas, tempo, rival.vencedorId);
+      } else {
+        continue;
+      }
+      tempo += 400;
+      vagas--;
     }
 
     if (comEnfeite) {
@@ -267,6 +318,91 @@ export function useEncenacoes({
       return t;
     }
 
+    /** Os dois avançam um passo, se encaram e fazem `provocar`; depois voltam ao lugar. */
+    function encenarProvocacao(
+      lista: Etapa[],
+      inicio: number,
+      rival: RivalEmCena,
+      a: Ponto,
+      b: Ponto,
+    ): number {
+      const pares: [string, Ponto, Ponto][] = [
+        [rival.escolhedorId, a, b],
+        [rival.rivalId, b, a],
+      ];
+      const passo = (de: Ponto) => ({
+        dx: Math.round((centro.x - de.x) * PassoRival),
+        dy: Math.round((centro.y - de.y) * PassoRival),
+      });
+      let t = inicio;
+      lista.push({
+        em: t,
+        executar: () =>
+          pares.forEach(([id, de]) =>
+            atuar(id, {
+              animacao: "andar",
+              ...passo(de),
+              espelhar: centro.x < de.x,
+              passoMs: PassoRivalMs,
+            }),
+          ),
+      });
+      t += PassoRivalMs;
+      lista.push({
+        em: t,
+        executar: () =>
+          pares.forEach(([id, de, alvo]) =>
+            atuar(id, {
+              animacao: "provocar",
+              ...passo(de),
+              espelhar: alvo.x < de.x,
+              passoMs: 0,
+            }),
+          ),
+      });
+      t += Math.max(getDuracao("provocar"), 700);
+      lista.push({
+        em: t,
+        executar: () =>
+          pares.forEach(([id, de]) =>
+            atuar(id, {
+              animacao: "andar",
+              dx: 0,
+              dy: 0,
+              espelhar: de.x < centro.x,
+              passoMs: PassoRivalMs,
+            }),
+          ),
+      });
+      t += PassoRivalMs;
+      lista.push({
+        em: t,
+        executar: () => pares.forEach(([id]) => atuar(id, null)),
+      });
+      return t;
+    }
+
+    function encenarVitoria(
+      lista: Etapa[],
+      inicio: number,
+      vencedorId: string,
+    ): number {
+      let t = inicio;
+      lista.push({
+        em: t,
+        executar: () =>
+          atuar(vencedorId, {
+            animacao: "comemorando",
+            dx: 0,
+            dy: 0,
+            passoMs: 0,
+          }),
+      });
+      t += Math.max(getDuracao("comemorando"), 1200);
+      lista.push({ em: t, executar: () => atuar(vencedorId, null) });
+      return t;
+    }
+
     if (etapas.length === 0) {
       avisarJa();
       return;
@@ -285,6 +421,7 @@ export function useEncenacoes({
       ativos.current = [];
       pendentes.current = [];
       pendenteEnfeites.current = false;
+      pendentesRivais.current = [];
       setAtuacoes(new Map());
       setCarta(null);
       setAtiva(false);

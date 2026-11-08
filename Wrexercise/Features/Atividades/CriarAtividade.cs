@@ -97,7 +97,7 @@ internal static class CriarAtividade
 
         await using (var verificar = new NpgsqlCommand("""
             UPDATE atividades
-            SET situacao_verificacao = 'Verificada'
+            SET situacao_verificacao = 'Verificada', verified_at = now()
             WHERE id = $1
               AND tipo_comprovacao = 'RegistroManual'
               AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = $1)

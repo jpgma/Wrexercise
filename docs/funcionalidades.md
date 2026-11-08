@@ -130,13 +130,14 @@ The user cannot change the e-mail.
 - Energy (EN) is the currency of the game. Each user has one balance for all groups. All users get Energy, also in the mode `App`.
 - The server calculates the Energy at each read. There is no wallet table. Energy that the user earned never decreases.
 - The balance is the earned Energy minus the prices of all the cards that the user bought (see 3.3.4).
-- `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0, "jogadas": 0 } }`. A user without a session gets 401.
+- `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0, "jogadas": 0, "rivais": 0 } }`. A user without a session gets 401.
 - Sources of Energy:
   - Each `Verificada` activity gives 10 EN, in each group.
   - A week with the goal met gives 20 EN. It counts one time for each user and week, also if the user met the goal in more than one group.
   - The best streak in one challenge gives 25 EN at 4 weeks, 50 EN at 8 weeks and 100 EN at 12 weeks. Each milestone counts one time for each user. The streaks of different challenges do not add.
   - A challenge that is `Encerrado`, with all the weeks that counted for the user met, gives 75 EN, one time for each challenge.
   - A completed card play (`Jogada`) gives the price of the card to the recipient and half of the price, rounded down, to the sender. If the recipient accepted with `Aposta`, the recipient gets 2 × the price.
+  - A win against the weekly rival (`Rival`) gives 15 EN to the user who chose the rival (see 3.3.7). Each group counts separately.
   - Activities in groups that the user left continue to count.
 - Bonus for each activity, at most 10 EN for each activity:
   - First activity of the week: 3 EN.
@@ -224,6 +225,21 @@ The user cannot change the e-mail.
 - Only users in the mode `Jogo` show a `Vitrine`. It is visible to the people who share an active group with the user. A user in the mode `App` shows nothing.
 - When a new `Enfeite` exists, the next visit to the scene plays an animation for the user only: the `Avatar` does `comemorando` and the `Enfeite` glows. The animation counts in the limit of 3 per visit. It does not play with reduced motion. Then the system marks the `Enfeite` as seen. Other members see the `Enfeite` in place, with no animation.
 - The profile page shows the `Enfeite` image on each achievement.
+
+### 3.3.7. Weekly rival (`Rival`)
+
+- In each group, a user in the mode `Jogo` can choose one other member as `Rival` for each week. The rival must also be in the mode `Jogo`. The rival does not have to accept and does not lose anything.
+- The week is the current week of the featured challenge. The challenge must be `Ativo`. The two users must participate in the week.
+- The user can choose only before one of the two users meets the goal of the week. Pending activities count for this check. After the choice, the user cannot change or cancel it.
+- The winner is the user who meets the goal first. The time is the `verified_at` of the activity that completed the goal: the N-th `Verificada` activity of the week that counts for the challenge, where N is the sessions for each week.
+- `atividades.verified_at` is the time when the activity became `Verificada`. All operations that verify an activity write it.
+- A result is final when it shows: `Venceu` (the user who chose won) or `Perdeu` (the rival won). The same time gives no winner. If nobody meets the goal, the result is `SemVencedor` 2 days after Sunday (the verification window). Before that, the result is `EmAndamento`.
+- A win gives 15 EN to the user who chose. The rival gets nothing.
+- Only the two users see their pair. The rival gets the notification `RivalEscolhido`.
+- The panel "Rival da semana" below the scene shows the pair, the result badge (`RIVAL` or `VENCEU · +15 EN`) and the number of wins of the user in the group. The menu of an `Avatar` shows the button "Escolher ... como Rival" for each member that the user can choose.
+- Animations: after the choice, the two `Avatar` items step to the center and do `provocar`. The rival sees this on the next visit. When the result is final, the user who chose sees the winner do `comemorando`. These animations count in the limit of 3 per visit.
+- The API is `GET /api/grupos/{id}/rivais`, `POST /api/grupos/{id}/rivais` (errors `SEM_DESAFIO_ATIVO`, `MODO_JOGO_NECESSARIO`, `RIVAL_INDISPONIVEL`, `RIVAL_JA_ESCOLHIDO`, `META_JA_CUMPRIDA`) and `POST /api/grupos/{id}/rivais/vistos`.
+- A cancelled challenge cancels the rivals of its weeks.
 
 ### 3.4. Forgotten password
 
@@ -512,9 +528,10 @@ The system makes a notification for these events:
 | The recipient accepts the card. | The sender. | `CartaAceita` |
 | The recipient refuses the card. | The sender. | `CartaRecusada` |
 | An activity completes a play. | The sender and the recipient. | `JogadaConcluida` |
+| A member chooses the user as weekly rival. | The rival. | `RivalEscolhido` |
 
 - The system joins unread reactions and comments of one activity into one notification with a total.
-- A card notification opens the home screen of the group.
+- A card or rival notification opens the home screen of the group.
 - The bell on the home page and on the profile page shows the number of unread notifications.
 - The notifications page shows the 50 most recent notifications. When the user opens a notification, it becomes read. "Marcar todas como lidas" marks all as read.
 - The bell and the list update when the window becomes active again. The application does not poll the server.

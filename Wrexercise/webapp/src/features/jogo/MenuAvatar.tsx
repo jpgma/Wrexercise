@@ -9,6 +9,7 @@ import { EnfeiteIcone } from "./EnfeiteIcone";
 import { primeiroNome } from "./textosCartas";
 import { useJogarCarta, useLoja } from "./useCartas";
 import type { MembroCena } from "./useCena";
+import { useEscolherRival, useRivais } from "./useRivais";
 
 /** Escolher uma carta da Mão e jogar para o colega. */
 function JogarCarta({
@@ -110,6 +111,55 @@ function JogarCarta({
   );
 }
 
+/** Escolher o colega como Rival da semana. Só aparece para quem pode ser escolhido agora. */
+function EscolherRival({
+  grupoId,
+  membro,
+  onEscolhido,
+}: {
+  grupoId: string;
+  membro: MembroCena;
+  onEscolhido: (rivalId: string) => void;
+}) {
+  const rivais = useRivais(grupoId);
+  const escolher = useEscolherRival(grupoId);
+  const { showToast } = useToast();
+  const nome = primeiroNome(membro.nomeExibicao);
+
+  if (!rivais.data?.candidatos.includes(membro.usuarioId)) return null;
+
+  return (
+    <div>
+      <p className="eyebrow mb-2">Rival da semana</p>
+      <p className="text-sm text-muted">
+        Vence quem cumprir a meta da semana primeiro, e quem vence ganha 15 EN.{" "}
+        {nome} não perde nada. A escolha vale até domingo e não pode ser
+        trocada.
+      </p>
+      {escolher.isError && (
+        <p role="alert" className="form-error mt-3">
+          {getErrorMessage(escolher.error)}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn-secondary mt-3 w-full"
+        disabled={escolher.isPending}
+        onClick={() =>
+          escolher.mutate(membro.usuarioId, {
+            onSuccess: () => {
+              showToast(`${nome} é o seu Rival da semana!`);
+              onEscolhido(membro.usuarioId);
+            },
+          })
+        }
+      >
+        {escolher.isPending ? "Escolhendo…" : `Escolher ${nome} como Rival`}
+      </button>
+    </div>
+  );
+}
+
 /** A vitrine de Enfeites de quem foi tocado; sem Enfeites, não mostra nada. */
 function Vitrine({ usuarioId }: { usuarioId: string }) {
   const vitrine = useVitrine(usuarioId);
@@ -135,11 +185,14 @@ export function MenuAvatar({
   membro,
   usuarioId,
   onClose,
+  onRival,
 }: {
   grupoId: string;
   membro: MembroCena | null;
   usuarioId: string;
   onClose: () => void;
+  /** Quem vê a cena acabou de escolher este colega como Rival. */
+  onRival: (rivalId: string) => void;
 }) {
   return (
     <Dialog
@@ -152,6 +205,16 @@ export function MenuAvatar({
           <Vitrine usuarioId={membro.usuarioId} />
           {membro.usuarioId !== usuarioId && (
             <JogarCarta grupoId={grupoId} membro={membro} onJogada={onClose} />
+          )}
+          {membro.usuarioId !== usuarioId && (
+            <EscolherRival
+              grupoId={grupoId}
+              membro={membro}
+              onEscolhido={(rivalId) => {
+                onClose();
+                onRival(rivalId);
+              }}
+            />
           )}
           <Link
             to={`/grupos/${grupoId}/membros/${membro.usuarioId}`}

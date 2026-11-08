@@ -12,7 +12,8 @@ internal sealed record EnergiaDetalhamentoResponse(
     int Metas,
     int Sequencias,
     int Desafios,
-    int Jogadas);
+    int Jogadas,
+    int Rivais);
 
 internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento);
 
@@ -36,6 +37,32 @@ internal sealed record JogarCartaRequest(Guid? CartaId, Guid? DestinatarioId);
 internal sealed record ResponderJogadaRequest(string? Resposta, Guid? CartaRespostaId = null, string? Objetivo = null);
 
 internal sealed record MarcarJogadasVistasRequest(IReadOnlyList<Guid>? Ids);
+
+internal sealed record MarcarRivaisVistosRequest(IReadOnlyList<Guid>? Ids);
+
+/// <param name="Situacao">Do ponto de vista de quem escolheu: <c>EmAndamento</c>, <c>Venceu</c>, <c>Perdeu</c> ou <c>SemVencedor</c>.</param>
+/// <param name="Escolhido">Se quem consulta escolheu este Rival; senão, foi escolhido.</param>
+/// <param name="Nova">Se quem consulta ainda não viu a provocação (Rival) ou o resultado final (quem escolheu).</param>
+internal sealed record RivalResponse(
+    Guid Id,
+    Guid EscolhedorId,
+    string EscolhedorNome,
+    Guid RivalId,
+    string RivalNome,
+    DateOnly SemanaInicio,
+    string Situacao,
+    bool Escolhido,
+    bool Nova);
+
+/// <param name="SemanaInicio">A segunda-feira da semana em curso do desafio ativo, ou <c>null</c> sem ele.</param>
+/// <param name="Candidatos">Os colegas que quem consulta pode escolher agora.</param>
+/// <param name="Vitorias">Quantas vezes quem consulta venceu o Rival que escolheu neste grupo.</param>
+internal sealed record RivaisResponse(
+    DateOnly? SemanaInicio,
+    bool PodeEscolher,
+    IReadOnlyList<Guid> Candidatos,
+    int Vitorias,
+    IReadOnlyList<RivalResponse> Rivais);
 
 /// <param name="Objetivo">O código do objetivo em vigor: o da carta ou o trocado pela MUDANÇA DE PLANOS.</param>
 /// <param name="CartaResposta">A Resposta usada no aceite, se houver.</param>

@@ -8,6 +8,7 @@ export type DetalhamentoEnergia = {
   sequencias: number;
   desafios: number;
   jogadas: number;
+  rivais: number;
 };
 
 export type Energia = {
