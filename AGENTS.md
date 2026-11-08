@@ -68,7 +68,7 @@ Wrexercise/                 # aplicação: API e frontend
 Wrexercise.UnitTests/       # regras puras e testes de arquitetura
 Wrexercise.IntegrationTests/   # HTTP e SQL contra o PostgreSQL
 deploy/  scripts/  docs/
-pixel-art/                  # scripts Python que geram a arte do Jogo (avatar-base/, praca/; ver docs/avatar-kit.md)
+pixel-art/                  # scripts Python que geram a arte do Jogo (avatar-base/, praca/, jpgma/; ver docs/avatar-kit.md)
 ```
 
 Arte em pixel do Jogo: use a skill `.claude/skills/pixel-art-studio/` (ver `docs/avatar-kit.md`). Cada arte tem um `pixel-art/<slug>/build.py` versionado; nunca edite o PNG à mão. Arquivos `.aseprite`/`.ase` usam sempre o plugin `pixel-plugin` (configuração em `docs/avatar-kit.md` §6).
