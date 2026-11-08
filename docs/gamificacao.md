@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas) e G6 (avatar importado e Enfeites) estão implementadas, as demais ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` e o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas), G6 (avatar importado e Enfeites) e G7 (Rival da semana) estão implementadas, e a G5 (Missões) ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md` e o Rival da semana de `decisoes/0038-rival-da-semana.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -101,7 +101,7 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 | DESAFIO DUPLO | Igual a "carta recebida", com os papéis trocados. |
 | Jogada concluída | O destinatário faz `comemorando` e a carta vira com o carimbo CONCLUÍDA. |
 | Jogada expirada | A carta some com o carimbo EXPIRADA. Nenhum avatar reage. |
-| Rivais da semana | Na primeira visita da semana, os dois avançam um passo e fazem `provocar`. Ao fim da semana, o vencedor faz `comemorando`. |
+| Rivais da semana | Quem escolhe vê na hora, e o Rival na primeira visita: os dois avançam um passo e fazem `provocar`. Quando o resultado é final, quem escolheu vê o vencedor fazer `comemorando`. |
 | Missão concluída | `comemorando` com um brilho em CSS. |
 | Enfeite novo (vista só pelo dono) | `comemorando`, e o Enfeite aparece ao lado com o mesmo brilho (§9.2). |
 
@@ -189,13 +189,13 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Sequência de 12 semanas | 100 |
 | Desafio concluído | 75 |
 | Missão semanal concluída (§7) | 5 a 15 |
-| Rival da semana vencido (§8) | 15 |
+| Rival da semana vencido (§8), em cada grupo | 15 |
 | Jogada concluída, para quem recebeu (§6.4) | 1 × o preço da carta (2 × com APOSTA) |
 | Jogada concluída, para quem enviou (§6.4) | 0,5 × o preço da carta |
 
 - As sequências seguem a mesma regra das conquistas: a melhor sequência num único desafio, sem somar desafios. Cada marco paga **uma vez por pessoa**, então as sequências rendem no máximo 175 EN no total.
 - **Desafio concluído:** um desafio `Encerrado` com todas as semanas que contavam para a pessoa cumpridas. Paga uma vez por desafio.
-- **Vários grupos:** a base de 10 EN vale para cada atividade verificada, em qualquer grupo. A meta semanal paga uma vez por pessoa por semana, no primeiro grupo em que for cumprida. Os bônus de §5.2 também contam por pessoa. Assim, estar em mais grupos não multiplica a Energia.
+- **Vários grupos:** a base de 10 EN vale para cada atividade verificada, em qualquer grupo. A meta semanal paga uma vez por pessoa por semana, no primeiro grupo em que for cumprida. Os bônus de §5.2 também contam por pessoa. Assim, estar em mais grupos não multiplica a Energia. A exceção é o Rival da semana, que paga em cada grupo (§8).
 
 **Alvo do balanceamento:** quem cumpre a meta com regularidade ganha cerca de 90 a 110 EN por semana, o suficiente para 2 ou 3 cartas. É essa escassez que faz cada gasto importar.
 
@@ -333,11 +333,18 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 ## 8. Rival da semana
 
-- Cada pessoa pode escolher um rival por semana no grupo. O rival não precisa aceitar e não perde nada.
-- Critério normalizado: vence quem cumprir a meta semanal primeiro (pelo horário de verificação da sessão que completou a meta). Se só um cumprir, esse vence. Se ninguém cumprir, não há vencedor.
-- Prêmio: 15 EN e um selo, só para quem escolheu.
+Decidido em `decisoes/0038-rival-da-semana.md`.
+
+- Cada pessoa no modo Jogo pode escolher um Rival por semana **em cada grupo**, entre os colegas também no modo Jogo. O Rival não precisa aceitar e não perde nada.
+- A semana é a do desafio em destaque, que precisa estar `Ativo`, e as duas pessoas precisam participar dela.
+- A escolha só vale **antes de alguém dos dois cumprir a meta**, contando as atividades pendentes. Depois de escolhido, o Rival não muda.
+- Critério normalizado: vence quem cumprir a meta semanal primeiro, pelo `verified_at` da sessão que completou a meta (a N-ésima atividade verificada que conta, com N = sessões por semana). Se só um cumprir, esse vence. Empate exato ou ninguém cumprindo até o domingo mais 2 dias de verificação: sem vencedor.
+- Venceu e Perdeu são finais assim que aparecem, porque `Verificada` é final. Tudo é calculado na leitura, sem tarefa agendada.
+- Prêmio: 15 EN e um selo, só para quem escolheu. Cada grupo paga à parte.
+- O Rival recebe a `Notificacao` `RivalEscolhido`. Só as duas pessoas do par veem o par.
+- O painel "Rival da semana", embaixo da praça, mostra o par e o selo (`RIVAL` ou `VENCEU · +15 EN`) com o total de vitórias no grupo. A escolha fica no menu do avatar.
 - Não há aposta de Energia.
-- Na cena, os rivais fazem `provocar` no começo da semana, e o vencedor faz `comemorando` no fim (§3.3).
+- Na cena, os rivais fazem `provocar`, e o vencedor faz `comemorando` (§3.3).
 
 ## 9. Enfeites
 
@@ -458,9 +465,10 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 
 ### G7 — Rival da semana
 
-- Tabela `rivais`.
-- Resultado e recompensa derivados das atividades verificadas.
-- Encenação `provocar`.
+- Migração `019-create-rivais.sql`: tabela `rivais`, coluna `atividades.verified_at` e o tipo de notificação `RivalEscolhido`.
+- `GET` e `POST /api/grupos/{id}/rivais` e `POST /api/grupos/{id}/rivais/vistos`.
+- Resultado e recompensa derivados das atividades verificadas (`ResultadoRival`, `Rivais`).
+- Painel "Rival da semana", escolha no menu do avatar e encenações `provocar` e `comemorando`.
 
 ## 11. Adiado e descartado
 
