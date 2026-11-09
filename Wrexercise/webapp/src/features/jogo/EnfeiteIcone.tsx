@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-/** O desenho de um Enfeite (16×16, ampliado sem suavizar). `conquista` define o nível que aparece. */
+/** O desenho de um Enfeite (32×32, ampliado sem suavizar). `conquista` define o nível que aparece. */
 export function EnfeiteIcone({
   conquista,
   tamanho = 32,

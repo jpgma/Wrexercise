@@ -174,7 +174,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×230 (mestre 1×, mostrado em 2×, ou seja, 360×460) | 1 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 32×32 | 9 |
-| Enfeite | 16×16 ou 32×32 | 19 (§9.1) |
+| Enfeite | 32×32 | 19 (§9.1) |
 
 ## 5. Energia
 

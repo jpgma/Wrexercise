@@ -170,7 +170,7 @@ function Vitrine({ usuarioId }: { usuarioId: string }) {
       <ul className="flex gap-4">
         {vitrine.map((enfeite) => (
           <li key={enfeite.codigo} className="flex flex-col items-center gap-1">
-            <EnfeiteIcone conquista={enfeite.conquista} tamanho={48} />
+            <EnfeiteIcone conquista={enfeite.conquista} tamanho={64} />
             <span className="text-2xs text-muted">{enfeite.nome}</span>
           </li>
         ))}

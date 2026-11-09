@@ -214,7 +214,7 @@ The user cannot change the e-mail.
 
 ### 3.3.6. Ornaments (`Enfeite`) and showcase (`Vitrine`)
 
-- Each achievement unlocks one `Enfeite`: a 16 by 16 px object. The system calculates the `Enfeite` items from the achievements each time. No purchase is possible.
+- Each achievement unlocks one `Enfeite`: a 32 by 32 px object. The system calculates the `Enfeite` items from the achievements each time. No purchase is possible.
 - The plant and the medal evolve. The best streak gives the plant: `Sequencia4` the seedling, `Sequencia8` the plant with a flower, `Sequencia12` the small tree. The number of training days gives the medal (see 10.3): `Treinos10` bronze, `Treinos50` silver, `Treinos100` gold. The user has the highest level only.
 - The other `Enfeite` items are: trophy (`DesafioCompleto`), dumbbell (`RatoDeAcademia`), stopwatch (`Corredor`), dog on a leash (`Andarilho`), bicycle (`Ciclista`), buoy (`Peixe`), ball (`Boleiro`), yoga mat (`Zen`), parallel bars (`PesoDoCorpo`), alarm clock (`Madrugador`), street lamp (`Noturno`), portable speaker (`FimDeSemana`), gym backpack (`Ecletico`).
 - The user has a `Vitrine` of up to 3 `Enfeite` items. It stores the code of the `Enfeite` and not the code of the achievement. An evolution keeps its place.

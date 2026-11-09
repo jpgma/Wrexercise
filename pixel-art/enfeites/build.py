@@ -1,9 +1,13 @@
-"""Enfeites do modo Jogo (docs/gamificacao.md §9): 19 objetos de 16×16, um por conquista.
+"""Enfeites do modo Jogo (docs/gamificacao.md §9): 19 objetos de 32×32, um por conquista.
 
 O arquivo de cada um tem o código da conquista em minúsculas: saida/enfeite-<conquista>.png.
 A planta e a medalha evoluem (três níveis cada), então a vitrine mostra o nível mais alto.
 
-Uso: python build.py   (gera saida/*.png e preview/folha-8x.png)
+Se existir fonte/folha.png (uma folha gerada no Gemini, ver prompts-gemini.md), cada Enfeite sai
+dela: a célula da grade de 5×4 é reduzida para 32×32 por moda de cor, com a mesma escala para
+todos, e as cores vão para a paleta. Sem a fonte, o desenho de 16×16 deste script é ampliado 2×.
+
+Uso: python build.py   (gera saida/*.png e preview/folha-4x.png)
 """
 
 import math
@@ -12,7 +16,13 @@ import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/scripts"))
+sys.path.insert(0, str(AQUI.parent))
+from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
+
+FONTE = AQUI / "fonte" / "folha.png"
+LADO = 32  # tamanho final de cada Enfeite
+COLUNAS, LINHAS = 5, 4  # grade da fonte, lida da esquerda para a direita e de cima para baixo
 
 TINTA = "#14161f"
 GIZ, GIZ_SOMBRA = "#f5f1e8", "#d6d0c0"
@@ -309,10 +319,18 @@ ENFEITES = {
 }
 
 if __name__ == "__main__":
-    folha = Sprite(16 * 10, 16 * 2, palette="wrexercise")
-    for i, (nome, fabrica) in enumerate(ENFEITES.items()):
-        caminho = AQUI / "saida" / f"enfeite-{nome}.png"
-        fabrica().save_png(caminho)
-        folha.paste_png(caminho, (i % 10) * 16, (i // 10) * 16)
-    folha.save_png(AQUI / "preview" / "folha-8x.png", scale=8, bg="#2b3042")
+    if FONTE.exists():
+        cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
+        imagens = recortar_grade(FONTE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores)
+        for nome, imagem in zip(ENFEITES, imagens):
+            imagem.save(AQUI / "saida" / f"enfeite-{nome}.png")
+        print("fonte:", FONTE.name)
+    else:
+        for nome, fabrica in ENFEITES.items():
+            fabrica().save_png(AQUI / "saida" / f"enfeite-{nome}.png", scale=LADO // 16)
+
+    folha = Sprite(LADO * 10, LADO * 2)
+    for i, nome in enumerate(ENFEITES):
+        folha.paste_png(AQUI / "saida" / f"enfeite-{nome}.png", (i % 10) * LADO, (i // 10) * LADO)
+    folha.save_png(AQUI / "preview" / "folha-4x.png", scale=4, bg="#2b3042")
     print(len(ENFEITES), "enfeites")

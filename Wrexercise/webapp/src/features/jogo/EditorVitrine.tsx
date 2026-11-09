@@ -66,7 +66,7 @@ function Editor({ avatar }: { avatar: MeuAvatar }) {
                     onClick={() => alternar(enfeite.codigo)}
                     className={`flex w-full flex-col items-center gap-1 rounded-lg p-2 tap ${marcado ? "ring-3 ring-game" : "opacity-80"}`}
                   >
-                    <EnfeiteIcone conquista={enfeite.conquista} tamanho={48} />
+                    <EnfeiteIcone conquista={enfeite.conquista} tamanho={64} />
                     <span className="text-2xs">{enfeite.nome}</span>
                   </button>
                 </li>

@@ -147,7 +147,7 @@ function AvatarCena({
 }) {
   const folha = useFolhaAvatar();
   const enfeite = useVitrine(membro.usuarioId)[0];
-  // O Enfeite (16 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
+  // O Enfeite (32 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
   const escalaEnfeite = escala >= 3 ? 2 : 1;
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   const parado = membro.pose === "parado";
