@@ -39,6 +39,18 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 - **Primeiro quadro de `andar`:** nas direções nordeste, oeste e sudoeste, o primeiro quadro do `Walking` é diferente da `rotacao`. Começar a andar a partir da pose parada dá um pequeno salto nessas direções.
 - **Tamanho na tela:** a cena mostra o quadro de 32 em 2× ou 3×. A célula de 48 em 2× ocupa 96 px; talvez a elipse precise de menos avatares, ou de escala 1× em telas estreitas.
 
+## Andamento
+
+**2026-11-08 — teste com a folha do `jpgma` para todos.** A decisão continua proposta. Para testar o formato de ponta a ponta na cena:
+
+- A folha do `jpgma` é a única folha padrão (`Wrexercise/webapp/public/avatar-jpgma.png`, PNG indexado de 54 KB, gerado por `build.py`). As 6 folhas de lado saíram do bundle.
+- **A importação está pausada.** Todos usam a folha padrão, inclusive quem importou uma folha. O servidor, a validação e os arquivos guardados não mudam, e `/perfil/avatar` mostra um aviso no lugar do envio.
+- O `parado` (respiração, 4 quadros × 200 ms) é desenhado à mão no `build.py`, sobre a `rotacao`: os ombros sobem 1 px, depois a cabeça sobe junto, depois só os ombros. As outras animações que faltam (`alongar`, `olhar`, `aceitar`, `recusar`, `provocar`) usam `parado`, e as variações de `parado` ficam desligadas.
+- O `retrato` é um recorte de 24 × 24 px, em (12, 10), da `rotacao` `sul`.
+- A carta sai da mão no quarto quadro de `arremessar`, e o `receber` começa 2 quadros antes do fim do voo: a carta atinge o peito no terceiro quadro, e quem recebe fica virado para quem arremessou.
+- **Direção de quem está parado:** virado para o centro só na horizontal, e sempre de frente para quem vê a tela. Se virasse para o centro de verdade, quem fica embaixo da elipse (a própria pessoa) apareceria de costas.
+- O formato está em `avatar-formato.md` §6.
+
 ## Impacto, se aprovada
 
 - `avatar-formato.md`, `gamificacao.md` §3.1, §3.3, §4 e `avatar-kit.md` reescritos para o formato novo.

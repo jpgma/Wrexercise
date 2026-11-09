@@ -2,7 +2,7 @@
 
 > Especificação pública da folha de sprites usada pelos avatares do modo Jogo (`gamificacao.md` §4). Qualquer pessoa pode desenhar uma folha neste formato e importá-la no aplicativo.
 >
-> **Em revisão:** a troca por uma folha vista de cima, em 8 direções, está proposta em `decisoes/0039-avatar-em-8-direcoes.md`. Até a decisão, este formato continua valendo.
+> **Em revisão:** a troca por uma folha vista de cima, em 8 direções, está proposta em `decisoes/0039-avatar-em-8-direcoes.md`. Por enquanto, a cena só desenha a folha em 8 direções do bundle (§6), e a importação está pausada. As §1 a §5 continuam valendo para o servidor, que ainda aceita e guarda folhas neste formato.
 
 ## 1. Arquivo
 
@@ -60,3 +60,29 @@ O aplicativo nunca muda os tempos nem a ordem dos quadros. Assim, todas as pesso
 ## 5. Referência
 
 As animações da arte padrão seguem a estrutura do *2D Platformer Character Template* (CC0), cujos quadros têm 16 × 16 px. A correspondência entre as linhas e as animações do template está em `gamificacao.md` §4.2. As folhas padrão são geradas pelo rig descrito em `avatar-kit.md`.
+
+## 6. Folha em 8 direções (em teste)
+
+É o formato da folha padrão do bundle, `avatar-jpgma.png`, gerada por `pixel-art/jpgma/build.py` (ADR 0039, Andamento). Ainda não pode ser importada.
+
+| Requisito | Valor |
+|---|---|
+| Tipo | PNG com paleta indexada (o índice 0 é transparente) |
+| Dimensões | 432 × 2352 px: 9 colunas × 49 linhas de células de 48 × 48 px |
+| Vista | de cima, em 8 direções, sem espelho |
+| Âncora | o ponto entre os pés fica em (24, 44), em todos os quadros |
+
+- **Direções**, nesta ordem: `sul` (de frente para quem vê a tela), `sudeste`, `leste`, `nordeste`, `norte`, `noroeste`, `oeste`, `sudoeste`.
+- **Linhas:** a linha 0 é `rotacao`, com uma direção por coluna. Depois, cada animação ocupa 8 linhas, uma por direção, com um quadro por coluna.
+
+| Primeira linha | Nome | Quadros | Tempo por quadro | Usada no Jogo como |
+|---:|---|---:|---:|---|
+| 0 | `rotacao` | 1 por direção | — | `retrato` (recorte de 24 × 24 px em (12, 10) da direção `sul`) |
+| 1 | `andar` | 8 | 200 ms | `andar` |
+| 9 | `correr` | 8 | 200 ms | `treinando` |
+| 17 | `arremessar` | 7 | 200 ms | `arremessar`; a carta sai no quarto quadro |
+| 25 | `comemorar` | 9 | 200 ms | `comemorando` |
+| 33 | `receber` | 6 | 200 ms | `receber`; a carta atinge o peito no terceiro quadro |
+| 41 | `parado` | 4 | 200 ms | `parado` e, até terem arte, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` |
+
+- **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, vira para o centro da praça na horizontal, mas sempre de frente para quem vê a tela.

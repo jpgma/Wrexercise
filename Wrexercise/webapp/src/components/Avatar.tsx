@@ -1,5 +1,8 @@
 import type { CSSProperties } from "react";
-import { useFolhaAvatar } from "@/components/folhaAvatar";
+import {
+  formatoFolha as formato,
+  useFolhaAvatar,
+} from "@/components/folhaAvatar";
 
 type AvatarProps = {
   nome: string;
@@ -25,9 +28,11 @@ function getHue(semente: string): number {
 }
 
 export function Avatar({ nome, id, size = 40, ring = false }: AvatarProps) {
-  const folha = useFolhaAvatar(id ?? "");
+  const folha = useFolhaAvatar();
   if (id) {
-    // Retrato: linha 0, coluna 0 da folha (8×12 células de 32 px), ampliado sem suavizar.
+    // Retrato: a cabeça e os ombros da `rotacao` `sul` (linha 0, coluna 0), ampliados sem suavizar.
+    const { x, y, lado } = formato.retrato;
+    const fator = size / lado;
     return (
       <span
         aria-hidden="true"
@@ -38,8 +43,8 @@ export function Avatar({ nome, id, size = 40, ring = false }: AvatarProps) {
             height: size,
             "--avatar-hue": getHue(id),
             backgroundImage: `url(${folha})`,
-            backgroundSize: `${size * 8}px ${size * 12}px`,
-            backgroundPosition: "0 0",
+            backgroundSize: `${formato.colunas * formato.celula * fator}px ${formato.linhas * formato.celula * fator}px`,
+            backgroundPosition: `${-x * fator}px ${-y * fator}px`,
             backgroundRepeat: "no-repeat",
             imageRendering: "pixelated",
           } as CSSProperties

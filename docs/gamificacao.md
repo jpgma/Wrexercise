@@ -71,7 +71,7 @@ A tela não tem um botão próprio de "Registrar atividade": o registro já est�
 ### 3.1. Layout
 
 - Vista 2,5D, de cima e de lado: o chão é uma praça vista de cima, e os avatares são desenhados de lado.
-- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça, virados para o centro. Quem está à esquerda do centro olha para a direita, e quem está à direita aparece espelhado (`scaleX(-1)`).
+- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar vira para o centro na horizontal, mas sempre de frente para quem vê a tela. Nas encenações, ele olha para onde anda ou para o alvo.
 - A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente.
 - Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. Grupos de até 5 pessoas usam 3×.
 - O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
@@ -115,14 +115,14 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 ## 4. Avatar
 
 - Cada usuário tem um único avatar, igual em todos os grupos.
-- Quem nunca configurou o avatar recebe uma das 6 folhas padrão do bundle, escolhida de forma estável pelo identificador do usuário.
+- Por enquanto, todos usam a mesma folha padrão do bundle, `avatar-jpgma.png`, em 8 direções (`decisoes/0039-avatar-em-8-direcoes.md`, Andamento). As 6 folhas de lado saíram do bundle.
 - A pessoa pode **importar a própria folha de sprites**, num formato documentado publicamente (§4.3).
 - Fora da cena, o componente `Avatar` mostra a célula `retrato` da folha no lugar das iniciais. Isso vale para todos, inclusive para quem está no modo App.
 - O avatar é só visual: nenhuma folha dá vantagem no Jogo.
 
 ### 4.1. Formato
 
-> **Em revisão:** folha vista de cima, em 8 direções, proposta em `decisoes/0039-avatar-em-8-direcoes.md` (Q034).
+> **Em revisão:** folha vista de cima, em 8 direções, proposta em `decisoes/0039-avatar-em-8-direcoes.md` (Q034). A cena já usa a folha em 8 direções do bundle (`avatar-formato.md` §6), e a importação está pausada. Enquanto não houver arte, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` usam `parado`. O resumo abaixo e a tabela de §4.2 descrevem o formato de lado, que o servidor ainda aceita.
 
 Resumo de `avatar-formato.md`:
 
@@ -151,7 +151,7 @@ A arte padrão é o personagem do template CC0 *2D Platformer Character Template
 | `provocar` | 4 | uma vez | encontro dos rivais | Idle1 com o braço esticado do Dash |
 
 - São 53 quadros por folha. Com paleta pequena, um PNG fica entre 5 e 15 KB.
-- Não precisam de animação própria: virar (espelho instantâneo), o voo e os carimbos da carta (CSS) e o brilho da missão (CSS).
+- Não precisam de animação própria: virar (troca de direção instantânea), o voo e os carimbos da carta (CSS) e o brilho da missão (CSS).
 
 ### 4.3. Importação
 

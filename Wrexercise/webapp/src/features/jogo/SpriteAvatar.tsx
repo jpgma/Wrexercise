@@ -1,15 +1,23 @@
 import type { CSSProperties } from "react";
-import { animacoes, type NomeAnimacao } from "./animacoes";
+import {
+  animacoes,
+  direcoes,
+  folha as formato,
+  type Direcao,
+  type NomeAnimacao,
+} from "./animacoes";
 
 type SpriteAvatarProps = {
-  /** Caminho da folha 256×384 (8 colunas × 12 linhas de 32 px). */
+  /** Caminho da folha em 8 direções (células de 48 px; ver `folha` em animacoes.ts). */
   folha: string;
   animacao: NomeAnimacao;
+  direcao: Direcao;
   /** Fator inteiro de ampliação: 2 ou 3 mantêm os pixels nítidos. */
   escala: number;
   /** Mostra um só quadro da pose, sem animar (movimento reduzido). */
   estatico?: boolean;
-  espelhar?: boolean;
+  className?: string;
+  style?: CSSProperties;
   /** Chamado ao fim de uma animação que toca uma vez. */
   onFim?: () => void;
 };
@@ -17,30 +25,32 @@ type SpriteAvatarProps = {
 export function SpriteAvatar({
   folha,
   animacao,
+  direcao,
   escala,
   estatico = false,
-  espelhar = false,
+  className = "",
+  style,
   onFim,
 }: SpriteAvatarProps) {
   const { linha, quadros, ms, repete, quadroEstatico } = animacoes[animacao];
-  const celula = 32 * escala;
+  const celula = formato.celula * escala;
 
   return (
     <span
       aria-hidden="true"
-      className={`sprite-avatar ${estatico ? "" : repete ? "sprite-repete" : "sprite-uma-vez"}`}
+      className={`sprite-avatar ${estatico ? "" : repete ? "sprite-repete" : "sprite-uma-vez"} ${className}`}
       onAnimationEnd={onFim}
       style={
         {
+          ...style,
           width: celula,
           height: celula,
           backgroundImage: `url(${folha})`,
-          backgroundSize: `${celula * 8}px ${celula * 12}px`,
+          backgroundSize: `${celula * formato.colunas}px ${celula * formato.linhas}px`,
           backgroundPositionX: estatico
             ? `${-quadroEstatico * celula}px`
             : undefined,
-          backgroundPositionY: `${-linha * celula}px`,
-          transform: espelhar ? "scaleX(-1)" : undefined,
+          backgroundPositionY: `${-(linha + direcoes.indexOf(direcao)) * celula}px`,
           "--quadros": quadros,
           "--ms": `${ms}ms`,
           "--celula": `${celula}px`,

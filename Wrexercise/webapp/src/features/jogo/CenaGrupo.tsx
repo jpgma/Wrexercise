@@ -1,11 +1,12 @@
 import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
+  formatoFolha,
   hashFnv1a,
   useFolhaAvatar,
   useVitrine,
 } from "@/components/folhaAvatar";
-import { variacoesDeParado, type NomeAnimacao } from "./animacoes";
+import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MenuAvatar } from "./MenuAvatar";
@@ -38,10 +39,13 @@ const raioX = 130;
 /** Onde os pés podem pisar: abaixo da mureta e com espaço para o nome embaixo. */
 const topoDosPes = 46;
 const folgaInferior = 22;
+const { ancora, corpo } = formatoFolha;
+/** Altura do corpo acima dos pés, em px da folha. */
+const alturaCorpo = ancora.y - corpo.topo;
 
-/** Elipse em pé: ocupa a altura toda da praça, deixando espaço para o avatar (31 px de altura × escala) e o nome. */
+/** Elipse em pé: ocupa a altura toda da praça, deixando espaço para o avatar (o corpo × escala) e o nome. */
 function getElipse(escala: number) {
-  const minY = topoDosPes + 31 * escala;
+  const minY = topoDosPes + alturaCorpo * escala;
   const maxY = altura - folgaInferior;
   return { centroY: (minY + maxY) / 2, raioY: (maxY - minY) / 2 };
 }
@@ -120,17 +124,31 @@ function posicionar(
   );
 }
 
+/**
+ * Parado na elipse, o avatar vira para o centro na horizontal, mas sempre de frente para quem vê a
+ * tela: de costas, quem fica embaixo (a própria pessoa) só mostraria a nuca.
+ */
+function getDirecaoParado(posicao: Posicao, centro: Posicao) {
+  return getDirecao(posicao, {
+    x: centro.x,
+    y: posicao.y + Math.abs(centro.y - posicao.y),
+  });
+}
+
 function AvatarCena({
   membro,
   posicao,
   escala,
   reduzido,
+  centro,
   atuacao,
   brilho,
   onToque,
 }: {
   membro: MembroCena;
   posicao: Posicao;
+  /** Centro da praça: para onde olha quem está parado. */
+  centro: Posicao;
   escala: number;
   reduzido: boolean;
   atuacao: Atuacao | undefined;
@@ -138,7 +156,7 @@ function AvatarCena({
   brilho: boolean;
   onToque: () => void;
 }) {
-  const folha = useFolhaAvatar(membro.usuarioId);
+  const folha = useFolhaAvatar();
   const enfeite = useVitrine(membro.usuarioId)[0];
   // O Enfeite (16 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
   const escalaEnfeite = escala >= 3 ? 2 : 1;
@@ -152,7 +170,7 @@ function AvatarCena({
 
   // Quem está parado de vez em quando se alonga ou olha em volta, fora de sincronia com os outros.
   useEffect(() => {
-    if (!parado || reduzido) return;
+    if (!parado || reduzido || variacoesDeParado.length === 0) return;
     let temporizador: number;
     const agendar = () => {
       temporizador = window.setTimeout(
@@ -176,7 +194,7 @@ function AvatarCena({
 
   const animacao: NomeAnimacao =
     atuacao?.animacao ?? (parado ? (variacao ?? "parado") : membro.pose);
-  const espelhar = atuacao?.espelhar ?? posicao.x > centroX + 1;
+  const direcao = atuacao?.direcao ?? getDirecaoParado(posicao, centro);
   const deslocamento = {
     transform: atuacao
       ? `translate(${atuacao.dx}px, ${atuacao.dy}px)`
@@ -194,20 +212,27 @@ function AvatarCena({
         onClick={onToque}
         className="absolute block cursor-pointer rounded-md focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none"
         style={{
-          left: posicao.x - 16 * escala,
-          top: posicao.y - 31 * escala,
-          width: 32 * escala,
+          // A área de toque é só o corpo; a célula da folha (48 px) passa dela sem receber toques.
+          left: posicao.x - (ancora.x - corpo.esquerda) * escala,
+          top: posicao.y - alturaCorpo * escala,
+          width: corpo.largura * escala,
+          height: (alturaCorpo + 1) * escala,
           zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)),
           ...deslocamento,
         }}
       >
         <SpriteAvatar
-          key={animacao}
+          key={`${animacao}-${direcao}`}
           folha={folha}
           animacao={animacao}
+          direcao={direcao}
           escala={escala}
           estatico={reduzido}
-          espelhar={espelhar}
+          className="pointer-events-none absolute"
+          style={{
+            left: -corpo.esquerda * escala,
+            top: -corpo.topo * escala,
+          }}
           onFim={() => setVariacao(null)}
         />
       </button>
@@ -218,7 +243,7 @@ function AvatarCena({
           brilho={brilho}
           className="pointer-events-none absolute block"
           style={{
-            left: posicao.x + 6 * escala,
+            left: posicao.x + 9 * escala,
             top: posicao.y - 16 * escalaEnfeite - 2,
             zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)) + 1,
             ...deslocamento,
@@ -302,8 +327,8 @@ function CartaVoando({
   carta: CartaEmCena;
   escala: number;
 }) {
-  // A carta (40 px) fica na altura das mãos, centrada no avatar.
-  const acima = 15 * escala + 20;
+  // A carta (40 px) fica na altura do peito, centrada no avatar.
+  const acima = 13 * escala + 20;
   return (
     <span
       aria-hidden="true"
@@ -409,6 +434,7 @@ function Praca({
               posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
               escala={escala}
               reduzido={reduzido}
+              centro={centro}
               atuacao={encenacao.atuacoes.get(membro.usuarioId)}
               brilho={encenacao.brilho && membro.usuarioId === usuarioId}
               onToque={() => setTocado(membro)}

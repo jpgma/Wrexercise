@@ -8,6 +8,6 @@ Na medida do possível segundo a lei, os autores renunciam a todos os direitos
 autorais e conexos sobre estas imagens. Você pode copiá-las, modificá-las,
 distribuí-las e usá-las, inclusive para fins comerciais, sem pedir permissão.
 
-As folhas de avatar derivam do "2D Platformer Character Template", distribuído
-sob CC0 pelo autor original. O chão da praça, as cartas e os Enfeites são gerados por código, sem arte de
-terceiros. As fontes ficam em pixel-art/.
+A folha de avatar (avatar-jpgma.png) foi gerada pelo autor com o PixelLab, e a
+animação parado foi desenhada à mão. O chão da praça, as cartas e os Enfeites são
+gerados por código, sem arte de terceiros. As fontes ficam em pixel-art/.

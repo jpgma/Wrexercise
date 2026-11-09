@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getDuracao, type NomeAnimacao } from "./animacoes";
+import {
+  animacoes,
+  type Direcao,
+  getDirecao,
+  getDuracao,
+  type NomeAnimacao,
+  quadroImpacto,
+  quadroSoltura,
+} from "./animacoes";
 import type { Jogada } from "./useCartas";
 
 export type Ponto = { x: number; y: number };
@@ -9,8 +17,8 @@ export type Atuacao = {
   animacao: NomeAnimacao;
   dx: number;
   dy: number;
-  /** `true` olha para a esquerda. Sem valor, vale o lado da elipse. */
-  espelhar?: boolean;
+  /** Para onde o avatar olha. Sem valor, vale a direção de quem está parado na elipse. */
+  direcao?: Direcao;
   /** Duração do deslocamento até `dx`/`dy`, em ms. */
   passoMs: number;
 };
@@ -219,8 +227,6 @@ export function useEncenacoes({
     ): number {
       const id = jogada.remetenteId;
       const ida = { dx: centro.x - de.x, dy: centro.y - de.y };
-      const olharPara = (alvo: Ponto) =>
-        Math.abs(alvo.x - centro.x) < 2 ? undefined : alvo.x < centro.x;
       let t = inicio;
       lista.push({
         em: t,
@@ -228,7 +234,7 @@ export function useEncenacoes({
           atuar(id, {
             animacao: "andar",
             ...ida,
-            espelhar: centro.x < de.x,
+            direcao: getDirecao(de, centro),
             passoMs: PassoMs,
           }),
       });
@@ -239,30 +245,32 @@ export function useEncenacoes({
           atuar(id, {
             animacao: "arremessar",
             ...ida,
-            espelhar: olharPara(para),
+            direcao: getDirecao(centro, para),
             passoMs: 0,
           }),
       });
-      // A carta sai da mão no terceiro quadro do arremesso.
-      t += 2 * 80;
+      t += quadroSoltura * animacoes.arremessar.ms;
       lista.push({
         em: t,
         executar: () => setCarta({ jogada, efeito: "voo", de: centro, para }),
       });
-      t += VooMs;
+      // O `receber` começa antes do fim do voo: a carta atinge o peito no quadro do impacto,
+      // com quem recebe virado para quem arremessou.
+      const impactoMs = quadroImpacto * animacoes.receber.ms;
       lista.push({
-        em: t,
-        executar: () => {
-          setCarta(null);
+        em: t + VooMs - impactoMs,
+        executar: () =>
           atuar(jogada.destinatarioId, {
             animacao: "receber",
             dx: 0,
             dy: 0,
+            direcao: getDirecao(para, centro),
             passoMs: 0,
-          });
-        },
+          }),
       });
-      t += getDuracao("receber");
+      t += VooMs;
+      lista.push({ em: t, executar: () => setCarta(null) });
+      t += getDuracao("receber") - impactoMs;
       lista.push({
         em: t,
         executar: () => {
@@ -271,7 +279,7 @@ export function useEncenacoes({
             animacao: "andar",
             dx: 0,
             dy: 0,
-            espelhar: de.x < centro.x,
+            direcao: getDirecao(centro, de),
             passoMs: PassoMs,
           });
         },
@@ -342,7 +350,7 @@ export function useEncenacoes({
             atuar(id, {
               animacao: "andar",
               ...passo(de),
-              espelhar: centro.x < de.x,
+              direcao: getDirecao(de, centro),
               passoMs: PassoRivalMs,
             }),
           ),
@@ -355,7 +363,7 @@ export function useEncenacoes({
             atuar(id, {
               animacao: "provocar",
               ...passo(de),
-              espelhar: alvo.x < de.x,
+              direcao: getDirecao(de, alvo),
               passoMs: 0,
             }),
           ),
@@ -369,7 +377,7 @@ export function useEncenacoes({
               animacao: "andar",
               dx: 0,
               dy: 0,
-              espelhar: de.x < centro.x,
+              direcao: getDirecao(centro, de),
               passoMs: PassoRivalMs,
             }),
           ),

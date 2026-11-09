@@ -105,7 +105,7 @@ The user cannot change the e-mail.
 
 - In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring and the notice of activities to review. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
 - The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on a tall ellipse that uses the full height of the plaza (360 by 460 px). The current user stands at the front (bottom). The other members follow in the order of joining.
-- Each `Avatar` has the first name below it. A tap opens a window with a link to the page of the member. For another member in the mode `Jogo`, the window also shows the free cards of the hand: the user selects one card and taps "Jogar". For a member in the mode `App`, the window says that the member does not receive cards. The `Avatar` of a member on the right side of the scene is mirrored, to face the centre.
+- Each `Avatar` has the first name below it. A tap opens a window with a link to the page of the member. For another member in the mode `Jogo`, the window also shows the free cards of the hand: the user selects one card and taps "Jogar". For a member in the mode `App`, the window says that the member does not receive cards. The scene shows the `Avatar` from above, in 8 directions. A standing `Avatar` turns to the centre on the horizontal axis, but always faces the screen. During an animation, the `Avatar` faces the direction of movement or the target. The animations `alongar`, `olhar`, `aceitar`, `recusar` and `provocar` show the idle animation `parado` until they have their own art.
 - The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
 - The names of the members are in a layer above all the avatars. No avatar hides the name of another one.
 - On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
@@ -203,12 +203,11 @@ The user cannot change the e-mail.
 
 ### 3.3.5. Imported avatar (`Avatar`)
 
-- The page `/perfil/avatar` lets the user import a sprite sheet. A link "Trocar avatar" on the profile page opens it.
+- **Import is paused.** All users show the same default avatar (`avatar-jpgma.png`, 8 directions). This is also true for users with an imported sheet. The page `/perfil/avatar` shows a notice and the default avatar in the 8 directions. It has no file input. The button "Apagar a folha importada" deletes the imported file. The server API below does not change.
+- The page `/perfil/avatar` lets the user import a sprite sheet (paused, see above). A link "Trocar avatar" on the profile page opens it.
 - The sheet is a PNG with 256 by 384 px (8 columns, 12 rows of 32 px), colour type RGBA, 8 bits, and at most 64 KB. An animated PNG is not valid.
 - The browser opens the file, checks the size, and writes the PNG again. The server checks the file again and refuses an invalid one with `FOLHA_INVALIDA`. The server gives the file a random name.
-- Before saving, the page shows a preview of the portrait and of all the animation rows.
-- "Voltar ao avatar padrão" deletes the imported file. The default sheet returns.
-- `GET /api/jogo/avatares` returns the sheet URL of the user and of each active member of the groups of the user. The app shows these sheets in every `Avatar` and in the scene.
+- `GET /api/jogo/avatares` returns the sheet URL of the user and of each active member of the groups of the user. While import is paused, the app uses only the `Vitrine` from this response.
 - `GET /api/avatares/{arquivo}` returns the file only to its owner and to people who share an active group with the owner. For anyone else, it returns 404.
 - The `Proprietario` or an `Administrador` of a group can use "Voltar o avatar ao padrão" on the page of a member. This deletes the imported file of that member. The action is not for the own avatar of the actor.
 - An import is limited to 10 per minute for each user.
@@ -473,7 +472,7 @@ The application does not use points.
 
 - The challenge page shows a chart with the history of the weeks of the current user.
 - The group summary shows the featured challenge, the weekly progress of the user and the first 3 members of the ranking. Each ranking item has the `usuarioId` of the member.
-- Each `Avatar` that has a user ID shows the portrait (row 0, column 0) of the imported sheet of that user (see 3.3.5). Without one, it shows a default sheet. The default sheet comes from a hash of the user ID, out of 6 sheets in the app bundle. If the ID is missing, the `Avatar` shows the initials.
+- Each `Avatar` that has a user ID shows the portrait: the head and shoulders of the front frame of the default sheet in the app bundle. While import is paused, all users have the same default sheet (see 3.3.5). If the ID is missing, the `Avatar` shows the initials.
 
 ## 10. Profile, member page and achievements
 
