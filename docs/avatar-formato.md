@@ -85,4 +85,4 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 | 33 | `receber` | 6 | 200 ms | `receber`; a carta atinge o peito no terceiro quadro |
 | 41 | `parado` | 4 | 200 ms | `parado` e, até terem arte, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` |
 
-- **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, vira para o centro da praça na horizontal, mas sempre de frente para quem vê a tela.
+- **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, olha para o centro da elipse, na direção mais próxima (quem fica embaixo aparece de costas).

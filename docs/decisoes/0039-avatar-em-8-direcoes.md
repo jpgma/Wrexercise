@@ -48,7 +48,7 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 - O `parado` (respiração, 4 quadros × 200 ms) é desenhado à mão no `build.py`, sobre a `rotacao`: os ombros sobem 1 px, depois a cabeça sobe junto, depois só os ombros. As outras animações que faltam (`alongar`, `olhar`, `aceitar`, `recusar`, `provocar`) usam `parado`, e as variações de `parado` ficam desligadas.
 - O `retrato` é um recorte de 24 × 24 px, em (12, 10), da `rotacao` `sul`.
 - A carta sai da mão no quarto quadro de `arremessar`, e o `receber` começa 2 quadros antes do fim do voo: a carta atinge o peito no terceiro quadro, e quem recebe fica virado para quem arremessou.
-- **Direção de quem está parado:** virado para o centro só na horizontal, e sempre de frente para quem vê a tela. Se virasse para o centro de verdade, quem fica embaixo da elipse (a própria pessoa) apareceria de costas.
+- **Direção de quem está parado:** virado para o centro da elipse, como diz a decisão proposta (item 5). Quem fica embaixo (a própria pessoa) aparece de costas, e quem fica em cima, de frente.
 - O formato está em `avatar-formato.md` §6.
 
 ## Impacto, se aprovada

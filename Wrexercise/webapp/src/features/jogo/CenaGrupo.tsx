@@ -124,17 +124,6 @@ function posicionar(
   );
 }
 
-/**
- * Parado na elipse, o avatar vira para o centro na horizontal, mas sempre de frente para quem vê a
- * tela: de costas, quem fica embaixo (a própria pessoa) só mostraria a nuca.
- */
-function getDirecaoParado(posicao: Posicao, centro: Posicao) {
-  return getDirecao(posicao, {
-    x: centro.x,
-    y: posicao.y + Math.abs(centro.y - posicao.y),
-  });
-}
-
 function AvatarCena({
   membro,
   posicao,
@@ -194,7 +183,7 @@ function AvatarCena({
 
   const animacao: NomeAnimacao =
     atuacao?.animacao ?? (parado ? (variacao ?? "parado") : membro.pose);
-  const direcao = atuacao?.direcao ?? getDirecaoParado(posicao, centro);
+  const direcao = atuacao?.direcao ?? getDirecao(posicao, centro);
   const deslocamento = {
     transform: atuacao
       ? `translate(${atuacao.dx}px, ${atuacao.dy}px)`

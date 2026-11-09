@@ -71,7 +71,7 @@ A tela não tem um botão próprio de "Registrar atividade": o registro já est�
 ### 3.1. Layout
 
 - Vista 2,5D, de cima e de lado: o chão é uma praça vista de cima, e os avatares são desenhados de lado.
-- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar vira para o centro na horizontal, mas sempre de frente para quem vê a tela. Nas encenações, ele olha para onde anda ou para o alvo.
+- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar olha para o centro da elipse: quem fica embaixo aparece de costas (`norte`), e quem fica em cima, de frente (`sul`). Nas encenações, ele olha para onde anda ou para o alvo.
 - A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente.
 - Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. Grupos de até 5 pessoas usam 3×.
 - O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
