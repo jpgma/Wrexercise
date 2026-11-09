@@ -1,18 +1,30 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Camera, CheckCircle2, Info, Minus, Plus, Trash2 } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  ClipboardCheck,
+  Info,
+  Minus,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { z } from "zod";
 import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
   anexarEvidencia,
+  descartarRascunho,
+  guardarRascunho,
+  lerRascunho,
   prepararEvidencia,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   tiposAtividade,
   useCriarAtividade,
+  useFilaAvaliacao,
   type TipoAtividade,
 } from "@/features/atividades";
 import { useDesafio, useProgresso } from "@/features/desafios";
@@ -103,16 +115,63 @@ function TreinoRegistrado({
   );
 }
 
+/** A API recusa o registro enquanto a fila de avaliação não estiver vazia. */
+function AvisoFila({
+  quantidade,
+  onAvaliar,
+}: {
+  quantidade: number;
+  onAvaliar: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="mb-5 flex animate-fade-in gap-3 rounded-2xl border-2 border-outline bg-soft p-4 text-on-soft shadow-sticker-sm"
+    >
+      <ClipboardCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">
+          {quantidade === 1
+            ? "Uma atividade espera sua avaliação"
+            : `${quantidade} atividades esperam sua avaliação`}
+        </p>
+        <p className="mt-1 text-sm">
+          Antes de enviar a sua, confira os treinos do grupo. O que você
+          preencher aqui fica guardado.
+        </p>
+        <button
+          type="button"
+          className="btn-secondary mt-3 w-full sm:w-auto"
+          onClick={onAvaliar}
+        >
+          Começar avaliação
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function RegistrarAtividadePage() {
   const { id: grupoId = "" } = useParams();
+  const navigate = useNavigate();
   const grupo = useGrupo(grupoId);
+  const fila = useFilaAvaliacao(grupoId);
+  // Volta da fila de avaliação: o rascunho é lido uma vez e descartado.
+  const [rascunho] = useState(() => lerRascunho(grupoId));
+  useEffect(() => descartarRascunho(grupoId), [grupoId]);
   const resumo = useResumoGrupo(grupoId);
   const desafioId = resumo.data?.desafio?.id;
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
   const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
   const seletor = useRef<HTMLInputElement>(null);
-  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [anexos, setAnexos] = useState<Anexo[]>(
+    () =>
+      rascunho?.arquivos.map((arquivo) => ({
+        arquivo,
+        url: URL.createObjectURL(arquivo),
+      })) ?? [],
+  );
   const [enviando, setEnviando] = useState<string | null>(null);
   const [registrada, setRegistrada] = useState<Registrada | null>(null);
 
@@ -121,14 +180,22 @@ export function RegistrarAtividadePage() {
     handleSubmit,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      duracaoMinutos: 60,
-      startedAt: toLocalInputValue(new Date()),
-      descricao: "",
-    },
+    defaultValues: rascunho
+      ? {
+          tipo: rascunho.tipo,
+          duracaoMinutos: rascunho.duracaoMinutos,
+          startedAt: rascunho.startedAt,
+          descricao: rascunho.descricao,
+        }
+      : {
+          duracaoMinutos: 60,
+          startedAt: toLocalInputValue(new Date()),
+          descricao: "",
+        },
   });
 
   const duracaoMinutos = useWatch({ control, name: "duracaoMinutos" });
@@ -160,38 +227,6 @@ export function RegistrarAtividadePage() {
     minimoMinutos === null
       ? 0
       : Math.max(0, minimoMinutos - minutosJaNoDia - (duracaoMinutos || 0));
-
-  if (grupo.isPending) return <SplashScreen />;
-
-  if (grupo.isError) {
-    return (
-      <div className="mx-auto max-w-xl">
-        <p role="alert" className="form-error">
-          {getErrorMessage(grupo.error)}
-        </p>
-        <Link to="/" className="btn-secondary mt-4">
-          Voltar
-        </Link>
-      </div>
-    );
-  }
-
-  if (registrada) {
-    return <TreinoRegistrado registrada={registrada} grupoId={grupoId} />;
-  }
-
-  const adicionarAnexos = (lista: FileList | null) => {
-    if (!lista) return;
-    const novos = Array.from(lista)
-      .slice(0, maximoDeEvidencias - anexos.length)
-      .map((arquivo) => ({ arquivo, url: URL.createObjectURL(arquivo) }));
-    setAnexos([...anexos, ...novos]);
-  };
-
-  const removerAnexo = ({ url }: Anexo) => {
-    URL.revokeObjectURL(url);
-    setAnexos(anexos.filter((anexo) => anexo.url !== url));
-  };
 
   const enviar = async (data: FormData) => {
     const atividade = await criar.mutateAsync({
@@ -228,6 +263,70 @@ export function RegistrarAtividadePage() {
     });
   };
 
+  // Se a fila não carregar, o formulário aparece e a API decide.
+  const pendentes = fila.data ?? [];
+  const [primeira] = pendentes;
+
+  // Quem tocou em "Avaliar e enviar" já pediu o envio: volta da fila e ele acontece sozinho.
+  const enviarAoVoltar = useRef(rascunho?.enviarAoVoltar === true);
+  const enviarAtual = useRef(enviar);
+  useEffect(() => {
+    enviarAtual.current = enviar;
+  });
+  useEffect(() => {
+    if (!enviarAoVoltar.current || !fila.isSuccess || pendentes.length > 0) {
+      return;
+    }
+    enviarAoVoltar.current = false;
+    void handleSubmit((data) => enviarAtual.current(data))();
+  }, [fila.isSuccess, pendentes.length, handleSubmit]);
+
+  const irParaFila = (enviarDepois: boolean) => {
+    if (!primeira) return;
+    guardarRascunho(grupoId, {
+      ...getValues(),
+      arquivos: anexos.map(({ arquivo }) => arquivo),
+      enviarAoVoltar: enviarDepois,
+    });
+    // Substitui o formulário no histórico: a fila volta para ele com o rascunho.
+    void navigate(
+      `/grupos/${grupoId}/revisar/${primeira.id}?depois=registrar`,
+      { replace: true },
+    );
+  };
+
+  if (grupo.isPending || fila.isPending) return <SplashScreen />;
+
+  if (grupo.isError) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <p role="alert" className="form-error">
+          {getErrorMessage(grupo.error)}
+        </p>
+        <Link to="/" className="btn-secondary mt-4">
+          Voltar
+        </Link>
+      </div>
+    );
+  }
+
+  if (registrada) {
+    return <TreinoRegistrado registrada={registrada} grupoId={grupoId} />;
+  }
+
+  const adicionarAnexos = (lista: FileList | null) => {
+    if (!lista) return;
+    const novos = Array.from(lista)
+      .slice(0, maximoDeEvidencias - anexos.length)
+      .map((arquivo) => ({ arquivo, url: URL.createObjectURL(arquivo) }));
+    setAnexos([...anexos, ...novos]);
+  };
+
+  const removerAnexo = ({ url }: Anexo) => {
+    URL.revokeObjectURL(url);
+    setAnexos(anexos.filter((anexo) => anexo.url !== url));
+  };
+
   const alterarDuracao = (delta: number) =>
     setValue(
       "duracaoMinutos",
@@ -242,6 +341,13 @@ export function RegistrarAtividadePage() {
         back={`/grupos/${grupoId}/inicio`}
       />
 
+      {primeira && (
+        <AvisoFila
+          quantidade={pendentes.length}
+          onAvaliar={() => irParaFila(false)}
+        />
+      )}
+
       {minimoMinutos !== null && (
         <div className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
@@ -253,7 +359,14 @@ export function RegistrarAtividadePage() {
         </div>
       )}
 
-      <form noValidate onSubmit={(event) => void handleSubmit(enviar)(event)}>
+      <form
+        noValidate
+        onSubmit={(event) =>
+          void handleSubmit(async (data) =>
+            primeira ? irParaFila(true) : enviar(data),
+          )(event)
+        }
+      >
         <fieldset>
           <legend className="mb-2 text-sm font-semibold">
             Tipo de atividade
@@ -424,7 +537,12 @@ export function RegistrarAtividadePage() {
           className="btn-primary mt-6 w-full"
           disabled={criar.isPending || enviando !== null}
         >
-          {enviando ?? (criar.isPending ? "Enviando…" : "Enviar atividade")}
+          {enviando ??
+            (criar.isPending
+              ? "Enviando…"
+              : primeira
+                ? "Avaliar e enviar"
+                : "Enviar atividade")}
         </button>
       </form>
     </div>

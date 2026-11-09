@@ -5,7 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { gruposKey, shouldRetry } from "@/features/grupos";
-import { getJson, postFormData, postJson } from "@/services/api";
+import { ApiError, getJson, postFormData, postJson } from "@/services/api";
 import type {
   Atividade,
   AtividadeResumo,
@@ -115,6 +115,14 @@ export function useCriarAtividade(grupoId: string) {
       void queryClient.invalidateQueries({ queryKey: ["desafios"] });
       // Poses da cena do Jogo (chave de features/jogo; uma feature não importa o miolo da outra).
       void queryClient.invalidateQueries({ queryKey: ["jogo"] });
+    },
+    onError: (error) => {
+      // Chegou atividade para avaliar depois que a tela abriu: a fila atualizada troca o formulário pelo aviso.
+      if (error instanceof ApiError && error.code === "AVALIACOES_PENDENTES") {
+        void queryClient.invalidateQueries({
+          queryKey: [...atividadesDoGrupoKey(grupoId), "fila"],
+        });
+      }
     },
   });
 }

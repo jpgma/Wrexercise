@@ -154,12 +154,13 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
         var caio = await _host.AddMembroAsync(grupoId, nome: "Caio");
 
-        var pendente = await CriarManualAsync(ana, grupoId);
-        var emRevisao = await CriarManualAsync(ana, grupoId);
-        await ReagirAsync(bia, emRevisao, "Suspeito");
+        // A da Bia vem primeiro: com a da Ana pendente, a Bia não poderia registrar.
         var verificada = await CriarManualAsync(bia, grupoId);
         await ReagirAsync(ana, verificada, "Kudos");
         await ReagirAsync(caio, verificada, "Kudos");
+        var pendente = await CriarManualAsync(ana, grupoId);
+        var emRevisao = await CriarManualAsync(ana, grupoId);
+        await ReagirAsync(bia, emRevisao, "Suspeito");
 
         Assert.Equal(
             new HashSet<Guid> { pendente, emRevisao },
@@ -202,12 +203,13 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
         var caio = await _host.AddMembroAsync(grupoId, nome: "Caio");
 
+        var daBia = await CriarManualAsync(bia, grupoId);
+        await ReagirAsync(ana, daBia, "Kudos");
         var aguardando = await CriarManualAsync(ana, grupoId);
         var jaReagida = await CriarManualAsync(ana, grupoId);
         await ReagirAsync(bia, jaReagida, "Kudos");
         var emRevisao = await CriarManualAsync(ana, grupoId);
         await ReagirAsync(caio, emRevisao, "Suspeito");
-        await CriarManualAsync(bia, grupoId);
         var expirada = await CriarManualAsync(ana, grupoId);
         await _host.ExecuteAsync(
             $"UPDATE atividades SET submitted_at = now() - interval '49 hours' WHERE id = '{expirada}'");
@@ -220,6 +222,58 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         Assert.Equal(
             new HashSet<Guid> { aguardando, emRevisao },
             fila!.Atividades.Select(a => a.Id).ToHashSet());
+    }
+
+    [Fact]
+    public async Task Criar_ComFilaDeAvaliacao_RecusadoAteReagir()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+
+        var primeira = await CriarManualAsync(ana, grupoId);
+        // A própria atividade não entra na fila da autora.
+        var segunda = await CriarManualAsync(ana, grupoId);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostAtividadeAsync(bia, grupoId, Valid()),
+            HttpStatusCode.Conflict,
+            "AVALIACOES_PENDENTES");
+
+        // Bloqueia enquanto restar qualquer uma; e qualquer reação conta, não só dar moral.
+        await ReagirAsync(bia, primeira, "Suspeito");
+        await ApiTestHost.AssertProblemAsync(
+            await PostAtividadeAsync(bia, grupoId, Valid()),
+            HttpStatusCode.Conflict,
+            "AVALIACOES_PENDENTES");
+        await ReagirAsync(bia, segunda, "Rejeitar");
+
+        Assert.Equal(HttpStatusCode.Created, (await PostAtividadeAsync(bia, grupoId, Valid())).StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_JanelaEncerrada_NaoBloqueia()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+
+        var expirada = await CriarManualAsync(ana, grupoId);
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET submitted_at = now() - interval '49 hours' WHERE id = '{expirada}'");
+
+        Assert.Equal(HttpStatusCode.Created, (await PostAtividadeAsync(bia, grupoId, Valid())).StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_QuemEntrouDepois_NaoEBloqueadoPeloQueVeioAntes()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await CriarManualAsync(ana, grupoId);
+        var caio = await _host.AddMembroAsync(grupoId, nome: "Caio");
+
+        Assert.Equal(HttpStatusCode.Created, (await PostAtividadeAsync(caio, grupoId, Valid())).StatusCode);
     }
 
     [Fact]

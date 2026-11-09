@@ -1,5 +1,6 @@
 import { CheckCircle2, CloudOff } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
@@ -54,11 +55,93 @@ function SemanaDoAutor({
   );
 }
 
+/** Igual a `--animate-avanco` em styles/index.css. */
+const tempoDeAvancoMs = 3000;
+
+/**
+ * Segue sozinho para `para` depois de 3 segundos, com uma barra de progresso. Para quando a
+ * pessoa toca em "Ficar aqui" ou começa a escrever um comentário.
+ */
+function AvancoAutomatico({
+  para,
+  texto,
+  acao,
+}: {
+  para: string;
+  texto: string;
+  acao: string;
+}) {
+  const navigate = useNavigate();
+  const [parado, setParado] = useState(false);
+
+  useEffect(() => {
+    if (parado) return;
+    const timer = setTimeout(
+      () => void navigate(para, { replace: true }),
+      tempoDeAvancoMs,
+    );
+    return () => clearTimeout(timer);
+  }, [para, parado, navigate]);
+
+  useEffect(() => {
+    const pararAoEscrever = ({ target }: FocusEvent) => {
+      if (target instanceof HTMLTextAreaElement) setParado(true);
+    };
+    document.addEventListener("focusin", pararAoEscrever);
+    return () => document.removeEventListener("focusin", pararAoEscrever);
+  }, []);
+
+  if (parado) {
+    return (
+      <Link to={para} replace className="btn-secondary mt-4 w-full">
+        {acao}
+      </Link>
+    );
+  }
+
+  return (
+    <div role="status" className="card mt-5 animate-slide-up p-4">
+      <p className="text-sm font-semibold">{texto}</p>
+      <div
+        aria-hidden="true"
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-soft"
+      >
+        <div className="h-full origin-left animate-avanco rounded-full bg-progress" />
+      </div>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          className="btn-ghost flex-1"
+          onClick={() => setParado(true)}
+        >
+          Ficar aqui
+        </button>
+        <Link to={para} replace className="btn-primary flex-1">
+          {acao}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function RevisarPage() {
   const { id: grupoId = "", atividadeId = "" } = useParams();
   const atividade = useAtividade(atividadeId);
   const fila = useFilaAvaliacao(grupoId);
   const resumo = useResumoGrupo(grupoId);
+  // Veio do registro: avaliar a fila é o que libera o formulário.
+  const [busca] = useSearchParams();
+  const depoisRegistrar = busca.get("depois") === "registrar";
+  const sufixo = depoisRegistrar ? "?depois=registrar" : "";
+  // Só avança sozinho depois de uma reação feita nesta tela, não ao abrir uma já avaliada.
+  const [reagidaAqui, setReagidaAqui] = useState<string | null>(null);
+  const avancar = reagidaAqui === atividadeId;
+
+  const naFila = fila.data ?? [];
+  const avaliada = !naFila.some(({ id }) => id === atividadeId);
+  const proxima = naFila.find(({ id }) => id !== atividadeId);
+  // Carrega a próxima durante a contagem: a troca de tela fica sem tela de carregamento.
+  useAtividade(proxima?.id ?? "", avancar && proxima !== undefined);
 
   if (atividade.isPending) return <SplashScreen />;
 
@@ -90,12 +173,8 @@ export function RevisarPage() {
     voce,
     evidencias,
   } = atividade.data;
-  const naFila = fila.data ?? [];
-  const avaliada = !naFila.some(({ id }) => id === atividadeId);
-  const proxima = naFila.find(({ id }) => id !== atividadeId);
-
   return (
-    <div className="mx-auto max-w-xl">
+    <div key={atividadeId} className="mx-auto max-w-xl animate-fade-in">
       <PageHeader
         title="Avaliar atividade"
         back={`/grupos/${grupoId}/inicio`}
@@ -145,28 +224,61 @@ export function RevisarPage() {
           situacaoVerificacao={situacaoVerificacao}
           voce={voce}
           nomeAutor={nomeExibicao}
+          onReagida={() => setReagidaAqui(atividadeId)}
         />
       </div>
 
       {fila.isSuccess &&
         avaliada &&
         (proxima ? (
-          <Link
-            to={`/grupos/${grupoId}/revisar/${proxima.id}`}
-            className="btn-secondary mt-4 w-full"
-          >
-            Próxima avaliação
-          </Link>
+          avancar ? (
+            <AvancoAutomatico
+              para={`/grupos/${grupoId}/revisar/${proxima.id}${sufixo}`}
+              texto={`Indo para a próxima… ${naFila.length === 1 ? "Falta 1" : `Faltam ${naFila.length}`}.`}
+              acao="Próxima avaliação"
+            />
+          ) : (
+            <Link
+              to={`/grupos/${grupoId}/revisar/${proxima.id}${sufixo}`}
+              replace
+              className="btn-secondary mt-4 w-full"
+            >
+              Próxima avaliação
+            </Link>
+          )
+        ) : depoisRegistrar && avancar ? (
+          <AvancoAutomatico
+            para={`/grupos/${grupoId}/atividades/nova`}
+            texto="Tudo avaliado! Voltando ao seu registro…"
+            acao="Registrar atividade"
+          />
         ) : (
           <div className="card mt-5">
             <EmptyState
               icon={CheckCircle2}
               title="Tudo em dia"
-              description="Ninguém espera sua avaliação agora. Valeu por fazer a sua parte!"
+              description={
+                depoisRegistrar
+                  ? "Valeu por fazer a sua parte! Agora é a sua vez de registrar."
+                  : "Ninguém espera sua avaliação agora. Valeu por fazer a sua parte!"
+              }
               action={
-                <Link to={`/grupos/${grupoId}/inicio`} className="btn-primary">
-                  Voltar ao início
-                </Link>
+                depoisRegistrar ? (
+                  <Link
+                    to={`/grupos/${grupoId}/atividades/nova`}
+                    replace
+                    className="btn-primary"
+                  >
+                    Registrar atividade
+                  </Link>
+                ) : (
+                  <Link
+                    to={`/grupos/${grupoId}/inicio`}
+                    className="btn-primary"
+                  >
+                    Voltar ao início
+                  </Link>
+                )
               }
             />
           </div>

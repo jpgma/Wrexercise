@@ -20,6 +20,35 @@ internal static class ConsultasAtividade
         JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $1 AND m.removed_at IS NULL
         """;
 
+    /// <summary>Fila de avaliação de alguém no grupo: <c>$1</c> é o usuário e <c>$2</c>, o grupo.</summary>
+    public const string FiltroParaAvaliar = """
+        a.grupo_id = $2
+          AND a.situacao_verificacao IN ('AguardandoFeedback', 'EmRevisao')
+          AND a.submitted_at + interval '48 hours' > now()
+          AND EXISTS (
+              SELECT 1 FROM revisores_atividade v
+              WHERE v.atividade_id = a.id AND v.usuario_id = $1)
+          AND NOT EXISTS (
+              SELECT 1 FROM reacoes_atividade r
+              WHERE r.atividade_id = a.id AND r.usuario_id = $1)
+        """;
+
+    /// <summary>Quem tem a fila de avaliação vazia pode registrar uma atividade no grupo.</summary>
+    public static async Task<bool> ExistemParaAvaliarAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        Guid grupoId,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand($"""
+            SELECT EXISTS (SELECT 1 FROM atividades a WHERE {FiltroParaAvaliar})
+            """, connection, transaction);
+        command.Parameters.AddWithValue(usuarioId);
+        command.Parameters.AddWithValue(grupoId);
+        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
+    }
+
     public static AtividadeResumoResponse ReadResumo(NpgsqlDataReader reader) =>
         new(
             reader.GetGuid(0),

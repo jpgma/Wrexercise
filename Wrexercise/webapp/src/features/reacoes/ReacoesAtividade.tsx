@@ -30,12 +30,15 @@ export function ReacoesAtividade({
   situacaoVerificacao,
   voce,
   nomeAutor,
+  onReagida,
 }: {
   atividadeId: string;
   grupoId: string;
   situacaoVerificacao: SituacaoVerificacao;
   voce: boolean;
   nomeAutor: string;
+  /** Chamado depois que a reação de quem usa o aplicativo é registrada. */
+  onReagida?: () => void;
 }) {
   const reacoes = useReacoes(atividadeId);
   const registrar = useRegistrarReacao(atividadeId);
@@ -55,6 +58,7 @@ export function ReacoesAtividade({
       onSuccess: () => {
         setConfirmandoRejeicao(false);
         showToast(mensagem);
+        onReagida?.();
       },
     });
 

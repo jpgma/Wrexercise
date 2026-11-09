@@ -24,15 +24,7 @@ internal static class ListarParaAvaliar
 
         await using var command = new NpgsqlCommand($"""
             {ConsultasAtividade.SelectResumo}
-            WHERE a.grupo_id = $2
-              AND a.situacao_verificacao IN ('AguardandoFeedback', 'EmRevisao')
-              AND a.submitted_at + interval '48 hours' > now()
-              AND EXISTS (
-                  SELECT 1 FROM revisores_atividade v
-                  WHERE v.atividade_id = a.id AND v.usuario_id = $1)
-              AND NOT EXISTS (
-                  SELECT 1 FROM reacoes_atividade r
-                  WHERE r.atividade_id = a.id AND r.usuario_id = $1)
+            WHERE {ConsultasAtividade.FiltroParaAvaliar}
             ORDER BY a.submitted_at, a.id
             """, connection);
         command.Parameters.AddWithValue(usuarioId);

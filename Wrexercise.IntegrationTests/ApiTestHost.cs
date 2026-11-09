@@ -114,6 +114,24 @@ internal sealed class ApiTestHost : IAsyncDisposable
         return usuario;
     }
 
+    /// <summary>Dá moral a tudo que espera <paramref name="usuario"/> no grupo, como a API exige antes de registrar.</summary>
+    public static async Task AvaliarFilaAsync(TestUsuario usuario, Guid grupoId)
+    {
+        var fila = await usuario.Client.GetFromJsonAsync(
+            $"/api/grupos/{grupoId}/atividades/para-avaliar",
+            AppJsonContext.Default.FilaAvaliacaoResponse,
+            Token);
+        foreach (var atividade in fila!.Atividades)
+        {
+            var response = await usuario.Client.PutAsJsonAsync(
+                $"/api/atividades/{atividade.Id}/reacao",
+                new Wrexercise.Features.Reacoes.ReacaoRequest("Kudos"),
+                AppJsonContext.Default.ReacaoRequest,
+                Token);
+            response.EnsureSuccessStatusCode();
+        }
+    }
+
     public async Task ExecuteAsync(string sql)
     {
         await using var command = _database.DataSource.CreateCommand(sql);

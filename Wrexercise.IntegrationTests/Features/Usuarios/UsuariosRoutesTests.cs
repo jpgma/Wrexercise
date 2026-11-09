@@ -215,6 +215,7 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
 
     private static async Task CriarAtividadeAsync(TestUsuario usuario, Guid grupoId)
     {
+        await ApiTestHost.AvaliarFilaAsync(usuario, grupoId);
         var response = await usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades",
             new CriarAtividadeRequest(

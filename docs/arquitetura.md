@@ -1004,7 +1004,7 @@ GET  /api/atividades/{id}/evidencias/{evidenciaId}
 GET  /api/atividades/{id}/evidencias/{evidenciaId}/miniatura
 ```
 
-A lista do grupo aceita `?filtro=Minhas|Pendentes|Verificadas|EmRevisao` e `?autorId=`, aplicados no servidor para não quebrar a paginação por cursor. `para-avaliar` devolve o que ainda espera a reação de quem consulta, dentro da janela de 48 horas. A criação usa somente JSON; o upload de evidências usa `multipart/form-data` em rota separada. Permissões e regras em `docs/decisoes/0011-atividades.md`.
+A lista do grupo aceita `?filtro=Minhas|Pendentes|Verificadas|EmRevisao` e `?autorId=`, aplicados no servidor para não quebrar a paginação por cursor. `para-avaliar` devolve o que ainda espera a reação de quem consulta, dentro da janela de 48 horas. Enquanto essa fila não estiver vazia, o `POST` recusa com `409 AVALIACOES_PENDENTES` (`docs/decisoes/0041-avaliar-antes-de-registrar.md`); as duas rotas usam o mesmo filtro SQL (`ConsultasAtividade.FiltroParaAvaliar`). A criação usa somente JSON; o upload de evidências usa `multipart/form-data` em rota separada. Permissões e regras em `docs/decisoes/0011-atividades.md`.
 
 ### 10.4.1. Usuários
 

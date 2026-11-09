@@ -15,6 +15,7 @@ internal enum AtividadeOperacaoStatus
     LimiteEvidencias,
     EvidenciaInvalida,
     AtividadeEncerrada,
+    AvaliacoesPendentes,
 }
 
 internal static class OperacaoAtividade
@@ -43,6 +44,10 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "ATIVIDADE_ENCERRADA",
             "Não é possível alterar evidências desta atividade."),
+        AtividadeOperacaoStatus.AvaliacoesPendentes => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "AVALIACOES_PENDENTES",
+            "Avalie as atividades do grupo antes de registrar a sua."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

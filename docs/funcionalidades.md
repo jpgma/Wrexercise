@@ -354,6 +354,10 @@ The form adds the duration to the other activities of the user on the same day i
 
 Nobody can edit or delete an activity.
 
+A member with activities in his or her review queue (see 8.6) cannot record an activity in that group. The API returns `409 AVALIACOES_PENDENTES`. Any reaction (`Kudos`, `Suspeito` or `Rejeitar`) removes an activity from the queue.
+
+When the queue is not empty, the form page shows the notice "N atividades esperam sua avaliação" above the form, with the button "Começar avaliação". The submit button shows "Avaliar e enviar". Both buttons open the queue. The application keeps the form data in memory (not after a page reload). When the queue is empty, the application goes back to the form with the same data. After "Avaliar e enviar", the application sends the activity automatically.
+
 ### 7.2. Evidence
 
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
@@ -441,6 +445,9 @@ After each reaction, the system calculates the status again:
 - The "para avaliar" list shows the activities that wait for a reaction from the current user, in the open window.
 - The group pages show a message when the user has activities to examine.
 - The review page ("Avaliar atividade") shows one activity. After the reaction, it shows a link to the next activity in the queue.
+- After the user reacts on the review page, a bar fills in 3 seconds. Then the application opens the next activity in the queue. The user can stop this with "Ficar aqui". The application also stops it when the user starts to write a comment. If the user opens an activity that he or she already examined, the application does not go to the next activity automatically.
+- The queue must be empty before the user records an activity in the group (see 7.1). When the user starts from the form page, the application goes back to the form 3 seconds after the last reaction.
+- The queue has only activities in the 48-hour window. Thus, the queue cannot block a user for more than 48 hours. An activity recorded before the user entered the group does not block the user, because the user is not a reviewer.
 
 ## 9. Progress and competition
 

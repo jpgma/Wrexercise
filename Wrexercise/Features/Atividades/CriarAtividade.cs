@@ -63,6 +63,12 @@ internal static class CriarAtividade
             return (AtividadeOperacaoStatus.GrupoNaoEncontrado, default);
         }
 
+        // Quem ainda deve avaliações ao grupo não registra a sua: assim ninguém fica esperando 48 horas.
+        if (await ConsultasAtividade.ExistemParaAvaliarAsync(connection, transaction, grupoId, usuarioId, cancellationToken))
+        {
+            return (AtividadeOperacaoStatus.AvaliacoesPendentes, default);
+        }
+
         await using var insert = new NpgsqlCommand("""
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, descricao, tipo_comprovacao)
