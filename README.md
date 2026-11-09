@@ -54,7 +54,7 @@ scripts/verify.sh --full   # também testes de integração e imagem arm64
 
 ## Produção
 
-A produção é um Galaxy A14 com Termux, em `https://wx.jpgmaraujo.com.br`, por um túnel da Cloudflare chamado `wx`. Pré-requisitos do telefone: `docs/decisoes/0029-implantacao-nativa-no-termux.md`. Decisão: `docs/decisoes/0032-a14-como-producao.md`.
+A produção é um Galaxy A14 com Termux, em `https://wx.jpgmaraujo.com.br`, por um túnel da Cloudflare chamado `wx`. Pré-requisitos do telefone: `docs/decisoes/0029-implantacao-nativa-no-termux.md`. Decisão: `docs/decisoes/0032-a14-como-producao.md`. Plano para enxugar o Android do aparelho: `docs/a14-enxugamento.md`.
 
 ```powershell
 adb forward tcp:8022 tcp:8022   # opcional: fala com o telefone por USB; use 127.0.0.1 como host
