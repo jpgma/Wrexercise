@@ -9,16 +9,22 @@ const CACHE = `wrexercise-${VERSAO}`;
 // Tudo o que depende da sessão vai sempre direto à rede.
 const SEMPRE_REDE = ["/api/", "/health", "/ready"];
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) =>
-        cache.addAll(
-          PRECACHE.map((url) => new Request(url, { cache: "reload" })),
-        ),
-      ),
+// O `?v=` faz cada versão buscar o arquivo na origem: sem ele, uma CDN (Cloudflare) ainda com a cópia
+// antiga de um arquivo de nome fixo (por exemplo, `avatar-jpgma.png`) a entregaria, e ela ficaria
+// no pré-cache até a versão seguinte. O cache guarda a resposta com a URL sem o `?v=`.
+async function preencher() {
+  const cache = await caches.open(CACHE);
+  await Promise.all(
+    PRECACHE.map(async (url) => {
+      const resposta = await fetch(`${url}?v=${VERSAO}`, { cache: "reload" });
+      if (!resposta.ok) throw new Error(`Pré-cache falhou: ${url}`);
+      await cache.put(url, resposta);
+    }),
   );
+}
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(preencher());
 });
 
 self.addEventListener("activate", (event) => {

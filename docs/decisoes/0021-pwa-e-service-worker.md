@@ -21,7 +21,7 @@ A Fase 8 pede manifest, Service Worker, cache estático e instalação mobile (`
 ## Decisão
 
 - `Wrexercise/webapp/sw.js` é escrito à mão em JS puro. O plugin `serviceWorker()` em `vite.config.ts` gera `wwwroot/sw.js` com:
-  - a versão: um hash dos nomes do bundle e do conteúdo de `public/`;
+  - a versão: um hash dos nomes do bundle, do conteúdo de `public/` e do próprio `sw.js`;
   - o pré-cache: `index.html`, o chunk de entrada com seus imports estáticos, o CSS, as fontes e os arquivos de `public/`.
 - `/api/*`, `/health` e `/ready` nunca passam pelo Service Worker, o que inclui evidências e miniaturas. Requisições que não são `GET` ou que vêm de outra origem também não.
 - Navegação: tenta a rede primeiro e, sem rede, usa o `index.html` da versão instalada. Quem está online sempre recebe o HTML novo, de modo que um frontend antigo só roda offline, quando também não fala com a API. Isso resolve a incompatibilidade entre versões levantada em Q024.
@@ -30,7 +30,8 @@ A Fase 8 pede manifest, Service Worker, cache estático e instalação mobile (`
 - Offline: um aviso fixo "Você está sem conexão" aparece em todas as telas. Sem sessão em cache, a tela inteira de sem conexão do mockup substitui o carregamento infinito.
 - Escritas usam `networkMode: "always"` no TanStack Query: sem rede, falham na hora em vez de ficarem pausadas, porque uma escrita pausada funcionaria como fila offline. As consultas continuam pausadas e voltam sozinhas com a conexão.
 - Instalação: em Configurações, o botão "Instalar aplicativo" aparece quando o navegador oferece `beforeinstallprompt` (Chromium e Android). No iOS, aparece a instrução de usar Compartilhar.
-- O backend responde `sw.js` e `manifest.webmanifest` com `no-cache`, como o `index.html`.
+- O backend responde com `no-cache` todo arquivo estático de nome fixo (`index.html`, `sw.js`, `manifest.webmanifest` e os de `public/`); só `/assets/*` é `immutable`. Assim o Cloudflare revalida na origem e não entrega uma cópia antiga depois de uma implantação.
+- O pré-cache busca cada arquivo com `?v=<versão>` e o guarda com a URL sem o parâmetro. Mesmo se a CDN ainda tiver uma cópia antiga, a versão nova do Service Worker recebe a da origem. (2026-11-09: o `avatar-jpgma.png` novo não aparecia depois da implantação, porque o Cloudflare guardava o antigo por 4 h e o pré-cache o copiou.)
 - O Service Worker só é registrado no build de produção. No `npm run dev`, não há cache.
 - Ícones em `public/` (`favicon.ico`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`), gerados com o ImageMagick por `scripts/gerar-icones.sh` (no Windows, `scripts\gerar-icones.bat`) a partir de `Wrexercise/webapp/icon-source.png`, que fica fora de `public/` para não entrar no pré-cache. Para trocar o ícone, passe o PNG novo, quadrado e de preferência com 1024 px: `scripts/gerar-icones.sh novo-icone.png`. O script copia o arquivo para `icon-source.png` e gera tudo de novo:
   - `favicon.ico`, `icon-192.png` e `icon-512.png`: a arte inteira, com os cantos transparentes. O `BrandMark` da interface usa o `icon-192.png`.

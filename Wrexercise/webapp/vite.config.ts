@@ -40,6 +40,8 @@ function serviceWorker(): Plugin {
 
       const precache = [...arquivos].sort().map((nome) => `/${nome}`);
       const codigo = readFileSync(origem, "utf8");
+      // Uma mudança só no sw.js também cria um cache novo.
+      versao.update(codigo);
       const gerado = codigo
         .replace(
           '"__VERSAO__"',

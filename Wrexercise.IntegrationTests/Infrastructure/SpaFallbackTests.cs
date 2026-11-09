@@ -18,6 +18,7 @@ public sealed class SpaFallbackTests : IDisposable
         File.WriteAllText(Path.Combine(_webRoot.FullName, "index.html"), IndexHtml);
         File.WriteAllText(Path.Combine(_webRoot.FullName, "sw.js"), "// sw");
         File.WriteAllText(Path.Combine(_webRoot.FullName, "manifest.webmanifest"), "{}");
+        File.WriteAllBytes(Path.Combine(_webRoot.FullName, "avatar-jpgma.png"), [0x89, 0x50, 0x4E, 0x47]);
         Directory.CreateDirectory(Path.Combine(_webRoot.FullName, "assets"));
         File.WriteAllText(Path.Combine(_webRoot.FullName, "assets", "index-abc123.js"), "// app");
     }
@@ -54,11 +55,12 @@ public sealed class SpaFallbackTests : IDisposable
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
-    // Nome fixo: o navegador precisa revalidar, ou uma versão nova do app nunca chegaria.
+    // Nome fixo: o navegador e a CDN precisam revalidar, ou uma versão nova do arquivo nunca chegaria.
     [Theory]
     [InlineData("/sw.js", "text/javascript")]
     [InlineData("/manifest.webmanifest", "application/manifest+json")]
-    public async Task PwaFiles_AreAlwaysRevalidated(string path, string contentType)
+    [InlineData("/avatar-jpgma.png", "image/png")]
+    public async Task FixedNameFiles_AreAlwaysRevalidated(string path, string contentType)
     {
         await using var factory = CreateFactory();
         using var client = factory.CreateClient();
