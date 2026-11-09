@@ -192,7 +192,7 @@ Depois do prompt, acrescente o bloco de estilo de §2.
 
 ## 5. O que o `build.py` faz com as fontes
 
-1. Divide `fonte/icones.png` na grade de 3×3 e, em cada célula, pega a caixa do que não é magenta. Uma célula vazia faz o script parar.
+1. Divide `fonte/icones.png` na grade de 3×3. Separa as manchas que não são magenta (nem rosa da borda). Cada mancha grande vai para a célula onde fica o seu centro, e cada mancha pequena (uma alça ou um pino solto) vai para o objeto grande mais próximo. Assim um objeto que passa um pouco da borda da célula não é cortado nem invade o vizinho. Uma célula vazia faz o script parar.
 2. Reduz todas as caixas com a mesma escala, para que a maior ocupe os 32 px, pela cor mais comum de cada bloco (não pela média), e centra cada ícone.
 3. Troca cada cor pela mais próxima da paleta `wrexercise` (e das cores do script); o magenta vira transparente.
 4. Grava `saida/carta-*.png`, `preview/icones-4x.png` e as molduras feitas por código.

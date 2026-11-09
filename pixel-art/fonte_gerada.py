@@ -34,26 +34,81 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
     # O resto da tabela repete a primeira cor: com zeros, um preto puro da fonte cairia num índice
     # fora de `cores`.
     tabela.putpalette([c for cor in cores + [cores[0]] * (256 - len(cores)) for c in cor])
-    im = Image.open(fonte).convert("RGB").quantize(palette=tabela, dither=Image.Dither.NONE)
+    rgb = Image.open(fonte).convert("RGB")
+    im = rgb.quantize(palette=tabela, dither=Image.Dither.NONE)
     im = im.point(lambda i: i if i < len(cores) else 0)
     fundo = cores.index(MAGENTA)
-    px = im.load()
+    px, fonte_px = im.load(), rgb.load()
+    largura, altura = im.size
 
-    cw, ch = im.width / colunas, im.height / linhas
-    caixas = []
-    for i in range(quantidade):
-        x0, y0 = round(i % colunas * cw), round(i // colunas * ch)
-        x1, y1 = round(x0 + cw), round(y0 + ch)
-        pontos = [(x, y) for y in range(y0, y1) for x in range(x0, x1) if px[x, y] != fundo]
-        if not pontos:
+    # O Gemini mistura a borda dos objetos com o magenta. Um rosa claro (vermelho e azul altos, verde
+    # baixo) também é fundo: a paleta não tem nenhum, e os violetas têm vermelho bem mais baixo.
+    def e_fundo(x, y):
+        r, g, b = fonte_px[x, y]
+        return px[x, y] == fundo or (r > 180 and b > 180 and g < 90)
+
+    # Manchas conexas. As grandes vão para a célula onde fica o seu centro, e as pequenas (alça, pino,
+    # botão soltos) vão para o objeto grande mais próximo. Assim um objeto que passa da borda da
+    # célula não é cortado nem invade o vizinho. Manchas mínimas são resto da borda e somem.
+    dono = [[-1] * largura for _ in range(altura)]
+    manchas = []
+    for y_ini in range(altura):
+        for x_ini in range(largura):
+            if dono[y_ini][x_ini] != -1 or e_fundo(x_ini, y_ini):
+                continue
+            mancha, pilha = [], [(x_ini, y_ini)]
+            dono[y_ini][x_ini] = -2
+            while pilha:
+                x, y = pilha.pop()
+                mancha.append((x, y))
+                for vx in (x - 1, x, x + 1):
+                    for vy in (y - 1, y, y + 1):
+                        if 0 <= vx < largura and 0 <= vy < altura and dono[vy][vx] == -1 and not e_fundo(vx, vy):
+                            dono[vy][vx] = -2
+                            pilha.append((vx, vy))
+            if len(mancha) >= 30:
+                xs, ys = [p[0] for p in mancha], [p[1] for p in mancha]
+                manchas.append((mancha, (min(xs), min(ys), max(xs) + 1, max(ys) + 1)))
+
+    def juntar(a, b):
+        return b if a is None else (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
+
+    cw, ch = largura / colunas, altura / linhas
+    maior = max(len(m) for m, _ in manchas)
+    caixas = [None] * quantidade
+    pequenas = []
+    for mancha, caixa in manchas:
+        if len(mancha) < maior / 10:
+            pequenas.append((mancha, caixa))
+            continue
+        col = min(int((caixa[0] + caixa[2]) / 2 / cw), colunas - 1)
+        lin = min(int((caixa[1] + caixa[3]) / 2 / ch), linhas - 1)
+        if lin * colunas + col < quantidade:
+            caixas[lin * colunas + col] = juntar(caixas[lin * colunas + col], caixa)
+            for x, y in mancha:
+                dono[y][x] = lin * colunas + col
+    for i, caixa in enumerate(caixas):
+        if caixa is None:
             sys.exit(f"célula {i + 1} de {fonte.name} está vazia")
-        xs, ys = [p[0] for p in pontos], [p[1] for p in pontos]
-        caixas.append((min(xs), min(ys), max(xs) + 1, max(ys) + 1))
+
+    def distancia(a, b):
+        dx = max(a[0] - b[2], b[0] - a[2], 0)
+        dy = max(a[1] - b[3], b[1] - a[3], 0)
+        return dx * dx + dy * dy
+
+    perto = []
+    for mancha, caixa in pequenas:
+        celula = min(range(quantidade), key=lambda i: distancia(caixa, caixas[i]))
+        perto.append((celula, caixa))
+        for x, y in mancha:
+            dono[y][x] = celula
+    for celula, caixa in perto:
+        caixas[celula] = juntar(caixas[celula], caixa)
 
     # A mesma escala para todos: o maior objeto ocupa o lado inteiro, e os outros mantêm a proporção.
     bloco = max(max(x1 - x0, y1 - y0) for x0, y0, x1, y1 in caixas) / lado
     saidas = []
-    for x0, y0, x1, y1 in caixas:
+    for celula, (x0, y0, x1, y1) in enumerate(caixas):
         w = min(lado, max(1, round((x1 - x0) / bloco)))
         h = min(lado, max(1, round((y1 - y0) / bloco)))
         sx, sy = (x1 - x0) / w, (y1 - y0) / h
@@ -65,7 +120,7 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
             for tx in range(w):
                 xa = round(x0 + tx * sx)
                 xb = max(round(x0 + (tx + 1) * sx), xa + 1)
-                votos = Counter(px[x, y] for y in range(ya, yb) for x in range(xa, xb))
+                votos = Counter(px[x, y] if dono[y][x] == celula else fundo for y in range(ya, yb) for x in range(xa, xb))
                 indice = votos.most_common(1)[0][0]
                 if indice != fundo:
                     out.putpixel((ox + tx, oy + ty), (*cores[indice], 255))
