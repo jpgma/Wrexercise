@@ -4,10 +4,12 @@ Junta as duas exportações do PixelLab de fonte/ numa folha só, sem redesenhar
 - cada animação × direção vem de um dos arquivos (tabela FONTES);
 - o ruído de cor do Cheering vai para a cor mais próxima das 16 da paleta, e os vermelhos
   da boca viram duas cores novas (`BOCA`, `BOCA_ESCURA`);
-- cada quadro de 64×64 é recortado para 48×48 com o mesmo deslocamento, sem reamostrar.
+- cada quadro de 64×64 é recortado para 48×48 com o mesmo deslocamento, sem reamostrar;
+- o `parado` (respiração) é desenhado aqui, sobre a `rotacao` (tabelas PARADO e PARADO_RETOQUES).
 
 Uso: python build.py   (exige Pillow e o pixel-plugin configurado; ver docs/avatar-kit.md §6)
-Gera saida/jpgma.png, saida/jpgma.json, saida/jpgma.aseprite e preview/.
+Gera saida/jpgma.png, saida/jpgma.json, saida/jpgma.aseprite, preview/ e a folha padrão do
+frontend, Wrexercise/webapp/public/avatar-jpgma.png (PNG indexado).
 """
 
 from __future__ import annotations
@@ -61,6 +63,24 @@ ANIMACOES = [
     ("comemorar", "Cheering"),
     ("receber", "Taking_Punch"),  # reação ao ser atingido pela carta
 ]
+
+# `parado` (respiração, 4 quadros) é desenhado aqui, sobre a `rotacao` de cada direção, já no recorte
+# de 48×48. O ciclo é: 0 a própria `rotacao`; 1 os ombros sobem 1 px (o pescoço encolhe: a linha
+# `ombro - 1` some); 2 a cabeça sobe junto (tudo acima da `cintura` sobe 1 px); 3 igual a 1. A linha da
+# `cintura` se repete para fechar o vão, e os pés nunca mexem. Por direção: (ombro, cintura).
+PARADO_MS = 200
+PARADO = {
+    "sul": (29, 35),
+    "sudeste": (29, 35),
+    "leste": (29, 35),
+    "nordeste": (29, 35),
+    "norte": (29, 35),
+    "noroeste": (29, 35),
+    "oeste": (29, 35),
+    "sudoeste": (29, 35),
+}
+# Retoques à mão, por direção e quadro: {(x, y): cor ou None (apaga)}, aplicados depois do deslocamento.
+PARADO_RETOQUES: dict[str, dict[int, dict[tuple[int, int], str | None]]] = {}
 
 # As 16 cores das exportações do PixelLab (o arquivo "a" usa só estas).
 PALETA_BASE = [
@@ -208,7 +228,35 @@ def montar(fontes: dict) -> tuple[list[list[dict]], dict, Counter]:
                 sys.exit(f"{tag}: quantidade de quadros diferente em {d}")
             linhas.append([converter(q, f"{tag}-{d} quadro {i + 1}") for i, q in enumerate(trecho)])
         meta["animacoes"][nome] = {"linha": primeira, "quadros": qt, "ms": MS, "origem": tag}
+    primeira = len(linhas)
+    for k, d in enumerate(DIRECOES):
+        linhas.append(desenhar_parado(d, linhas[0][k]))
+    meta["animacoes"]["parado"] = {"linha": primeira, "quadros": 4, "ms": PARADO_MS, "origem": "desenho"}
     return linhas, meta, trocas
+
+
+def subir(q: dict, de: int, ate: int) -> dict:
+    """Sobe 1 px as linhas `de`..`ate`; a linha `ate` fica onde está (repetida) e a `de - 1` some."""
+    out = {(x, y): c for (x, y), c in q.items() if not (de - 1 <= y < ate)}
+    for (x, y), c in q.items():
+        if de <= y <= ate:
+            out[(x, y - 1)] = c
+    return out
+
+
+def desenhar_parado(direcao: str, rotacao: dict) -> list[dict]:
+    ombro, cintura = PARADO[direcao]
+    ombros = subir(rotacao, ombro, cintura)
+    quadros = [dict(rotacao), ombros, subir(rotacao, 1, cintura), dict(ombros)]
+    for i, retoque in PARADO_RETOQUES.get(direcao, {}).items():
+        for (x, y), c in retoque.items():
+            if not (0 <= x < N and 0 <= y < N) or (c is not None and c not in PALETA):
+                sys.exit(f"parado-{direcao} quadro {i + 1}: retoque inválido em ({x}, {y}): {c}")
+            if c is None:
+                quadros[i].pop((x, y), None)
+            else:
+                quadros[i][(x, y)] = c
+    return quadros
 
 
 def imagem(q: dict, dx: int = 0, dy: int = 0) -> Image.Image:
@@ -229,7 +277,7 @@ def escrever_folha(linhas: list[list[dict]]) -> Image.Image:
 def escrever_aseprite(linhas: list[list[dict]], meta: dict, arquivo: pathlib.Path):
     """Um quadro por célula e uma tag `animacao-direcao`, para tocar a folha no Aseprite."""
     seq: list[tuple[str, dict]] = [("rotacao", q) for q in linhas[0]]
-    for nome, _ in ANIMACOES:
+    for nome in [n for n, _ in ANIMACOES] + ["parado"]:
         primeira = meta["animacoes"][nome]["linha"]
         for k, d in enumerate(DIRECOES):
             seq += [(f"{nome}-{d}", q) for q in linhas[primeira + k]]
@@ -277,7 +325,8 @@ def escrever_previews(folha: Image.Image, linhas: list[list[dict]], meta: dict, 
             for k in range(8):
                 tela.alpha_composite(imagem(linhas[info["linha"] + k][i]), (k * N, 0))
             quadros.append(tela.resize((tela.width * 3, tela.height * 3), Image.NEAREST))
-        quadros[0].save(prev / f"{nome}.gif", save_all=True, append_images=quadros[1:], duration=MS, loop=0)
+        quadros[0].save(prev / f"{nome}.gif", save_all=True, append_images=quadros[1:], duration=info["ms"],
+                        loop=0, disposal=2)
     # Cheering de frente antes (em cima) e depois (embaixo) da troca de cores, em 6×.
     antes = fontes[("Cheering", "south")]
     depois = linhas[meta["animacoes"]["comemorar"]["linha"]]
@@ -286,6 +335,18 @@ def escrever_previews(folha: Image.Image, linhas: list[list[dict]], meta: dict, 
         tira.alpha_composite(imagem(q, -OX, -OY), (i * N, 0))
         tira.alpha_composite(imagem(depois[i]), (i * N, N))
     tira.resize((tira.width * 6, tira.height * 6), Image.NEAREST).save(prev / "comemorar-antes-depois.png")
+
+
+def escrever_bundle(folha: Image.Image):
+    """A folha padrão do frontend: o mesmo desenho em PNG indexado (índice 0 transparente), bem menor que o RGBA."""
+    indice = {(*rgb(c), 255): i + 1 for i, c in enumerate(PALETA)}
+    ind = Image.new("P", folha.size, 0)
+    ind.putpalette([0, 0, 0] + [v for c in PALETA for v in rgb(c)])
+    ind.putdata([indice[p] if p[3] else 0 for p in folha.getdata()])
+    destino_png = AQUI.parents[1] / "Wrexercise/webapp/public/avatar-jpgma.png"
+    ind.save(destino_png, optimize=True, transparency=0)
+    if Image.open(destino_png).convert("RGBA").tobytes() != folha.tobytes():
+        sys.exit(f"{destino_png}: a versão indexada difere da folha")
 
 
 def main():
@@ -309,6 +370,7 @@ def main():
         escrever_aseprite(linhas, meta, ase)
     arq_meta.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     escrever_previews(folha, linhas, meta, fontes)
+    escrever_bundle(folha)
 
     print("trocas de cor (destino ← origem×pixels):")
     por_destino: dict[str, list[str]] = {}

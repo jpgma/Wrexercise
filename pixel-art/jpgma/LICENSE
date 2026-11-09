@@ -8,4 +8,5 @@ autorais e conexos sobre esta arte. Você pode copiá-la, modificá-la,
 distribuí-la e usá-la, inclusive para fins comerciais, sem pedir permissão.
 
 Os quadros de fonte/ foram gerados pelo autor com o PixelLab. As saídas são
-geradas por build.py a partir deles, sem redesenho.
+geradas por build.py a partir deles, sem redesenho; só o `parado` (respiração)
+é desenhado à mão no próprio build.py, sobre a `rotacao`.

@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 1968,
+  "altura": 2352,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -52,6 +52,12 @@
       "quadros": 6,
       "ms": 200,
       "origem": "Taking_Punch"
+    },
+    "parado": {
+      "linha": 41,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "desenho"
     }
   },
   "paleta": [
@@ -74,5 +80,5 @@
     "#e74647",
     "#702623"
   ],
-  "sha256": "2110aa7d346edfdce5c97b64220ad2647951204be1395c336924a30cbb26391f"
+  "sha256": "c13ebef07f830f65126164bd7b5c70f8f5e8636558fc670332517005c80693e3"
 }

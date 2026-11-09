@@ -36,7 +36,7 @@ arms at the sides. Dark near-black outline, simple soft shading, muted colors.
 
 | Nome na folha | Uso no Jogo | Quadros | Repetição |
 |---|---|---:|---|
-| `parado` | pose padrão | 4 | sim |
+| `parado` | pose padrão (já desenhado à mão em `build.py`) | 4 | sim |
 | `treinando` | atividade aguardando verificação | 6 | sim |
 | `alongar` | variação de `parado` | 4 | uma vez |
 | `olhar` | variação de `parado` | 4 | uma vez |
@@ -55,6 +55,8 @@ relaxed idle pose. Comic, not violent. Feet do not move. 6 frames. Do not draw t
 ```
 
 ### `parado` — Idle_Breathing
+
+Já existe: o `build.py` o desenha à mão sobre a `rotacao` (tabelas `PARADO` e `PARADO_RETOQUES`). Use o prompt só para trocá-lo por uma versão do PixelLab; nesse caso, tire o desenho de `montar()`.
 
 ```text
 Idle breathing loop, standing still in place. Relaxed stance, arms at the sides.
