@@ -80,7 +80,14 @@ PARADO = {
     "sudoeste": (29, 35),
 }
 # Retoques à mão, por direção e quadro: {(x, y): cor ou None (apaga)}, aplicados depois do deslocamento.
-PARADO_RETOQUES: dict[str, dict[int, dict[tuple[int, int], str | None]]] = {}
+# Feitos à mão no Aseprite em 2026-11-09 e trazidos para cá: apagam 8 pixels no `sul` e 1 no `sudeste`,
+# nos 4 quadros. No quadro 2, a cabeça e os ombros estão 1 px acima, então os retoques também.
+_SUL = {(24, 12): None, (15, 20): None, (15, 25): None, (16, 25): None, (16, 26): None, (17, 26): None, (18, 26): None, (29, 26): None}
+_SUL_ACIMA = {(24, 11): None, (15, 19): None, (15, 24): None, (16, 24): None, (16, 25): None, (17, 25): None, (18, 25): None, (29, 25): None}
+PARADO_RETOQUES: dict[str, dict[int, dict[tuple[int, int], str | None]]] = {
+    "sul": {0: _SUL, 1: _SUL, 2: _SUL_ACIMA, 3: _SUL},
+    "sudeste": {0: {(31, 23): None}, 1: {(31, 23): None}, 2: {(31, 22): None}, 3: {(31, 23): None}},
+}
 
 # As 16 cores das exportações do PixelLab (o arquivo "a" usa só estas).
 PALETA_BASE = [
