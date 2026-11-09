@@ -4,7 +4,11 @@
   com "linhas de movimento" e corpo em giz. Feita para `border-image` (fatias de 10/6 px): a
   faixa e as bordas repetem a cada 8 px, então a carta pode ter qualquer tamanho.
 - Moldura da Resposta, 24×32: a mesma forma, com faixa violeta em halftone (G4).
-- Ícones 16×16 das cinco Provocações e das quatro Respostas.
+- Ícones 32×32 das cinco Provocações e das quatro Respostas.
+
+Se existir fonte/icones.png (uma folha gerada no Gemini, ver prompts-gemini.md), cada ícone sai
+dela: a célula da grade de 3×3 é reduzida para 32×32 por moda de cor, com a mesma escala para
+todos, e as cores vão para a paleta. Sem a fonte, o desenho de 16×16 deste script é ampliado 2×.
 
 Uso: python build.py   (gera saida/*.png e preview/*.png)
 """
@@ -14,7 +18,12 @@ import sys
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/scripts"))
+sys.path.insert(0, str(AQUI.parent))
+from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
+
+FONTE = AQUI / "fonte" / "icones.png"
+LADO = 32  # tamanho final de cada ícone
 
 TINTA = "#14161f"  # contorno
 GIZ, GIZ_SOMBRA, GIZ_FUNDO = "#f5f1e8", "#d6d0c0", "#a9a392"
@@ -267,21 +276,39 @@ def mudanca_de_planos():
 
 # --- Exportação --------------------------------------------------------------
 
-pecas = {
+molduras = {
     "carta-provocacao": moldura_provocacao(),
     "carta-resposta": moldura_resposta(),
-    "carta-desafioduplo": desafio_duplo(),
-    "carta-aposta": aposta(),
-    "carta-prazoextra": prazo_extra(),
-    "carta-mudancadeplanos": mudanca_de_planos(),
-    "carta-mais10min": cronometro(60),
-    "carta-mais20min": cronometro(120),
-    "carta-variedade": variedade(),
-    "carta-fimdesemana": fim_de_semana(),
-    "carta-antesdas8": antes_das_8(),
 }
 
-for nome, sprite in pecas.items():
+# Na ordem da grade de fonte/icones.png.
+icones = {
+    "carta-mais10min": lambda: cronometro(60),
+    "carta-mais20min": lambda: cronometro(120),
+    "carta-variedade": variedade,
+    "carta-fimdesemana": fim_de_semana,
+    "carta-antesdas8": antes_das_8,
+    "carta-desafioduplo": desafio_duplo,
+    "carta-aposta": aposta,
+    "carta-prazoextra": prazo_extra,
+    "carta-mudancadeplanos": mudanca_de_planos,
+}
+
+for nome, sprite in molduras.items():
     sprite.save_png(str(AQUI / "saida" / f"{nome}.png"))
-    sprite.preview(str(AQUI / "preview" / f"{nome}-8x.png"), scale=8, bg="#222633" if nome in ("carta-provocacao", "carta-resposta") else "#f5f1e8", labels=False)
-    print(nome, len(sprite.used_colors()), "cores")
+    sprite.preview(str(AQUI / "preview" / f"{nome}-8x.png"), scale=8, bg="#222633", labels=False)
+
+if FONTE.exists():
+    cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
+    for nome, imagem in zip(icones, recortar_grade(FONTE, 3, 3, len(icones), LADO, cores, na_base=False)):
+        imagem.save(AQUI / "saida" / f"{nome}.png")
+    print("fonte:", FONTE.name)
+else:
+    for nome, fabrica in icones.items():
+        fabrica().save_png(str(AQUI / "saida" / f"{nome}.png"), scale=LADO // 16)
+
+folha = Sprite(LADO * 3, LADO * 3)
+for i, nome in enumerate(icones):
+    folha.paste_png(AQUI / "saida" / f"{nome}.png", (i % 3) * LADO, (i // 3) * LADO)
+folha.save_png(AQUI / "preview" / "icones-4x.png", scale=4, bg="#f5f1e8")
+print(len(molduras), "molduras e", len(icones), "ícones")

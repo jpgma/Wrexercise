@@ -39,7 +39,7 @@ O Jogo é a parte mais expressiva da identidade Wrexercise (`decisoes/0027-ident
 #### Cartas
 
 - **Mesma moldura para todas** (§4.4): contorno grosso escuro, cantos levemente recortados e um número de preço no canto, como etiqueta de placar.
-- **Hierarquia fixa:** nome em Anton e caixa alta (como no catálogo, §6.1); selo do tipo; ícone em pixel de 16×16; efeito em uma frase curta; preço em EN.
+- **Hierarquia fixa:** nome em Anton e caixa alta (como no catálogo, §6.1); selo do tipo; ícone em pixel de 32×32; efeito em uma frase curta; preço em EN.
 - **Provocação e Resposta:** a moldura e a hierarquia são as mesmas, e muda só o acento. Provocação usa coral, com uma faixa de "linhas de movimento" no topo. Resposta usa violeta, com a faixa em halftone. O selo do tipo diz o nome por extenso, para a diferença não depender só da cor.
 - Nenhuma carta nova e nenhuma carta de defesa (§11). Os efeitos são os de §6.1.
 
@@ -173,7 +173,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Folhas padrão de avatar (pele clara, morena e negra; corpo masculino e feminino) | 256×384 | 6 |
 | Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×230 (mestre 1×, mostrado em 2×, ou seja, 360×460) | 1 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
-| Ícone de carta | 16×16 | 9 |
+| Ícone de carta | 32×32 | 9 |
 | Enfeite | 16×16 ou 32×32 | 19 (§9.1) |
 
 ## 5. Energia

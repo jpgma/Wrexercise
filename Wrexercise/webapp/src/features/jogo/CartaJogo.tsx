@@ -2,15 +2,15 @@ import type { Carta, CodigoCarta } from "./useCartas";
 
 const iconeDe = (codigo: CodigoCarta) => `/carta-${codigo.toLowerCase()}.png`;
 
-/** Ícone 16×16 da carta, em escala inteira. */
+/** Ícone 32×32 da carta, em escala inteira. */
 export function IconeCarta({
   codigo,
-  escala = 2,
+  escala = 1,
 }: {
   codigo: CodigoCarta;
-  escala?: 2 | 3;
+  escala?: 1 | 2;
 }) {
-  const lado = 16 * escala;
+  const lado = 32 * escala;
   return (
     <img
       src={iconeDe(codigo)}
@@ -52,8 +52,8 @@ export function CartaJogo({
       <span className="sr-only">
         {carta.tipo === "Provocacao" ? "Provocação" : "Resposta"}
       </span>
-      <div className="absolute inset-x-0 top-12 flex justify-center">
-        <IconeCarta codigo={carta.codigo} escala={3} />
+      <div className="absolute inset-x-0 top-10 flex justify-center">
+        <IconeCarta codigo={carta.codigo} escala={2} />
       </div>
       <p className="absolute -right-1.5 -bottom-1.5 flex items-baseline gap-0.5 rounded-md border-2 border-carta-tinta bg-carta-tinta px-1.5 py-0.5 text-carta-giz">
         <span className="font-score text-base">{carta.preco}</span>
