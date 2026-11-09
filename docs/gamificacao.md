@@ -363,9 +363,9 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `Sequencia4` | Sequência de 4 semanas | Muda num vaso |
 | `Sequencia8` | Sequência de 8 semanas | Planta com flor (substitui a muda) |
 | `Sequencia12` | Sequência de 12 semanas | Árvore pequena em vaso (substitui a planta) |
-| `Treinos10` | 10 atividades | Medalha de bronze |
-| `Treinos50` | 50 atividades | Medalha de prata (substitui a de bronze) |
-| `Treinos100` | 100 atividades | Medalha de ouro (substitui a de prata) |
+| `Treinos10` | 10 dias com treino | Medalha de bronze |
+| `Treinos50` | 50 dias com treino | Medalha de prata (substitui a de bronze) |
+| `Treinos100` | 100 dias com treino | Medalha de ouro (substitui a de prata) |
 | `DesafioCompleto` (nova) | Um desafio `Encerrado` com todas as semanas que contavam cumpridas (a mesma regra do desafio concluído, §5.1) | Troféu |
 
 **Tipo de atividade**, uma por tipo, com **10 atividades** daquele tipo. `Outro` não tem conquista.

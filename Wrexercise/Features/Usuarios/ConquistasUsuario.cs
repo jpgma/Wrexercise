@@ -1,6 +1,11 @@
 namespace Wrexercise.Features.Usuarios;
 
+/// <param name="TotalTreinos">Atividades verificadas, mostradas no Perfil.</param>
 /// <param name="TreinosPorTipo">Atividades verificadas por tipo; tipos sem treino podem faltar.</param>
+/// <param name="DiasComTreino">
+/// Dias com atividade verificada em cada grupo, que dão as medalhas; antes de
+/// <see cref="ConquistasUsuario.InicioTreinosPorDia"/>, cada atividade conta um.
+/// </param>
 internal readonly record struct EstatisticasConquistas(
     int TotalTreinos,
     int MelhorSequencia,
@@ -8,7 +13,8 @@ internal readonly record struct EstatisticasConquistas(
     int TreinosNoturnos = 0,
     int TreinosFimDeSemana = 0,
     int DesafiosCompletos = 0,
-    IReadOnlyDictionary<string, int>? TreinosPorTipo = null);
+    IReadOnlyDictionary<string, int>? TreinosPorTipo = null,
+    int DiasComTreino = 0);
 
 /// <summary>Conquistas são só reconhecimento: calculadas na leitura, sem efeito na classificação.</summary>
 internal static class ConquistasUsuario
@@ -25,6 +31,12 @@ internal static class ConquistasUsuario
     public const int TreinosPorTipoMarco = 10;
     public const int TiposEcletico = 5;
     public const int HoraNoturno = 20;
+
+    /// <summary>
+    /// A partir deste dia, as medalhas contam dias com treino, não atividades (decisão 0040): dividir um
+    /// treino não as acelera. Antes dele, cada atividade conta um, para que ninguém perca uma medalha.
+    /// </summary>
+    public static readonly DateOnly InicioTreinosPorDia = new(2026, 11, 9);
 
     private static readonly int[] MarcosSequencia = [12, 8, 4];
     private static readonly int[] MarcosTreinos = [100, 50, 10];
@@ -54,12 +66,12 @@ internal static class ConquistasUsuario
                 "Meta batida sem falhar em um desafio"));
         }
 
-        foreach (var marco in MarcosTreinos.Where(marco => estatisticas.TotalTreinos >= marco))
+        foreach (var marco in MarcosTreinos.Where(marco => estatisticas.DiasComTreino >= marco))
         {
             conquistas.Add(new ConquistaResponse(
                 $"Treinos{marco}",
                 $"{marco} treinos",
-                "Treinos verificados pelos amigos"));
+                "Dias com treino verificado pelos amigos"));
         }
 
         if (estatisticas.DesafiosCompletos > 0)

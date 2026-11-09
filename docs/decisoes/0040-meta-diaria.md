@@ -23,10 +23,11 @@ Isso afeta o progresso, a classificação, as sequências e o Jogo: a Energia pa
 4. **Energia:** a base de 10 EN é por dia com atividade verificada em cada grupo. Para que a Energia ganha nunca diminua, as atividades que começaram antes de 9/11/2026 (`CalculoEnergia.InicioEnergiaPorDia`) continuam pagando 10 EN cada. Os bônus não mudam.
 5. **+10 MIN e +20 MIN:** somam-se as atividades de um mesmo dia que começaram dentro do prazo da Jogada. A Jogada fica `Concluida` quando a soma das verificadas de um dia alcança a duração-alvo. O aviso `JogadaConcluida` sai para a atividade que completou a soma.
 6. **Rival:** cada dia conta no `verified_at` da atividade verificada que levou a soma do dia ao mínimo; a meta, no N-ésimo dia a contar.
-7. **Interface:** o formulário de registro soma a duração às outras atividades do mesmo dia na semana atual (`seusSegundosPorDia` no progresso) e diz quanto falta no dia. O feed deixa de marcar atividades "abaixo do mínimo", porque uma atividade curta pode completar o dia. Os textos falam em "dias" em vez de "sessões".
+7. **Medalhas `Treinos10/50/100`:** contam dias com atividade verificada em cada grupo, não atividades. Com o mesmo corte da Energia (`ConquistasUsuario.InicioTreinosPorDia`), as atividades anteriores contam uma cada, para que ninguém perca uma medalha já na Vitrine. O total de treinos do Perfil continua contando atividades.
+8. **Interface:** o formulário de registro soma a duração às outras atividades do mesmo dia na semana atual (`seusSegundosPorDia` no progresso) e diz quanto falta no dia. O feed deixa de marcar atividades "abaixo do mínimo", porque uma atividade curta pode completar o dia. Os textos falam em "dias" em vez de "sessões".
 
 ## Impacto
 
 - Pessoas com treinos divididos podem ganhar semanas cumpridas, sequências, conquistas de sequência e Energia de metas nos desafios já encerrados.
-- As conquistas `Treinos10/50/100` e as por tipo continuam contando atividades: dividir um treino ainda as acelera. Elas não afetam a classificação.
+- As conquistas por tipo (`RatoDeAcademia` etc.), `Madrugador`, `Noturno` e `FimDeSemana` continuam contando atividades. Elas não afetam a classificação.
 - O dia do formulário é o do aparelho, que costuma coincidir com o fuso do grupo.

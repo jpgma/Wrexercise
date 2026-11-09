@@ -52,6 +52,23 @@ internal static class ConquistasDoUsuario
             }
         }
 
+        int diasComTreino;
+        await using (var command = new NpgsqlCommand("""
+            SELECT (count(*) FILTER (WHERE d.dia < $2)
+                + count(DISTINCT (d.grupo_id, d.dia)) FILTER (WHERE d.dia >= $2))::int
+            FROM (
+                SELECT a.grupo_id, (a.started_at AT TIME ZONE g.fuso_horario)::date AS dia
+                FROM atividades a
+                JOIN grupos g ON g.id = a.grupo_id
+                WHERE a.usuario_id = $1 AND a.situacao_verificacao = 'Verificada'
+            ) d
+            """, connection))
+        {
+            command.Parameters.AddWithValue(usuarioId);
+            command.Parameters.AddWithValue(ConquistasUsuario.InicioTreinosPorDia);
+            diasComTreino = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
+        }
+
         var desafios = await DesafiosDaPessoa.LoadAsync(connection, null, usuarioId, cancellationToken);
 
         return new EstatisticasConquistas(
@@ -61,6 +78,7 @@ internal static class ConquistasDoUsuario
             noturnos,
             fimDeSemana,
             desafios.Count(d => d.IsConcluido()),
-            porTipo);
+            porTipo,
+            diasComTreino);
     }
 }

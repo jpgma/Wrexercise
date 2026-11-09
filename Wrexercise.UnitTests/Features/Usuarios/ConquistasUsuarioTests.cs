@@ -7,12 +7,20 @@ public class ConquistasUsuarioTests
 {
     private static string[] Codigos(int treinos, int sequencia, int antesDas7) =>
         ConquistasUsuario
-            .Calcular(new EstatisticasConquistas(treinos, sequencia, antesDas7))
+            .Calcular(new EstatisticasConquistas(treinos, sequencia, antesDas7, DiasComTreino: treinos))
             .Select(c => c.Codigo)
             .ToArray();
 
     [Fact]
     public void Calcular_SemNada_NaoTemConquistas() => Assert.Empty(Codigos(9, 3, 9));
+
+    [Fact]
+    public void Medalhas_ContamDiasComTreino_NaoAtividades() =>
+        Assert.DoesNotContain(
+            "Treinos10",
+            ConquistasUsuario
+                .Calcular(new EstatisticasConquistas(TotalTreinos: 30, 0, 0, DiasComTreino: 9))
+                .Select(c => c.Codigo));
 
     [Fact]
     public void Calcular_NoLimiteDeCadaMarco() =>

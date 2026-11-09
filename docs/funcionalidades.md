@@ -215,7 +215,7 @@ The user cannot change the e-mail.
 ### 3.3.6. Ornaments (`Enfeite`) and showcase (`Vitrine`)
 
 - Each achievement unlocks one `Enfeite`: a 16 by 16 px object. The system calculates the `Enfeite` items from the achievements each time. No purchase is possible.
-- The plant and the medal evolve. The best streak gives the plant: `Sequencia4` the seedling, `Sequencia8` the plant with a flower, `Sequencia12` the small tree. The number of activities gives the medal: `Treinos10` bronze, `Treinos50` silver, `Treinos100` gold. The user has the highest level only.
+- The plant and the medal evolve. The best streak gives the plant: `Sequencia4` the seedling, `Sequencia8` the plant with a flower, `Sequencia12` the small tree. The number of training days gives the medal (see 10.3): `Treinos10` bronze, `Treinos50` silver, `Treinos100` gold. The user has the highest level only.
 - The other `Enfeite` items are: trophy (`DesafioCompleto`), dumbbell (`RatoDeAcademia`), stopwatch (`Corredor`), dog on a leash (`Andarilho`), bicycle (`Ciclista`), buoy (`Peixe`), ball (`Boleiro`), yoga mat (`Zen`), parallel bars (`PesoDoCorpo`), alarm clock (`Madrugador`), street lamp (`Noturno`), portable speaker (`FimDeSemana`), gym backpack (`Ecletico`).
 - The user has a `Vitrine` of up to 3 `Enfeite` items. It stores the code of the `Enfeite` and not the code of the achievement. An evolution keeps its place.
 - A new `Enfeite` enters the `Vitrine` alone if there is room. An `Enfeite` that the user removes does not return alone.
@@ -500,7 +500,7 @@ The system calculates the achievements each time. It does not keep them in the d
 | Achievement | Condition |
 |---|---|
 | Streak of 4, 8 and 12 weeks | The best streak in one challenge. The system does not add streaks from different challenges. |
-| 10, 50 and 100 activities | Number of verified activities. |
+| 10, 50 and 100 training days | Number of days with a verified activity, in each group. Activities that started before 2026-11-09 count one each. |
 | Madrugador | 10 verified activities that started before 07:00 in the time zone of the group. |
 | `DesafioCompleto` | One `Encerrado` challenge in which the user met the goal in every week that counted for the user. |
 | `RatoDeAcademia`, `Corredor`, `Andarilho`, `Ciclista`, `Peixe`, `Boleiro`, `Zen`, `PesoDoCorpo` | 10 verified activities of one type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Esporte`, `Yoga` or `Calistenia`. The type `Outro` has no achievement. |

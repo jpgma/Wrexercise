@@ -124,8 +124,21 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
         Assert.Equal(12, perfil!.TotalTreinos);
         Assert.Equal(12 * 3600, perfil.TotalSegundos);
         Assert.Equal(8, perfil.Semanas.Count);
-        Assert.Contains(perfil.Conquistas, c => c.Codigo == "Treinos10");
         Assert.Equal(12, perfil.Semanas.Sum(s => s.SessoesVerificadas));
+
+        // As medalhas contam dias com treino em cada grupo: hoje, nos dois grupos, são 2.
+        Assert.DoesNotContain(perfil.Conquistas, c => c.Codigo == "Treinos10");
+
+        // Antes da meta diária, cada atividade contava um.
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET started_at = timestamptz '2026-11-02 12:00-03'
+            WHERE usuario_id = '{ana.Id}'
+            """);
+        perfil = await ana.Client.GetFromJsonAsync(
+            "/api/usuarios/eu/perfil",
+            AppJsonContext.Default.MeuPerfilResponse,
+            Token);
+        Assert.Contains(perfil!.Conquistas, c => c.Codigo == "Treinos10");
     }
 
     [Theory]
