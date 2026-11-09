@@ -45,8 +45,9 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 
 - A folha do `jpgma` é a única folha padrão (`Wrexercise/webapp/public/avatar-jpgma.png`, PNG indexado de 54 KB, gerado por `build.py`). As 6 folhas de lado saíram do bundle.
 - **A importação está pausada.** Todos usam a folha padrão, inclusive quem importou uma folha. O servidor, a validação e os arquivos guardados não mudam, e `/perfil/avatar` mostra um aviso no lugar do envio.
-- O `parado` (respiração, 4 quadros × 200 ms) é desenhado à mão no `build.py`, sobre a `rotacao`: os ombros sobem 1 px, depois a cabeça sobe junto, depois só os ombros. As outras animações que faltam (`alongar`, `olhar`, `aceitar`, `recusar`, `provocar`) usam `parado`, e as variações de `parado` ficam desligadas.
+- O `parado` (respiração, 4 quadros × 200 ms) é desenhado à mão sobre a `rotacao`: os ombros sobem 1 px, depois a cabeça sobe junto, depois só os ombros. As outras animações que faltam (`alongar`, `olhar`, `aceitar`, `recusar`, `provocar`) usam `parado`, e as variações de `parado` ficam desligadas.
 - O `retrato` é um recorte de 24 × 24 px, em (12, 10), da `rotacao` `sul`.
+- **Fonte da verdade:** desde 2026-11-09, `pixel-art/jpgma/fonte/jpgma.aseprite`, editado à mão no Aseprite (um quadro por célula, uma tag por animação e direção). As exportações do PixelLab saíram do repositório, e o `build.py` só lê esse arquivo e gera a folha, o JSON e o PNG do bundle.
 - A carta sai da mão no quarto quadro de `arremessar`, e o `receber` começa 2 quadros antes do fim do voo: a carta atinge o peito no terceiro quadro, e quem recebe fica virado para quem arremessou.
 - **Direção de quem está parado:** virado para o centro da elipse, como diz a decisão proposta (item 5). Quem fica embaixo (a própria pessoa) aparece de costas, e quem fica em cima, de frente.
 - O formato está em `avatar-formato.md` §6.

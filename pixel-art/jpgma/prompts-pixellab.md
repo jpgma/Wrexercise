@@ -15,28 +15,28 @@ long charcoal black pants, white sneakers with dark soles. Relaxed standing pose
 arms at the sides. Dark near-black outline, simple soft shading, muted colors.
 ```
 
-**Configuração**, para ficar igual às exportações de `fonte/`:
+**Configuração**, para ficar igual às exportações originais do PixelLab (hoje dentro de `fonte/jpgma.aseprite`):
 
 - Tela de 64×64, com o personagem de cerca de 18×33 px, os pés perto da linha 45 e centrado na horizontal.
 - Vista de cima e um pouco de lado (*low top-down*), 8 direções.
 - Contorno de uma cor só, quase preto (`#0e071b`); sombreamento simples; detalhe médio.
 - Se der para anexar referências, use as 8 imagens de `rotations` (por exemplo, recortadas de `saida/jpgma.png`, linha 0, ampliadas sem suavização) e a paleta de `PALETA` em `build.py`.
-- Confira se a nova `rotations` sai igual à de `fonte/`. Se mudar, o build para (a tag repetida precisa ser idêntica nas fontes). Nesse caso, dê outro nome a essa tag em `FONTES` (por exemplo, `rotations_c`): os quadros continuam contados, mas não entram na folha.
+- A nova `rotations` não entra na folha: a `rotacao` de `fonte/jpgma.aseprite` continua valendo.
 
 ## Como gerar
 
-- **Personagem:** o mesmo `jpgma` (as `rotations` de `fonte/`). Mesma tela de 64×64, mesmo tamanho e mesma posição dos pés, para que o recorte fixo de `build.py` continue valendo.
+- **Personagem:** o mesmo `jpgma` (a linha `rotacao` da folha). Mesma tela de 64×64, mesmo tamanho e mesma posição dos pés, para que o recorte fixo (x 8..55, y 1..48) continue valendo.
 - **Direções:** as 8, na ordem `south`, `south-east`, `east`, `north-east`, `north`, `north-west`, `west`, `south-west`.
 - **Saída:** fundo transparente, sem antisserrilhado, sem sombra no chão, 200 ms por quadro (o padrão do PixelLab).
-- **Paleta:** se o PixelLab aceitar uma paleta, use as 18 cores de `PALETA` em `build.py`. Senão, o build leva as cores novas para a mais próxima, então evite cores que não existem no personagem.
-- **Quantidade de quadros:** a da tabela, que vem do formato atual (`docs/avatar-formato.md` §3). Se o PixelLab gerar outra quantidade, tudo bem: o build lê a quantidade de `FONTES`.
-- **Exportar:** um `.aseprite` com uma camada `Idle` e tags `Acao-direcao` (por exemplo, `Idle_Breathing-south`), como os arquivos de `fonte/`. Salve como `fonte/jpgma-c.aseprite` (e assim por diante). Depois, acrescente o arquivo em `FONTES` e a linha em `ANIMACOES`, em `build.py`.
+- **Paleta:** se o PixelLab aceitar uma paleta, use as 18 cores de `PALETA` em `build.py`. Senão, leve as cores novas para as da paleta antes de colar: o build recusa cores fora de `PALETA`.
+- **Quantidade de quadros:** a da tabela, que vem do formato atual (`docs/avatar-formato.md` §3). Se o PixelLab gerar outra quantidade, tudo bem: ela vai para `ANIMACOES`, em `build.py`.
+- **Juntar à fonte:** recorte cada quadro de 64×64 para 48×48 em (8, 1), sem reamostrar, e acrescente os quadros ao fim de `fonte/jpgma.aseprite`, na ordem das 8 direções, com uma tag `animacao-direcao` por trecho. Depois, acrescente a linha em `ANIMACOES`, em `build.py`, na mesma posição. A exportação do PixelLab não precisa ficar no repositório.
 
 ## Animações
 
 | Nome na folha | Uso no Jogo | Quadros | Repetição |
 |---|---|---:|---|
-| `parado` | pose padrão (já desenhado à mão em `build.py`) | 4 | sim |
+| `parado` | pose padrão (já desenhado à mão em `fonte/jpgma.aseprite`) | 4 | sim |
 | `treinando` | atividade aguardando verificação | 6 | sim |
 | `alongar` | variação de `parado` | 4 | uma vez |
 | `olhar` | variação de `parado` | 4 | uma vez |
@@ -56,7 +56,7 @@ relaxed idle pose. Comic, not violent. Feet do not move. 6 frames. Do not draw t
 
 ### `parado` — Idle_Breathing
 
-Já existe: o `build.py` o desenha à mão sobre a `rotacao` (tabelas `PARADO` e `PARADO_RETOQUES`). Use o prompt só para trocá-lo por uma versão do PixelLab; nesse caso, tire o desenho de `montar()`.
+Já existe: desenhado à mão sobre a `rotacao`, em `fonte/jpgma.aseprite` (tags `parado-<direção>`). Use o prompt só para trocá-lo por uma versão do PixelLab; nesse caso, substitua esses quadros e acerte a quantidade em `ANIMACOES`.
 
 ```text
 Idle breathing loop, standing still in place. Relaxed stance, arms at the sides.
