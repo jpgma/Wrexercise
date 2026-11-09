@@ -24,7 +24,7 @@ O novo mockup (decisão 0014) tem um sino na tela Início e, nas Configurações
 - Eventos:
   - treino novo: os revisores (`NovaAtividade`);
   - primeira reação de cada pessoa: o autor (`Reacao`). Trocar de reação não avisa de novo;
-  - comentário: o autor, os administradores e quem já comentou, menos quem escreveu (`Comentario`);
+  - comentário: o autor e quem já comentou, menos quem escreveu (`Comentario`; os administradores saíram pela decisão 0042);
   - a atividade ficou `Verificada`, `Rejeitada` ou `EmRevisao`: o autor (`SituacaoAlterada`);
   - entrou em `EmRevisao`: os administradores, menos o autor (`Disputa`).
 - Enquanto não forem lidas, reações e comentários de uma atividade viram uma linha só, com um total.

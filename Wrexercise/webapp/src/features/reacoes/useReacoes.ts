@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gruposKey, shouldRetry } from "@/features/grupos";
 import { getJson, postJson, putJson } from "@/services/api";
 import type {
-  ComentarioRevisao,
+  Comentario,
   ReacoesDetalhe,
   RevisaoAtividadeData,
   TipoReacao,
@@ -52,7 +52,7 @@ export function useComentarios(atividadeId: string) {
   return useQuery({
     queryKey: comentariosKey(atividadeId),
     queryFn: ({ signal }) =>
-      getJson<{ comentarios: ComentarioRevisao[] }>(
+      getJson<{ comentarios: Comentario[] }>(
         `/api/atividades/${atividadeId}/comentarios`,
         signal,
       ),
@@ -64,14 +64,14 @@ export function useComentar(atividadeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (texto: string) =>
-      postJson<ComentarioRevisao>(
-        `/api/atividades/${atividadeId}/comentarios`,
-        { texto },
-      ),
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: comentariosKey(atividadeId),
+      postJson<Comentario>(`/api/atividades/${atividadeId}/comentarios`, {
+        texto,
       }),
+    onSuccess: () => {
+      // Inclui os comentários desta atividade; as listas do feed mostram o total.
+      void queryClient.invalidateQueries({ queryKey: ["atividades"] });
+      void queryClient.invalidateQueries({ queryKey: gruposKey });
+    },
   });
 }
 

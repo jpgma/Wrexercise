@@ -48,7 +48,7 @@ internal static class NotificacoesAtividade
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    /// <summary>Avisa o autor, os administradores e quem já comentou, menos quem acabou de escrever.</summary>
+    /// <summary>Avisa o autor e quem já comentou, menos quem acabou de escrever.</summary>
     public static async Task NotificarComentarioAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
@@ -64,9 +64,8 @@ internal static class NotificacoesAtividade
             WHERE a.id = $1
               AND m.usuario_id <> $2
               AND (m.usuario_id = a.usuario_id
-                   OR m.papel IN ('Proprietario', 'Administrador')
                    OR EXISTS (
-                       SELECT 1 FROM comentarios_revisao c
+                       SELECT 1 FROM comentarios c
                        WHERE c.atividade_id = a.id AND c.usuario_id = m.usuario_id))
             ON CONFLICT (usuario_id, atividade_id, tipo) WHERE read_at IS NULL AND tipo IN ('Reacao', 'Comentario')
             DO UPDATE SET total = notificacoes.total + 1, ator_id = EXCLUDED.ator_id, updated_at = now()

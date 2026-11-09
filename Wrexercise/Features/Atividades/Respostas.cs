@@ -26,7 +26,8 @@ internal sealed record AtividadeResumoResponse(
     int Kudos,
     int Suspeito,
     int Rejeitar,
-    string? MiniaturaUrl);
+    string? MiniaturaUrl,
+    int Comentarios);
 
 internal sealed record AtividadesPaginadasResponse(
     IReadOnlyList<AtividadeResumoResponse> Atividades,

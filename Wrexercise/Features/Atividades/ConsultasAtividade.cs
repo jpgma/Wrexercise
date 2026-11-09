@@ -13,7 +13,8 @@ internal static class ConsultasAtividade
             (SELECT count(*)::int FROM reacoes_atividade r WHERE r.atividade_id = a.id AND r.tipo = 'Suspeito'),
             (SELECT count(*)::int FROM reacoes_atividade r WHERE r.atividade_id = a.id AND r.tipo = 'Rejeitar'),
             (SELECT e.id FROM evidencias_atividade e
-             WHERE e.atividade_id = a.id AND e.ordem = 1 AND e.caminho_miniatura IS NOT NULL)
+             WHERE e.atividade_id = a.id AND e.ordem = 1 AND e.caminho_miniatura IS NOT NULL),
+            (SELECT count(*)::int FROM comentarios c WHERE c.atividade_id = a.id)
         FROM atividades a
         JOIN grupos g ON g.id = a.grupo_id
         JOIN usuarios u ON u.id = a.usuario_id
@@ -67,7 +68,8 @@ internal static class ConsultasAtividade
             reader.GetInt32(13),
             reader.GetInt32(14),
             reader.GetInt32(15),
-            reader.IsDBNull(16) ? null : BuildMiniaturaUrl(reader.GetGuid(0), reader.GetGuid(16)));
+            reader.IsDBNull(16) ? null : BuildMiniaturaUrl(reader.GetGuid(0), reader.GetGuid(16)),
+            reader.GetInt32(17));
 
     public static string BuildEvidenciaUrl(Guid atividadeId, Guid evidenciaId) =>
         $"/api/atividades/{atividadeId:D}/evidencias/{evidenciaId:D}";

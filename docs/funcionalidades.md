@@ -380,7 +380,7 @@ The week of an activity is the week of its start date and time, in the time zone
 - Group feed ("Atividades"): all the activities of the group, the most recent first. Filters: "Todas", "Minhas", "Pendentes", "Verificadas".
 - The member page shows the activities of one member.
 - The feed loads 20 activities at a time. "Carregar mais" loads the next 20.
-- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions.
+- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions. If the activity has comments, the item also shows 💬 and the number of comments.
 
 ## 8. Community verification
 
@@ -433,12 +433,13 @@ After each reaction, the system calculates the status again:
 - The system keeps a record of the person, the date and the justification. Nobody can change the decision.
 - The group page shows a list "Disputas para decidir" to the owner and the administrators.
 
-### 8.5. Review comments
+### 8.5. Comments
 
-- Active members, also the author, can write comments only while the activity is `EmRevisao`.
+- Active members, also the author, can write comments on all activities. The status of the activity and the time do not change this.
 - A comment has a maximum of 500 characters.
-- After the review, the comments stay visible but nobody can add more.
 - Nobody can edit or delete a comment.
+- The system accepts a maximum of 20 comments each minute from one IP address.
+- The activity page shows the section "Comentários" with all comments, the oldest first. Each comment shows the author, the date and the time ("Hoje, 15:30", "Ontem, 07:10" or the date). The full date and time show when the user holds the pointer on it.
 
 ### 8.6. Review queue
 
@@ -527,7 +528,7 @@ The system makes a notification for these events:
 |---|---|---|
 | A member records an activity. | The reviewers. | `NovaAtividade` |
 | A reviewer gives his or her first reaction to an activity. A changed reaction does not make a new notification. | The author. | `Reacao` |
-| A member writes a comment. | The author, the administrators and the persons who wrote comments, but not the writer. | `Comentario` |
+| A member writes a comment. | The author and the persons who wrote comments, but not the writer. | `Comentario` |
 | The activity becomes `Verificada`, `Rejeitada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
 | The activity becomes `EmRevisao`. | The administrators, but not the author. | `Disputa` |
 | A member plays a card to the user. | The recipient. | `CartaRecebida` |

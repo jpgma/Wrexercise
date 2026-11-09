@@ -33,8 +33,8 @@ export function getTextoNotificacao({
       );
     case "Comentario":
       return total <= 1
-        ? `${primeiroNome(atorNome)} comentou em uma revisão`
-        : `${total} novos comentários em uma revisão`;
+        ? `${primeiroNome(atorNome)} comentou em uma atividade`
+        : `${total} novos comentários em uma atividade`;
     case "Disputa":
       return `O treino de ${primeiroNome(atorNome)} precisa de uma decisão`;
     case "SituacaoAlterada":

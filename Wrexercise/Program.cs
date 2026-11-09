@@ -51,6 +51,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 builder.Services.AddAutenticacaoRateLimiter();
 builder.Services.AddAtividadesRateLimiter();
+builder.Services.AddReacoesRateLimiter();
 builder.Services.AddJogoRateLimiter();
 builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 

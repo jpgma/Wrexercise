@@ -1,6 +1,6 @@
 # 0015 — Reações e comentários durante a revisão
 
-**Status:** DECIDIDA. Altera a decisão 0012.
+**Status:** DECIDIDA. Altera a decisão 0012. A parte "Comentários" foi alterada pela decisão 0042.
 
 ## Contexto
 
@@ -25,7 +25,7 @@ Pela decisão 0012, a primeira reação negativa levava a atividade a `EmRevisao
 - Depois da janela, `EmRevisao` só muda por revisão administrativa. O administrador pode decidir a qualquer momento, mesmo com a janela aberta.
 - `ReacoesResponse` passa a informar `RejeicoesNecessarias`, para a interface mostrar o limite real.
 
-**Comentários**
+**Comentários** (substituído por `0042-comentarios-sempre-abertos.md`: comentários ficam sempre abertos)
 
 - Uma disputa precisa de contexto: quem marcou como suspeito pode explicar, e o autor pode responder.
 - Membros ativos do grupo, inclusive o autor, comentam apenas enquanto a atividade está em `EmRevisao`. Fora disso, recebem `COMENTARIOS_ENCERRADOS`.

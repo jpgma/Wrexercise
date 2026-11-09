@@ -1,4 +1,4 @@
-import { Camera, Clock } from "lucide-react";
+import { Camera, Clock, MessageCircle } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -45,6 +45,7 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
     suspeito,
     rejeitar,
     miniaturaUrl,
+    comentarios,
   } = atividade;
   const galeria = useGaleria(id);
   // As evidências completas só são buscadas quando a galeria é aberta.
@@ -80,6 +81,15 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
                 <Contagem tipo="Kudos" total={kudos} />
                 {suspeito > 0 && <Contagem tipo="Suspeito" total={suspeito} />}
                 {rejeitar > 0 && <Contagem tipo="Rejeitar" total={rejeitar} />}
+                {comentarios > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-muted tabular-nums">
+                    <MessageCircle aria-hidden="true" className="size-3.5" />
+                    {comentarios}
+                    <span className="sr-only">
+                      {comentarios === 1 ? "comentário" : "comentários"}
+                    </span>
+                  </span>
+                )}
                 {totalEvidencias > (miniaturaUrl ? 1 : 0) && (
                   <span className="flex items-center gap-1 text-xs text-muted">
                     <Camera aria-hidden="true" className="size-3.5" />

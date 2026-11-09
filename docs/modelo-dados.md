@@ -159,9 +159,9 @@ Auditoria de decisões administrativas.
 | `justificativa` | `text` | Obrigatória |
 | `created_at` | `timestamptz` | Padrão `now()` |
 
-## `comentarios_revisao`
+## `comentarios`
 
-Conversa sobre uma atividade em revisão. Membros ativos escrevem apenas durante `EmRevisao`, e os comentários não podem ser editados nem removidos.
+Conversa sobre uma atividade. Membros ativos do grupo escrevem a qualquer momento, e os comentários não podem ser editados nem removidos. Ver `decisoes/0042-comentarios-sempre-abertos.md`.
 
 | Coluna | Tipo | Observações |
 |---|---|---|

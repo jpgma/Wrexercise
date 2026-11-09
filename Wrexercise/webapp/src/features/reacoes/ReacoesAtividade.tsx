@@ -5,7 +5,7 @@ import { useToast } from "@/components/Toast";
 import { SituacaoBadge, type SituacaoVerificacao } from "@/features/atividades";
 import { canRevisarAtividade, useGrupo } from "@/features/grupos";
 import { getErrorMessage } from "@/services/api";
-import { ComentariosRevisao } from "./ComentariosRevisao";
+import { Comentarios } from "./Comentarios";
 import { tipoReacaoEmojis, tipoReacaoLabels } from "./labels";
 import type { TipoReacao } from "./types";
 import {
@@ -219,10 +219,7 @@ export function ReacoesAtividade({
         </div>
       )}
 
-      <ComentariosRevisao
-        atividadeId={atividadeId}
-        emRevisao={situacaoVerificacao === "EmRevisao"}
-      />
+      <Comentarios atividadeId={atividadeId} />
 
       {mostrarRevisaoAdmin && (
         <div className="card p-5">

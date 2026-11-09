@@ -171,34 +171,52 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Comentarios_ForaDaRevisao_Recusados()
+    public async Task Comentarios_AguardandoFeedback_Aceitos()
     {
-        var (ana, atividadeId, _) = await CriarComRevisoresAsync(2);
+        var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(2);
 
-        var response = await PostComentarioAsync(ana, atividadeId, "Foi na esteira.");
-        await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.Conflict, "COMENTARIOS_ENCERRADOS");
+        var response = await PostComentarioAsync(revisores[0], atividadeId, "Boa, mandou bem!");
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(Situacao.AguardandoFeedback, await SituacaoAsync(ana, atividadeId));
     }
 
     [Fact]
-    public async Task Comentarios_EmRevisao_AutorEMembrosComentam_DepoisSoLeitura()
+    public async Task Comentarios_AposDecisao_ContinuamAbertos()
     {
         var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(2);
         (await PutReacaoAsync(revisores[0], atividadeId, TipoReacao.Suspeito)).EnsureSuccessStatusCode();
 
         var criado = await PostComentarioAsync(ana, atividadeId, "  Foi na esteira.  ");
         Assert.Equal(HttpStatusCode.Created, criado.StatusCode);
-        (await PostComentarioAsync(revisores[1], atividadeId, "Faz sentido.")).EnsureSuccessStatusCode();
-
         (await PostRevisaoAsync(ana, atividadeId, Situacao.Verificada, "Conferido.")).EnsureSuccessStatusCode();
 
-        var recusado = await PostComentarioAsync(revisores[1], atividadeId, "Tarde demais.");
-        await ApiTestHost.AssertProblemAsync(recusado, HttpStatusCode.Conflict, "COMENTARIOS_ENCERRADOS");
+        var depois = await PostComentarioAsync(revisores[1], atividadeId, "Faz sentido.");
+        Assert.Equal(HttpStatusCode.Created, depois.StatusCode);
 
         var lista = await revisores[0].Client.GetFromJsonAsync(
             $"/api/atividades/{atividadeId}/comentarios",
             AppJsonContext.Default.ComentariosResponse,
             Token);
         Assert.Equal(["Foi na esteira.", "Faz sentido."], lista!.Comentarios.Select(c => c.Texto));
+    }
+
+    [Fact]
+    public async Task Comentarios_TotalAparecemNoFeed()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        var criada = await PostAtividadeAsync(ana, grupoId);
+        var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+
+        (await PostComentarioAsync(bia, atividade!.Id, "Boa!")).EnsureSuccessStatusCode();
+        (await PostComentarioAsync(ana, atividade.Id, "Valeu!")).EnsureSuccessStatusCode();
+
+        var feed = await bia.Client.GetFromJsonAsync(
+            $"/api/grupos/{grupoId}/atividades",
+            AppJsonContext.Default.AtividadesPaginadasResponse,
+            Token);
+        Assert.Equal(2, Assert.Single(feed!.Atividades).Comentarios);
     }
 
     [Theory]

@@ -510,7 +510,7 @@ Não carregar fontes, ícones ou bibliotecas de terceiros remotamente.
 - Detalhes da submissão.
 - Comprovação.
 - Reações.
-- Comentários de revisão, quando necessário.
+- Comentários.
 
 #### Perfil
 

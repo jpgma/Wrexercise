@@ -119,7 +119,7 @@ public sealed class NotificacoesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Comentario_AvisaAutorAdministradoresEQuemComentou_MenosQuemEscreveu()
+    public async Task Comentario_AvisaAutorEQuemComentou_MenosQuemEscreveu()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -133,7 +133,8 @@ public sealed class NotificacoesRoutesTests : IAsyncLifetime
         await ComentarAsync(bia, atividadeId, "Foi na esteira.");
 
         Assert.Equal(1, Assert.Single(await ListarAsync(bia), n => n.Tipo == "Comentario").Total);
-        Assert.Equal(2, Assert.Single(await ListarAsync(ana), n => n.Tipo == "Comentario").Total);
+        // Ana é a proprietária, mas não comentou: comentários não avisam administradores.
+        Assert.DoesNotContain(await ListarAsync(ana), n => n.Tipo == "Comentario");
         Assert.Equal("Bia", Assert.Single(await ListarAsync(caio), n => n.Tipo == "Comentario").AtorNome);
         Assert.DoesNotContain(await ListarAsync(dani), n => n.Tipo == "Comentario");
     }

@@ -20,7 +20,7 @@ export type ReacoesDetalhe = {
   reacoes: ReacaoItem[];
 };
 
-export type ComentarioRevisao = {
+export type Comentario = {
   id: string;
   usuarioId: string;
   nomeExibicao: string;
