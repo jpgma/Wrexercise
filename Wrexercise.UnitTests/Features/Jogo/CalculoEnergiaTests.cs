@@ -8,8 +8,12 @@ public class CalculoEnergiaTests
     // 2026-11-02 é uma segunda-feira.
     private static readonly DateOnly Segunda = new(2026, 11, 2);
 
-    private static AtividadeEnergia Atividade(int dia, int hora, string tipo = "Corrida", bool verificada = true) =>
-        new(Segunda.AddDays(dia).ToDateTime(new TimeOnly(hora, 0)), tipo, verificada);
+    private static readonly Guid GrupoA = Guid.NewGuid();
+    private static readonly Guid GrupoB = Guid.NewGuid();
+
+    private static AtividadeEnergia Atividade(
+        int dia, int hora, string tipo = "Corrida", bool verificada = true, Guid? grupo = null) =>
+        new(Segunda.AddDays(dia).ToDateTime(new TimeOnly(hora, 0)), tipo, verificada, grupo ?? GrupoA);
 
     private static DesafioDaPessoa Desafio(
         int[] cumpridas,
@@ -73,6 +77,27 @@ public class CalculoEnergiaTests
     [Fact]
     public void Base_SoContaAsVerificadas() =>
         Assert.Equal(10, Calcular(Atividade(0, 12), Atividade(1, 12, verificada: false)).Atividades);
+
+    [Fact]
+    public void Base_DepoisDoInicioPorDia_DividirOTreinoNaoRendeMais()
+    {
+        // 9 de novembro (dia 7) é o primeiro dia da base por dia.
+        Assert.Equal(CalculoEnergia.InicioEnergiaPorDia, Segunda.AddDays(7));
+        Assert.Equal(10, Calcular(Atividade(7, 7), Atividade(7, 12), Atividade(7, 18)).Atividades);
+        Assert.Equal(20, Calcular(Atividade(7, 7), Atividade(8, 7)).Atividades);
+    }
+
+    [Fact]
+    public void Base_PorDia_CadaGrupoContaAParte() =>
+        Assert.Equal(20, Calcular(Atividade(7, 7, grupo: GrupoA), Atividade(7, 12, grupo: GrupoB)).Atividades);
+
+    [Fact]
+    public void Base_PorDia_PendenteNaoConta() =>
+        Assert.Equal(0, Calcular(Atividade(7, 7, verificada: false)).Atividades);
+
+    [Fact]
+    public void Base_AntesDoInicioPorDia_ContinuaPorAtividade() =>
+        Assert.Equal(30, Calcular(Atividade(6, 7), Atividade(6, 12), Atividade(7, 12), Atividade(7, 18)).Atividades);
 
     [Fact]
     public void Bonus_TemTetoDeDezPorAtividade() =>

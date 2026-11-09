@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas), G6 (avatar importado e Enfeites) e G7 (Rival da semana) estão implementadas, e a G5 (Missões) ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md` e o Rival da semana de `decisoes/0038-rival-da-semana.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas), G6 (avatar importado e Enfeites) e G7 (Rival da semana) estão implementadas, e a G5 (Missões) ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md` o Rival da semana de `decisoes/0038-rival-da-semana.md` e a meta diária de `decisoes/0040-meta-diaria.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -184,7 +184,7 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 
 | Evento | EN |
 |---|---:|
-| Atividade verificada | 10 |
+| Dia com atividade verificada, em cada grupo (antes de 9/11/2026: cada atividade verificada) | 10 |
 | Semana com a meta cumprida (uma vez por pessoa por semana) | 20 |
 | Sequência de 4 semanas | 25 |
 | Sequência de 8 semanas | 50 |
@@ -197,7 +197,7 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 
 - As sequências seguem a mesma regra das conquistas: a melhor sequência num único desafio, sem somar desafios. Cada marco paga **uma vez por pessoa**, então as sequências rendem no máximo 175 EN no total.
 - **Desafio concluído:** um desafio `Encerrado` com todas as semanas que contavam para a pessoa cumpridas. Paga uma vez por desafio.
-- **Vários grupos:** a base de 10 EN vale para cada atividade verificada, em qualquer grupo. A meta semanal paga uma vez por pessoa por semana, no primeiro grupo em que for cumprida. Os bônus de §5.2 também contam por pessoa. Assim, estar em mais grupos não multiplica a Energia. A exceção é o Rival da semana, que paga em cada grupo (§8).
+- **Vários grupos:** a base de 10 EN vale para cada dia com atividade verificada em cada grupo. Dividir um treino em várias atividades no mesmo dia não rende mais base (`decisoes/0040-meta-diaria.md`). A meta semanal paga uma vez por pessoa por semana, no primeiro grupo em que for cumprida. Os bônus de §5.2 também contam por pessoa. Assim, estar em mais grupos não multiplica a Energia. A exceção é o Rival da semana, que paga em cada grupo (§8).
 
 **Alvo do balanceamento:** quem cumpre a meta com regularidade ganha cerca de 90 a 110 EN por semana, o suficiente para 2 ou 3 cartas. É essa escassez que faz cada gasto importar.
 
@@ -246,8 +246,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 | Carta | Tipo | Preço | Efeito |
 |---|---|---:|---|
-| +10 MIN | `Provocacao` | 30 | Uma atividade com pelo menos a duração mínima do desafio + 10 minutos. |
-| +20 MIN | `Provocacao` | 45 | Uma atividade com pelo menos a duração mínima do desafio + 20 minutos. |
+| +10 MIN | `Provocacao` | 30 | Somar num mesmo dia pelo menos a duração mínima do desafio + 10 minutos. |
+| +20 MIN | `Provocacao` | 45 | Somar num mesmo dia pelo menos a duração mínima do desafio + 20 minutos. |
 | VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente da última atividade do destinatário, neste grupo, já verificada no momento do envio. |
 | FIM DE SEMANA | `Provocacao` | 35 | Uma atividade que comece no sábado ou no domingo. |
 | ANTES DAS 8 | `Provocacao` | 40 | Uma atividade que comece antes das 08:00. |
@@ -258,7 +258,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 - **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
 - **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que continua sendo de quem a comprou. A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o de quem vai cumprir e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
-- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio.
+- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. Em +10 MIN e +20 MIN, somam-se as atividades de um mesmo dia dentro do prazo da Jogada.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 
@@ -340,7 +340,7 @@ Decidido em `decisoes/0038-rival-da-semana.md`.
 - Cada pessoa no modo Jogo pode escolher um Rival por semana **em cada grupo**, entre os colegas também no modo Jogo. O Rival não precisa aceitar e não perde nada.
 - A semana é a do desafio em destaque, que precisa estar `Ativo`, e as duas pessoas precisam participar dela.
 - A escolha só vale **antes de alguém dos dois cumprir a meta**, contando as atividades pendentes. Depois de escolhido, o Rival não muda.
-- Critério normalizado: vence quem cumprir a meta semanal primeiro, pelo `verified_at` da sessão que completou a meta (a N-ésima atividade verificada que conta, com N = sessões por semana). Se só um cumprir, esse vence. Empate exato ou ninguém cumprindo até o domingo mais 2 dias de verificação: sem vencedor.
+- Critério normalizado: vence quem cumprir a meta semanal primeiro, pelo momento em que o N-ésimo dia passou a contar, com N = dias por semana. Um dia conta no `verified_at` da atividade verificada que levou a soma do dia ao mínimo. Se só um cumprir, esse vence. Empate exato ou ninguém cumprindo até o domingo mais 2 dias de verificação: sem vencedor.
 - Venceu e Perdeu são finais assim que aparecem, porque `Verificada` é final. Tudo é calculado na leitura, sem tarefa agendada.
 - Prêmio: 15 EN e um selo, só para quem escolheu. Cada grupo paga à parte.
 - O Rival recebe a `Notificacao` `RivalEscolhido`. Só as duas pessoas do par veem o par.

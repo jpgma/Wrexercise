@@ -45,10 +45,10 @@ const schema = z.object({
     .min(1, "Use pelo menos 1 minuto")
     .max(1440, "Use no máximo 1440 minutos"),
   sessoesPorSemana: z
-    .number({ error: "Informe a quantidade de sessões" })
+    .number({ error: "Informe a quantidade de dias" })
     .int("Use um número inteiro")
-    .min(1, "Use pelo menos 1 sessão")
-    .max(7, "Use no máximo 7 sessões"),
+    .min(1, "Use pelo menos 1 dia")
+    .max(7, "Use no máximo 7 dias"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -142,7 +142,7 @@ function CriarDesafioForm({
       </div>
 
       <TextField
-        label="Sessões por semana"
+        label="Dias de treino por semana"
         icon={Repeat}
         type="number"
         inputMode="numeric"
@@ -153,7 +153,7 @@ function CriarDesafioForm({
       />
 
       <TextField
-        label="Duração mínima de cada sessão, em minutos"
+        label="Duração mínima por dia, em minutos"
         icon={Clock}
         type="number"
         inputMode="numeric"

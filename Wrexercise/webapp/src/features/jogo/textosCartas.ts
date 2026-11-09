@@ -7,8 +7,8 @@ import type { CodigoProvocacao, Jogada, SituacaoJogada } from "./useCartas";
 
 /** O objetivo em poucas palavras, para escolher a troca da MUDANÇA DE PLANOS. */
 export const objetivoCurto: Record<CodigoProvocacao, string> = {
-  Mais10Min: "Treino 10 min mais longo",
-  Mais20Min: "Treino 20 min mais longo",
+  Mais10Min: "Dia com 10 min a mais",
+  Mais20Min: "Dia com 20 min a mais",
   Variedade: "Treino de outro tipo",
   FimDeSemana: "Treino no fim de semana",
   AntesDas8: "Treino antes das 8h",
@@ -20,7 +20,7 @@ export function getObjetivo(jogada: Jogada): string {
     case "Mais10Min":
     case "Mais20Min":
       return jogada.duracaoAlvoSegundos
-        ? `Um treino de ${formatarDuracao(jogada.duracaoAlvoSegundos)} ou mais`
+        ? `Somar ${formatarDuracao(jogada.duracaoAlvoSegundos)} ou mais num mesmo dia`
         : objetivoCurto[jogada.objetivo];
     case "Variedade":
       return jogada.tipoEvitar

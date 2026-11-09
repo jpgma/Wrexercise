@@ -179,6 +179,31 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MetaDiaria_ContaQuandoASomaDoDiaAlcancaOMinimo()
+    {
+        // Mínimo de 30 min: a Ana divide em 2 × 15 min, e o dia só conta quando a segunda é verificada.
+        var (ana, bia, grupoId) = await CriarGrupoNoJogoAsync();
+        (await EscolherAsync(ana, grupoId, bia.Id)).EnsureSuccessStatusCode();
+        await PostAtividadeAsync(ana, grupoId, 900);
+        await PostAtividadeAsync(ana, grupoId, 900);
+        await PostAtividadeAsync(bia, grupoId);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades a
+            SET situacao_verificacao = 'Verificada', verified_at = now() - o.n * interval '2 hours'
+            FROM (SELECT id, row_number() OVER (ORDER BY created_at, id) AS n
+                  FROM atividades WHERE usuario_id = '{ana.Id}') o
+            WHERE a.id = o.id
+            """);
+
+        // A Ana completa o dia há 2 horas; a Bia, há 3.
+        await VerificarAsync(bia, "now() - interval '3 hours'");
+        Assert.Equal(ResultadoRival.Perdeu, Assert.Single((await GetRivaisAsync(ana, grupoId)).Rivais).Situacao);
+
+        await VerificarAsync(bia, "now() - interval '1 hour'");
+        Assert.Equal(ResultadoRival.Venceu, Assert.Single((await GetRivaisAsync(ana, grupoId)).Rivais).Situacao);
+    }
+
+    [Fact]
     public async Task MarcarVistos_RivalViuAProvocacao()
     {
         var (ana, bia, grupoId) = await CriarGrupoNoJogoAsync();
@@ -261,13 +286,13 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
             """);
     }
 
-    private async Task PostAtividadeAsync(TestUsuario usuario, Guid grupoId)
+    private async Task PostAtividadeAsync(TestUsuario usuario, Guid grupoId, int duracao = 3600)
     {
         var response = await usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades",
             new CriarAtividadeRequest(
                 TipoAtividade.Corrida,
-                3600,
+                duracao,
                 DateTimeOffset.UtcNow.AddMinutes(-30),
                 "Treino",
                 TipoComprovacao.RegistroManual),

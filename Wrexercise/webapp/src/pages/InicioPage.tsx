@@ -110,7 +110,7 @@ function SuaSemana({
                 {Math.min(verificadas, meta)}
                 <span className="text-xl text-muted">/{meta}</span>
               </p>
-              <p className="mt-1 text-2xs text-muted">sessões</p>
+              <p className="mt-1 text-2xs text-muted">dias</p>
             </div>
           </ProgressRing>
           <div className="min-w-0 flex-1">
@@ -126,7 +126,7 @@ function SuaSemana({
             )}
             <p className="mt-1 text-sm text-muted">
               Mínimo de {formatarDuracao(desafio.data.duracaoMinimaSegundos)}{" "}
-              por sessão
+              por dia
             </p>
           </div>
         </div>
@@ -399,11 +399,7 @@ function InicioApp({
       )}
       <div className="grid gap-3 lg:grid-cols-2">
         {atividades.map((atividade) => (
-          <FeedAtividade
-            key={atividade.id}
-            atividade={atividade}
-            duracaoMinimaSegundos={desafio?.duracaoMinimaSegundos}
-          />
+          <FeedAtividade key={atividade.id} atividade={atividade} />
         ))}
       </div>
     </>

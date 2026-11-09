@@ -33,4 +33,17 @@ public class JogadasConcluidasTests
         var id = Guid.NewGuid();
         Assert.False(JogadasConcluidas.ConcluiAgora(Jogada, id, [Verificada(id, "Corrida")]));
     }
+
+    [Fact]
+    public void Duracao_AtividadeQueCompletaASomaDoDia_Conclui()
+    {
+        var jogada = Jogada with { Codigo = CodigoCarta.Mais10Min, DuracaoAlvoSegundos = 4200, TipoEvitar = null };
+        var primeira = Guid.NewGuid();
+        var segunda = Guid.NewGuid();
+        (Guid, AtividadeJogada) Parte(Guid id, int hora) =>
+            (id, new AtividadeJogada(new DateTime(2026, 11, 3, hora, 0, 0), "Corrida", 2100, true));
+
+        Assert.False(JogadasConcluidas.ConcluiAgora(jogada, primeira, [Parte(primeira, 8)]));
+        Assert.True(JogadasConcluidas.ConcluiAgora(jogada, segunda, [Parte(primeira, 8), Parte(segunda, 18)]));
+    }
 }

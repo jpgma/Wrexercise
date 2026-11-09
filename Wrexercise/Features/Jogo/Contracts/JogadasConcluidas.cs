@@ -84,12 +84,19 @@ internal static class JogadasConcluidas
         }
     }
 
-    /// <summary>Regra pura: esta atividade conclui a Jogada, e nenhuma outra verificada já a concluía.</summary>
+    /// <summary>
+    /// Regra pura: com esta atividade, as verificadas cumprem o objetivo, e sem ela ainda não cumpriam.
+    /// Nas cartas de duração, ela pode completar a soma de um dia (decisão 0040).
+    /// </summary>
     public static bool ConcluiAgora(
         JogadaEstado jogada,
         Guid atividadeId,
         IReadOnlyList<(Guid AtividadeId, AtividadeJogada Atividade)> verificadas) =>
         jogada.RespondidaEm < jogada.ExpiraEm
-        && verificadas.Any(v => v.AtividadeId == atividadeId && ObjetivoCarta.Cumpre(jogada, v.Atividade))
-        && !verificadas.Any(v => v.AtividadeId != atividadeId && ObjetivoCarta.Cumpre(jogada, v.Atividade));
+        && verificadas.Any(v => v.AtividadeId == atividadeId)
+        && ObjetivoCarta.Cumpre(jogada, verificadas.Select(v => v.Atividade), apenasVerificadas: true)
+        && !ObjetivoCarta.Cumpre(
+            jogada,
+            verificadas.Where(v => v.AtividadeId != atividadeId).Select(v => v.Atividade),
+            apenasVerificadas: true);
 }

@@ -10,7 +10,7 @@
 
 Wrexercise is a private web application for small groups of friends. It helps them to exercise regularly.
 
-A group sets one weekly goal, for example "4 sessions of 60 minutes each week". Each member records his or her exercise sessions. The other members examine each session and give a reaction. The reactions decide if the session is valid. Only valid sessions count for the goal.
+A group sets one weekly goal, for example "4 days with 60 minutes each week". The activities of one day add up. Each member records his or her exercise sessions. The other members examine each session and give a reaction. The reactions decide if the session is valid. Only valid sessions count for the goal.
 
 The application is a Progressive Web App (PWA). The interface is in Brazilian Portuguese and is for smartphones first.
 
@@ -132,7 +132,7 @@ The user cannot change the e-mail.
 - The balance is the earned Energy minus the prices of all the cards that the user bought (see 3.3.4).
 - `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0, "jogadas": 0, "rivais": 0 } }`. A user without a session gets 401.
 - Sources of Energy:
-  - Each `Verificada` activity gives 10 EN, in each group.
+  - Each day with a `Verificada` activity gives 10 EN, in each group. More activities on the same day do not give more. Activities that started before 2026-11-09 give 10 EN each.
   - A week with the goal met gives 20 EN. It counts one time for each user and week, also if the user met the goal in more than one group.
   - The best streak in one challenge gives 25 EN at 4 weeks, 50 EN at 8 weeks and 100 EN at 12 weeks. Each milestone counts one time for each user. The streaks of different challenges do not add.
   - A challenge that is `Encerrado`, with all the weeks that counted for the user met, gives 75 EN, one time for each challenge.
@@ -156,8 +156,8 @@ The user cannot change the e-mail.
 
   | Code name | Name | Price | Goal for the recipient |
   |---|---|---:|---|
-  | `Mais10Min` | +10 MIN | 30 | One activity with at least the minimum duration of the active challenge + 10 minutes. |
-  | `Mais20Min` | +20 MIN | 45 | One activity with at least the minimum duration of the active challenge + 20 minutes. |
+  | `Mais10Min` | +10 MIN | 30 | Activities on one day with a total of at least the minimum duration of the active challenge + 10 minutes. |
+  | `Mais20Min` | +20 MIN | 45 | Activities on one day with a total of at least the minimum duration of the active challenge + 20 minutes. |
   | `Variedade` | VARIEDADE | 35 | One activity of a type that is different from the last `Verificada` activity of the recipient in the group. |
   | `FimDeSemana` | FIM DE SEMANA | 35 | One activity that starts on Saturday or Sunday. |
   | `AntesDas8` | ANTES DAS 8 | 40 | One activity that starts before 08:00. |
@@ -194,7 +194,7 @@ The user cannot change the e-mail.
   | `Concluida` | Accepted, an activity that counts is `Verificada`. |
   | `Expirada` | No answer before the deadline, or accepted with no activity that counts before the deadline. |
 
-- An activity counts if it is not `Rejeitada`, belongs to the recipient and to the group of the play, starts between the play and the deadline, and meets the goal of the card. The verification can occur after the deadline. One activity can complete more than one play.
+- An activity counts if it is not `Rejeitada`, belongs to the recipient and to the group of the play, starts between the play and the deadline, and meets the goal of the card. For `Mais10Min` and `Mais20Min`, the activities that count on one day add up. The play is `Concluida` when the total of the `Verificada` activities of one day is equal to or more than the target duration. The verification can occur after the deadline. One activity can complete more than one play.
 - When a play becomes `Concluida`, the sender and the recipient get the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
 - `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient), `nova` (the user did not see the new card or the answer yet), `objetivo` (the goal now), `cartaResposta` (the answer card that the recipient used, or `null`), `desafioDuplo` (`DesafioDuplo` created the play) and `objetivosEquivalentes` (the goals that `MudancaDePlanos` can select; only for a received play that is `Enviada`, and without `Mais10Min` and `Mais20Min` if the group has no active challenge).
 - `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
@@ -230,7 +230,7 @@ The user cannot change the e-mail.
 - In each group, a user in the mode `Jogo` can choose one other member as `Rival` for each week. The rival must also be in the mode `Jogo`. The rival does not have to accept and does not lose anything.
 - The week is the current week of the featured challenge. The challenge must be `Ativo`. The two users must participate in the week.
 - The user can choose only before one of the two users meets the goal of the week. Pending activities count for this check. After the choice, the user cannot change or cancel it.
-- The winner is the user who meets the goal first. The time is the `verified_at` of the activity that completed the goal: the N-th `Verificada` activity of the week that counts for the challenge, where N is the sessions for each week.
+- The winner is the user who meets the goal first. The time is when the N-th day of the week started to count, where N is the days for each week. A day counts at the `verified_at` of the `Verificada` activity that made the total of the day equal to or more than the minimum duration.
 - `atividades.verified_at` is the time when the activity became `Verificada`. All operations that verify an activity write it.
 - A result is final when it shows: `Venceu` (the user who chose won) or `Perdeu` (the rival won). The same time gives no winner. If nobody meets the goal, the result is `SemVencedor` 2 days after Sunday (the verification window). Before that, the result is `EmAndamento`.
 - A win gives 15 EN to the user who chose. The rival gets nothing.
@@ -302,7 +302,7 @@ A group has a maximum of 10 active members.
 
 ### 6.1. Rules
 
-- A challenge sets the weekly goal of the group: a minimum number of sessions each week (1 to 7) and a minimum duration of each session (1 minute to 24 hours).
+- A challenge sets the weekly goal of the group: a minimum number of days each week (1 to 7) and a minimum duration for each day (1 minute to 24 hours). The activities of one day add up.
 - A challenge has a name (1 to 80 characters) and an optional description (maximum 500 characters).
 - A challenge has only full weeks. It starts on a Monday and stops on a Sunday, in the time zone of the group. It has a maximum of 52 weeks. The start date cannot be in the past.
 - The creation page shows the next 12 Mondays as start dates and asks for the number of weeks.
@@ -350,7 +350,7 @@ The proof method comes from the evidence:
 - One or more images: `Fotografia`.
 - The code also has `CapturaDeTela`. The interface does not use it.
 
-The form shows "Conta para a meta" when the duration is equal to or more than the minimum duration of the challenge.
+The form adds the duration to the other activities of the user on the same day in the current week (`seusSegundosPorDia`, not `Rejeitada`). It shows "Conta para a meta" when the total is equal to or more than the minimum duration of the challenge. If not, it shows "Faltam N min no dia para contar". If the day already has activities, it shows "Você já tem N min nesse dia".
 
 Nobody can edit or delete an activity.
 
@@ -446,23 +446,23 @@ After each reaction, the system calculates the status again:
 
 ### 9.1. Weekly progress
 
-- Only activities with a duration equal to or more than the minimum duration of the challenge count.
-- One activity counts as one session. A long activity does not count as two sessions.
+- The activities of a user on one day add up. The day is the start date of each activity, in the time zone of the group.
+- A day counts as one session when the total is equal to or more than the minimum duration of the challenge. A day counts as one session at most, also with a very long total.
 - Additional sessions in one week do not count for other weeks.
-- Definitive progress: activities with status `Verificada`.
-- Provisional progress: activities with status `AguardandoFeedback`, `EmRevisao` or `Contestada`.
+- Definitive progress: days in which the total of `Verificada` activities is equal to or more than the minimum.
+- Provisional progress: days that get to the minimum only with the activities in `AguardandoFeedback`, `EmRevisao` or `Contestada` added.
 - A member completes a week when the definitive progress is equal to or more than the goal.
 
 ### 9.2. Group goal for the week
 
-The group page shows the total of verified sessions of all members in the current week. The target is the goal multiplied by the number of members who count in this week. A new member does not decrease the group result.
+The group page shows the total of verified days of all members in the current week. The target is the goal multiplied by the number of members who count in this week. A new member does not decrease the group result.
 
 ### 9.3. Ranking
 
 The challenge page shows the ranking. The order is:
 
 1. Number of completed weeks.
-2. Total number of verified sessions in the challenge.
+2. Total number of verified days in the challenge.
 3. Current streak: the number of completed weeks one after the other, from the most recent week.
 4. Display name.
 

@@ -27,9 +27,9 @@ internal static class CatalogoCartas
     public static readonly IReadOnlyList<Carta> Todas =
     [
         new(CodigoCarta.Mais10Min, "+10 MIN", TipoCarta.Provocacao, 30,
-            "Uma atividade com pelo menos a duração mínima do desafio + 10 minutos."),
+            "Somar num mesmo dia pelo menos a duração mínima do desafio + 10 minutos."),
         new(CodigoCarta.Mais20Min, "+20 MIN", TipoCarta.Provocacao, 45,
-            "Uma atividade com pelo menos a duração mínima do desafio + 20 minutos."),
+            "Somar num mesmo dia pelo menos a duração mínima do desafio + 20 minutos."),
         new(CodigoCarta.Variedade, "VARIEDADE", TipoCarta.Provocacao, 35,
             "Uma atividade de tipo diferente da última atividade verificada."),
         new(CodigoCarta.FimDeSemana, "FIM DE SEMANA", TipoCarta.Provocacao, 35,

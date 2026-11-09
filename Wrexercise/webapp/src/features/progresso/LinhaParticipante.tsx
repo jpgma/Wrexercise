@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { Segments } from "@/components/Segments";
 
-/** "Meta batida" só com sessões verificadas: as pendentes ainda podem ser rejeitadas. */
+/** "Meta batida" só com dias verificados: as pendentes ainda podem ser rejeitadas. */
 export function SituacaoParticipante({
   verificadas,
   meta,

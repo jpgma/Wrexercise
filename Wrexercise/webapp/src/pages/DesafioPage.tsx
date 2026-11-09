@@ -326,12 +326,12 @@ function DesafioConteudo({ desafio }: { desafio: Desafio }) {
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Dado
             icon={Repeat}
-            titulo="Sessões por semana"
+            titulo="Dias por semana"
             valor={String(desafio.sessoesPorSemana)}
           />
           <Dado
             icon={Clock}
-            titulo="Duração mínima"
+            titulo="Mínimo por dia"
             valor={formatarDuracao(desafio.duracaoMinimaSegundos)}
           />
           <Dado

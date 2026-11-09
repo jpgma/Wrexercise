@@ -52,19 +52,30 @@ internal sealed record SemanaRival(
 internal static class Rivais
 {
     /// <summary>
-    /// Quando a pessoa cumpriu a meta da semana: o <c>verified_at</c> da N-ésima atividade verificada que
-    /// conta para o desafio, N = sessões por semana.
+    /// Quando a pessoa cumpriu a meta da semana: cada dia conta no <c>verified_at</c> da atividade verificada que
+    /// levou a soma do dia ao mínimo do desafio, e a meta, no N-ésimo dia a contar, N = sessões por semana
+    /// (decisão 0040).
     /// </summary>
     private static string MetaCumpridaEmSql(string usuarioColuna) => $"""
-        (SELECT v.verified_at
+        (SELECT v.concluido_em
          FROM (
-             SELECT a.verified_at, row_number() OVER (ORDER BY a.verified_at, a.id) AS n
-             FROM atividades a
-             WHERE a.usuario_id = {usuarioColuna}
-               AND a.grupo_id = r.grupo_id
-               AND a.situacao_verificacao = 'Verificada'
-               AND a.duracao_segundos >= d.duracao_minima_segundos
-               AND (a.started_at AT TIME ZONE g.fuso_horario)::date BETWEEN r.semana_inicio AND r.semana_inicio + 6
+             SELECT c.concluido_em, row_number() OVER (ORDER BY c.concluido_em) AS n
+             FROM (
+                 SELECT min(s.verified_at) FILTER (WHERE s.acumulado >= d.duracao_minima_segundos) AS concluido_em
+                 FROM (
+                     SELECT a.verified_at, (a.started_at AT TIME ZONE g.fuso_horario)::date AS dia,
+                         sum(a.duracao_segundos) OVER (
+                             PARTITION BY (a.started_at AT TIME ZONE g.fuso_horario)::date
+                             ORDER BY a.verified_at, a.id) AS acumulado
+                     FROM atividades a
+                     WHERE a.usuario_id = {usuarioColuna}
+                       AND a.grupo_id = r.grupo_id
+                       AND a.situacao_verificacao = 'Verificada'
+                       AND (a.started_at AT TIME ZONE g.fuso_horario)::date BETWEEN r.semana_inicio AND r.semana_inicio + 6
+                 ) s
+                 GROUP BY s.dia
+             ) c
+             WHERE c.concluido_em IS NOT NULL
          ) v
          WHERE v.n = d.sessoes_por_semana)
         """;

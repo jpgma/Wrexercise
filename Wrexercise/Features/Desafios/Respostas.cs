@@ -32,11 +32,18 @@ internal sealed record ProgressoParticipanteResponse(
     bool MetaCumprida,
     bool ContaNestaSemana);
 
+/// <summary>A soma das durações não rejeitadas de quem consulta num dia.</summary>
+internal sealed record SegundosDoDiaResponse(DateOnly Data, int Segundos);
+
 /// <param name="SemanaAtual">Vazia quando o desafio não está em andamento.</param>
-/// <param name="SeusDias">Os dias da semana atual em que quem consulta treinou.</param>
+/// <param name="SeusDias">
+/// Os dias da semana atual que contam para a meta de quem consulta, contando as atividades pendentes.
+/// </param>
+/// <param name="SeusSegundosPorDia">Os dias da semana atual com atividade de quem consulta, mesmo abaixo do mínimo.</param>
 internal sealed record ProgressoResponse(
     int SessoesPorSemana,
     int TotalSemanas,
     SemanaResponse? SemanaAtual,
     IReadOnlyList<ProgressoParticipanteResponse> Participantes,
-    IReadOnlyList<DateOnly> SeusDias);
+    IReadOnlyList<DateOnly> SeusDias,
+    IReadOnlyList<SegundosDoDiaResponse> SeusSegundosPorDia);

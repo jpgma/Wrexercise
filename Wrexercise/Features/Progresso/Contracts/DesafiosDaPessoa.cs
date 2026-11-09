@@ -83,20 +83,26 @@ internal static class DesafiosDaPessoa
         }
 
         var cumpridas = desafios.Keys.ToDictionary(id => id, _ => new List<int>());
+        // Um dia conta quando a soma das atividades verificadas alcança o mínimo (decisão 0040).
         await using (var command = new NpgsqlCommand($"""
-            SELECT d.id, {ContagensAtividadeDesafio.IndiceSemanaSql}
-            FROM atividades a
-            JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
-            JOIN grupos g ON g.id = d.grupo_id
-            JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
-            WHERE a.usuario_id = $1
-              AND a.situacao_verificacao = 'Verificada'
-              AND a.duracao_segundos >= d.duracao_minima_segundos
-              AND (a.started_at AT TIME ZONE g.fuso_horario)::date >= d.data_inicio
-              AND (a.started_at AT TIME ZONE g.fuso_horario)::date <= d.data_fim
-              AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
-            GROUP BY d.id, d.sessoes_por_semana, {ContagensAtividadeDesafio.IndiceSemanaSql}
-            HAVING count(*) >= d.sessoes_por_semana
+            SELECT dias.desafio_id, dias.indice_semana
+            FROM (
+                SELECT d.id AS desafio_id, d.sessoes_por_semana, {ContagensAtividadeDesafio.IndiceSemanaSql} AS indice_semana
+                FROM atividades a
+                JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
+                JOIN grupos g ON g.id = d.grupo_id
+                JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
+                WHERE a.usuario_id = $1
+                  AND a.situacao_verificacao = 'Verificada'
+                  AND {ContagensAtividadeDesafio.DiaSql} >= d.data_inicio
+                  AND {ContagensAtividadeDesafio.DiaSql} <= d.data_fim
+                  AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
+                GROUP BY d.id, d.sessoes_por_semana, d.duracao_minima_segundos,
+                    {ContagensAtividadeDesafio.DiaSql}, {ContagensAtividadeDesafio.IndiceSemanaSql}
+                HAVING sum(a.duracao_segundos) >= d.duracao_minima_segundos
+            ) dias
+            GROUP BY dias.desafio_id, dias.sessoes_por_semana, dias.indice_semana
+            HAVING count(*) >= dias.sessoes_por_semana
             """, connection, transaction))
         {
             command.Parameters.AddWithValue(usuarioId);

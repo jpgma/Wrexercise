@@ -4,7 +4,7 @@ using Wrexercise.Features.Progresso.Contracts;
 namespace Wrexercise.Features.Jogo;
 
 /// <summary>Uma atividade não rejeitada da pessoa, com o início no fuso do grupo dela.</summary>
-internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool Verificada);
+internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool Verificada, Guid GrupoId = default);
 
 /// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
 /// <param name="Preco">O preço pago pela Provocação.</param>
@@ -25,7 +25,8 @@ internal sealed record EnergiaGanha(
 /// </summary>
 internal static class CalculoEnergia
 {
-    public const int PorAtividade = 10;
+    /// <summary>Por dia com atividade verificada em cada grupo; antes de <see cref="InicioEnergiaPorDia"/>, por atividade.</summary>
+    public const int PorDia = 10;
     public const int PorMeta = 20;
     public const int PorDesafioConcluido = 75;
     public const int TetoBonus = 10;
@@ -36,6 +37,12 @@ internal static class CalculoEnergia
     public const int BonusPrimeiraDaSemana = 3;
     public const int BonusDiaNovo = 3;
     public const int BonusTipoNovo = 5;
+
+    /// <summary>
+    /// A partir deste dia, a base é por dia, não por atividade (decisão 0040). Antes dele, cada atividade
+    /// continua com a sua base, para que a Energia já ganha nunca diminua.
+    /// </summary>
+    public static readonly DateOnly InicioEnergiaPorDia = new(2026, 11, 9);
 
     private static readonly (int Semanas, int Energia)[] MarcosSequencia = [(4, 25), (8, 50), (12, 100)];
 
@@ -56,7 +63,7 @@ internal static class CalculoEnergia
             .Max();
 
         return new EnergiaGanha(
-            atividades.Count(a => a.Verificada) * PorAtividade,
+            CountBase(atividades) * PorDia,
             CalculateBonus(atividades),
             CountSemanasCumpridas(desafios) * PorMeta,
             MarcosSequencia.Where(m => melhorSequencia >= m.Semanas).Sum(m => m.Energia),
@@ -133,6 +140,22 @@ internal static class CalculoEnergia
         }
 
         return total;
+    }
+
+    /// <summary>
+    /// Uma base por dia com atividade verificada em cada grupo: dividir um treino não rende mais.
+    /// Atividades de antes de <see cref="InicioEnergiaPorDia"/> contam uma a uma.
+    /// </summary>
+    private static int CountBase(IReadOnlyList<AtividadeEnergia> atividades)
+    {
+        var verificadas = atividades.Where(a => a.Verificada).ToList();
+        var antigas = verificadas.Count(a => DateOnly.FromDateTime(a.InicioLocal) < InicioEnergiaPorDia);
+        var dias = verificadas
+            .Where(a => DateOnly.FromDateTime(a.InicioLocal) >= InicioEnergiaPorDia)
+            .Select(a => (a.GrupoId, DateOnly.FromDateTime(a.InicioLocal)))
+            .Distinct()
+            .Count();
+        return antigas + dias;
     }
 
     /// <summary>A meta paga uma vez por semana, mesmo cumprida em vários grupos ou desafios.</summary>

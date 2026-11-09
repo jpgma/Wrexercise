@@ -660,8 +660,8 @@ Atributos:
 - Descrição.
 - Data inicial.
 - Data final.
-- Duração mínima de uma sessão, em segundos.
-- Quantidade mínima de sessões por semana.
+- Duração mínima por dia, em segundos. As atividades de um dia se somam.
+- Quantidade mínima de dias por semana que alcançam a duração mínima.
 - Situação, calculada a partir das datas e do cancelamento.
 
 O desafio segue o fuso horário do grupo e cobre apenas semanas inteiras, de segunda a domingo. Ver `docs/decisoes/0009-desafios.md`.
@@ -675,8 +675,8 @@ Duração mínima: 3600 segundos
 Sessões semanais: 4
 
 Meta individual:
-4 atividades de pelo menos 60 minutos
-por semana.
+4 dias com pelo menos 60 minutos
+de atividade por semana.
 ```
 
 Todos os participantes seguem a mesma meta. Todo membro ativo do grupo participa, sem adesão nem saída, e quem entra depois do início conta a partir da primeira semana inteira. Um grupo tem um desafio por vez, sem sobreposição de datas. Ver `decisoes/0016-um-desafio-por-vez.md`.
@@ -755,26 +755,26 @@ Armazena:
 
 Cada desafio possui:
 
-- Duração mínima por atividade.
-- Quantidade mínima de atividades por semana.
+- Duração mínima por dia.
+- Quantidade mínima de dias por semana (sessões).
 
-Uma atividade somente será elegível se atingir a duração mínima.
+As atividades de um mesmo dia, no fuso do grupo, se somam. Um dia cuja soma alcança a duração mínima conta como uma sessão. Ver `decisoes/0040-meta-diaria.md`.
 
 Exemplo:
 
 ```text
-Meta: 4 sessões de 60 minutos.
+Meta: 4 dias de 60 minutos.
 
-Atividade A: 30 minutos -> Não elegível.
-Atividade B: 60 minutos -> 1 sessão.
-Atividade C: 90 minutos -> 1 sessão.
-Atividade D: 60 minutos -> 1 sessão.
-Atividade E: 60 minutos -> 1 sessão.
+Segunda: 30 + 30 minutos -> 1 sessão.
+Terça:   30 minutos      -> Não conta.
+Quarta:  90 minutos      -> 1 sessão.
+Quinta:  60 + 60 minutos -> 1 sessão.
+Sábado:  60 minutos      -> 1 sessão.
 
 Resultado: 4 de 4 sessões.
 ```
 
-Uma atividade de 90 minutos não poderá representar mais de uma sessão.
+Um dia nunca representa mais de uma sessão, por mais longo que seja.
 
 Atividades adicionais podem ser registradas, mas não compensam semanas anteriores.
 
@@ -843,7 +843,7 @@ Somente atividades verificadas contribuem para o progresso definitivo.
 
 Atividades pendentes podem aparecer separadamente como progresso provisório.
 
-O progresso semanal será calculado pela quantidade de sessões verificadas e elegíveis.
+O progresso semanal será calculado pela quantidade de dias em que a soma das atividades verificadas alcança o mínimo. Um dia que só alcança o mínimo com atividades pendentes conta no progresso provisório.
 
 Exemplo:
 
@@ -861,7 +861,7 @@ Progresso provisório: 3/4
 A classificação inicial deverá priorizar:
 
 1. Semanas com meta cumprida.
-2. Total de sessões verificadas.
+2. Total de dias verificados (sessões).
 3. Sequência de semanas cumpridas.
 
 Evitar sistemas artificiais de pontuação no MVP.

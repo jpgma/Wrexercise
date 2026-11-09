@@ -15,7 +15,7 @@ function getCor(
   return indice < provisorio ? "bg-primary/35" : "bg-surface-muted";
 }
 
-/** Uma barra por sessão da meta: sólida se definitiva, clara se ainda provisória. */
+/** Uma barra por dia da meta: sólida se definitiva, clara se ainda provisória. */
 export function Segments({
   label,
   valor,

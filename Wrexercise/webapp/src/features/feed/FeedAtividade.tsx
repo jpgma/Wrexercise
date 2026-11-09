@@ -30,14 +30,7 @@ function Contagem({
   );
 }
 
-export function FeedAtividade({
-  atividade,
-  duracaoMinimaSegundos,
-}: {
-  atividade: AtividadeResumo;
-  /** A do desafio atual do grupo, para indicar o que não conta na meta. */
-  duracaoMinimaSegundos?: number;
-}) {
+export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
   const {
     id,
     usuarioId,
@@ -56,9 +49,6 @@ export function FeedAtividade({
   const galeria = useGaleria(id);
   // As evidências completas só são buscadas quando a galeria é aberta.
   const detalhe = useAtividade(id, galeria.aberta);
-  const abaixoDoMinimo =
-    duracaoMinimaSegundos !== undefined &&
-    duracaoSegundos < duracaoMinimaSegundos;
 
   return (
     // A miniatura abre a galeria; o resto do cartão leva à atividade. Um botão
@@ -78,11 +68,6 @@ export function FeedAtividade({
               {tipoAtividadeLabels[tipo]} ·
               <Clock aria-hidden="true" className="size-3.5" />
               {formatarDuracao(duracaoSegundos)}
-              {abaixoDoMinimo && (
-                <span className="font-medium text-on-warning-soft">
-                  · abaixo do mínimo
-                </span>
-              )}
             </p>
             {descricao && (
               <p className="mt-2 line-clamp-2 text-sm break-words">

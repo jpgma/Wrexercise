@@ -118,7 +118,7 @@ internal sealed record EstadoJogo(
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.situacao_verificacao = 'Verificada'
+            SELECT a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.situacao_verificacao = 'Verificada', a.grupo_id
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
             WHERE a.usuario_id = $1 AND a.situacao_verificacao <> 'Rejeitada'
@@ -130,7 +130,8 @@ internal sealed record EstadoJogo(
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            atividades.Add(new AtividadeEnergia(reader.GetDateTime(0), reader.GetString(1), reader.GetBoolean(2)));
+            atividades.Add(new AtividadeEnergia(
+                reader.GetDateTime(0), reader.GetString(1), reader.GetBoolean(2), reader.GetGuid(3)));
         }
 
         return atividades;

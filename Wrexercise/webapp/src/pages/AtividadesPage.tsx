@@ -8,7 +8,6 @@ import {
   type FiltroAtividades,
 } from "@/features/atividades";
 import { FeedAtividade } from "@/features/feed";
-import { useResumoGrupo } from "@/features/progresso";
 import { getErrorMessage } from "@/services/api";
 
 const filtros: { valor: FiltroAtividades | undefined; rotulo: string }[] = [
@@ -22,7 +21,6 @@ export function AtividadesPage() {
   const { id = "" } = useParams();
   const [filtro, setFiltro] = useState<FiltroAtividades | undefined>();
   const feed = useAtividadesFeed(id, 20, filtro);
-  const resumo = useResumoGrupo(id);
   const atividades = feed.data?.pages.flatMap((p) => p.atividades) ?? [];
 
   return (
@@ -83,11 +81,7 @@ export function AtividadesPage() {
 
       <div className="grid gap-3 lg:grid-cols-2">
         {atividades.map((atividade) => (
-          <FeedAtividade
-            key={atividade.id}
-            atividade={atividade}
-            duracaoMinimaSegundos={resumo.data?.desafio?.duracaoMinimaSegundos}
-          />
+          <FeedAtividade key={atividade.id} atividade={atividade} />
         ))}
       </div>
 

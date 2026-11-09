@@ -15,7 +15,7 @@ import {
   useCriarAtividade,
   type TipoAtividade,
 } from "@/features/atividades";
-import { useDesafio } from "@/features/desafios";
+import { useDesafio, useProgresso } from "@/features/desafios";
 import { useGrupo } from "@/features/grupos";
 import { useResumoGrupo } from "@/features/progresso";
 import { getErrorMessage } from "@/services/api";
@@ -47,7 +47,8 @@ function toLocalInputValue(date: Date): string {
 
 type Registrada = {
   id: string;
-  duracaoMinutos: number;
+  /** Os minutos que ainda faltavam no dia para contar na meta; 0 se já conta. */
+  faltamNoDia: number;
   enviadas: number;
   anexadas: number;
 };
@@ -55,15 +56,11 @@ type Registrada = {
 function TreinoRegistrado({
   registrada,
   grupoId,
-  minimoMinutos,
 }: {
   registrada: Registrada;
   grupoId: string;
-  minimoMinutos: number | null;
 }) {
   const faltaram = registrada.anexadas - registrada.enviadas;
-  const abaixoDoMinimo =
-    minimoMinutos !== null && registrada.duracaoMinutos < minimoMinutos;
 
   return (
     <div className="mx-auto flex max-w-md animate-fade-in flex-col items-center pt-16 text-center">
@@ -78,8 +75,8 @@ function TreinoRegistrado({
       </div>
       <h1 className="mt-6 text-4xl uppercase">Boa! Tá registrado.</h1>
       <p className="mt-2 text-muted">
-        {abaixoDoMinimo
-          ? `Registramos, mas sessões abaixo de ${minimoMinutos} min não contam para a meta. `
+        {registrada.faltamNoDia > 0
+          ? `Registramos. Faltam ${registrada.faltamNoDia} min nesse dia para contar na meta. `
           : ""}
         Seus amigos já podem dar moral.
       </p>
@@ -112,6 +109,7 @@ export function RegistrarAtividadePage() {
   const resumo = useResumoGrupo(grupoId);
   const desafioId = resumo.data?.desafio?.id;
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
+  const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
   const seletor = useRef<HTMLInputElement>(null);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
@@ -135,6 +133,7 @@ export function RegistrarAtividadePage() {
 
   const duracaoMinutos = useWatch({ control, name: "duracaoMinutos" });
   const tipoAtual = useWatch({ control, name: "tipo" });
+  const startedAt = useWatch({ control, name: "startedAt" });
 
   // As prévias ocupam memória até serem liberadas.
   const urls = useRef<string[]>([]);
@@ -149,6 +148,18 @@ export function RegistrarAtividadePage() {
   const minimoMinutos = desafio.data
     ? Math.ceil(desafio.data.duracaoMinimaSegundos / 60)
     : null;
+
+  // As atividades do mesmo dia se somam: a meta é de minutos por dia. O dia do campo é o do
+  // aparelho, que costuma ser o fuso do grupo.
+  const diaEscolhido = startedAt?.slice(0, 10);
+  const minutosJaNoDia = Math.floor(
+    (progresso.data?.seusSegundosPorDia.find((d) => d.data === diaEscolhido)
+      ?.segundos ?? 0) / 60,
+  );
+  const faltamNoDia =
+    minimoMinutos === null
+      ? 0
+      : Math.max(0, minimoMinutos - minutosJaNoDia - (duracaoMinutos || 0));
 
   if (grupo.isPending) return <SplashScreen />;
 
@@ -166,13 +177,7 @@ export function RegistrarAtividadePage() {
   }
 
   if (registrada) {
-    return (
-      <TreinoRegistrado
-        registrada={registrada}
-        grupoId={grupoId}
-        minimoMinutos={minimoMinutos}
-      />
-    );
+    return <TreinoRegistrado registrada={registrada} grupoId={grupoId} />;
   }
 
   const adicionarAnexos = (lista: FileList | null) => {
@@ -217,7 +222,7 @@ export function RegistrarAtividadePage() {
 
     setRegistrada({
       id: atividade.id,
-      duracaoMinutos: data.duracaoMinutos,
+      faltamNoDia,
       enviadas,
       anexadas: anexos.length,
     });
@@ -241,8 +246,9 @@ export function RegistrarAtividadePage() {
         <div className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <p>
-            Para contar na meta do grupo, a sessão precisa ter{" "}
-            <b>pelo menos {minimoMinutos} minutos</b>.
+            Para contar na meta do grupo, some{" "}
+            <b>pelo menos {minimoMinutos} minutos</b> de atividade no dia. Vale
+            dividir em mais de um treino.
           </p>
         </div>
       )}
@@ -293,11 +299,16 @@ export function RegistrarAtividadePage() {
             </p>
             {minimoMinutos !== null && (
               <p
-                className={`text-xs font-medium ${duracaoMinutos >= minimoMinutos ? "text-on-success-soft" : "text-on-warning-soft"}`}
+                className={`text-xs font-medium ${faltamNoDia === 0 ? "text-on-success-soft" : "text-on-warning-soft"}`}
               >
-                {duracaoMinutos >= minimoMinutos
+                {faltamNoDia === 0
                   ? "Conta para a meta"
-                  : `Faltam ${minimoMinutos - duracaoMinutos} min para contar`}
+                  : `Faltam ${faltamNoDia} min no dia para contar`}
+              </p>
+            )}
+            {minimoMinutos !== null && minutosJaNoDia > 0 && (
+              <p className="text-xs text-muted">
+                Você já tem {minutosJaNoDia} min nesse dia
               </p>
             )}
           </div>

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Progresso;
 using Wrexercise.Infrastructure.Json;
 
@@ -32,18 +33,14 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
             await PostAtividadeAsync(ana, grupoId, 3600);
         }
 
+        await DistribuirNaSemanaAsync(grupoId);
         await _host.AddMembroAsync(grupoId, nome: "Bia");
 
-        var progresso = await ana.Client.GetFromJsonAsync(
-            $"/api/desafios/{desafioId}/progresso",
-            AppJsonContext.Default.ProgressoResponse,
-            Token);
-        var anaProgresso = Assert.Single(progresso!.Participantes, p => p.NomeExibicao == "Ana");
+        var progresso = await GetProgressoAsync(ana, desafioId);
+        var anaProgresso = Assert.Single(progresso.Participantes, p => p.NomeExibicao == "Ana");
         Assert.Equal(4, anaProgresso.SessoesVerificadas);
         Assert.True(anaProgresso.MetaCumprida);
-
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3).AddMinutes(-30));
-        Assert.Equal([hoje], progresso.SeusDias);
+        Assert.Equal(4, progresso.SeusDias.Count);
 
         var classificacao = await GetClassificacaoAsync(ana, desafioId);
 
@@ -54,6 +51,67 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         Assert.Equal(4, classificacao.Participantes[0].SessoesVerificadas);
         Assert.Equal("Bia", classificacao.Participantes[1].NomeExibicao);
         Assert.Equal(0, classificacao.Participantes[1].SemanasCumpridas);
+    }
+
+    [Fact]
+    public async Task MetaDiaria_AtividadesDoMesmoDiaSomamUmaSessao()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var desafioId = await CreateDesafioAsync(ana, grupoId);
+        await IniciarAsync(desafioId);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3).AddMinutes(-30));
+
+        await PostAtividadeAsync(ana, grupoId, 1800);
+
+        var progresso = await GetProgressoAsync(ana, desafioId);
+        Assert.Equal(0, Assert.Single(progresso.Participantes).SessoesVerificadas);
+        Assert.Empty(progresso.SeusDias);
+        Assert.Equal([new SegundosDoDiaResponse(hoje, 1800)], progresso.SeusSegundosPorDia);
+
+        await PostAtividadeAsync(ana, grupoId, 1800);
+
+        progresso = await GetProgressoAsync(ana, desafioId);
+        Assert.Equal(1, Assert.Single(progresso.Participantes).SessoesVerificadas);
+        Assert.Equal([hoje], progresso.SeusDias);
+
+        // Um dia longo continua sendo uma sessão só.
+        await PostAtividadeAsync(ana, grupoId, 3600);
+
+        progresso = await GetProgressoAsync(ana, desafioId);
+        Assert.Equal(1, Assert.Single(progresso.Participantes).SessoesVerificadas);
+        Assert.Equal([new SegundosDoDiaResponse(hoje, 7200)], progresso.SeusSegundosPorDia);
+        Assert.Equal(1, (await GetClassificacaoAsync(ana, desafioId)).Participantes[0].SessoesVerificadas);
+    }
+
+    [Fact]
+    public async Task MetaDiaria_DiaComUmaPendente_ContaComoProvisorio()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var desafioId = await CreateDesafioAsync(ana, grupoId);
+        await IniciarAsync(desafioId);
+        await _host.AddMembroAsync(grupoId, nome: "Bia");
+
+        await PostAtividadeAsync(ana, grupoId, 1800);
+        await PostAtividadeAsync(ana, grupoId, 1800);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
+            WHERE id = (SELECT id FROM atividades WHERE grupo_id = '{grupoId}' ORDER BY created_at LIMIT 1)
+            """);
+
+        var ana1 = Assert.Single((await GetProgressoAsync(ana, desafioId)).Participantes, p => p.NomeExibicao == "Ana");
+        Assert.Equal(0, ana1.SessoesVerificadas);
+        Assert.Equal(1, ana1.SessoesProvisorias);
+
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
+            WHERE grupo_id = '{grupoId}'
+            """);
+
+        var ana2 = Assert.Single((await GetProgressoAsync(ana, desafioId)).Participantes, p => p.NomeExibicao == "Ana");
+        Assert.Equal(1, ana2.SessoesVerificadas);
+        Assert.Equal(1, ana2.SessoesProvisorias);
     }
 
     [Fact]
@@ -183,6 +241,22 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
             Token);
         return desafio!.Id;
     }
+
+    /// <summary>Uma atividade por dia da semana atual, a partir de segunda, ao meio-dia no horário do grupo.</summary>
+    private async Task DistribuirNaSemanaAsync(Guid grupoId) =>
+        await _host.ExecuteAsync($"""
+            UPDATE atividades a
+            SET started_at = ({SegundaDaSemana} + (o.n - 1)::int + time '12:00') AT TIME ZONE 'America/Sao_Paulo'
+            FROM (SELECT id, row_number() OVER (ORDER BY created_at, id) AS n
+                  FROM atividades WHERE grupo_id = '{grupoId}') o
+            WHERE a.id = o.id
+            """);
+
+    private static async Task<ProgressoResponse> GetProgressoAsync(TestUsuario leitor, Guid desafioId) =>
+        (await leitor.Client.GetFromJsonAsync(
+            $"/api/desafios/{desafioId}/progresso",
+            AppJsonContext.Default.ProgressoResponse,
+            Token))!;
 
     private async Task IniciarAsync(Guid desafioId)
     {

@@ -102,17 +102,18 @@ internal static class ObterProgresso
 
         var seusDias = semana is null
             ? []
-            : await LoadDiasComAtividadeAsync(connection, desafioId, semana.Inicio, semana.Fim, usuarioId, cancellationToken);
+            : await LoadDiasDaSemanaAsync(connection, desafioId, semana.Inicio, semana.Fim, usuarioId, cancellationToken);
 
         return new ProgressoResponse(
             sessoesPorSemana,
             ProgressoDesafio.CountSemanas(inicio, fim),
             semana,
             progresso,
-            seusDias);
+            seusDias.Where(d => d.Conta).Select(d => d.Data).ToList(),
+            seusDias.Select(d => new SegundosDoDiaResponse(d.Data, d.Segundos)).ToList());
     }
 
-    private static async Task<List<DateOnly>> LoadDiasComAtividadeAsync(
+    private static async Task<List<(DateOnly Data, int Segundos, bool Conta)>> LoadDiasDaSemanaAsync(
         NpgsqlConnection connection,
         Guid desafioId,
         DateOnly inicioSemana,
@@ -121,18 +122,18 @@ internal static class ObterProgresso
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand(
-            ContagensAtividadeDesafio.BuildDiasComAtividade(),
+            ContagensAtividadeDesafio.BuildDiasDaSemana(),
             connection);
         command.Parameters.AddWithValue(desafioId);
         command.Parameters.AddWithValue(inicioSemana);
         command.Parameters.AddWithValue(fimSemana);
         command.Parameters.AddWithValue(usuarioId);
 
-        var dias = new List<DateOnly>();
+        var dias = new List<(DateOnly Data, int Segundos, bool Conta)>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            dias.Add(reader.GetFieldValue<DateOnly>(0));
+            dias.Add((reader.GetFieldValue<DateOnly>(0), reader.GetInt32(1), reader.GetBoolean(2)));
         }
 
         return dias;

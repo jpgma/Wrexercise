@@ -25,7 +25,7 @@ export function HistoryChart({ titulo, meta, colunas }: HistoryChartProps) {
     <div className="card p-4">
       <p className="text-sm font-semibold">{titulo}</p>
       <p className="text-xs text-muted">
-        Sessões por semana{meta !== undefined && " · linha = meta"}
+        Dias por semana{meta !== undefined && " · linha = meta"}
       </p>
       <div
         className="relative mt-4 flex items-end gap-2"

@@ -87,8 +87,8 @@ As datas são dias do calendário no fuso do grupo. Só semanas inteiras, garant
 | `descricao` | `text` | Opcional |
 | `data_inicio` | `date` | Sempre uma segunda-feira |
 | `data_fim` | `date` | Sempre um domingo, posterior ao início. Incluída no período |
-| `duracao_minima_segundos` | `integer` | Positiva |
-| `sessoes_por_semana` | `integer` | Positiva |
+| `duracao_minima_segundos` | `integer` | Positiva. Mínimo por dia: as atividades do dia se somam (`decisoes/0040-meta-diaria.md`) |
+| `sessoes_por_semana` | `integer` | Positiva. Dias por semana que alcançam o mínimo; no máximo 1 por dia |
 | `created_at` | `timestamptz` | Padrão `now()` |
 | `cancelled_at` | `timestamptz` | Preenchida ao cancelar |
 

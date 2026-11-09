@@ -34,7 +34,10 @@ export type Progresso = {
   totalSemanas: number;
   semanaAtual: { numero: number; inicio: string; fim: string } | null;
   participantes: ProgressoParticipante[];
+  /** Os dias da semana atual que contam para a meta, contando as pendentes. */
   seusDias: string[];
+  /** A soma das atividades não rejeitadas de cada dia da semana atual. */
+  seusSegundosPorDia: { data: string; segundos: number }[];
 };
 
 export type CriarDesafioData = {
@@ -81,11 +84,12 @@ export function useDesafio(desafioId: string, enabled = true) {
   });
 }
 
-export function useProgresso(desafioId: string) {
+export function useProgresso(desafioId: string, enabled = true) {
   return useQuery({
     queryKey: [...desafioKey(desafioId), "progresso"],
     queryFn: ({ signal }) =>
       getJson<Progresso>(`/api/desafios/${desafioId}/progresso`, signal),
+    enabled,
     retry: shouldRetry,
   });
 }

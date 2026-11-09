@@ -390,8 +390,8 @@ export function GrupoPage() {
                     {desafio.nome}
                   </p>
                   <p className="text-xs text-muted">
-                    {desafio.sessoesPorSemana} por semana ·{" "}
-                    {formatarDuracao(desafio.duracaoMinimaSegundos)} ·{" "}
+                    {desafio.sessoesPorSemana} dias por semana ·{" "}
+                    {formatarDuracao(desafio.duracaoMinimaSegundos)} por dia ·{" "}
                     {formatarData(desafio.dataInicio)} a{" "}
                     {formatarData(desafio.dataFim)}
                   </p>

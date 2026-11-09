@@ -36,13 +36,13 @@ internal static class SituacaoJogada
             return Expirada;
         }
 
-        var queContam = atividades.Where(a => ObjetivoCarta.Cumpre(jogada, a)).ToList();
-        if (queContam.Any(a => a.Verificada))
+        var lista = atividades.ToList();
+        if (ObjetivoCarta.Cumpre(jogada, lista, apenasVerificadas: true))
         {
             return Concluida;
         }
 
-        if (queContam.Count > 0)
+        if (ObjetivoCarta.Cumpre(jogada, lista, apenasVerificadas: false))
         {
             return AguardandoVerificacao;
         }
@@ -70,13 +70,33 @@ internal sealed record JogadaEstado(
 /// <summary>Uma atividade candidata, com o início no fuso do grupo.</summary>
 internal sealed record AtividadeJogada(DateTime InicioLocal, string Tipo, int DuracaoSegundos, bool Verificada);
 
-/// <summary>Se uma atividade cumpre o objetivo da carta de uma Jogada.</summary>
+/// <summary>Se as atividades de uma Jogada cumprem o objetivo da carta.</summary>
 internal static class ObjetivoCarta
 {
-    public static bool Cumpre(JogadaEstado jogada, AtividadeJogada atividade) => jogada.Codigo switch
+    /// <summary>
+    /// +10 MIN e +20 MIN somam as atividades de um mesmo dia (decisão 0040); as outras cartas pedem uma atividade.
+    /// </summary>
+    /// <param name="apenasVerificadas">Só as verificadas contam; senão, também as pendentes.</param>
+    public static bool Cumpre(JogadaEstado jogada, IEnumerable<AtividadeJogada> atividades, bool apenasVerificadas)
     {
-        CodigoCarta.Mais10Min or CodigoCarta.Mais20Min =>
-            jogada.DuracaoAlvoSegundos is { } alvo && atividade.DuracaoSegundos >= alvo,
+        var queContam = atividades.Where(a => !apenasVerificadas || a.Verificada);
+        if (jogada.Codigo is CodigoCarta.Mais10Min or CodigoCarta.Mais20Min)
+        {
+            return jogada.DuracaoAlvoSegundos is { } alvo
+                && queContam
+                    .GroupBy(a => DateOnly.FromDateTime(a.InicioLocal))
+                    .Any(dia => dia.Sum(a => a.DuracaoSegundos) >= alvo);
+        }
+
+        return queContam.Any(a => CumpreSozinha(jogada, a));
+    }
+
+    /// <summary>Se uma atividade, sozinha, cumpre o objetivo.</summary>
+    public static bool Cumpre(JogadaEstado jogada, AtividadeJogada atividade) =>
+        Cumpre(jogada, [atividade], apenasVerificadas: false);
+
+    private static bool CumpreSozinha(JogadaEstado jogada, AtividadeJogada atividade) => jogada.Codigo switch
+    {
         // Sem atividade verificada no envio, não há tipo a evitar: qualquer tipo vale.
         CodigoCarta.Variedade => atividade.Tipo != jogada.TipoEvitar,
         CodigoCarta.FimDeSemana => atividade.InicioLocal.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,

@@ -92,6 +92,33 @@ public class SituacaoJogadaTests
         Assert.Equal(cumpre, ObjetivoCarta.Cumpre(Jogada(CodigoCarta.Mais10Min, alvo: 4200), Atividade(duracao: duracao)));
 
     [Fact]
+    public void Duracao_SomaAsAtividadesDoMesmoDia() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.Mais10Min, "Aceita", alvo: 4200),
+                [Atividade(duracao: 2100, hora: 8), Atividade(duracao: 2100, hora: 18)],
+                Antes));
+
+    [Fact]
+    public void Duracao_DiasDiferentesNaoSomam() =>
+        Assert.Equal(
+            SituacaoJogada.Aceita,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.Mais10Min, "Aceita", alvo: 4200),
+                [Atividade(duracao: 2100, dia: 3), Atividade(duracao: 2100, dia: 4)],
+                Antes));
+
+    [Fact]
+    public void Duracao_SomaComPendente_AguardaVerificacao() =>
+        Assert.Equal(
+            SituacaoJogada.AguardandoVerificacao,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.Mais10Min, "Aceita", alvo: 4200),
+                [Atividade(duracao: 2100, hora: 8), Atividade(duracao: 2100, hora: 18, verificada: false)],
+                Antes));
+
+    [Fact]
     public void Variedade_SemTipoAEvitar_QualquerTipoVale() =>
         Assert.True(ObjetivoCarta.Cumpre(Jogada(evitar: null), Atividade(tipo: "Corrida")));
 
