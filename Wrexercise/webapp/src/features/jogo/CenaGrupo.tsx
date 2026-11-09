@@ -10,7 +10,6 @@ import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MenuAvatar } from "./MenuAvatar";
-import { RivalDaSemana } from "./RivalDaSemana";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
@@ -452,7 +451,6 @@ function Praca({
         onClose={() => setTocado(null)}
         onRival={setEscolhidoAgora}
       />
-      <RivalDaSemana grupoId={grupoId} />
     </div>
   );
 }

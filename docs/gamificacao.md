@@ -344,7 +344,7 @@ Decidido em `decisoes/0038-rival-da-semana.md`.
 - Venceu e Perdeu são finais assim que aparecem, porque `Verificada` é final. Tudo é calculado na leitura, sem tarefa agendada.
 - Prêmio: 15 EN e um selo, só para quem escolheu. Cada grupo paga à parte.
 - O Rival recebe a `Notificacao` `RivalEscolhido`. Só as duas pessoas do par veem o par.
-- O painel "Rival da semana", embaixo da praça, mostra o par e o selo (`RIVAL` ou `VENCEU · +15 EN`) com o total de vitórias no grupo. A escolha fica no menu do avatar.
+- O painel "Rival da semana", embaixo da Mão, mostra o par e o selo (`RIVAL` ou `VENCEU · +15 EN`) com o total de vitórias no grupo. A escolha fica no menu do avatar.
 - Não há aposta de Energia.
 - Na cena, os rivais fazem `provocar`, e o vencedor faz `comemorando` (§3.3).
 

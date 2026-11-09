@@ -45,7 +45,7 @@ function getTexto(rival: Rival): string {
   }
 }
 
-/** Rival da semana, embaixo da praça. Só quem está no par vê o par. */
+/** Rival da semana, embaixo da Mão. Só quem está no par vê o par. */
 export function RivalDaSemana({ grupoId }: { grupoId: string }) {
   const rivais = useRivais(grupoId);
   if (!rivais.data) return null;

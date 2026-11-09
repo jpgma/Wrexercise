@@ -123,7 +123,7 @@ The user cannot change the e-mail.
   - An answer to a card that the user sent: the recipient accepts (`aceitar`, the card jumps above the head and folds) or refuses (`recusar`, the card slides out).
   - A tap on the plaza skips the scene. After the scene, or after a skip, the events become seen (`POST /api/grupos/{id}/jogadas/vistas`). If the user leaves the page during the scene, the events stay new.
   - If the device asks for reduced motion, or the page is hidden, the scene does not play, and the events become seen at once. The list shows the final state.
-- Under it, the section "Sua Mão" shows the cards of the hand, the count (for example "2/5") and a link to the shop. A card in an open play is dimmed and has the label "Em jogo".
+- Under it, the section "Sua Mão" shows the count (for example "2/5") and one slot for each card of the hand limit, in one row. A slot with a card shows a small card with the icon and the price. A card in an open play is dimmed and has the label "Em jogo". An empty slot shows the outline of a card. The first empty slot shows "+". A tap on an empty slot opens the shop. When the hand is full, the Energy badge above the scene opens the shop.
 
 ### 3.3.3. Energy (`Energia`)
 
@@ -235,7 +235,7 @@ The user cannot change the e-mail.
 - A result is final when it shows: `Venceu` (the user who chose won) or `Perdeu` (the rival won). The same time gives no winner. If nobody meets the goal, the result is `SemVencedor` 2 days after Sunday (the verification window). Before that, the result is `EmAndamento`.
 - A win gives 15 EN to the user who chose. The rival gets nothing.
 - Only the two users see their pair. The rival gets the notification `RivalEscolhido`.
-- The panel "Rival da semana" below the scene shows the pair, the result badge (`RIVAL` or `VENCEU · +15 EN`) and the number of wins of the user in the group. The menu of an `Avatar` shows the button "Escolher ... como Rival" for each member that the user can choose.
+- The panel "Rival da semana" below the section "Sua Mão" shows the pair, the result badge (`RIVAL` or `VENCEU · +15 EN`) and the number of wins of the user in the group. The menu of an `Avatar` shows the button "Escolher ... como Rival" for each member that the user can choose.
 - Animations: after the choice, the two `Avatar` items step to the center and do `provocar`. The rival sees this on the next visit. When the result is final, the user who chose sees the winner do `comemorando`. These animations count in the limit of 3 per visit.
 - The API is `GET /api/grupos/{id}/rivais`, `POST /api/grupos/{id}/rivais` (errors `SEM_DESAFIO_ATIVO`, `MODO_JOGO_NECESSARIO`, `RIVAL_INDISPONIVEL`, `RIVAL_JA_ESCOLHIDO`, `META_JA_CUMPRIDA`) and `POST /api/grupos/{id}/rivais/vistos`.
 - A cancelled challenge cancels the rivals of its weeks.

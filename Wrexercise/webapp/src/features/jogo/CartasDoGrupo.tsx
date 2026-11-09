@@ -1,10 +1,11 @@
-import { Store } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { SectionTitle } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
+import { RivalDaSemana } from "./RivalDaSemana";
 import {
   formatarPrazo,
   getObjetivo,
@@ -22,22 +23,31 @@ import {
   useResponderJogada,
 } from "./useCartas";
 
-/** A Mão de quem está vendo a cena, com acesso à Loja. */
+/** Vaga vazia da Mão, no formato da carta. A próxima a ser preenchida tem "+"; todas abrem a Loja. */
+function VagaVazia({ proxima }: { proxima: boolean }) {
+  return (
+    <Link
+      to="/jogo/loja"
+      aria-label={proxima ? "Comprar carta na Loja" : undefined}
+      aria-hidden={proxima ? undefined : true}
+      tabIndex={proxima ? undefined : -1}
+      className={`grid aspect-[3/4] w-full place-items-center rounded-md border-2 border-dashed tap ${proxima ? "border-border-strong text-muted" : "border-border"}`}
+    >
+      {proxima && <Plus aria-hidden="true" className="size-6" />}
+    </Link>
+  );
+}
+
+/** A Mão de quem está vendo a cena: uma vaga por carta do limite, as vazias levam à Loja. */
 function MaoCartas() {
   const loja = useLoja();
   if (!loja.data) return null;
   const { mao, limiteMao } = loja.data;
+  const vagas = Array.from({ length: Math.max(limiteMao, mao.length) });
 
   return (
     <section aria-labelledby="mao-titulo">
-      <SectionTitle
-        action={
-          <Link to="/jogo/loja" className="btn-ghost h-11 px-3">
-            <Store aria-hidden="true" className="size-4" />
-            Loja
-          </Link>
-        }
-      >
+      <SectionTitle>
         <span id="mao-titulo">
           Sua Mão{" "}
           <span className="font-score text-base text-muted">
@@ -45,29 +55,32 @@ function MaoCartas() {
           </span>
         </span>
       </SectionTitle>
-      {mao.length === 0 ? (
-        <p className="card p-4 text-sm text-muted">
-          Nenhuma carta por aqui. Use a sua Energia na{" "}
-          <Link to="/jogo/loja" className="font-semibold text-link">
-            Loja
-          </Link>{" "}
-          e provoque um colega tocando no avatar dele.
-        </p>
-      ) : (
-        <>
-          <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pt-1 pb-3">
-            {mao.map((carta) => (
-              <li key={carta.id} className="flex flex-col items-center gap-2">
-                <CartaJogo carta={carta} apagada={carta.emJogo} />
-                {carta.emJogo && <span className="chip">Em jogo</span>}
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-muted">
-            Toque no avatar de um colega para jogar uma carta.
-          </p>
-        </>
-      )}
+      <ul className="grid max-w-md grid-cols-5 gap-2 pt-1 pb-1.5">
+        {vagas.map((_, i) => {
+          const carta = mao[i];
+          return (
+            <li key={carta?.id ?? `vaga-${i}`} className="relative">
+              {carta ? (
+                <>
+                  <CartaJogo carta={carta} apagada={carta.emJogo} compacta />
+                  {carta.emJogo && (
+                    <span className="chip absolute inset-x-0 top-[3%] mx-auto w-fit px-1">
+                      Em jogo
+                    </span>
+                  )}
+                </>
+              ) : (
+                <VagaVazia proxima={i === mao.length} />
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-1 text-xs text-muted">
+        {mao.length === 0
+          ? "Toque no + para comprar cartas na Loja."
+          : "Toque no avatar de um colega para jogar uma carta."}
+      </p>
     </section>
   );
 }
@@ -336,6 +349,7 @@ export function CartasDoGrupo({ grupoId }: { grupoId: string }) {
     <div className="space-y-2">
       <MesaJogadas grupoId={grupoId} />
       <MaoCartas />
+      <RivalDaSemana grupoId={grupoId} />
     </div>
   );
 }
