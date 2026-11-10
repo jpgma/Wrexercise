@@ -42,12 +42,18 @@ internal static class ListarDesafios
         command.Parameters.AddWithValue(grupoId);
 
         var desafios = new List<DesafioResponse>();
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
         {
-            desafios.Add(ConsultasDesafio.ReadDesafio(reader));
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                desafios.Add(ConsultasDesafio.ReadDesafio(reader));
+            }
         }
 
-        return desafios;
+        var metas = await ConsultasDesafio.LoadMetasPorTipoAsync(
+            dataSource,
+            [.. desafios.Select(d => d.Id)],
+            cancellationToken);
+        return [.. desafios.Select(d => ConsultasDesafio.WithMetasPorTipo(d, metas))];
     }
 }

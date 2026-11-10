@@ -103,17 +103,25 @@ internal static class ObterProgresso
         var seusDias = semana is null
             ? []
             : await LoadDiasDaSemanaAsync(connection, desafioId, semana.Inicio, semana.Fim, usuarioId, cancellationToken);
+        var porTipo = semana is null
+            ? []
+            : await LoadSegundosPorTipoAsync(connection, desafioId, semana.Inicio, semana.Fim, usuarioId, cancellationToken);
 
         return new ProgressoResponse(
             sessoesPorSemana,
             ProgressoDesafio.CountSemanas(inicio, fim),
             semana,
             progresso,
-            seusDias.Where(d => d.Conta).Select(d => d.Data).ToList(),
-            seusDias.Select(d => new SegundosDoDiaResponse(d.Data, d.Segundos)).ToList());
+            seusDias.Where(d => d.Conta).Select(d => new DiaQueContaResponse(d.Data, d.MetaPorTipoId)).ToList(),
+            seusDias
+                .Select(d => new SegundosDoDiaResponse(
+                    d.Data,
+                    d.Segundos,
+                    porTipo.Where(t => t.Data == d.Data).Select(t => new SegundosPorTipoResponse(t.Tipo, t.Segundos)).ToList()))
+                .ToList());
     }
 
-    private static async Task<List<(DateOnly Data, int Segundos, bool Conta)>> LoadDiasDaSemanaAsync(
+    private static async Task<List<(DateOnly Data, int Segundos, bool Conta, Guid? MetaPorTipoId)>> LoadDiasDaSemanaAsync(
         NpgsqlConnection connection,
         Guid desafioId,
         DateOnly inicioSemana,
@@ -129,14 +137,42 @@ internal static class ObterProgresso
         command.Parameters.AddWithValue(fimSemana);
         command.Parameters.AddWithValue(usuarioId);
 
-        var dias = new List<(DateOnly Data, int Segundos, bool Conta)>();
+        var dias = new List<(DateOnly Data, int Segundos, bool Conta, Guid? MetaPorTipoId)>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            dias.Add((reader.GetFieldValue<DateOnly>(0), reader.GetInt32(1), reader.GetBoolean(2)));
+            dias.Add((
+                reader.GetFieldValue<DateOnly>(0),
+                reader.GetInt32(1),
+                reader.GetBoolean(2),
+                reader.IsDBNull(3) ? null : reader.GetGuid(3)));
         }
 
         return dias;
+    }
+
+    private static async Task<List<(DateOnly Data, string Tipo, int Segundos)>> LoadSegundosPorTipoAsync(
+        NpgsqlConnection connection,
+        Guid desafioId,
+        DateOnly inicioSemana,
+        DateOnly fimSemana,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand(ContagensAtividadeDesafio.SegundosPorTipoDaSemanaSql, connection);
+        command.Parameters.AddWithValue(desafioId);
+        command.Parameters.AddWithValue(inicioSemana);
+        command.Parameters.AddWithValue(fimSemana);
+        command.Parameters.AddWithValue(usuarioId);
+
+        var segundos = new List<(DateOnly Data, string Tipo, int Segundos)>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            segundos.Add((reader.GetFieldValue<DateOnly>(0), reader.GetString(1), reader.GetInt32(2)));
+        }
+
+        return segundos;
     }
 
     private static async Task<Dictionary<Guid, (int Verificadas, int Pendentes)>> LoadContagensSemanaAsync(

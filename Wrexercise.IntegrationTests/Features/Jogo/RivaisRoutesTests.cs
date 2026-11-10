@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Jogo;
 using Wrexercise.Infrastructure.Json;
 
@@ -204,6 +205,32 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MetaPorTipo_ContaODiaNoRival()
+    {
+        // Mínimo de 30 min, ou 10 min de Corrida: a Ana cumpre o dia com 10 min de Corrida, antes da Bia.
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await JogoTestes.AtivarJogoAsync(_host, ana);
+        await JogoTestes.AtivarJogoAsync(_host, bia);
+        await IniciarDesafioAsync(ana, grupoId, [new(null, [TipoAtividade.Corrida], 600)]);
+        (await EscolherAsync(ana, grupoId, bia.Id)).EnsureSuccessStatusCode();
+
+        await PostAtividadeAsync(ana, grupoId, 600, TipoAtividade.Musculacao);
+        await PostAtividadeAsync(bia, grupoId);
+        await VerificarAsync(ana, "now() - interval '2 hours'");
+        await VerificarAsync(bia, "now() - interval '1 hour'");
+
+        // 10 min de Musculacao não cumprem nada: a Bia chegou primeiro.
+        Assert.Equal(ResultadoRival.Perdeu, Assert.Single((await GetRivaisAsync(ana, grupoId)).Rivais).Situacao);
+
+        await PostAtividadeAsync(ana, grupoId, 600, TipoAtividade.Corrida);
+        await VerificarAsync(ana, "now() - interval '2 hours'");
+
+        Assert.Equal(ResultadoRival.Venceu, Assert.Single((await GetRivaisAsync(ana, grupoId)).Rivais).Situacao);
+    }
+
+    [Fact]
     public async Task MarcarVistos_RivalViuAProvocacao()
     {
         var (ana, bia, grupoId) = await CriarGrupoNoJogoAsync();
@@ -259,7 +286,10 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
         return (ana, bia, grupoId);
     }
 
-    private async Task IniciarDesafioAsync(TestUsuario ator, Guid grupoId)
+    private async Task IniciarDesafioAsync(
+        TestUsuario ator,
+        Guid grupoId,
+        IReadOnlyList<Wrexercise.Features.Desafios.MetaPorTipoRequest>? metasPorTipo = null)
     {
         var inicio = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
         while (inicio.DayOfWeek != DayOfWeek.Monday)
@@ -269,7 +299,14 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
 
         var response = await ator.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/desafios",
-            new Wrexercise.Features.Desafios.CriarDesafioRequest("Competição", null, inicio, inicio.AddDays(27), 1800, 1),
+            new Wrexercise.Features.Desafios.CriarDesafioRequest(
+                "Competição",
+                null,
+                inicio,
+                inicio.AddDays(27),
+                1800,
+                1,
+                metasPorTipo),
             AppJsonContext.Default.CriarDesafioRequest,
             Token);
         response.EnsureSuccessStatusCode();
@@ -286,13 +323,17 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
             """);
     }
 
-    private async Task PostAtividadeAsync(TestUsuario usuario, Guid grupoId, int duracao = 3600)
+    private async Task PostAtividadeAsync(
+        TestUsuario usuario,
+        Guid grupoId,
+        int duracao = 3600,
+        string tipo = TipoAtividade.Corrida)
     {
         await ApiTestHost.AvaliarFilaAsync(usuario, grupoId);
         var response = await usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades",
             new CriarAtividadeRequest(
-                TipoAtividade.Corrida,
+                tipo,
                 duracao,
                 DateTimeOffset.UtcNow.AddMinutes(-30),
                 "Treino",

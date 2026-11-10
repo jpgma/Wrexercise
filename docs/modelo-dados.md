@@ -92,6 +92,20 @@ As datas são dias do calendário no fuso do grupo. Só semanas inteiras, garant
 | `created_at` | `timestamptz` | Padrão `now()` |
 | `cancelled_at` | `timestamptz` | Preenchida ao cancelar |
 
+## `metas_tipo_desafio`
+
+Alternativas à duração mínima do desafio: um dia também conta quando a soma das atividades destes tipos alcança o mínimo da meta. Não mudam depois da criação. Ver `decisoes/0043-metas-por-tipo.md`.
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `id` | `uuid` | Chave primária |
+| `desafio_id` | `uuid` | Referencia `desafios` |
+| `ordem` | `smallint` | Posição no formulário, a partir de 0. Única por desafio; desempata qual meta fez o dia contar |
+| `nome` | `text` | Opcional, até 20 caracteres |
+| `tipos` | `text[]` | Tipos de atividade (§7.5), pelo menos um, sem repetição |
+| `duracao_minima_segundos` | `integer` | Positiva e menor que a do desafio |
+| `created_at` | `timestamptz` | Padrão `now()` |
+
 ## `atividades`
 
 Ver `decisoes/0011-atividades.md` e migração `006-create-atividades.sql`.

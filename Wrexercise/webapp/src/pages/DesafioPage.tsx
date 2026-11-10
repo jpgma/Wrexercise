@@ -4,6 +4,7 @@ import {
   CloudOff,
   Flame,
   Globe,
+  ListChecks,
   Medal,
   Repeat,
   Target,
@@ -17,6 +18,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { HistoryChart } from "@/components/HistoryChart";
 import { PageHeader, SectionTitle } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
+import { tipoAtividadeLabels } from "@/features/atividades";
 import { useSessao } from "@/features/autenticacao";
 import {
   canGerenciarDesafios,
@@ -24,6 +26,7 @@ import {
   formatarDiaEMes,
   formatarDuracao,
   formatarSemanaCurta,
+  getRotuloMeta,
   isDesafioAberto,
   situacaoLabels,
   useCancelarDesafio,
@@ -334,6 +337,33 @@ function DesafioConteudo({ desafio }: { desafio: Desafio }) {
             titulo="Mínimo por dia"
             valor={formatarDuracao(desafio.duracaoMinimaSegundos)}
           />
+          {desafio.metasPorTipo.length > 0 && (
+            <div className="col-span-2 rounded-xl bg-surface-muted p-3">
+              <ListChecks aria-hidden="true" className="size-4 text-link" />
+              <p className="mt-2 text-xs text-muted">Ou o dia conta com</p>
+              <ul className="mt-1 space-y-1">
+                {desafio.metasPorTipo.map((meta) => (
+                  <li
+                    key={meta.id}
+                    className="text-sm font-semibold break-words"
+                  >
+                    {formatarDuracao(meta.duracaoMinimaSegundos)} de{" "}
+                    {getRotuloMeta(meta)}
+                    {meta.nome && (
+                      <span className="font-normal text-muted">
+                        {" "}
+                        (
+                        {meta.tipos
+                          .map((t) => tipoAtividadeLabels[t])
+                          .join(", ")}
+                        )
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Dado
             icon={CalendarDays}
             titulo="Período"

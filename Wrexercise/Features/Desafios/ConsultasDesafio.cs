@@ -41,9 +41,65 @@ internal static class ConsultasDesafio
         command.Parameters.AddWithValue(usuarioId);
         command.Parameters.AddWithValue(desafioId);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? ReadDesafio(reader) : null;
+        DesafioResponse desafio;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return null;
+            }
+
+            desafio = ReadDesafio(reader);
+        }
+
+        var metas = await LoadMetasPorTipoAsync(dataSource, [desafio.Id], cancellationToken);
+        return WithMetasPorTipo(desafio, metas);
     }
+
+    /// <summary>As metas por tipo dos desafios, na ordem de criação.</summary>
+    public static async Task<Dictionary<Guid, List<MetaPorTipoResponse>>> LoadMetasPorTipoAsync(
+        NpgsqlDataSource dataSource,
+        Guid[] desafioIds,
+        CancellationToken cancellationToken)
+    {
+        var metas = new Dictionary<Guid, List<MetaPorTipoResponse>>();
+        if (desafioIds.Length == 0)
+        {
+            return metas;
+        }
+
+        await using var command = dataSource.CreateCommand("""
+            SELECT desafio_id, id, nome, tipos, duracao_minima_segundos
+            FROM metas_tipo_desafio
+            WHERE desafio_id = ANY($1)
+            ORDER BY desafio_id, ordem
+            """);
+        command.Parameters.AddWithValue(desafioIds);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var desafioId = reader.GetGuid(0);
+            if (!metas.TryGetValue(desafioId, out var lista))
+            {
+                lista = [];
+                metas[desafioId] = lista;
+            }
+
+            lista.Add(new MetaPorTipoResponse(
+                reader.GetGuid(1),
+                reader.IsDBNull(2) ? null : reader.GetString(2),
+                reader.GetFieldValue<string[]>(3),
+                reader.GetInt32(4)));
+        }
+
+        return metas;
+    }
+
+    public static DesafioResponse WithMetasPorTipo(
+        DesafioResponse desafio,
+        Dictionary<Guid, List<MetaPorTipoResponse>> metas) =>
+        metas.TryGetValue(desafio.Id, out var lista) ? desafio with { MetasPorTipo = lista } : desafio;
 
     public static DesafioOperacaoStatus? GetBloqueio(string situacao) => situacao switch
     {
@@ -79,6 +135,7 @@ internal static class ConsultasDesafio
             : null;
     }
 
+    /// <summary>Lê a linha de <see cref="SelectDesafio"/>; as metas por tipo vêm de <see cref="LoadMetasPorTipoAsync"/>.</summary>
     public static DesafioResponse ReadDesafio(NpgsqlDataReader reader)
     {
         var inicio = reader.GetFieldValue<DateOnly>(4);
@@ -97,6 +154,7 @@ internal static class ConsultasDesafio
             reader.GetString(10),
             reader.GetString(11),
             reader.GetBoolean(12),
-            reader.GetInt32(13));
+            reader.GetInt32(13),
+            []);
     }
 }

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Features.Notificacoes;
 using Wrexercise.Features.Notificacoes.Contracts;

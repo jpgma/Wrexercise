@@ -27,7 +27,13 @@ import {
   useFilaAvaliacao,
   type TipoAtividade,
 } from "@/features/atividades";
-import { useDesafio, useProgresso } from "@/features/desafios";
+import {
+  calcularFaltaNoDia,
+  descreverMeta,
+  formatarFaltaNoDia,
+  useDesafio,
+  useProgresso,
+} from "@/features/desafios";
 import { useGrupo } from "@/features/grupos";
 import { useResumoGrupo } from "@/features/progresso";
 import { getErrorMessage } from "@/services/api";
@@ -59,8 +65,8 @@ function toLocalInputValue(date: Date): string {
 
 type Registrada = {
   id: string;
-  /** Os minutos que ainda faltavam no dia para contar na meta; 0 se já conta. */
-  faltamNoDia: number;
+  /** O que ainda faltava no dia para contar na meta; nulo se já conta ou sem desafio. */
+  faltaNoDia: string | null;
   enviadas: number;
   anexadas: number;
 };
@@ -87,8 +93,8 @@ function TreinoRegistrado({
       </div>
       <h1 className="mt-6 text-4xl uppercase">Boa! Tá registrado.</h1>
       <p className="mt-2 text-muted">
-        {registrada.faltamNoDia > 0
-          ? `Registramos. Faltam ${registrada.faltamNoDia} min nesse dia para contar na meta. `
+        {registrada.faltaNoDia
+          ? `Registramos. ${registrada.faltaNoDia} para o dia contar na meta. `
           : ""}
         Seus amigos já podem dar moral.
       </p>
@@ -212,21 +218,20 @@ export function RegistrarAtividadePage() {
     [],
   );
 
-  const minimoMinutos = desafio.data
-    ? Math.ceil(desafio.data.duracaoMinimaSegundos / 60)
-    : null;
-
-  // As atividades do mesmo dia se somam: a meta é de minutos por dia. O dia do campo é o do
-  // aparelho, que costuma ser o fuso do grupo.
+  // As atividades do mesmo dia se somam, no total e por tipo (decisões 0040 e 0043). O dia do
+  // campo é o do aparelho, que costuma ser o fuso do grupo.
   const diaEscolhido = startedAt?.slice(0, 10);
-  const minutosJaNoDia = Math.floor(
-    (progresso.data?.seusSegundosPorDia.find((d) => d.data === diaEscolhido)
-      ?.segundos ?? 0) / 60,
+  const doDia = progresso.data?.seusSegundosPorDia.find(
+    (d) => d.data === diaEscolhido,
   );
-  const faltamNoDia =
-    minimoMinutos === null
-      ? 0
-      : Math.max(0, minimoMinutos - minutosJaNoDia - (duracaoMinutos || 0));
+  const minutosJaNoDia = Math.floor((doDia?.segundos ?? 0) / 60);
+  const falta = desafio.data
+    ? calcularFaltaNoDia(desafio.data, doDia, {
+        tipo: tipoAtual,
+        segundos: (duracaoMinutos || 0) * 60,
+      })
+    : null;
+  const faltaNoDia = falta && !falta.conta ? formatarFaltaNoDia(falta) : null;
 
   const enviar = async (data: FormData) => {
     const atividade = await criar.mutateAsync({
@@ -257,7 +262,7 @@ export function RegistrarAtividadePage() {
 
     setRegistrada({
       id: atividade.id,
-      faltamNoDia,
+      faltaNoDia,
       enviadas,
       anexadas: anexos.length,
     });
@@ -348,13 +353,13 @@ export function RegistrarAtividadePage() {
         />
       )}
 
-      {minimoMinutos !== null && (
+      {desafio.data && (
         <div className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <p>
-            Para contar na meta do grupo, some{" "}
-            <b>pelo menos {minimoMinutos} minutos</b> de atividade no dia. Vale
-            dividir em mais de um treino.
+            Para contar na meta do grupo, some no dia pelo menos{" "}
+            <b>{descreverMeta(desafio.data)}</b>. Vale dividir em mais de um
+            treino.
           </p>
         </div>
       )}
@@ -405,21 +410,21 @@ export function RegistrarAtividadePage() {
           >
             <Minus aria-hidden="true" className="size-5" />
           </button>
-          <div className="text-center">
+          <div className="min-w-0 flex-1 px-2 text-center">
             <p className="font-score text-3xl">
               {duracaoMinutos}
               <span className="text-base text-muted"> min</span>
             </p>
-            {minimoMinutos !== null && (
+            {falta && (
               <p
-                className={`text-xs font-medium ${faltamNoDia === 0 ? "text-on-success-soft" : "text-on-warning-soft"}`}
+                className={`text-xs font-medium text-balance ${falta.conta ? "text-on-success-soft" : "text-on-warning-soft"}`}
               >
-                {faltamNoDia === 0
+                {falta.conta
                   ? "Conta para a meta"
-                  : `Faltam ${faltamNoDia} min no dia para contar`}
+                  : `${faltaNoDia} para contar`}
               </p>
             )}
-            {minimoMinutos !== null && minutosJaNoDia > 0 && (
+            {falta && minutosJaNoDia > 0 && (
               <p className="text-xs text-muted">
                 Você já tem {minutosJaNoDia} min nesse dia
               </p>

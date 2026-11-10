@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Infrastructure.Json;
@@ -66,8 +67,86 @@ public sealed class DesafiosRoutesTests : IAsyncLifetime
                 "America/Sao_Paulo",
                 PapelMembro.Proprietario,
                 Participando: true,
-                TotalParticipantes: 1),
+                TotalParticipantes: 1,
+                desafio.MetasPorTipo),
             desafio);
+        Assert.Empty(desafio.MetasPorTipo);
+    }
+
+    [Fact]
+    public async Task Create_SavesTheMetasPorTipoInOrder()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await PostDesafioAsync(ana, grupoId, Valid() with
+        {
+            MetasPorTipo =
+            [
+                new("  Cardio  ", [TipoAtividade.Corrida, TipoAtividade.Caminhada], 1200),
+                new("   ", [TipoAtividade.Calistenia], 1800),
+            ],
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var criado = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.DesafioResponse, Token);
+        foreach (var desafio in new[] { criado!, await GetAsync(ana, criado!.Id), Assert.Single(await ListAsync(ana, grupoId)) })
+        {
+            Assert.Collection(
+                desafio.MetasPorTipo,
+                cardio =>
+                {
+                    Assert.Equal("Cardio", cardio.Nome);
+                    Assert.Equal([TipoAtividade.Corrida, TipoAtividade.Caminhada], cardio.Tipos);
+                    Assert.Equal(1200, cardio.DuracaoMinimaSegundos);
+                },
+                calistenia =>
+                {
+                    Assert.Null(calistenia.Nome);
+                    Assert.Equal([TipoAtividade.Calistenia], calistenia.Tipos);
+                    Assert.Equal(1800, calistenia.DuracaoMinimaSegundos);
+                });
+        }
+    }
+
+    // A duração mínima do desafio é 3600: uma meta por tipo precisa de menos.
+    private static readonly MetaPorTipoRequest?[][] MetasPorTipoInvalidas =
+    [
+        [null],
+        [new(null, [], 1200)],
+        [new(null, null, 1200)],
+        [new(null, ["Paraquedismo"], 1200)],
+        [new(null, [TipoAtividade.Corrida, TipoAtividade.Corrida], 1200)],
+        [new(null, [TipoAtividade.Corrida], null)],
+        [new(null, [TipoAtividade.Corrida], 59)],
+        [new(null, [TipoAtividade.Corrida], 3600)],
+        [new(new string('a', 21), [TipoAtividade.Corrida], 1200)],
+        [
+            new(null, [TipoAtividade.Corrida, TipoAtividade.Yoga], 1200),
+            new(null, [TipoAtividade.Yoga, TipoAtividade.Corrida], 1800),
+        ],
+        [
+            new(null, [TipoAtividade.Corrida], 1200),
+            new(null, [TipoAtividade.Yoga], 1200),
+            new(null, [TipoAtividade.Natacao], 1200),
+            new(null, [TipoAtividade.Ciclismo], 1200),
+            new(null, [TipoAtividade.Calistenia], 1200),
+        ],
+    ];
+
+    public static TheoryData<int> IndicesMetasPorTipoInvalidas => [.. Enumerable.Range(0, MetasPorTipoInvalidas.Length)];
+
+    [Theory]
+    [MemberData(nameof(IndicesMetasPorTipoInvalidas))]
+    public async Task Create_RejectsInvalidMetasPorTipo(int indice)
+    {
+        var metas = MetasPorTipoInvalidas[indice];
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await PostDesafioAsync(ana, grupoId, Valid() with { MetasPorTipo = metas });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -199,7 +278,7 @@ public sealed class DesafiosRoutesTests : IAsyncLifetime
 
         response.EnsureSuccessStatusCode();
         var depois = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.DesafioResponse, Token);
-        Assert.Equal(antes with { Nome = "Novo", Descricao = "Texto" }, depois);
+        Assert.Equal(antes with { Nome = "Novo", Descricao = "Texto", MetasPorTipo = depois!.MetasPorTipo }, depois);
     }
 
     [Fact]

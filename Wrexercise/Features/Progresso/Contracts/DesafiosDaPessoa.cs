@@ -83,26 +83,15 @@ internal static class DesafiosDaPessoa
         }
 
         var cumpridas = desafios.Keys.ToDictionary(id => id, _ => new List<int>());
-        // Um dia conta quando a soma das atividades verificadas alcança o mínimo (decisão 0040).
+        // Um dia conta quando as atividades verificadas cumprem a duração mínima ou uma meta por tipo
+        // (decisões 0040 e 0043).
         await using (var command = new NpgsqlCommand($"""
             SELECT dias.desafio_id, dias.indice_semana
-            FROM (
-                SELECT d.id AS desafio_id, d.sessoes_por_semana, {ContagensAtividadeDesafio.IndiceSemanaSql} AS indice_semana
-                FROM atividades a
-                JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
-                JOIN grupos g ON g.id = d.grupo_id
-                JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
-                WHERE a.usuario_id = $1
-                  AND a.situacao_verificacao = 'Verificada'
-                  AND {ContagensAtividadeDesafio.DiaSql} >= d.data_inicio
-                  AND {ContagensAtividadeDesafio.DiaSql} <= d.data_fim
-                  AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
-                GROUP BY d.id, d.sessoes_por_semana, d.duracao_minima_segundos,
-                    {ContagensAtividadeDesafio.DiaSql}, {ContagensAtividadeDesafio.IndiceSemanaSql}
-                HAVING sum(a.duracao_segundos) >= d.duracao_minima_segundos
-            ) dias
-            GROUP BY dias.desafio_id, dias.sessoes_por_semana, dias.indice_semana
-            HAVING count(*) >= dias.sessoes_por_semana
+            FROM ({ContagensAtividadeDesafio.BuildDiasPorCondicao(DiasPorTipoSql)}) dias
+            JOIN desafios d ON d.id = dias.desafio_id
+            WHERE dias.conta_verificada
+            GROUP BY dias.desafio_id, d.sessoes_por_semana, dias.indice_semana
+            HAVING count(*) >= d.sessoes_por_semana
             """, connection, transaction))
         {
             command.Parameters.AddWithValue(usuarioId);
@@ -120,6 +109,28 @@ internal static class DesafiosDaPessoa
             .Select(d => new DesafioDaPessoa(d.Value.Inicio, d.Value.Fim, d.Value.Entrada, d.Value.Encerrado, cumpridas[d.Key]))
             .ToList();
     }
+
+    /// <summary>As atividades verificadas da pessoa ($1), por desafio, dia e tipo.</summary>
+    private const string DiasPorTipoSql = $"""
+                SELECT d.id AS desafio_id, a.usuario_id,
+                    {ContagensAtividadeDesafio.DiaSql} AS dia,
+                    {ContagensAtividadeDesafio.IndiceSemanaSql} AS indice_semana,
+                    d.duracao_minima_segundos AS minimo,
+                    a.tipo,
+                    sum(a.duracao_segundos) AS segundos_verificados,
+                    sum(a.duracao_segundos) AS segundos_provisorios
+                FROM atividades a
+                JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
+                JOIN grupos g ON g.id = d.grupo_id
+                JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
+                WHERE a.usuario_id = $1
+                  AND a.situacao_verificacao = 'Verificada'
+                  AND {ContagensAtividadeDesafio.DiaSql} >= d.data_inicio
+                  AND {ContagensAtividadeDesafio.DiaSql} <= d.data_fim
+                  AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
+                GROUP BY d.id, a.usuario_id, d.duracao_minima_segundos, a.tipo,
+                    {ContagensAtividadeDesafio.DiaSql}, {ContagensAtividadeDesafio.IndiceSemanaSql}
+                """;
 
     /// <summary>A melhor sequência de semanas cumpridas em um único desafio.</summary>
     public static int GetMelhorSequencia(IEnumerable<DesafioDaPessoa> desafios) =>

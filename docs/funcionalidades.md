@@ -10,7 +10,7 @@
 
 Wrexercise is a private web application for small groups of friends. It helps them to exercise regularly.
 
-A group sets one weekly goal, for example "4 days with 60 minutes each week". The activities of one day add up. Each member records his or her exercise sessions. The other members examine each session and give a reaction. The reactions decide if the session is valid. Only valid sessions count for the goal.
+A group sets one weekly goal, for example "4 days with 60 minutes each week". The activities of one day add up. A challenge can also have goals for types of activity, for example "or 20 minutes of running". Each member records his or her exercise sessions. The other members examine each session and give a reaction. The reactions decide if the session is valid. Only valid sessions count for the goal.
 
 The application is a Progressive Web App (PWA). The interface is in Brazilian Portuguese and is for smartphones first.
 
@@ -30,6 +30,7 @@ The code uses Portuguese names for the terms of the domain. This document uses t
 | invitation | `Convite` | Convite |
 | challenge | `Desafio` | Desafio, Meta do grupo |
 | goal | `Meta` | Meta |
+| type goal | `MetaPorTipo` | Meta por tipo |
 | week | `Semana` | Semana |
 | activity | `Atividade` | Atividade, treino |
 | evidence | `Evidencia` | Comprovante |
@@ -230,7 +231,7 @@ The user cannot change the e-mail.
 - In each group, a user in the mode `Jogo` can choose one other member as `Rival` for each week. The rival must also be in the mode `Jogo`. The rival does not have to accept and does not lose anything.
 - The week is the current week of the featured challenge. The challenge must be `Ativo`. The two users must participate in the week.
 - The user can choose only before one of the two users meets the goal of the week. Pending activities count for this check. After the choice, the user cannot change or cancel it.
-- The winner is the user who meets the goal first. The time is when the N-th day of the week started to count, where N is the days for each week. A day counts at the `verified_at` of the `Verificada` activity that made the total of the day equal to or more than the minimum duration.
+- The winner is the user who meets the goal first. The time is when the N-th day of the week started to count, where N is the days for each week. A day counts at the `verified_at` of the first `Verificada` activity that made one condition of the day true: the total of the day gets to the minimum duration, or the total of the types of one type goal gets to the minimum of that type goal (see 6.1).
 - `atividades.verified_at` is the time when the activity became `Verificada`. All operations that verify an activity write it.
 - A result is final when it shows: `Venceu` (the user who chose won) or `Perdeu` (the rival won). The same time gives no winner. If nobody meets the goal, the result is `SemVencedor` 2 days after Sunday (the verification window). Before that, the result is `EmAndamento`.
 - A win gives 15 EN to the user who chose. The rival gets nothing.
@@ -303,6 +304,10 @@ A group has a maximum of 10 active members.
 ### 6.1. Rules
 
 - A challenge sets the weekly goal of the group: a minimum number of days each week (1 to 7) and a minimum duration for each day (1 minute to 24 hours). The activities of one day add up.
+- A challenge can have 0 to 4 type goals (`MetaPorTipo`). A type goal is an alternative to the minimum duration. It has one or more activity types, a minimum duration and an optional name (maximum 20 characters, for example "Cardio"). A day counts when the total of the day gets to the minimum duration of the challenge, or when the total of the activities of the types of one type goal gets to the minimum of that type goal.
+- The types of a type goal must be valid and different. The minimum of a type goal is 1 minute or more and less than the minimum duration of the challenge. Two type goals cannot have the same set of types.
+- The creation page has the section "Ou o dia conta com…". The user adds a type goal with "Adicionar meta por tipo", selects the types with buttons, and types the minutes. The page shows a sentence with all the conditions, for example "O dia conta com 1h de qualquer treino, ou 20 min de Corrida".
+- The challenge page, the group page, the home page and the activity form show the type goals next to the minimum duration.
 - A challenge has a name (1 to 80 characters) and an optional description (maximum 500 characters).
 - A challenge has only full weeks. It starts on a Monday and stops on a Sunday, in the time zone of the group. It has a maximum of 52 weeks. The start date cannot be in the past.
 - The creation page shows the next 12 Mondays as start dates and asks for the number of weeks.
@@ -350,7 +355,7 @@ The proof method comes from the evidence:
 - One or more images: `Fotografia`.
 - The code also has `CapturaDeTela`. The interface does not use it.
 
-The form adds the duration to the other activities of the user on the same day in the current week (`seusSegundosPorDia`, not `Rejeitada`). It shows "Conta para a meta" when the total is equal to or more than the minimum duration of the challenge. If not, it shows "Faltam N min no dia para contar". If the day already has activities, it shows "Você já tem N min nesse dia".
+The form adds the duration to the other activities of the user on the same day in the current week (`seusSegundosPorDia`, not `Rejeitada`). The form also adds the duration to the activities of the same types (`segundosPorTipo`). It shows "Conta para a meta" when one condition of the day is true (see 6.1). If not, it shows "Faltam N min no dia para contar". If a type goal that includes the selected type is nearer, it shows "Faltam N min de [type goal] (ou M min no total) para contar". If the day already has activities, it shows "Você já tem N min nesse dia".
 
 Nobody can edit or delete an activity.
 
@@ -455,10 +460,12 @@ After each reaction, the system calculates the status again:
 ### 9.1. Weekly progress
 
 - The activities of a user on one day add up. The day is the start date of each activity, in the time zone of the group.
-- A day counts as one session when the total is equal to or more than the minimum duration of the challenge. A day counts as one session at most, also with a very long total.
+- A day counts as one session when the total is equal to or more than the minimum duration of the challenge, or when the total of the types of one type goal is equal to or more than the minimum of that type goal (see 6.1). A day counts as one session at most, also with a very long total or with more than one condition true.
 - Additional sessions in one week do not count for other weeks.
-- Definitive progress: days in which the total of `Verificada` activities is equal to or more than the minimum.
-- Provisional progress: days that get to the minimum only with the activities in `AguardandoFeedback`, `EmRevisao` or `Contestada` added.
+- Definitive progress: days in which one condition is true with only the `Verificada` activities.
+- Provisional progress: days in which one condition is true only with the activities in `AguardandoFeedback`, `EmRevisao` or `Contestada` added.
+- For each day of the user that counts (`seusDias`), the progress gives the type goal that made the day count (`metaPorTipoId`). It is empty when the total of the day got to the minimum duration of the challenge. If not, it is the first true type goal, in the order of creation.
+- On the home page, the days of the week show a small icon of the type goal on a day that counted because of a type goal. Under the days, a legend shows "Contou por [type goal]".
 - A member completes a week when the definitive progress is equal to or more than the goal.
 
 ### 9.2. Group goal for the week

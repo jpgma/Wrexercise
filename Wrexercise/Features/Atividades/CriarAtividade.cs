@@ -1,5 +1,6 @@
 using Npgsql;
 using NpgsqlTypes;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;

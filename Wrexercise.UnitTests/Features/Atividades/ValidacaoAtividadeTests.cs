@@ -1,4 +1,5 @@
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 
 namespace Wrexercise.UnitTests.Features.Atividades;
 

@@ -10,7 +10,7 @@ import { useSessao } from "@/features/autenticacao";
 import {
   canGerenciarDesafios,
   FaixaSemana,
-  formatarDuracao,
+  formatarMeta,
   formatarTempoAteFim,
   useDesafio,
   useProgresso,
@@ -125,15 +125,15 @@ function SuaSemana({
               </p>
             )}
             <p className="mt-1 text-sm text-muted">
-              Mínimo de {formatarDuracao(desafio.data.duracaoMinimaSegundos)}{" "}
-              por dia
+              Mínimo de {formatarMeta(desafio.data)}
             </p>
           </div>
         </div>
         {semanaAtual && (
           <FaixaSemana
             inicio={semanaAtual.inicio}
-            diasComTreino={seusDias}
+            dias={seusDias}
+            metasPorTipo={desafio.data.metasPorTipo}
             fusoHorario={desafio.data.fusoHorario}
           />
         )}

@@ -15,7 +15,15 @@ internal sealed record DesafioResponse(
     string FusoHorario,
     string Papel,
     bool Participando,
-    int TotalParticipantes);
+    int TotalParticipantes,
+    IReadOnlyList<MetaPorTipoResponse> MetasPorTipo);
+
+/// <summary>Uma alternativa à duração mínima do desafio, na ordem em que foi criada (decisão 0043).</summary>
+internal sealed record MetaPorTipoResponse(
+    Guid Id,
+    string? Nome,
+    IReadOnlyList<string> Tipos,
+    int DuracaoMinimaSegundos);
 
 internal sealed record DesafiosResponse(IReadOnlyList<DesafioResponse> Desafios);
 
@@ -32,8 +40,19 @@ internal sealed record ProgressoParticipanteResponse(
     bool MetaCumprida,
     bool ContaNestaSemana);
 
-/// <summary>A soma das durações não rejeitadas de quem consulta num dia.</summary>
-internal sealed record SegundosDoDiaResponse(DateOnly Data, int Segundos);
+/// <summary>A soma das durações não rejeitadas de quem consulta num dia, no total e por tipo.</summary>
+internal sealed record SegundosDoDiaResponse(
+    DateOnly Data,
+    int Segundos,
+    IReadOnlyList<SegundosPorTipoResponse> SegundosPorTipo);
+
+internal sealed record SegundosPorTipoResponse(string Tipo, int Segundos);
+
+/// <summary>Um dia que conta para a meta de quem consulta.</summary>
+/// <param name="MetaPorTipoId">
+/// Nulo quando o dia alcançou a duração mínima do desafio; senão, a primeira meta por tipo cumprida.
+/// </param>
+internal sealed record DiaQueContaResponse(DateOnly Data, Guid? MetaPorTipoId);
 
 /// <param name="SemanaAtual">Vazia quando o desafio não está em andamento.</param>
 /// <param name="SeusDias">
@@ -45,5 +64,5 @@ internal sealed record ProgressoResponse(
     int TotalSemanas,
     SemanaResponse? SemanaAtual,
     IReadOnlyList<ProgressoParticipanteResponse> Participantes,
-    IReadOnlyList<DateOnly> SeusDias,
+    IReadOnlyList<DiaQueContaResponse> SeusDias,
     IReadOnlyList<SegundosDoDiaResponse> SeusSegundosPorDia);

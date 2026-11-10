@@ -758,7 +758,7 @@ Cada desafio possui:
 - Duração mínima por dia.
 - Quantidade mínima de dias por semana (sessões).
 
-As atividades de um mesmo dia, no fuso do grupo, se somam. Um dia cuja soma alcança a duração mínima conta como uma sessão. Ver `decisoes/0040-meta-diaria.md`.
+As atividades de um mesmo dia, no fuso do grupo, se somam. Um dia cuja soma alcança a duração mínima conta como uma sessão; também conta o dia em que a soma dos tipos de uma meta por tipo alcança o mínimo dela. Ver `decisoes/0040-meta-diaria.md` e `decisoes/0043-metas-por-tipo.md`.
 
 Exemplo:
 

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gruposKey, shouldRetry, type Papel } from "@/features/grupos";
 import { getJson, postEmpty, postJson, putJson } from "@/services/api";
+import type { MetaPorTipo } from "./metas";
 
 export type SituacaoDesafio = "Agendado" | "Ativo" | "Encerrado" | "Cancelado";
 
@@ -18,6 +19,8 @@ export type Desafio = {
   papel: Papel;
   participando: boolean;
   totalParticipantes: number;
+  /** As alternativas à duração mínima, na ordem de criação. */
+  metasPorTipo: MetaPorTipo[];
 };
 
 export type ProgressoParticipante = {
@@ -34,10 +37,17 @@ export type Progresso = {
   totalSemanas: number;
   semanaAtual: { numero: number; inicio: string; fim: string } | null;
   participantes: ProgressoParticipante[];
-  /** Os dias da semana atual que contam para a meta, contando as pendentes. */
-  seusDias: string[];
-  /** A soma das atividades não rejeitadas de cada dia da semana atual. */
-  seusSegundosPorDia: { data: string; segundos: number }[];
+  /**
+   * Os dias da semana atual que contam para a meta, contando as pendentes. `metaPorTipoId` é nulo
+   * quando o dia alcançou a duração mínima do desafio; senão, é a meta por tipo que o fez contar.
+   */
+  seusDias: { data: string; metaPorTipoId: string | null }[];
+  /** A soma das atividades não rejeitadas de cada dia da semana atual, no total e por tipo. */
+  seusSegundosPorDia: {
+    data: string;
+    segundos: number;
+    segundosPorTipo: { tipo: string; segundos: number }[];
+  }[];
 };
 
 export type CriarDesafioData = {
@@ -47,6 +57,7 @@ export type CriarDesafioData = {
   dataFim: string;
   duracaoMinimaSegundos: number;
   sessoesPorSemana: number;
+  metasPorTipo: Omit<MetaPorTipo, "id">[];
 };
 
 const desafiosKey = ["desafios"] as const;

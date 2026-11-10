@@ -13,7 +13,13 @@ internal sealed record CriarDesafioRequest(
     DateOnly? DataInicio,
     DateOnly? DataFim,
     int? DuracaoMinimaSegundos,
-    int? SessoesPorSemana);
+    int? SessoesPorSemana,
+    IReadOnlyList<MetaPorTipoRequest?>? MetasPorTipo = null);
+
+/// <summary>Uma alternativa à duração mínima do desafio: a soma das atividades destes tipos num dia.</summary>
+internal sealed record MetaPorTipoRequest(string? Nome, IReadOnlyList<string>? Tipos, int? DuracaoMinimaSegundos);
+
+internal sealed record NovaMetaPorTipo(string? Nome, string[] Tipos, int DuracaoMinimaSegundos);
 
 internal sealed record NovoDesafio(
     string Nome,
@@ -21,7 +27,8 @@ internal sealed record NovoDesafio(
     DateOnly DataInicio,
     DateOnly DataFim,
     int DuracaoMinimaSegundos,
-    int SessoesPorSemana);
+    int SessoesPorSemana,
+    IReadOnlyList<NovaMetaPorTipo> MetasPorTipo);
 
 /// <summary>Quem altera um desafio trava o grupo antes de verificar o papel, como em toda operação do grupo.</summary>
 internal static class CriarDesafio
@@ -37,6 +44,7 @@ internal static class CriarDesafio
             || !ValidacaoDesafio.IsValidDescricao(request.Descricao)
             || !ValidacaoDesafio.IsValidDuracaoMinima(request.DuracaoMinimaSegundos)
             || !ValidacaoDesafio.IsValidSessoesPorSemana(request.SessoesPorSemana)
+            || !ValidacaoDesafio.IsValidMetasPorTipo(request.MetasPorTipo, request.DuracaoMinimaSegundos!.Value)
             || request.DataInicio is not { } dataInicio
             || request.DataFim is not { } dataFim)
         {
@@ -54,7 +62,13 @@ internal static class CriarDesafio
                 dataInicio,
                 dataFim,
                 request.DuracaoMinimaSegundos!.Value,
-                request.SessoesPorSemana!.Value),
+                request.SessoesPorSemana!.Value,
+                (request.MetasPorTipo ?? [])
+                    .Select(m => new NovaMetaPorTipo(
+                        ValidacaoDesafio.NormalizeNomeMeta(m!.Nome),
+                        [.. m.Tipos!],
+                        m.DuracaoMinimaSegundos!.Value))
+                    .ToList()),
             cancellationToken);
         if (status != DesafioOperacaoStatus.Concluida)
         {
@@ -140,6 +154,21 @@ internal static class CriarDesafio
             insert.Parameters.AddWithValue(novo.DuracaoMinimaSegundos);
             insert.Parameters.AddWithValue(novo.SessoesPorSemana);
             desafioId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
+        }
+
+        for (var ordem = 0; ordem < novo.MetasPorTipo.Count; ordem++)
+        {
+            var meta = novo.MetasPorTipo[ordem];
+            await using var insertMeta = new NpgsqlCommand("""
+                INSERT INTO metas_tipo_desafio (desafio_id, ordem, nome, tipos, duracao_minima_segundos)
+                VALUES ($1, $2, $3, $4, $5)
+                """, connection, transaction);
+            insertMeta.Parameters.AddWithValue(desafioId);
+            insertMeta.Parameters.AddWithValue((short)ordem);
+            insertMeta.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)meta.Nome ?? DBNull.Value);
+            insertMeta.Parameters.AddWithValue(meta.Tipos);
+            insertMeta.Parameters.AddWithValue(meta.DuracaoMinimaSegundos);
+            await insertMeta.ExecuteNonQueryAsync(cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);

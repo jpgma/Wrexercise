@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Jogo;
 using Wrexercise.Features.Reacoes;
 using Wrexercise.Infrastructure.Json;

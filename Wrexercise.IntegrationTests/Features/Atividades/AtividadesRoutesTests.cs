@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.IntegrationTests.Features.Atividades;

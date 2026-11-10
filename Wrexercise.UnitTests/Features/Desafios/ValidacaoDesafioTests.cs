@@ -1,3 +1,4 @@
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Grupos.Contracts;
 
@@ -170,5 +171,59 @@ public class ValidacaoDesafioTests
         Assert.False(ProgressoDesafio.CalculateProgresso(3, 5, 4).MetaCumprida);
         Assert.True(ProgressoDesafio.CalculateProgresso(4, 0, 4).MetaCumprida);
         Assert.True(ProgressoDesafio.CalculateProgresso(6, 0, 4).MetaCumprida);
+    }
+    [Fact]
+    public void MetasPorTipo_AreOptional()
+    {
+        Assert.True(ValidacaoDesafio.IsValidMetasPorTipo(null, 3600));
+        Assert.True(ValidacaoDesafio.IsValidMetasPorTipo([], 3600));
+    }
+
+    [Fact]
+    public void MetasPorTipo_AcceptsUpToFourDistinctSets_BelowTheDesafioMinimum()
+    {
+        Assert.True(ValidacaoDesafio.IsValidMetasPorTipo(
+            [
+                new("Cardio", [TipoAtividade.Corrida, TipoAtividade.Caminhada], 1200),
+                new(null, [TipoAtividade.Corrida], 1200),
+                new(null, [TipoAtividade.Calistenia], 3599),
+                new(new string('a', 20), [TipoAtividade.Yoga], 60),
+            ],
+            3600));
+    }
+
+    [Fact]
+    public void MetasPorTipo_RejectsAMinimumThatNeverHelps()
+    {
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Corrida], 3600)], 3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Corrida], 59)], 3600));
+    }
+
+    [Fact]
+    public void MetasPorTipo_RejectsInvalidOrRepeatedTipos()
+    {
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [], 1200)], 3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, ["Paraquedismo"], 1200)], 3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo(
+            [new(null, [TipoAtividade.Corrida, TipoAtividade.Corrida], 1200)],
+            3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo(
+            [
+                new(null, [TipoAtividade.Corrida, TipoAtividade.Yoga], 1200),
+                new(null, [TipoAtividade.Yoga, TipoAtividade.Corrida], 1800),
+            ],
+            3600));
+    }
+
+    [Fact]
+    public void MetasPorTipo_LimitsTheCountAndTheNome()
+    {
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo(
+            [.. new[] { TipoAtividade.Corrida, TipoAtividade.Yoga, TipoAtividade.Natacao, TipoAtividade.Ciclismo, TipoAtividade.Esporte }
+                .Select(t => new MetaPorTipoRequest(null, [t], 1200))],
+            3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(new string('a', 21), [TipoAtividade.Corrida], 1200)], 3600));
+        Assert.Null(ValidacaoDesafio.NormalizeNomeMeta("   "));
+        Assert.Equal("Cardio", ValidacaoDesafio.NormalizeNomeMeta("  Cardio  "));
     }
 }

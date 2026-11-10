@@ -20,7 +20,7 @@ import { useSessao } from "@/features/autenticacao";
 import {
   canGerenciarDesafios,
   formatarData,
-  formatarDuracao,
+  formatarMeta,
   formatarTempoAteFim,
   situacaoLabels,
   useDesafio,
@@ -391,9 +391,8 @@ export function GrupoPage() {
                   </p>
                   <p className="text-xs text-muted">
                     {desafio.sessoesPorSemana} dias por semana ·{" "}
-                    {formatarDuracao(desafio.duracaoMinimaSegundos)} por dia ·{" "}
-                    {formatarData(desafio.dataInicio)} a{" "}
-                    {formatarData(desafio.dataFim)}
+                    {formatarMeta(desafio)} · {formatarData(desafio.dataInicio)}{" "}
+                    a {formatarData(desafio.dataFim)}
                   </p>
                 </div>
                 <span className="chip">{situacaoLabels[desafio.situacao]}</span>
