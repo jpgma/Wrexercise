@@ -2,7 +2,7 @@
 
 > Prompt para gerar no Gemini (Nano Banana) uma versão mais rica do chão da praça (`docs/gamificacao.md` §1.3, §3.1 e §4.4). A imagem gerada é só a **fonte**: ela vai para `fonte/praca.png`, e o `build.py` a reduz, a ajusta à paleta `wrexercise` e grava `saida/praca.png`. Nunca copie a imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** hoje o `build.py` desenha a praça só por código. Ler `fonte/praca.png` é o próximo passo dele; até lá, a imagem gerada serve de referência para o desenho.
+> **Estado:** o `build.py` lê `fonte/praca.png`. A fonte atual é uma quadra num terraço, com a barra no canto de cima à esquerda; ela foi aceita como veio, sem correções por código.
 
 O prompt fixa só as **restrições** (vista, escala, paleta, área livre para os avatares, legibilidade) e deixa a composição por conta do gerador. A ideia é ver cenas que não pensaríamos em desenhar e escolher a melhor, e não reproduzir a praça atual com mais acabamento.
 
@@ -82,7 +82,7 @@ Antes de salvar em `fonte/`, confira:
 
 ## 6. O que o `build.py` faz com a fonte
 
-1. Reduz para 180×240 pela cor mais comum de cada bloco (não pela média) e corta as 10 últimas linhas.
-2. Troca cada cor pela mais próxima da paleta `wrexercise`.
-3. Desenha por cima o que precisa de posição exata: a assinatura "WX" (coral e violeta), num trecho liso da borda que a cena oferecer, porque texto gerado sai torto.
-4. Grava `saida/praca.png` e `preview/praca-2x.png`.
+1. Troca cada pixel pela cor mais próxima da paleta `wrexercise`. Fazer isso antes de reduzir tira o ruído da compressão da contagem.
+2. Reduz para 180×240 pela cor mais comum de cada bloco (não pela média) e corta as 10 últimas linhas.
+3. Desenha por cima só a assinatura "WX" (coral e violeta), num trecho liso da borda que a cena oferecer, porque texto gerado sai torto. Ao trocar a fonte, confira a posição em `ASSINATURA_X` e `ASSINATURA_Y`.
+4. Grava `saida/praca.png` e `preview/praca-2x.png`. Copie `saida/praca.png` para `Wrexercise/webapp/public/praca.png` (`docs/avatar-kit.md`).
