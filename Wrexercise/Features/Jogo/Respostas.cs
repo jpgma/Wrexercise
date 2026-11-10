@@ -99,6 +99,16 @@ internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
 /// <param name="Conquista">A conquista do nível que define o desenho: <c>/enfeite-{conquista em minúsculas}.png</c>.</param>
 internal sealed record EnfeiteResponse(string Codigo, string Conquista, string Nome);
 
+/// <param name="TituloConquista">A conquista que libera o Enfeite, como o Perfil a mostra.</param>
+/// <param name="Atual">O progresso da pessoa na conquista, de <paramref name="Alvo"/>.</param>
+internal sealed record EnfeiteBloqueadoResponse(
+    string Codigo,
+    string Conquista,
+    string Nome,
+    string TituloConquista,
+    int Atual,
+    int Alvo);
+
 /// <param name="Folha">O endereço da folha importada; sem ela vale a folha padrão.</param>
 /// <param name="Vitrine">Os Enfeites da vitrine; vazia para quem está no modo <c>App</c>.</param>
 internal sealed record AvatarMembroResponse(Guid UsuarioId, string? Folha, IReadOnlyList<EnfeiteResponse> Vitrine);
@@ -107,7 +117,8 @@ internal sealed record MeuAvatarResponse(
     string? Folha,
     IReadOnlyList<EnfeiteResponse> Vitrine,
     IReadOnlyList<EnfeiteResponse> Liberados,
-    IReadOnlyList<string> Novos);
+    IReadOnlyList<string> Novos,
+    IReadOnlyList<EnfeiteBloqueadoResponse> Bloqueados);
 
 internal sealed record AvataresResponse(IReadOnlyList<AvatarMembroResponse> Avatares);
 

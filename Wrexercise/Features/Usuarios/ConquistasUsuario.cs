@@ -54,81 +54,106 @@ internal static class ConquistasUsuario
         (Tipos.Calistenia, "PesoDoCorpo", "Peso do corpo"),
     ];
 
-    public static IReadOnlyList<ConquistaResponse> Calcular(EstatisticasConquistas estatisticas)
+    /// <summary>As conquistas que a pessoa já tem.</summary>
+    public static IReadOnlyList<ConquistaResponse> Calcular(EstatisticasConquistas estatisticas) =>
+        Listar(estatisticas).Where(c => c.Liberada).ToList();
+
+    /// <summary>
+    /// Todas as conquistas, liberadas ou não, com o progresso da pessoa (<c>Atual</c> nunca passa de
+    /// <c>Alvo</c>). Nos níveis, a ordem vai do mais alto ao mais baixo.
+    /// </summary>
+    public static IReadOnlyList<ConquistaResponse> Listar(EstatisticasConquistas estatisticas)
     {
         var conquistas = new List<ConquistaResponse>();
 
-        foreach (var marco in MarcosSequencia.Where(marco => estatisticas.MelhorSequencia >= marco))
+        foreach (var marco in MarcosSequencia)
         {
-            conquistas.Add(new ConquistaResponse(
+            conquistas.Add(Criar(
                 $"Sequencia{marco}",
                 $"{marco} semanas seguidas",
-                "Meta batida sem falhar em um desafio"));
+                "Meta batida sem falhar em um desafio",
+                estatisticas.MelhorSequencia,
+                marco));
         }
 
-        foreach (var marco in MarcosTreinos.Where(marco => estatisticas.DiasComTreino >= marco))
+        foreach (var marco in MarcosTreinos)
         {
-            conquistas.Add(new ConquistaResponse(
+            conquistas.Add(Criar(
                 $"Treinos{marco}",
                 $"{marco} treinos",
-                "Dias com treino verificado pelos amigos"));
+                "Dias com treino verificado pelos amigos",
+                estatisticas.DiasComTreino,
+                marco));
         }
 
-        if (estatisticas.DesafiosCompletos > 0)
-        {
-            conquistas.Add(new ConquistaResponse(
-                DesafioCompleto,
-                "Desafio completo",
-                "Todas as semanas de um desafio com a meta cumprida"));
-        }
+        conquistas.Add(Criar(
+            DesafioCompleto,
+            "Desafio completo",
+            "Todas as semanas de um desafio com a meta cumprida",
+            estatisticas.DesafiosCompletos,
+            1));
 
         var porTipo = estatisticas.TreinosPorTipo;
         foreach (var (tipo, codigo, titulo) in ConquistasDeTipo)
         {
-            if (porTipo is not null && porTipo.TryGetValue(tipo, out var total) && total >= TreinosPorTipoMarco)
-            {
-                conquistas.Add(new ConquistaResponse(
-                    codigo,
-                    titulo,
-                    $"{TreinosPorTipoMarco} treinos verificados de {NomeDoTipo(tipo)}"));
-            }
+            var total = porTipo is not null && porTipo.TryGetValue(tipo, out var valor) ? valor : 0;
+            conquistas.Add(Criar(
+                codigo,
+                titulo,
+                $"{TreinosPorTipoMarco} treinos verificados de {NomeDoTipo(tipo)}",
+                total,
+                TreinosPorTipoMarco));
         }
 
-        if (estatisticas.TreinosAntesDas7 >= TreinosMadrugador)
-        {
-            conquistas.Add(new ConquistaResponse(
-                Madrugador,
-                "Madrugador",
-                $"{TreinosMadrugador} treinos verificados antes das 7h"));
-        }
+        conquistas.Add(Criar(
+            Madrugador,
+            "Madrugador",
+            $"{TreinosMadrugador} treinos verificados antes das 7h",
+            estatisticas.TreinosAntesDas7,
+            TreinosMadrugador));
 
-        if (estatisticas.TreinosNoturnos >= TreinosNoturno)
-        {
-            conquistas.Add(new ConquistaResponse(
-                Noturno,
-                "Noturno",
-                $"{TreinosNoturno} treinos verificados a partir das {HoraNoturno}h"));
-        }
+        conquistas.Add(Criar(
+            Noturno,
+            "Noturno",
+            $"{TreinosNoturno} treinos verificados a partir das {HoraNoturno}h",
+            estatisticas.TreinosNoturnos,
+            TreinosNoturno));
 
-        if (estatisticas.TreinosFimDeSemana >= TreinosDeFimDeSemana)
-        {
-            conquistas.Add(new ConquistaResponse(
-                FimDeSemana,
-                "Fim de semana",
-                $"{TreinosDeFimDeSemana} treinos verificados no sábado ou no domingo"));
-        }
+        conquistas.Add(Criar(
+            FimDeSemana,
+            "Fim de semana",
+            $"{TreinosDeFimDeSemana} treinos verificados no sábado ou no domingo",
+            estatisticas.TreinosFimDeSemana,
+            TreinosDeFimDeSemana));
 
-        if (porTipo is not null
-            && porTipo.Count(par => par.Key != Tipos.Outro && par.Value > 0) >= TiposEcletico)
-        {
-            conquistas.Add(new ConquistaResponse(
-                Ecletico,
-                "Eclético",
-                $"Treinos verificados de {TiposEcletico} tipos diferentes"));
-        }
+        conquistas.Add(Criar(
+            Ecletico,
+            "Eclético",
+            $"Treinos verificados de {TiposEcletico} tipos diferentes",
+            porTipo?.Count(par => par.Key != Tipos.Outro && par.Value > 0) ?? 0,
+            TiposEcletico));
 
         return conquistas;
     }
+
+    /// <summary>
+    /// O que o Perfil mostra: as liberadas, na ordem de <see cref="Listar"/>, e depois as bloqueadas, da mais
+    /// perto à mais longe de sair. Nos níveis (Sequência, Treinos), só o próximo nível bloqueado aparece.
+    /// </summary>
+    public static IReadOnlyList<ConquistaResponse> Visiveis(IReadOnlyList<ConquistaResponse> todas)
+    {
+        var bloqueadas = todas.Where(c => !c.Liberada).ToList();
+        var proximas = bloqueadas
+            .Where(c => !bloqueadas.Any(outra => Familia(outra) == Familia(c) && outra.Alvo < c.Alvo))
+            .OrderByDescending(c => (double)c.Atual / c.Alvo);
+        return [.. todas.Where(c => c.Liberada), .. proximas];
+    }
+
+    /// <summary>Os níveis de uma família só diferem pelo número no fim do código (<c>Sequencia4</c>, <c>Sequencia8</c>).</summary>
+    private static string Familia(ConquistaResponse conquista) => conquista.Codigo.TrimEnd("0123456789".ToCharArray());
+
+    private static ConquistaResponse Criar(string codigo, string titulo, string descricao, int atual, int alvo) =>
+        new(codigo, titulo, descricao, Math.Min(Math.Max(atual, 0), alvo), alvo, atual >= alvo);
 
     private static string NomeDoTipo(string tipo) => tipo switch
     {

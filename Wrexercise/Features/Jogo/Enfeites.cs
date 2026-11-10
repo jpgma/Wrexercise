@@ -1,8 +1,20 @@
+using Wrexercise.Features.Usuarios.Contracts;
+
 namespace Wrexercise.Features.Jogo;
 
 /// <param name="Codigo">O código do Enfeite (a família): é o que a vitrine guarda.</param>
 /// <param name="Conquista">A conquista do nível mais alto que a pessoa tem; define o desenho.</param>
 internal readonly record struct EnfeiteLiberado(string Codigo, string Conquista, string Nome);
+
+/// <param name="Conquista">A conquista do primeiro nível, que libera o Enfeite; define o desenho.</param>
+/// <param name="Atual">O progresso da pessoa na conquista, de <paramref name="Alvo"/>.</param>
+internal readonly record struct EnfeiteBloqueado(
+    string Codigo,
+    string Conquista,
+    string Nome,
+    string TituloConquista,
+    int Atual,
+    int Alvo);
 
 /// <summary>
 /// Os Enfeites liberados pelas conquistas e a vitrine (docs/gamificacao.md §9). A vitrine guarda o código do
@@ -50,6 +62,29 @@ internal static class Enfeites
         }
 
         return liberados;
+    }
+
+    /// <summary>
+    /// Os Enfeites que a pessoa ainda não tem em nenhum nível, na ordem do catálogo, com o progresso na
+    /// conquista do primeiro nível. Quem já tem a muda não vê a planta com flor aqui: ela é evolução.
+    /// </summary>
+    public static IReadOnlyList<EnfeiteBloqueado> Bloqueados(IEnumerable<ProgressoConquista> progresso)
+    {
+        var porCodigo = progresso.ToDictionary(c => c.Codigo, StringComparer.Ordinal);
+        var bloqueados = new List<EnfeiteBloqueado>();
+        foreach (var (codigo, niveis) in Catalogo)
+        {
+            var temAlgum = niveis.Any(n => porCodigo.TryGetValue(n.Conquista, out var c) && c.Liberada);
+            if (temAlgum || !porCodigo.TryGetValue(niveis[0].Conquista, out var primeira))
+            {
+                continue;
+            }
+
+            bloqueados.Add(new EnfeiteBloqueado(
+                codigo, primeira.Codigo, niveis[0].Nome, primeira.Titulo, primeira.Atual, primeira.Alvo));
+        }
+
+        return bloqueados;
     }
 
     /// <summary>

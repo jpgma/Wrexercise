@@ -231,6 +231,7 @@ The user cannot change the e-mail.
 - Only users in the mode `Jogo` show a `Vitrine`. It is visible to the people who share an active group with the user. A user in the mode `App` shows nothing.
 - When a new `Enfeite` exists, the next visit to the scene plays an animation for the user only: the `Avatar` does `comemorando` and the `Enfeite` glows. The animation counts in the limit of 3 per visit. It does not play with reduced motion. Then the system marks the `Enfeite` as seen. Other members see the `Enfeite` in place, with no animation.
 - The profile page shows the `Enfeite` image on each achievement.
+- On the page `/perfil/avatar`, the user also sees the locked `Enfeite` items. A locked `Enfeite` is an `Enfeite` with no level unlocked. Each one shows a gray, faded image with a lock, the achievement that unlocks it ("Libera com …") and a progress bar with `atual/alvo`. The user cannot select a locked `Enfeite`. `GET /api/jogo/avatar` returns them in `bloqueados`. A `Vitrine` with a locked `Enfeite` gives the error `VITRINE_INVALIDA`.
 
 ### 3.3.7. Weekly rival (`Rival`)
 
@@ -529,8 +530,12 @@ The system calculates the achievements each time. It does not keep them in the d
 | `FimDeSemana` | 10 verified activities that started on Saturday or Sunday in the time zone of the group. |
 | `Ecletico` | Verified activities of 5 different types. The type `Outro` does not count. |
 
+- Each achievement has a progress: `atual` of `alvo`. The value `atual` is never more than `alvo`. The streak achievements use the best streak.
+- The profile shows the unlocked achievements first. Below them, the section "Próximas" shows the locked achievements, from the nearest to the farthest. Each one shows a gray, faded `Enfeite` image with a lock, the description and a progress bar.
+- For the achievements with levels (`Sequencia4`, `Sequencia8`, `Sequencia12` and `Treinos10`, `Treinos50`, `Treinos100`), the profile shows only the next locked level.
+- `GET /api/usuarios/eu/perfil` returns `atual`, `alvo` and `liberada` for each achievement.
 - Achievements do not change the ranking.
-- Only the user sees his or her achievements. Other members see only the `Enfeite` items in the `Vitrine` (see 3.3.6).
+- Only the user sees his or her achievements and progress. Other members see only the `Enfeite` items in the `Vitrine` (see 3.3.6).
 - When a user leaves a group, the user keeps the achievements from that group.
 
 ## 11. Notifications

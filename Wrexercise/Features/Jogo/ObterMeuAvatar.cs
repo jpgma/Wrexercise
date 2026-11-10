@@ -4,7 +4,7 @@ using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Jogo;
 
-/// <summary>O avatar de quem consulta: folha, vitrine, Enfeites liberados e os que ainda não viu.</summary>
+/// <summary>O avatar de quem consulta: folha, vitrine, Enfeites liberados, os que ainda não viu e os bloqueados.</summary>
 internal static class ObterMeuAvatar
 {
     public static async Task<IResult> HandleAsync(
@@ -28,7 +28,8 @@ internal static class ObterMeuAvatar
                 arquivo is null ? null : Avatares.GetUrl(arquivo),
                 Vitrines.ToResponses(estado.Liberados, estado.Vitrine),
                 estado.Liberados.Select(Vitrines.ToResponse).ToList(),
-                estado.Novos),
+                estado.Novos,
+                estado.Bloqueados.Select(Vitrines.ToResponse).ToList()),
             AppJsonContext.Default.MeuAvatarResponse);
     }
 }

@@ -10,14 +10,19 @@ import {
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { HistoryChart } from "@/components/HistoryChart";
+import { ProgressBar } from "@/components/ProgressBar";
 import { PageHeader, SectionTitle } from "@/components/PageHeader";
 import { useSessao } from "@/features/autenticacao";
 import { ConviteForm } from "@/features/convites";
 import { formatarSemanaCurta } from "@/features/desafios";
 import { papelLabels, useGrupos } from "@/features/grupos";
-import { EnergiaPerfil, EnfeiteIcone } from "@/features/jogo";
+import {
+  EnergiaPerfil,
+  EnfeiteBloqueadoIcone,
+  EnfeiteIcone,
+} from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
-import { useMeuPerfil } from "@/features/usuarios";
+import { useMeuPerfil, type Conquista } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
 
 function Numero({
@@ -38,12 +43,45 @@ function Numero({
   );
 }
 
+/** Uma conquista ainda bloqueada: só o desenho fica apagado, o texto continua legível. */
+function ConquistaBloqueada({ conquista }: { conquista: Conquista }) {
+  return (
+    <li className="card flex items-center gap-3 p-4">
+      <div className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface-muted">
+        <EnfeiteBloqueadoIcone conquista={conquista.codigo} tamanho={32} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">
+          {conquista.titulo}
+          <span className="sr-only"> (bloqueada)</span>
+        </p>
+        <p className="text-xs text-muted">{conquista.descricao}</p>
+        <div className="mt-2 flex items-center gap-2">
+          <ProgressBar
+            label={`Progresso em ${conquista.titulo}`}
+            valor={conquista.atual}
+            max={conquista.alvo}
+            className="flex-1"
+          />
+          <span aria-hidden="true" className="text-xs text-muted tabular-nums">
+            {conquista.atual}/{conquista.alvo}
+          </span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function PerfilPage() {
   const { data: usuario } = useSessao();
   const perfil = useMeuPerfil();
   const grupos = useGrupos();
 
   if (!usuario) return null;
+
+  const conquistas = perfil.data?.conquistas ?? [];
+  const liberadas = conquistas.filter((c) => c.liberada);
+  const proximas = conquistas.filter((c) => !c.liberada);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -140,14 +178,14 @@ export function PerfilPage() {
           {perfil.data && (
             <>
               <SectionTitle>Conquistas</SectionTitle>
-              {perfil.data.conquistas.length === 0 ? (
+              {liberadas.length === 0 ? (
                 <p className="card p-4 text-sm text-muted">
                   Nenhuma conquista ainda. A primeira pode vir já no próximo
                   treino.
                 </p>
               ) : (
                 <ul className="grid gap-3 sm:grid-cols-2">
-                  {perfil.data.conquistas.map((conquista, indice) => (
+                  {liberadas.map((conquista, indice) => (
                     <li
                       key={conquista.codigo}
                       className="card-sticker flex animate-pop items-center gap-3 p-4"
@@ -172,6 +210,22 @@ export function PerfilPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+
+              {proximas.length > 0 && (
+                <>
+                  <h3 className="mt-5 mb-2 text-sm font-semibold text-muted">
+                    Próximas
+                  </h3>
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {proximas.map((conquista) => (
+                      <ConquistaBloqueada
+                        key={conquista.codigo}
+                        conquista={conquista}
+                      />
+                    ))}
+                  </ul>
+                </>
               )}
             </>
           )}

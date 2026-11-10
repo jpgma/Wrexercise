@@ -24,19 +24,20 @@ internal static class Vitrines
     public sealed record EstadoVitrine(
         IReadOnlyList<EnfeiteLiberado> Liberados,
         IReadOnlyList<string> Vitrine,
-        IReadOnlyList<string> Novos);
+        IReadOnlyList<string> Novos,
+        IReadOnlyList<EnfeiteBloqueado> Bloqueados);
 
-    /// <summary>Os Enfeites liberados, a vitrine em vigor e o que a pessoa ainda não viu.</summary>
+    /// <summary>Os Enfeites liberados, a vitrine em vigor, o que a pessoa ainda não viu e o que falta liberar.</summary>
     public static async Task<EstadoVitrine> LoadEstadoAsync(
         NpgsqlConnection connection,
         Guid usuarioId,
         CancellationToken cancellationToken)
     {
-        var conquistas = await ConquistasDoUsuario.LoadCodigosAsync(connection, usuarioId, cancellationToken);
-        var liberados = Enfeites.Liberados(conquistas);
+        var progresso = await ConquistasDoUsuario.LoadProgressoAsync(connection, usuarioId, cancellationToken);
+        var liberados = Enfeites.Liberados(progresso.Where(c => c.Liberada).Select(c => c.Codigo));
         var (guardada, vistos) = await LoadGuardadaAsync(connection, usuarioId, cancellationToken);
         var (vitrine, novos) = Enfeites.Resolver(liberados, guardada, vistos);
-        return new EstadoVitrine(liberados, vitrine, novos);
+        return new EstadoVitrine(liberados, vitrine, novos, Enfeites.Bloqueados(progresso));
     }
 
     /// <summary>Guarda a vitrine e marca todos os Enfeites liberados como vistos.</summary>
@@ -62,6 +63,9 @@ internal static class Vitrines
 
     public static EnfeiteResponse ToResponse(EnfeiteLiberado enfeite) =>
         new(enfeite.Codigo, enfeite.Conquista, enfeite.Nome);
+
+    public static EnfeiteBloqueadoResponse ToResponse(EnfeiteBloqueado enfeite) =>
+        new(enfeite.Codigo, enfeite.Conquista, enfeite.Nome, enfeite.TituloConquista, enfeite.Atual, enfeite.Alvo);
 
     public static IReadOnlyList<EnfeiteResponse> ToResponses(
         IReadOnlyList<EnfeiteLiberado> liberados,

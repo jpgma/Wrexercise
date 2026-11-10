@@ -52,12 +52,20 @@ export function useRedefinirAvatarMembro(grupoId: string) {
   });
 }
 
+/** Um Enfeite que a pessoa ainda não tem, com o progresso na conquista que o libera. */
+export type EnfeiteBloqueado = Enfeite & {
+  tituloConquista: string;
+  atual: number;
+  alvo: number;
+};
+
 export type MeuAvatar = {
   folha: string | null;
   vitrine: Enfeite[];
   liberados: Enfeite[];
   /** Códigos dos Enfeites que a pessoa ainda não viu. */
   novos: string[];
+  bloqueados: EnfeiteBloqueado[];
 };
 
 export function useMeuAvatar() {

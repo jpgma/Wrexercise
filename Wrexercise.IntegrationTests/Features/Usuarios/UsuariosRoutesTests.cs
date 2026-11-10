@@ -127,8 +127,12 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
         Assert.Equal(8, perfil.Semanas.Count);
         Assert.Equal(12, perfil.Semanas.Sum(s => s.SessoesVerificadas));
 
-        // As medalhas contam dias com treino em cada grupo: hoje, nos dois grupos, são 2.
-        Assert.DoesNotContain(perfil.Conquistas, c => c.Codigo == "Treinos10");
+        // As medalhas contam dias com treino em cada grupo: hoje, nos dois grupos, são 2. A medalha de bronze
+        // aparece bloqueada, com o progresso; a de prata e a de ouro ainda não aparecem.
+        var bronze = Assert.Single(perfil.Conquistas, c => c.Codigo == "Treinos10");
+        Assert.False(bronze.Liberada);
+        Assert.Equal((2, 10), (bronze.Atual, bronze.Alvo));
+        Assert.DoesNotContain(perfil.Conquistas, c => c.Codigo is "Treinos50" or "Treinos100");
 
         // Antes da meta diária, cada atividade contava um.
         await _host.ExecuteAsync($"""
@@ -139,7 +143,25 @@ public sealed class UsuariosRoutesTests : IAsyncLifetime
             "/api/usuarios/eu/perfil",
             AppJsonContext.Default.MeuPerfilResponse,
             Token);
-        Assert.Contains(perfil!.Conquistas, c => c.Codigo == "Treinos10");
+        Assert.Contains(perfil!.Conquistas, c => c.Codigo == "Treinos10" && c.Liberada);
+        Assert.Contains(perfil.Conquistas, c => c.Codigo == "Treinos50" && !c.Liberada && c.Atual == 12);
+    }
+
+    [Fact]
+    public async Task MeuPerfil_SemTreinos_MostraAsProximasConquistasBloqueadas()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+
+        var perfil = await ana.Client.GetFromJsonAsync(
+            "/api/usuarios/eu/perfil",
+            AppJsonContext.Default.MeuPerfilResponse,
+            Token);
+
+        Assert.NotEmpty(perfil!.Conquistas);
+        Assert.All(perfil.Conquistas, c => Assert.False(c.Liberada));
+        Assert.All(perfil.Conquistas, c => Assert.Equal(0, c.Atual));
+        Assert.Contains(perfil.Conquistas, c => c.Codigo == "Sequencia4");
+        Assert.DoesNotContain(perfil.Conquistas, c => c.Codigo is "Sequencia8" or "Sequencia12");
     }
 
     [Theory]

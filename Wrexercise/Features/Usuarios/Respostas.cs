@@ -1,6 +1,13 @@
 namespace Wrexercise.Features.Usuarios;
 
-internal sealed record ConquistaResponse(string Codigo, string Titulo, string Descricao);
+/// <param name="Atual">O progresso da pessoa, limitado a <paramref name="Alvo"/>.</param>
+internal sealed record ConquistaResponse(
+    string Codigo,
+    string Titulo,
+    string Descricao,
+    int Atual,
+    int Alvo,
+    bool Liberada);
 
 internal sealed record SemanaConsistenciaResponse(DateOnly Inicio, int SessoesVerificadas, int SessoesProvisorias);
 

@@ -1,9 +1,41 @@
 import { useState } from "react";
+import { ProgressBar } from "@/components/ProgressBar";
 import { getErrorMessage } from "@/services/api";
+import { EnfeiteBloqueadoIcone } from "./EnfeiteBloqueadoIcone";
 import { EnfeiteIcone } from "./EnfeiteIcone";
-import { useMeuAvatar, useSalvarVitrine, type MeuAvatar } from "./useAvatares";
+import {
+  useMeuAvatar,
+  useSalvarVitrine,
+  type EnfeiteBloqueado,
+  type MeuAvatar,
+} from "./useAvatares";
 
 const maxVitrine = 3;
+
+/** Um Enfeite que ainda falta: não é botão, porque não pode entrar na vitrine. */
+function Bloqueado({ enfeite }: { enfeite: EnfeiteBloqueado }) {
+  return (
+    <li className="flex flex-col items-center gap-1 rounded-lg p-2 text-center">
+      <EnfeiteBloqueadoIcone conquista={enfeite.conquista} tamanho={64} />
+      <span className="text-2xs">
+        {enfeite.nome}
+        <span className="sr-only"> (bloqueado)</span>
+      </span>
+      <span className="text-2xs text-muted">
+        Libera com {enfeite.tituloConquista}
+      </span>
+      <ProgressBar
+        label={`Progresso para liberar ${enfeite.nome}`}
+        valor={enfeite.atual}
+        max={enfeite.alvo}
+        className="mt-1 w-full"
+      />
+      <span aria-hidden="true" className="text-2xs text-muted tabular-nums">
+        {enfeite.atual}/{enfeite.alvo}
+      </span>
+    </li>
+  );
+}
 
 function Editor({ avatar }: { avatar: MeuAvatar }) {
   const salvar = useSalvarVitrine();
@@ -103,6 +135,20 @@ function Editor({ avatar }: { avatar: MeuAvatar }) {
             </ol>
           )}
         </>
+      )}
+
+      {avatar.bloqueados.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold">Ainda bloqueados</h3>
+          <p className="text-xs text-muted">
+            Cada conquista nova libera um Enfeite para a vitrine.
+          </p>
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {avatar.bloqueados.map((enfeite) => (
+              <Bloqueado key={enfeite.codigo} enfeite={enfeite} />
+            ))}
+          </ul>
+        </div>
       )}
 
       {salvar.isError && (

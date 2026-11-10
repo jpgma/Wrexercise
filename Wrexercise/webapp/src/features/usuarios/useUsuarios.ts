@@ -6,6 +6,10 @@ export type Conquista = {
   codigo: string;
   titulo: string;
   descricao: string;
+  /** O progresso da pessoa, de 0 a `alvo`. */
+  atual: number;
+  alvo: number;
+  liberada: boolean;
 };
 
 export type MeuPerfil = {

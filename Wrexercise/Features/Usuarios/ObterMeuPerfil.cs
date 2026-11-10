@@ -46,7 +46,7 @@ internal static class ObterMeuPerfil
                 totalSegundos,
                 estatisticas.MelhorSequencia,
                 semanas,
-                ConquistasUsuario.Calcular(estatisticas)),
+                ConquistasUsuario.Visiveis(ConquistasUsuario.Listar(estatisticas))),
             AppJsonContext.Default.MeuPerfilResponse);
     }
 

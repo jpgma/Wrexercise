@@ -27,6 +27,7 @@ O novo mockup (decisão 0014) tem um Perfil com estatísticas, gráfico e conqui
   - 10, 50 e 100 treinos verificados;
   - Madrugador: 10 treinos verificados iniciados antes das 7h no fuso do grupo.
 - Conquistas não têm efeito na classificação. Sair de um grupo não remove o que a pessoa conquistou nele.
+- Atualização: o Perfil também mostra as conquistas ainda bloqueadas, com o progresso (`atual` de `alvo`). Nos níveis, só aparece o próximo. O cálculo continua na leitura, sem tabela nova, e só a própria pessoa vê.
 - Papel, transferência e remoção saem da lista do Grupo e vão para a página do membro. Sair do grupo continua na página do Grupo.
 - A lista de atividades do grupo aceita `?autorId=`, para a página do membro.
 - O desafio em destaque passa a ser o que está em andamento, e depois o próximo. Antes, com desafios em sequência, o agendado passaria na frente do atual.

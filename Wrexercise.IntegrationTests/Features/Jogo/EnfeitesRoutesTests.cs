@@ -54,6 +54,21 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
         Assert.Equal("Treinos10", meu.Vitrine[0].Conquista);
         Assert.Equal(["medalha"], meu.Liberados.Select(e => e.Codigo));
         Assert.Equal(["medalha"], meu.Novos);
+        Assert.DoesNotContain(meu.Bloqueados, e => e.Codigo == "medalha");
+        var planta = Assert.Single(meu.Bloqueados, e => e.Codigo == "planta");
+        Assert.Equal(("Sequencia4", 0, 4), (planta.Conquista, planta.Atual, planta.Alvo));
+    }
+
+    [Fact]
+    public async Task Vitrine_ComEnfeiteBloqueado_EInvalida()
+    {
+        var (ana, _) = await CriarAnaComMedalhaAsync();
+        Assert.Contains((await GetMeuAsync(ana)).Bloqueados, e => e.Codigo == "trofeu");
+
+        await ApiTestHost.AssertProblemAsync(
+            await PutVitrineAsync(ana, "medalha", "trofeu"),
+            HttpStatusCode.BadRequest,
+            "VITRINE_INVALIDA");
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using Wrexercise.Features.Jogo;
+using Wrexercise.Features.Usuarios.Contracts;
 
 namespace Wrexercise.UnitTests.Features.Jogo;
 
@@ -16,6 +17,27 @@ public sealed class EnfeitesTests
 
     [Fact]
     public void Liberados_SemConquistas_EVazio() => Assert.Empty(Enfeites.Liberados([]));
+
+    [Fact]
+    public void Bloqueados_OmiteFamiliasComAlgumNivel_ETrazOPrimeiroNivel()
+    {
+        ProgressoConquista[] progresso =
+        [
+            new("Sequencia12", "12 semanas seguidas", 5, 12, false),
+            new("Sequencia8", "8 semanas seguidas", 5, 8, false),
+            new("Sequencia4", "4 semanas seguidas", 4, 4, true),
+            new("Treinos100", "100 treinos", 7, 100, false),
+            new("Treinos50", "50 treinos", 7, 50, false),
+            new("Treinos10", "10 treinos", 7, 10, false),
+            new("Corredor", "Corredor", 10, 10, true),
+            new("Madrugador", "Madrugador", 3, 10, false),
+        ];
+
+        var bloqueados = Enfeites.Bloqueados(progresso);
+
+        Assert.Equal(["medalha", "despertador"], bloqueados.Select(e => e.Codigo));
+        Assert.Equal(new EnfeiteBloqueado("medalha", "Treinos10", "Medalha de bronze", "10 treinos", 7, 10), bloqueados[0]);
+    }
 
     [Fact]
     public void Resolver_EnfeitesNovosEntramNasVagas()

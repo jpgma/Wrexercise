@@ -3,6 +3,9 @@ using Wrexercise.Features.Progresso.Contracts;
 
 namespace Wrexercise.Features.Usuarios.Contracts;
 
+/// <summary>Uma conquista, liberada ou não, com o progresso da pessoa (<c>Atual</c> de <c>Alvo</c>).</summary>
+internal readonly record struct ProgressoConquista(string Codigo, string Titulo, int Atual, int Alvo, bool Liberada);
+
 /// <summary>
 /// As conquistas de uma pessoa, calculadas na leitura sobre as atividades <c>Verificada</c> de todos os
 /// grupos (inclusive os que ela deixou), com horários no fuso do grupo de cada atividade.
@@ -10,13 +13,16 @@ namespace Wrexercise.Features.Usuarios.Contracts;
 /// </summary>
 internal static class ConquistasDoUsuario
 {
-    public static async Task<IReadOnlyList<string>> LoadCodigosAsync(
+    /// <summary>Todas as conquistas, liberadas ou não, com o progresso da pessoa.</summary>
+    public static async Task<IReadOnlyList<ProgressoConquista>> LoadProgressoAsync(
         NpgsqlConnection connection,
         Guid usuarioId,
         CancellationToken cancellationToken)
     {
         var estatisticas = await LoadEstatisticasAsync(connection, usuarioId, cancellationToken);
-        return ConquistasUsuario.Calcular(estatisticas).Select(c => c.Codigo).ToList();
+        return ConquistasUsuario.Listar(estatisticas)
+            .Select(c => new ProgressoConquista(c.Codigo, c.Titulo, c.Atual, c.Alvo, c.Liberada))
+            .ToList();
     }
 
     internal static async Task<EstatisticasConquistas> LoadEstatisticasAsync(
