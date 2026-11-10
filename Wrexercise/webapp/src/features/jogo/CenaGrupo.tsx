@@ -41,13 +41,17 @@ const folgaInferior = 22;
 const { ancora, corpo } = formatoFolha;
 /** Altura do corpo acima dos pés, em px da folha. */
 const alturaCorpo = ancora.y - corpo.topo;
+/** O quadro aparece sempre em 2×, o tamanho de um grupo cheio (10 membros), qualquer que seja o grupo. */
+const escala = 2;
 
 /** Elipse em pé: ocupa a altura toda da praça, deixando espaço para o avatar (o corpo × escala) e o nome. */
-function getElipse(escala: number) {
+const elipse = (() => {
   const minY = topoDosPes + alturaCorpo * escala;
   const maxY = altura - folgaInferior;
   return { centroY: (minY + maxY) / 2, raioY: (maxY - minY) / 2 };
-}
+})();
+/** Centro da praça: para onde olha quem está parado. */
+const centro: Posicao = { x: centroX, y: elipse.centroY };
 
 function mulberry32(semente: number): () => number {
   let a = semente;
@@ -97,13 +101,9 @@ function getRivaisEmCena(
 }
 
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
-function posicionar(
-  membros: MembroCena[],
-  usuarioId: string,
-  escala: number,
-): Posicao[] {
+function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
   const n = membros.length;
-  const { centroY, raioY } = getElipse(escala);
+  const { centroY, raioY } = elipse;
   if (n === 1) return [{ x: centroX, y: centroY }];
   const outros = membros.filter((m) => m.usuarioId !== usuarioId);
   const ordenados = [
@@ -126,18 +126,13 @@ function posicionar(
 function AvatarCena({
   membro,
   posicao,
-  escala,
   reduzido,
-  centro,
   atuacao,
   brilho,
   onToque,
 }: {
   membro: MembroCena;
   posicao: Posicao;
-  /** Centro da praça: para onde olha quem está parado. */
-  centro: Posicao;
-  escala: number;
   reduzido: boolean;
   atuacao: Atuacao | undefined;
   /** O Enfeite do avatar brilha: é o Enfeite novo de quem vê a cena. */
@@ -146,8 +141,6 @@ function AvatarCena({
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
   const enfeite = useVitrine(membro.usuarioId)[0];
-  // O Enfeite (32 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
-  const escalaEnfeite = escala >= 3 ? 2 : 1;
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   const parado = membro.pose === "parado";
 
@@ -227,12 +220,12 @@ function AvatarCena({
       {enfeite && (
         <EnfeiteIcone
           conquista={enfeite.conquista}
-          tamanho={16 * escalaEnfeite}
+          tamanho={16}
           brilho={brilho}
           className="pointer-events-none absolute block"
           style={{
             left: posicao.x + 9 * escala,
-            top: posicao.y - 16 * escalaEnfeite - 2,
+            top: posicao.y - 16 - 2,
             zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)) + 1,
             ...deslocamento,
           }}
@@ -308,13 +301,7 @@ export function CenaGrupo({
 }
 
 /** A carta da encenação: voa até quem recebe, cai no lugar ao ser aceita ou sai pelo lado. */
-function CartaVoando({
-  carta,
-  escala,
-}: {
-  carta: CartaEmCena;
-  escala: number;
-}) {
+function CartaVoando({ carta }: { carta: CartaEmCena }) {
   // A carta (40 px) fica na altura do peito, centrada no avatar.
   const acima = 13 * escala + 20;
   return (
@@ -364,18 +351,13 @@ function Praca({
   );
 
   const { membros } = cena;
-  const escala = membros.length <= 5 ? 3 : 2;
   const posicoes = useMemo(
-    () => posicionar(membros, usuarioId, escala),
-    [membros, usuarioId, escala],
+    () => posicionar(membros, usuarioId),
+    [membros, usuarioId],
   );
   const porUsuario = useMemo(
     () => new Map(membros.map((m, i) => [m.usuarioId, posicoes[i]!])),
     [membros, posicoes],
-  );
-  const centro = useMemo(
-    () => ({ x: centroX, y: getElipse(escala).centroY }),
-    [escala],
   );
   const encenacao = useEncenacoes({
     jogadas: jogadas.data,
@@ -420,17 +402,13 @@ function Praca({
               key={membro.usuarioId}
               membro={membro}
               posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
-              escala={escala}
               reduzido={reduzido}
-              centro={centro}
               atuacao={encenacao.atuacoes.get(membro.usuarioId)}
               brilho={encenacao.brilho && membro.usuarioId === usuarioId}
               onToque={() => setTocado(membro)}
             />
           ))}
-          {encenacao.carta && (
-            <CartaVoando carta={encenacao.carta} escala={escala} />
-          )}
+          {encenacao.carta && <CartaVoando carta={encenacao.carta} />}
           {encenacao.ativa && (
             // Tocar na praça pula a encenação: ela nunca prende a pessoa.
             <button

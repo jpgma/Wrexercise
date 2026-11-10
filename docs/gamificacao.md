@@ -73,7 +73,7 @@ A tela não tem um botão próprio de "Registrar atividade": o registro já est�
 - Vista 2,5D, de cima e de lado: o chão é uma praça vista de cima, e os avatares são desenhados de lado.
 - Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar olha para o centro da elipse: quem fica embaixo aparece de costas (`norte`), e quem fica em cima, de frente (`sul`). Nas encenações, ele olha para onde anda ou para o alvo.
 - A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente.
-- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. Grupos de até 5 pessoas usam 3×.
+- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. A escala é sempre 2×, qualquer que seja o tamanho do grupo.
 - O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
 - Tocar num avatar mostra a vitrine de Enfeites e dá acesso à página do membro. No modo Jogo, também permite jogar uma carta da Mão para esse colega.
 
@@ -509,7 +509,7 @@ Fechadas em `decisoes/0033-regras-de-energia-e-jogadas.md`: valores das recompen
 1. ~~Tabela da MUDANÇA DE PLANOS~~ — fechada (§6.1).
 2. **Semana das missões para quem está em vários grupos** (G5). Recomendação: avaliar cada atividade na semana do fuso do seu grupo. Falta definir qual grupo serve de referência para a semana, porque o aplicativo não tem um "grupo em destaque".
 3. **Madrugada.** O bônus antes das 06:00 somado à carta ANTES DAS 8 pode estimular treino de madrugada em vez de constância. Revisar depois de observar o uso.
-4. **Enfeite e cena com 10 pessoas.** Aberta: implementado com o Enfeite de 16 px ao lado do avatar na escala 2; falta conferir num celular de 360 px se o Enfeite ao lado do avatar não polui o círculo. Se poluir, mostrar só ao tocar no avatar.
+4. **Enfeite e cena com 10 pessoas.** Aberta: implementado com o Enfeite de 16 px ao lado do avatar (escala fixa 2×, em todos os grupos); falta conferir num celular de 360 px se o Enfeite ao lado do avatar não polui o círculo. Se poluir, mostrar só ao tocar no avatar.
 5. ~~Limites das conquistas novas~~ — fechada: 10 por tipo (`decisoes/0037-avatar-importado-e-enfeites.md`). Rever com os dados reais.
 6. **Atividades antigas de "Treino em casa".** A migração 014 as trocou por `Calistenia`, então elas contam para `PesoDoCorpo`. Recomendação: aceitar, porque quase sempre eram treinos com o peso do corpo.
 
