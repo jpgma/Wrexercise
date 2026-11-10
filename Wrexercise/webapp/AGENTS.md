@@ -38,6 +38,8 @@ src/
 
 Todo trabalho de UI/UX (telas, componentes, layout, cores, tipografia, animação, acessibilidade, revisão visual) começa carregando a skill `ui-ux-pro-max` (`.claude/skills/ui-ux-pro-max/`). Use as buscas por `--domain` e `--stack react`/`--stack html-tailwind` e, antes de entregar, o checklist de `references/pro-rules.md`.
 
+A cópia versionada no repositório é a única fonte. O plugin global de mesmo nome fica desligado em `.claude/settings.json`, para não carregar descrições de skills duplicadas em toda sessão.
+
 As recomendações dela não se sobrepõem às regras deste repositório. Em caso de conflito, valem estas regras, o mockup e as ADRs 0014 e 0027. Em particular:
 
 - Não use `--design-system --persist`: os tokens ficam em `styles/index.css`, sem pasta `design-system/`.
