@@ -111,7 +111,11 @@ O personagem tem cerca de 0,6 de largura para 1 de altura. Uma linha só com 6 o
 - Os quadros intermediários mostram o movimento de forma clara, e não a pose parada com um tremor de 1 pixel.
 - Depois da redução para 33 px (mesma escala da `rotations`), os pés ficam na linha 45, salvo nos quadros que levantam um pé ou saltam.
 
-O resultado ainda é um esboço: importe os quadros no Aseprite (pelo `pixel-plugin`), acerte-os e exporte o `.aseprite` com as tags `Acao-direcao`, como em `prompts-pixellab.md` §3.
+### Redução
+
+`python gemini.py` lê todas as folhas de `fonte/gemini/` e grava `saida/gemini/<animacao>-<direcao>.png`: os quadros lado a lado, 64×64 cada, na escala da `rotations` (a altura do 1º quadro vira a altura de `fonte/<direcao>.png`), com os pés do 1º quadro na linha 45, a paleta fixa `PALETA` do `build.py` e o contorno de 1 px refeito. Confira `preview/gemini-<animacao>-<direcao>-6x.png`, que mostra a pose parada ao lado dos quadros.
+
+Depois, importe a tira no Aseprite (pelo `pixel-plugin`), acerte o que faltar e exporte o `.aseprite` com as tags `Acao-direcao`, como em `prompts-pixellab.md` §3.
 
 ### `parado` — Idle_Breathing
 
