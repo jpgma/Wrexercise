@@ -73,6 +73,8 @@ pixel-art/                  # scripts Python que geram a arte do Jogo (avatar-ba
 
 Arte em pixel do Jogo: use a skill `.claude/skills/pixel-art-studio/` (ver `docs/avatar-kit.md`). Cada arte tem um `pixel-art/<slug>/build.py` versionado; nunca edite o PNG à mão. Arquivos `.aseprite`/`.ase` usam sempre o plugin `pixel-plugin` (configuração em `docs/avatar-kit.md` §6).
 
+Especificações com Spec Kit: as skills `speckit-*` em `.claude/skills/` (`/speckit-specify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`) usam `.specify/` e gravam em `specs/NNN-nome/`. A constituição em `.specify/memory/constitution.md` apenas aponta para este arquivo e para `docs/`. Atualize com `specify init --here --force --integration claude --script ps`.
+
 Não recrie `src/`, `tests/` ou `web/`: projetos ficam na raiz e o frontend fica em `Wrexercise/webapp/`. Ver `docs/decisoes/0004-estrutura-do-repositorio.md`.
 
 Fatias planejadas, criadas apenas na fase correspondente de `docs/arquitetura.md` §18: `Autenticacao`, `Usuarios`, `Grupos`, `Convites`, `Desafios`, `Atividades`, `Reacoes`, `Progresso`, `Feed`, `Notificacoes`, `Jogo` (opcional, fases em `docs/gamificacao.md`).
