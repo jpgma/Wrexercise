@@ -4,13 +4,15 @@ MCP do pixel-plugin.
 Fontes (quadros de 64×64, pés na mesma linha):
 - fonte/base-a.aseprite (PixelLab): rotações, andar (8 direções) e correr (sul e sudeste);
 - fonte/base-b.aseprite (PixelLab): comemorar (8 direções);
-- saida/gemini/<animacao>-<direcao>.png (gemini.py): as demais, em até 5 direções, mais o
-  correr na direção leste.
+- fonte/<animacao>/<direcao>/frame_NNN.png (PixelLab): correr nas direções leste, norte,
+  nordeste, noroeste e oeste; têm prioridade sobre as outras fontes;
+- saida/gemini/<animacao>-<direcao>.png (gemini.py): as demais, em até 5 direções.
 As direções que faltam saem espelhando a do outro lado: oeste do leste, noroeste do nordeste e
 sudoeste do sudeste. Uma direção sem fonte nem espelho fica de fora.
 
 Uso: python montar.py   (exige Pillow e o pixel-plugin configurado)
-Gera uma camada e uma tag por animação e direção, por exemplo andar-north-west.
+Gera uma camada e uma tag por animação e direção, por exemplo andar-north-west. As rotações
+ficam numa única tag, rotacao, com um quadro por direção na ordem de DIRECOES.
 """
 
 from __future__ import annotations
@@ -37,7 +39,7 @@ ESPELHO = {"west": "east", "north-west": "north-east", "south-west": "south-east
 # (animação, fonte, duração do quadro em ms). Fonte: "gemini", ou (arquivo .aseprite, prefixo da
 # tag). Durações de docs/avatar-formato.md §2; correr e rotações não estão lá.
 ANIMACOES = [
-    ("rotacoes", ("base-a", "rotations"), 200),
+    ("rotacao", ("base-a", "rotations"), 200),
     ("parado", "gemini", 200),
     ("andar", ("base-a", "Walking"), 100),
     ("correr", ("base-a", "Running"), 100),
@@ -69,7 +71,7 @@ def ler_aseprite(a: Aseprite, nome: str, tmp: pathlib.Path) -> dict[str, list[Im
 
 def direcoes_da_fonte(animacao: str, fonte, aseprites: dict) -> dict[str, list[Image.Image]]:
     out = {}
-    if fonte == "gemini" or animacao == "correr":  # o correr leste vem do Gemini
+    if fonte == "gemini":
         for d in DIRECOES:
             png = GEMINI / f"{animacao}-{d.replace('-', '')}.png"
             if png.exists():
@@ -81,6 +83,11 @@ def direcoes_da_fonte(animacao: str, fonte, aseprites: dict) -> dict[str, list[I
             out.update({d: [q] for d, q in zip(DIRECOES, tags[prefixo])})
         else:
             out.update({d: tags[f"{prefixo}-{d}"] for d in DIRECOES if f"{prefixo}-{d}" in tags})
+    pasta = AQUI / "fonte" / animacao
+    for d in DIRECOES:
+        pngs = sorted((pasta / d).glob("frame_*.png"))
+        if pngs:
+            out[d] = [Image.open(png).convert("RGBA") for png in pngs]
     for d, origem in ESPELHO.items():
         if d not in out and origem in out:
             out[d] = [ImageOps.mirror(q) for q in out[origem]]
@@ -93,7 +100,11 @@ def main():
         aseprites = {nome: ler_aseprite(a, nome, tmp) for nome in ("base-a", "base-b")}
         tags = []  # (nome, duração, quadros)
         for animacao, fonte, ms in ANIMACOES:
-            for d, quadros in direcoes_da_fonte(animacao, fonte, aseprites).items():
+            por_direcao = direcoes_da_fonte(animacao, fonte, aseprites)
+            if animacao == "rotacao":  # um quadro por direção, numa tag só
+                tags.append((animacao, ms, [q for quadros in por_direcao.values() for q in quadros]))
+                continue
+            for d, quadros in por_direcao.items():
                 tags.append((f"{animacao}-{d}", ms, quadros))
 
         r = a("create_canvas", width=QUADRO, height=QUADRO, color_mode="rgb")
