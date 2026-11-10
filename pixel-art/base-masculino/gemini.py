@@ -54,8 +54,27 @@ def magenta(p) -> bool:
     return r > 150 and b > 150 and g < 110
 
 
-def mais_proxima(p, paleta):
-    return min(paleta, key=lambda c: sum((a - b) ** 2 for a, b in zip(p, c)))
+def marrom(p) -> bool:
+    """Escuro avermelhado (cabelo e sobrancelhas). A gola e a calça são cinzas: o verde e o azul
+    ficam perto do vermelho (no Gemini, vermelho até 1,36× o verde)."""
+    r, g, b = p
+    return r < 95 and r >= 1.4 * g and b < 0.85 * r
+
+
+def permitidas(p, paleta) -> list[int]:
+    """Índices de PALETA (mais o contorno no fim) que o pixel pode receber: marrom só vira
+    cabelo ou contorno, e o resto nunca vira cabelo. Sem isso, num cabelo desenhado mais claro
+    a gola calibrada toma o cabelo, e separar_gola o leva para a sombra da calça."""
+    cabelo = {i for i, nome in enumerate(PALETA) if nome.startswith("cabelo")}
+    if marrom(p):
+        return sorted(cabelo | {len(paleta) - 1})
+    return [i for i in range(len(paleta)) if i not in cabelo]
+
+
+def mais_proxima_permitida(p, centros) -> int:
+    return min(
+        permitidas(p, centros), key=lambda k: sum((a - b) ** 2 for a, b in zip(p, centros[k]))
+    )
 
 
 def calibrar(px, w, h, paleta, passo=4, rodadas=6) -> list[tuple]:
@@ -69,7 +88,7 @@ def calibrar(px, w, h, paleta, passo=4, rodadas=6) -> list[tuple]:
     for _ in range(rodadas):
         soma = [[0.0, 0.0, 0.0, 0] for _ in centros]
         for p, n in amostra.items():
-            k = centros.index(mais_proxima(p, centros))
+            k = mais_proxima_permitida(p, centros)
             s = soma[k]
             s[0] += p[0] * n
             s[1] += p[1] * n
@@ -182,7 +201,7 @@ def processar(arq: pathlib.Path) -> None:
 
     def cor(p):
         if p not in cache:
-            cache[p] = paleta[calibrada.index(mais_proxima(p, calibrada))]
+            cache[p] = paleta[mais_proxima_permitida(p, calibrada)]
         return cache[p]
 
     # 1. Caixa de cada quadro; a escala sai do 1º (pose parada), com uma estimativa da área
