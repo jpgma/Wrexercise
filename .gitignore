@@ -17,6 +17,8 @@ Wrexercise/avatares-dev/
 
 # Segredos e configuração local
 .env
+# Credenciais antigas do Podroid (aposentado)
+a14.txt
 !.env.example
 
 # Ferramentas

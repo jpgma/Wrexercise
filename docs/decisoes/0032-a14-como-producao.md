@@ -1,6 +1,6 @@
 # 0032 — Galaxy A14 como produção, em `wx.jpgmaraujo.com.br`
 
-**Status:** DECIDIDA
+**Status:** DECIDIDA · Banco e túnel atualizados pela 0044 (PostgreSQL e túnel do `Environment`).
 
 ## Contexto
 

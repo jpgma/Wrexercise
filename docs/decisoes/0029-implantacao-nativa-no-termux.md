@@ -1,6 +1,6 @@
 # 0029 — Implantação nativa no Termux (Android, sem VM)
 
-**Status:** DECIDIDA
+**Status:** DECIDIDA · Banco e túnel atualizados pela 0044 (PostgreSQL e túnel do `Environment`).
 
 ## Contexto
 

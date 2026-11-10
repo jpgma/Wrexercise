@@ -1,41 +1,40 @@
 #!/bin/sh
-# Executado no Termux (Android, sem root) por run.bat --ssh com SO "termux". POSIX sh.
-# Roda PostgreSQL, app e túnel da Cloudflare como processos nativos, sem VM e sem Docker.
-# Ver docs/decisoes/0029-implantacao-nativa-no-termux.md.
+# Executado no Termux (Android, sem root) por run.bat --ssh. POSIX sh.
+# Roda o app como processo nativo, sem VM e sem Docker. O PostgreSQL e o túnel da Cloudflare são do
+# repositório Environment (~/ambiente), compartilhados com os outros apps do telefone.
+# Ver docs/decisoes/0029-implantacao-nativa-no-termux.md e 0044-postgres-e-tunel-do-environment.md.
 #
-#   remote-termux.sh implantar <nome-tunel> <id-tunel>   troca o app, migra e (re)inicia tudo
-#   remote-termux.sh iniciar                              sobe o que não estiver rodando (Termux:Boot usa este)
+#   remote-termux.sh implantar                troca o app (se veio app.novo), migra e (re)inicia
+#   remote-termux.sh iniciar                  sobe o app se não estiver rodando (Termux:Boot usa este)
 #   remote-termux.sh parar
-#   remote-termux.sh backup | restore AAAAMMDD-HHMMSS     usa deploy/backup.sh
-#   remote-termux.sh reset-senha <email>                  gera o link de redefinição de senha
+#   remote-termux.sh backup                   evidências e avatares (o banco fica com o Environment)
+#   remote-termux.sh restore AAAAMMDD-HHMMSS  evidências e avatares; o banco: ambiente.sh restore wrexercise
+#   remote-termux.sh reset-senha <email>      gera o link de redefinição de senha
 #   remote-termux.sh status
-#   remote-termux.sh stats                                CPU, memória, banco, disco, túnel e backups (stats.bat usa este)
+#   remote-termux.sh stats                    CPU, memória, banco, disco e backups (stats.bat usa este)
 set -eu
 
 base=$HOME/wrexercise
 dados=$base/dados
+ambiente="sh $HOME/ambiente/deploy/ambiente.sh"
 cd "$base"
 
 # O binário Native AOT é glibc; o Termux é bionic. O grun (pacote glibc-runner) faz a ponte sem proot.
 exigir() {
   faltam=
-  for c in postgres initdb pg_ctl psql pg_dump cloudflared grun curl; do
+  for c in psql grun curl; do
     command -v "$c" >/dev/null 2>&1 || faltam="$faltam $c"
   done
   if [ -n "$faltam" ]; then
     echo "ERRO: faltam no Termux:$faltam" >&2
     echo "Instale e rode de novo:" >&2
-    echo "  pkg install -y glibc-repo && pkg update -y && pkg install -y postgresql cloudflared glibc-runner curl" >&2
+    echo "  pkg install -y glibc-repo && pkg update -y && pkg install -y postgresql glibc-runner curl" >&2
     exit 1
   fi
-  # O diretório de dados só abre na mesma versão maior: um "pkg upgrade" para outra versão deixaria o banco ilegível.
-  case $(postgres --version) in
-    *" 18."*) ;;
-    *)
-      echo "ERRO: o PostgreSQL do Termux precisa ser o 18 (testado com 18.6), não: $(postgres --version)" >&2
-      exit 1 ;;
-  esac
-  apt-mark showhold 2>/dev/null | grep -qx postgresql     || echo "AVISO: fixe a versão com: apt-mark hold postgresql" >&2
+  if [ ! -f "$HOME/ambiente/deploy/ambiente.sh" ]; then
+    echo "ERRO: o Environment (PostgreSQL e túnel) não está instalado. No repositório Environment: run.bat implantar" >&2
+    exit 1
+  fi
 }
 
 # Preserva a senha do banco entre implantações; ela nunca sai do telefone.
@@ -69,26 +68,13 @@ parar_tarefa() {
   fi
 }
 
-iniciar_banco() {
-  if [ ! -f "$dados/postgres/PG_VERSION" ]; then
-    mkdir -p "$dados/postgres"
-    (umask 077; printf '%s\n' "$DB_PASSWORD" > run/pw)
-    initdb -D "$dados/postgres" --auth=scram-sha-256 -U wrexercise --pwfile=run/pw >/dev/null
-    rm -f run/pw
-  fi
-  if ! pg_ctl -D "$dados/postgres" status >/dev/null 2>&1; then
-    # synchronous_commit=off: um corte de energia perde no máximo ~0,5 s de commits, sem corromper o banco.
-    pg_ctl -D "$dados/postgres" -l log/postgres.log -w -t 120 \
-      -o "-c listen_addresses=127.0.0.1 -c max_connections=20 -c shared_buffers=128MB -c effective_cache_size=1GB \
--c work_mem=4MB -c maintenance_work_mem=64MB -c max_wal_size=512MB -c checkpoint_completion_target=0.9 \
--c synchronous_commit=off -c wal_compression=on" start >/dev/null
-  fi
-  if [ "$(PGPASSWORD=$DB_PASSWORD psql -h 127.0.0.1 -U wrexercise -d postgres -Atc "select 1 from pg_database where datname='wrexercise'")" != 1 ]; then
-    PGPASSWORD=$DB_PASSWORD createdb -h 127.0.0.1 -U wrexercise wrexercise
-  fi
+# Espera o PostgreSQL do Environment (no boot ele pode subir depois) e garante papel, banco e senha.
+preparar_banco() {
+  $ambiente aguardar
+  printf '%s\n' "$DB_PASSWORD" | $ambiente provisionar wrexercise >/dev/null
 }
 
-# O app e o túnel leem a configuração do ambiente, como nos contêineres de compose.yaml.
+# O app lê a configuração do ambiente, como nos contêineres de compose.yaml.
 ambiente_app() {
   export ConnectionStrings__Database="Host=127.0.0.1;Port=5432;Database=wrexercise;Username=wrexercise;Password=$DB_PASSWORD;Maximum Pool Size=10"
   export Evidencias__Diretorio=$dados/evidencias
@@ -104,54 +90,48 @@ iniciar() {
   ler_env
   # Sem o wake lock, o Android suspende a CPU com a tela apagada.
   command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock || true
-  iniciar_banco
+  preparar_banco
   ambiente_app
   iniciar_tarefa app grun "$base/app/Wrexercise"
-  tunel=$(cat tunel.txt)
-  iniciar_tarefa tunel cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8080 run \
-    --cred-file "$base/tunnel/${tunel%% *}.json" "${tunel##* }"
 }
 
 parar() {
-  parar_tarefa tunel
   parar_tarefa app
   pkill -f "$base/app/Wrexercise" 2>/dev/null || true
-  pkill -f "cloudflared tunnel" 2>/dev/null || true
-  pg_ctl -D "$dados/postgres" -m fast -w stop >/dev/null 2>&1 || true
 }
 
 implantar() {
   exigir
   mkdir -p run log "$dados"
-  echo "$1 $2" > tunel.txt
-  chmod 600 tunel.txt "tunnel/$1.json"
-  # Credenciais de túneis renomeados ou abandonados não ficam no telefone.
-  find tunnel -maxdepth 1 -type f -name '*.json' ! -name "$1.json" -delete
   ler_env
   parar
   # run.bat envia o app novo em app.novo; o anterior fica em app.antigo para reverter.
-  rm -rf app.antigo
-  [ -d app ] && mv app app.antigo
-  mv app.novo app
+  # Sem app.novo (run.bat --ssh --scripts), só os scripts mudaram e o app atual continua.
+  if [ -d app.novo ]; then
+    rm -rf app.antigo
+    [ -d app ] && mv app app.antigo
+    mv app.novo app
+  fi
   chmod +x app/Wrexercise
-  iniciar_banco
+  preparar_banco
   ambiente_app
   mkdir -p "$dados/evidencias" "$dados/avatares"
   grun "$base/app/Wrexercise" migrate
   iniciar
-  # Termux:Boot roda tudo em ~/.termux/boot/ ao ligar o telefone.
+  # Termux:Boot roda ~/.termux/boot/ em ordem alfabética, depois do 00-ambiente.sh do Environment.
   mkdir -p "$HOME/.termux/boot"
-  printf '#!/data/data/com.termux/files/usr/bin/sh\nexec sh %s iniciar\n' "$base/deploy/remote-termux.sh" > "$HOME/.termux/boot/wrexercise.sh"
-  chmod 700 "$HOME/.termux/boot/wrexercise.sh"
+  rm -f "$HOME/.termux/boot/wrexercise.sh"
+  printf '#!/data/data/com.termux/files/usr/bin/sh\nexec sh %s iniciar\n' "$base/deploy/remote-termux.sh" > "$HOME/.termux/boot/20-wrexercise.sh"
+  chmod 700 "$HOME/.termux/boot/20-wrexercise.sh"
+  # O túnel agora é do Environment: a credencial antiga não fica aqui.
+  rm -rf tunnel tunel.txt
 }
 
 status() {
   curl -fs --max-time 5 http://127.0.0.1:8080/health || echo "app sem resposta"
   echo
-  pg_ctl -D "$dados/postgres" status | head -1 || true
-  for p in app tunel; do
-    if [ -f "run/$p.pid" ] && kill -0 "$(cat "run/$p.pid")" 2>/dev/null; then echo "$p: rodando"; else echo "$p: parado"; fi
-  done
+  if [ -f run/app.pid ] && kill -0 "$(cat run/app.pid)" 2>/dev/null; then echo "app: rodando"; else echo "app: parado"; fi
+  if pg_isready -q -h 127.0.0.1 -p 5432 2>/dev/null; then echo "PostgreSQL (Environment): aceita conexões"; else echo "PostgreSQL (Environment): sem resposta"; fi
   free -m | head -2
 }
 
@@ -234,8 +214,8 @@ stats() {
 
   titulo "Processos (amostra de ${amostra}s)"
   p_app=$(pids_de -f "$base/app/Wrexercise")
-  # O PID do postmaster está em postmaster.pid; os demais processos do banco são filhos dele.
-  pm=$(head -n 1 "$dados/postgres/postmaster.pid" 2>/dev/null)
+  # O PostgreSQL é compartilhado com os outros apps; o PID do postmaster está no cluster do Environment.
+  pm=$(head -n 1 "$HOME/ambiente/postgres/postmaster.pid" 2>/dev/null)
   p_pg=
   if [ -n "$pm" ] && [ -d "/proc/$pm" ]; then p_pg="$pm $(pgrep -P "$pm" 2>/dev/null | tr '\n' ' ')"; fi
   p_tun=$(pids_de -x cloudflared)
@@ -245,7 +225,7 @@ stats() {
   linha_processo app "$p_app" "$a_app" "$d_app"
   linha_processo postgres "$p_pg" "$a_pg" "$d_pg"
   linha_processo cloudflared "$p_tun" "$a_tun" "$d_tun"
-  echo "(RSS do PostgreSQL soma a memória compartilhada de cada processo; PSS divide-a, quando o Android deixa ler.)"
+  echo "(PostgreSQL e túnel são compartilhados com os outros apps. Detalhes: sh ~/ambiente/deploy/ambiente.sh stats)"
 
   titulo "Aplicação"
   for rota in health ready; do
@@ -256,22 +236,12 @@ stats() {
     echo "Última linha do log: $(tail -n 1 log/app.log | cut -c1-160)"
   fi
 
-  titulo "Túnel"
-  if [ -f log/tunel.log ]; then
-    echo "Conexões registradas no log atual: $(grep -c 'Registered tunnel connection' log/tunel.log)"
-    echo "Erros nas últimas 200 linhas: $(tail -n 200 log/tunel.log | grep -c ' ERR ')"
-    echo "Último erro: $(grep ' ERR ' log/tunel.log | tail -n 1 | cut -c1-160)"
-  else
-    echo "Sem log do túnel."
-  fi
-  echo "Túnel configurado: $(cat tunel.txt 2>/dev/null | cut -d' ' -f1)"
-
   titulo "Banco de dados"
-  PGPASSWORD=$DB_PASSWORD psql -h 127.0.0.1 -U wrexercise -d wrexercise -At -F ' | ' 2>&1 <<'SQL'
+  PGPASSWORD=$DB_PASSWORD psql -X -h 127.0.0.1 -U wrexercise -d wrexercise -At -F ' | ' 2>&1 <<'SQL'
 select 'Versão', split_part(version(), ' on ', 1);
 select 'PostgreSQL ativo há', date_trunc('second', now() - pg_postmaster_start_time());
 select 'Tamanho do banco', pg_size_pretty(pg_database_size('wrexercise'));
-select 'Conexões', count(*) || ' de ' || current_setting('max_connections') from pg_stat_activity where datname = 'wrexercise';
+select 'Conexões', count(*) || ' do app; teto do servidor ' || current_setting('max_connections') from pg_stat_activity where datname = 'wrexercise';
 select '  por situação', coalesce(state, 'sem situação'), count(*) from pg_stat_activity where datname = 'wrexercise' group by state;
 select 'Acerto no cache', coalesce(round(100.0 * blks_hit / nullif(blks_hit + blks_read, 0), 2) || '%', 'sem dados') from pg_stat_database where datname = 'wrexercise';
 select 'Transações', xact_commit || ' confirmadas, ' || xact_rollback || ' desfeitas, ' || deadlocks || ' deadlocks' from pg_stat_database where datname = 'wrexercise';
@@ -281,7 +251,7 @@ SQL
 
   titulo "Disco"
   df -h "$base" 2>/dev/null | tail -n 1 | awk '{printf "Partição do app: %s usados de %s (%s), %s livres\n", $3, $2, $5, $4}'
-  for d in postgres evidencias avatares backups; do
+  for d in evidencias avatares backups; do
     printf '%-10s %s\n' "$d" "$(du -sh "$dados/$d" 2>/dev/null | cut -f1)"
   done
   echo "Arquivos de evidência: $(find "$dados/evidencias" -type f 2>/dev/null | wc -l)"
@@ -289,38 +259,41 @@ SQL
   echo "Logs: $(du -sh log 2>/dev/null | cut -f1)"
 
   titulo "Backups"
-  ultimo=$(ls -1t "$dados/backups"/wrexercise-*.dump 2>/dev/null | head -n 1)
+  ultimo=$(ls -1t "$HOME/ambiente/backups"/wrexercise-*.dump 2>/dev/null | head -n 1)
   if [ -n "$ultimo" ]; then
     idade=$(( ($(date +%s) - $(stat -c %Y "$ultimo")) / 3600 ))
-    echo "Último: $(basename "$ultimo") (há ${idade} h, $(du -h "$ultimo" | cut -f1))"
-    echo "Total de bancos guardados: $(ls -1 "$dados/backups"/wrexercise-*.dump | wc -l)"
+    echo "Banco (Environment): $(basename "$ultimo") (há ${idade} h)"
   else
-    echo "Nenhum backup no telefone. Rode: run.bat ssh-backup"
+    echo "Banco: nenhum dump em ~/ambiente/backups. No Environment: run.bat ssh-backup"
+  fi
+  ultimo=$(ls -1t "$dados/backups"/evidencias-*.tar.gz 2>/dev/null | head -n 1)
+  if [ -n "$ultimo" ]; then
+    idade=$(( ($(date +%s) - $(stat -c %Y "$ultimo")) / 3600 ))
+    echo "Evidências: $(basename "$ultimo") (há ${idade} h, $(du -h "$ultimo" | cut -f1))"
+  else
+    echo "Evidências: nenhum backup no telefone. Rode: run.bat ssh-backup"
   fi
 }
 
+# O banco é copiado pelo Environment; aqui só os arquivos do app.
 backup_sh() {
-  ler_env
-  PGHOST=127.0.0.1 PGUSER=wrexercise PGDATABASE=wrexercise PGPASSWORD=$DB_PASSWORD \
-    BACKUP_DESTINO=$dados/backups EVIDENCIAS_DIR=$dados/evidencias AVATARES_DIR=$dados/avatares \
+  BACKUP_BANCO=0 BACKUP_DESTINO=$dados/backups EVIDENCIAS_DIR=$dados/evidencias AVATARES_DIR=$dados/avatares \
     sh "$base/deploy/backup.sh" "$@"
 }
 
 case ${1:-} in
-  implantar) implantar "$2" "$3" ;;
+  implantar) implantar ;;
   iniciar) iniciar ;;
   parar) parar ;;
   status) status ;;
   stats) stats ;;
   backup) backup_sh "$@" ;;
   restore)
-    # A restauração exige o app parado e o banco no ar.
-    parar_tarefa app
-    pkill -f "$base/app/Wrexercise" 2>/dev/null || true
-    ler_env
-    iniciar_banco
+    # A restauração exige o app parado.
+    parar
     backup_sh "$@"
-    echo "Rode 'remote-termux.sh iniciar' para subir o app de novo." ;;
+    echo "Para o banco: sh ~/ambiente/deploy/ambiente.sh restore wrexercise <AAAAMMDD-HHMMSS>"
+    echo "Depois, rode 'remote-termux.sh iniciar' para subir o app de novo." ;;
   reset-senha)
     ler_env
     ambiente_app

@@ -47,7 +47,7 @@ Prioridades, em ordem:
 | Frontend | React + TypeScript |
 | Estilização | Tailwind CSS |
 | Aplicação | SPA / PWA |
-| Hospedagem | Galaxy A14 com Termux, túnel da Cloudflare (0032) |
+| Hospedagem | Galaxy A14 com Termux, PostgreSQL e túnel da Cloudflare do `Environment` (0032, 0044) |
 | Arquitetura | Monólito modular com VSA |
 | Persistência | SQL explícito via Npgsql |
 | Deploy | Docker Compose |
@@ -61,7 +61,7 @@ Não implementar infraestrutura distribuída, escalabilidade horizontal ou abstr
 
 ### 2.1. Infraestrutura
 
-> **Atualização (0032):** a produção é um Galaxy A14 rodando nativo no Termux, em `wx.jpgmaraujo.com.br`, por túnel da Cloudflare (`docs/decisoes/0029-implantacao-nativa-no-termux.md`). Esta seção e as §2.2 a §2.4 descrevem a pilha com Docker Compose e Caddy, que hoje só roda no teste local (`run.bat`). A VM Oracle foi abandonada.
+> **Atualização (0032, 0044):** a produção é um Galaxy A14 rodando nativo no Termux, em `wx.jpgmaraujo.com.br` (`docs/decisoes/0029-implantacao-nativa-no-termux.md`). O PostgreSQL 18 e o túnel da Cloudflare são do repositório `Environment`, compartilhados com a API do Movr (`docs/decisoes/0044-postgres-e-tunel-do-environment.md`). Esta seção e as §2.2 a §2.4 descrevem a pilha com Docker Compose e Caddy, que hoje só roda no teste local (`run.bat`). A VM Oracle foi abandonada.
 
 O ambiente de produção seria composto por uma única VM Oracle Cloud Ampere A1.
 
@@ -138,7 +138,7 @@ Os limites devem ser revisados após observar o consumo real.
 
 O Galaxy A14 não usa estes limites: roda nativo no Termux (`docs/decisoes/0029-implantacao-nativa-no-termux.md`).
 
-No mesmo aparelho, a pilha também roda sem VM nem Docker, direto no Termux (PostgreSQL, app e `cloudflared` como processos nativos), pelo SO `termux` de `run.bat --ssh`. Ver `docs/decisoes/0029-implantacao-nativa-no-termux.md`.
+No mesmo aparelho, a pilha roda sem VM nem Docker, direto no Termux: o app por `run.bat --ssh`; o PostgreSQL e o `cloudflared`, compartilhados, pelo repositório `Environment`. Ver `docs/decisoes/0029-implantacao-nativa-no-termux.md` e `docs/decisoes/0044-postgres-e-tunel-do-environment.md`.
 
 ### 2.5. Configuração inicial do PostgreSQL
 

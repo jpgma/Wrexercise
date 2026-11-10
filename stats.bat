@@ -5,14 +5,14 @@ rem túnel, carga e memória do aparelho, bateria e temperatura, saúde da aplic
 rem   stats.bat                 uma leitura (leva cerca de 2 s, que é a amostra de CPU)
 rem   stats.bat --watch         repete a cada poucos segundos, até Ctrl+C
 rem   stats.bat NOME            usa o perfil NOME em vez de a14
-rem Usa o perfil salvo por run.bat --ssh (%LOCALAPPDATA%\Wrexercise\ssh). Se o perfil não existir ou o
-rem celular não responder, pergunta host, porta, usuário do Termux e chave, e salva as respostas.
+rem Usa o perfil SSH compartilhado com o Environment (%LOCALAPPDATA%\jpgma\a14.env). Se o perfil não existir
+rem ou o celular não responder, pergunta host, porta, usuário do Termux e chave, e salva as respostas.
 rem O trabalho roda no celular: deploy/remote-termux.sh stats. Somente leitura.
 setlocal
 cd /d "%~dp0"
 
 set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
-set "SSH_DIR=%LOCALAPPDATA%\Wrexercise\ssh"
+set "SSH_DIR=%LOCALAPPDATA%\jpgma"
 set "S_NOME=a14"
 set "WATCH="
 
@@ -36,8 +36,6 @@ set "S_HOST=127.0.0.1"
 set "S_PORT=8022"
 set "S_USER="
 set "S_KEY="
-set "S_TUNNEL=wx"
-set "S_TUNNEL_HOST=wx.jpgmaraujo.com.br"
 if exist "%SSH_FILE%" call :load
 
 if not defined S_USER goto :ask
@@ -70,8 +68,6 @@ if errorlevel 1 (
 >>"%SSH_FILE%" echo S_PORT=%S_PORT%
 >>"%SSH_FILE%" echo S_USER=%S_USER%
 >>"%SSH_FILE%" echo S_KEY=%S_KEY%
->>"%SSH_FILE%" echo S_TUNNEL=%S_TUNNEL%
->>"%SSH_FILE%" echo S_TUNNEL_HOST=%S_TUNNEL_HOST%
 echo Perfil salvo em %SSH_FILE%
 
 :run

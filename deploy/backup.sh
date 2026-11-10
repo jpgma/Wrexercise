@@ -3,12 +3,14 @@
 # Roda no serviço "backup" de compose.yaml, que fornece as variáveis PG* e os volumes:
 #   docker compose ... run --rm backup backup
 #   docker compose ... run --rm backup restore AAAAMMDD-HHMMSS   (com o app parado)
+# No Termux, deploy/remote-termux.sh passa BACKUP_BANCO=0: o banco é copiado pelo Environment (decisão 0044).
 set -eu
 
 # Os padrões valem para o contêiner; deploy/remote-termux.sh aponta para pastas do Termux.
 destino=${BACKUP_DESTINO:-/backups}
 evidencias=${EVIDENCIAS_DIR:-/dados/evidencias}
 avatares=${AVATARES_DIR:-/dados/avatares}
+banco=${BACKUP_BANCO:-1}
 retencao_dias=7
 
 falhar() {
@@ -23,8 +25,10 @@ backup() {
   arquivo_avatares="$destino/avatares-$data.tar.gz"
 
   # Grava em .tmp e só renomeia depois de conferir: um backup pela metade nunca parece válido.
-  pg_dump --format=custom --file="$dump.tmp"
-  pg_restore --list "$dump.tmp" >/dev/null || falhar "o dump gerado não pode ser lido."
+  if [ "$banco" = 1 ]; then
+    pg_dump --format=custom --file="$dump.tmp"
+    pg_restore --list "$dump.tmp" >/dev/null || falhar "o dump gerado não pode ser lido."
+  fi
 
   tar -czf "$arquivo.tmp" -C "$evidencias" .
   gzip -t "$arquivo.tmp" || falhar "o arquivo de evidências gerado está corrompido."
@@ -33,17 +37,17 @@ backup() {
   tar -czf "$arquivo_avatares.tmp" -C "$avatares" .
   gzip -t "$arquivo_avatares.tmp" || falhar "o arquivo de avatares gerado está corrompido."
 
-  mv "$dump.tmp" "$dump"
+  if [ "$banco" = 1 ]; then mv "$dump.tmp" "$dump"; fi
   mv "$arquivo.tmp" "$arquivo"
   mv "$arquivo_avatares.tmp" "$arquivo_avatares"
 
   find "$destino" -maxdepth 1 -type f \
-    \( -name 'wrexercise-*.dump' -o -name 'easyfit-*.dump' -o -name 'evidencias-*.tar.gz' \) \
+    \( -name 'wrexercise-*.dump' -o -name 'easyfit-*.dump' -o -name 'evidencias-*.tar.gz' -o -name 'avatares-*.tar.gz' \) \
     -mtime +"$retencao_dias" -delete
   rm -f "$destino"/*.tmp
 
   echo "Backup $data concluído:"
-  ls -lh "$dump" "$arquivo" "$arquivo_avatares"
+  if [ "$banco" = 1 ]; then ls -lh "$dump" "$arquivo" "$arquivo_avatares"; else ls -lh "$arquivo" "$arquivo_avatares"; fi
 }
 
 restore() {
@@ -53,13 +57,15 @@ restore() {
   # Backups anteriores à troca de nome (decisão 0026) têm o prefixo antigo.
   [ -f "$dump" ] || [ ! -f "$destino/easyfit-$data.dump" ] || dump="$destino/easyfit-$data.dump"
   arquivo="$destino/evidencias-$data.tar.gz"
-  [ -f "$dump" ] || falhar "$dump não existe."
+  [ "$banco" = 0 ] || [ -f "$dump" ] || falhar "$dump não existe."
   [ -f "$arquivo" ] || falhar "$arquivo não existe."
   # Backups anteriores aos avatares não têm este arquivo: os avatares ficam como estão.
   arquivo_avatares="$destino/avatares-$data.tar.gz"
 
-  echo "Restaurando o banco a partir de $dump"
-  pg_restore --clean --if-exists --no-owner --single-transaction --dbname="$PGDATABASE" "$dump"
+  if [ "$banco" = 1 ]; then
+    echo "Restaurando o banco a partir de $dump"
+    pg_restore --clean --if-exists --no-owner --single-transaction --dbname="$PGDATABASE" "$dump"
+  fi
 
   echo "Restaurando as evidências a partir de $arquivo"
   find "$evidencias" -mindepth 1 -delete

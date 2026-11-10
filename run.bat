@@ -9,17 +9,19 @@ rem   run.bat --tunnel     igual ao padrão, mas publica em https://wx-dev.jpgma
 rem                          da Cloudflare. Pode ser combinado com --rebuild. Na primeira vez, pede o
 rem                          login na Cloudflare pelo navegador. Com o banco vazio, quem abrir o link
 rem                          primeiro cria a primeira conta: abra-o logo após subir.
-rem   run.bat --ssh        em vez de subir aqui, pergunta host, porta, usuário do Termux e chave SSH e implanta
-rem                          no celular Android (Termux, sem root) por SSH: app, PostgreSQL e túnel da
-rem                          Cloudflare rodam nativos, sem Docker nem VM no alvo. Grava as respostas em
-rem                          %LOCALAPPDATA%\Wrexercise\ssh. Exige chave SSH (sem senha) e o sshd ligado no
-rem                          Termux. Pode ser combinado com --rebuild. Ver
-rem                          docs/decisoes/0029-implantacao-nativa-no-termux.md.
+rem   run.bat --ssh        em vez de subir aqui, implanta o app no celular Android (Termux, sem root) por SSH.
+rem                          O app roda nativo; PostgreSQL e túnel da Cloudflare são do repositório
+rem                          Environment, que precisa estar implantado antes. Usa o perfil SSH compartilhado
+rem                          %LOCALAPPDATA%\jpgma\a14.env (pergunta o que faltar). Exige chave SSH (sem senha)
+rem                          e o sshd ligado no Termux. Pode ser combinado com --rebuild. Ver
+rem                          docs/decisoes/0029-implantacao-nativa-no-termux.md e 0044.
+rem   run.bat --ssh --scripts  envia só deploy/*.sh e reinicia o app que já está no celular, sem build
 rem   run.bat logs         acompanha os logs da aplicação
 rem   run.bat backup       grava um backup do banco e das evidências em BACKUP_DIR
-rem   run.bat ssh-backup   roda o backup no celular (perfil salvo por --ssh) e copia a pasta de backups
-rem                          dele para BACKUP_DIR. Aponte BACKUP_DIR para uma pasta sincronizada.
-rem                          Não apaga cópias antigas daqui. Ver docs/decisoes/0032-a14-como-producao.md.
+rem   run.bat ssh-backup   roda o backup das evidências e avatares no celular e copia a pasta de backups
+rem                          dele para BACKUP_DIR. O banco é copiado pelo run.bat ssh-backup do Environment.
+rem                          Aponte BACKUP_DIR para uma pasta sincronizada. Não apaga cópias antigas daqui.
+rem                          Ver docs/decisoes/0032-a14-como-producao.md e 0044.
 rem   run.bat restore D    restaura o backup da data D (AAAAMMDD-HHMMSS), com o app parado
 rem   run.bat stop         para os serviços e mantém os dados
 rem   run.bat reset        para os serviços e APAGA os dados locais
@@ -59,6 +61,7 @@ set "DOCKER_BUILD_EXTRAS="
 set "REBUILD="
 set "TUNNEL="
 set "SSH_MODE="
+set "SO_SCRIPTS="
 set "TUNNEL_LOG_HINT=docker logs wrexercise-local-tunnel-1"
 
 :parse
@@ -85,13 +88,18 @@ if /i "%~1"=="--ssh" (
   shift
   goto :parse
 )
+if /i "%~1"=="--scripts" (
+  set "SO_SCRIPTS=1"
+  shift
+  goto :parse
+)
 if /i "%~1"=="logs" goto :logs
 if /i "%~1"=="backup" goto :backup
 if /i "%~1"=="ssh-backup" goto :ssh_backup
 if /i "%~1"=="restore" goto :restore
 if /i "%~1"=="stop" goto :stop
 if /i "%~1"=="reset" goto :reset
-echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--ssh] ^| logs ^| backup ^| ssh-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
+echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
 exit /b 2
 
 :start
@@ -223,61 +231,39 @@ echo run.bat FALHOU na etapa acima.
 exit /b 1
 
 :ssh
-rem Implanta em outra máquina por SSH. Perguntas com padrão entre colchetes: Enter mantém o valor.
+rem Implanta no celular por SSH. Perfil compartilhado com o Environment e os outros apps.
 set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
-set "SSH_DIR=%LOCALAPPDATA%\Wrexercise\ssh"
+set "SSH_DIR=%LOCALAPPDATA%\jpgma"
 if not exist "%SSH_DIR%" mkdir "%SSH_DIR%"
-
-set "S_NOME=a14"
+set "SSH_FILE=%SSH_DIR%\a14.env"
 rem 127.0.0.1 com "adb forward tcp:8022 tcp:8022" (decisão 0029); com IP do Wi-Fi, digite-o.
 set "S_HOST=127.0.0.1"
 set "S_PORT=8022"
 set "S_USER="
-set "S_ARCH=arm64"
 set "S_KEY="
-set "S_TUNNEL=wx"
-set "S_TUNNEL_HOST=wx.jpgmaraujo.com.br"
+set "S_ARCH=arm64"
+set "TUNNEL_HOST=wx.jpgmaraujo.com.br"
+if exist "%SSH_FILE%" call :ssh_load
+if defined S_USER goto :ssh_alvo
 
 echo.
-set /p "S_NOME=Nome do perfil [%S_NOME%]: "
-set "SSH_FILE=%SSH_DIR%\%S_NOME%.env"
-set "S_REUSE="
-if exist "%SSH_FILE%" set "S_REUSE=S"
-if defined S_REUSE call :ssh_load
-if defined S_REUSE set /p "S_REUSE=Usar o perfil salvo '%S_NOME%'? [S/n]: "
-if /i "%S_REUSE%"=="S" goto :ssh_validate
-
 set /p "S_HOST=Host ou IP do celular [%S_HOST%]: "
 set /p "S_PORT=Porta SSH do Termux [%S_PORT%]: "
-set /p "S_USER=Usuário do Termux (resultado de whoami) [%S_USER%]: "
+set /p "S_USER=Usuário do Termux (resultado de whoami): "
 set /p "S_KEY=Arquivo da chave SSH (vazio = ssh-agent ou padrão) [%S_KEY%]: "
-set /p "S_TUNNEL=Nome do túnel da Cloudflare [%S_TUNNEL%]: "
-set /p "S_TUNNEL_HOST=Hostname público [%S_TUNNEL_HOST%]: "
-
->"%SSH_FILE%" echo S_HOST=%S_HOST%
->>"%SSH_FILE%" echo S_PORT=%S_PORT%
->>"%SSH_FILE%" echo S_USER=%S_USER%
->>"%SSH_FILE%" echo S_KEY=%S_KEY%
->>"%SSH_FILE%" echo S_TUNNEL=%S_TUNNEL%
->>"%SSH_FILE%" echo S_TUNNEL_HOST=%S_TUNNEL_HOST%
-
-:ssh_validate
-rem O único alvo suportado é o Termux (arm64, sem root). Perfis antigos podem ter S_OS/S_RAM: são ignorados.
-set "S_ARCH=arm64"
-if defined S_USER goto :ssh_alvo
-set /p "S_USER=Usuário do Termux (rode whoami no telefone): "
 if not defined S_USER (
   echo Informe o usuário do Termux.
   exit /b 2
 )
+>"%SSH_FILE%" echo S_HOST=%S_HOST%
+>>"%SSH_FILE%" echo S_PORT=%S_PORT%
 >>"%SSH_FILE%" echo S_USER=%S_USER%
+>>"%SSH_FILE%" echo S_KEY=%S_KEY%
 
 :ssh_alvo
 set "TARGET=%S_USER%@%S_HOST%"
 set "SSH_OPTS=-p %S_PORT% -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
 if defined S_KEY set "SSH_OPTS=%SSH_OPTS% -i "%S_KEY%" -o IdentitiesOnly=yes"
-set "TUNNEL_NAME=%S_TUNNEL%"
-set "TUNNEL_HOST=%S_TUNNEL_HOST%"
 set "TUNNEL_LOG_HINT=ssh -p %S_PORT% %TARGET% sh wrexercise/deploy/remote-termux.sh status"
 
 echo.
@@ -299,16 +285,16 @@ if /i not "%R_ARCH%"=="%S_ARCH%" (
   goto :fail
 )
 
-call :prepare_tunnel
-if errorlevel 1 goto :fail
-
-rem O ID do túnel vem da credencial: o cloudflared não resolve o nome sem o cert.pem, que não vai ao alvo.
-set "TUNNEL_JSON=%TUNNEL_ROOT%\%TUNNEL_NAME%.json"
-for /f %%i in ('powershell -NoProfile -Command "(Get-Content -Raw $env:TUNNEL_JSON | ConvertFrom-Json).TunnelID"') do set "TUNNEL_ID=%%i"
-if not defined TUNNEL_ID (
-  echo Não foi possível ler o ID do túnel em %TUNNEL_ROOT%\%TUNNEL_NAME%.json.
+"%SSH_EXE%" %SSH_OPTS% -o BatchMode=yes %TARGET% "test -f ambiente/deploy/ambiente.sh"
+if errorlevel 1 (
+  echo O Environment ^(PostgreSQL e túnel^) não está no celular. No repositório Environment: run.bat implantar
   goto :fail
 )
+if defined SO_SCRIPTS (
+  set "SSH_IMAGE=app atual"
+  goto :ssh_enviar_scripts
+)
+set "SSH_IMAGE="
 set "DIRTY="
 for /f %%i in ('git status --porcelain') do set "DIRTY=-dirty"
 for /f %%i in ('git rev-parse --short HEAD') do set "SSH_IMAGE=wrexercise:%%i%DIRTY%-%S_ARCH%"
@@ -334,40 +320,41 @@ if not exist "%PUBLISH_DIR%\Wrexercise" (
   goto :fail
 )
 echo.
-echo ==^> Enviando o app e a configuração para o Termux
-"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/tunnel wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo && chmod 700 wrexercise/tunnel"
+echo ==^> Enviando o app para o Termux
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo"
 if errorlevel 1 goto :fail
 tar --format ustar -cf - -C "%PUBLISH_DIR%" . | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise/app.novo"
 if errorlevel 1 goto :fail
-tar --format ustar -cf - deploy/backup.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
-if errorlevel 1 goto :fail
-tar --format ustar -cf - -C "%TUNNEL_ROOT%" %TUNNEL_NAME%.json | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise/tunnel"
-if errorlevel 1 goto :fail
 rmdir /s /q "%PUBLISH_DIR%"
 
+:ssh_enviar_scripts
 echo.
-echo ==^> Aplicando migrações e subindo os serviços no Termux
-"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh implantar %TUNNEL_NAME% %TUNNEL_ID%"
+echo ==^> Enviando os scripts de deploy
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy"
+if errorlevel 1 goto :fail
+tar --format ustar -cf - deploy/backup.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
 if errorlevel 1 goto :fail
 
 echo.
-set "TUNNEL_LOG_HINT=ssh -p %S_PORT% %TARGET% sh wrexercise/deploy/remote-termux.sh status"
+echo ==^> Aplicando migrações e subindo o app no Termux
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh implantar"
+if errorlevel 1 goto :fail
+
+echo.
 call :check_tunnel
 echo.
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh status"
 echo.
-echo Implantação em %TARGET% concluída ^(%SSH_IMAGE%, Termux^). Perfil salvo em %SSH_FILE%
+echo Implantação em %TARGET% concluída ^(%SSH_IMAGE%, Termux^). Perfil em %SSH_FILE%
 exit /b 0
 
 :ssh_backup
-rem Usa o perfil salvo por --ssh. O backup roda no celular; depois a pasta de backups vem por tar em pipe.
+rem Usa o perfil compartilhado. O backup roda no celular; depois a pasta de backups vem por tar em pipe.
+rem Sem perguntas, para rodar pelo Agendador de Tarefas. O banco vem pelo ssh-backup do Environment.
 set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
-set "SSH_DIR=%LOCALAPPDATA%\Wrexercise\ssh"
-set "S_NOME=a14"
-set /p "S_NOME=Nome do perfil [%S_NOME%]: "
-set "SSH_FILE=%SSH_DIR%\%S_NOME%.env"
+set "SSH_FILE=%LOCALAPPDATA%\jpgma\a14.env"
 if not exist "%SSH_FILE%" (
-  echo Perfil %S_NOME% não existe. Rode run.bat --ssh antes.
+  echo Perfil %SSH_FILE% não existe. Rode run.bat --ssh antes.
   exit /b 2
 )
 call :ssh_load
@@ -376,7 +363,7 @@ set "SSH_OPTS=-p %S_PORT% -o StrictHostKeyChecking=accept-new -o ConnectTimeout=
 if defined S_KEY set "SSH_OPTS=%SSH_OPTS% -i "%S_KEY%" -o IdentitiesOnly=yes"
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 echo.
-echo ==^> Gravando o backup no celular
+echo ==^> Gravando o backup das evidências e avatares no celular
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh backup"
 if errorlevel 1 goto :fail
 echo.

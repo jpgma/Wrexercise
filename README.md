@@ -54,14 +54,16 @@ scripts/verify.sh --full   # também testes de integração e imagem arm64
 
 ## Produção
 
-A produção é um Galaxy A14 com Termux, em `https://wx.jpgmaraujo.com.br`, por um túnel da Cloudflare chamado `wx`. Pré-requisitos do telefone: `docs/decisoes/0029-implantacao-nativa-no-termux.md`. Decisão: `docs/decisoes/0032-a14-como-producao.md`. Plano para enxugar o Android do aparelho: `docs/a14-enxugamento.md`.
+A produção é um Galaxy A14 com Termux, em `https://wx.jpgmaraujo.com.br`. O PostgreSQL 18 e o túnel da Cloudflare (`a14`) são do repositório `Environment`, compartilhados com os outros apps do telefone; o app roda nativo em `~/wrexercise`. Pré-requisitos do telefone: `docs/decisoes/0029-implantacao-nativa-no-termux.md`. Decisões: `docs/decisoes/0032-a14-como-producao.md` e `docs/decisoes/0044-postgres-e-tunel-do-environment.md`. Plano para enxugar o Android do aparelho: `docs/a14-enxugamento.md`.
 
 ```powershell
-adb forward tcp:8022 tcp:8022   # opcional: fala com o telefone por USB; use 127.0.0.1 como host
-.\run.bat --ssh                 # constrói o app, envia ao Termux, migra e sobe PostgreSQL, app e túnel
+adb forward tcp:8022 tcp:8022     # opcional: fala com o telefone por USB; use 127.0.0.1 como host
+..\Environment\run.bat implantar  # uma vez: PostgreSQL e túnel do Environment
+.\run.bat --ssh                   # constrói o app, envia ao Termux, provisiona o banco, migra e sobe o app
+.\run.bat --ssh --scripts         # só os scripts de deploy, sem build; o app do telefone continua
 ```
 
-Antes, abra o Termux no telefone e rode `sshd` (ele não sobe no boot). Com o banco vazio, quem abrir o endereço primeiro cria a primeira conta (ver "Primeira conta").
+Antes, abra o Termux no telefone e rode `sshd` (ele não sobe no boot). O perfil SSH é o compartilhado `%LOCALAPPDATA%\jpgma\a14.env`. Com o banco vazio, quem abrir o endereço primeiro cria a primeira conta (ver "Primeira conta").
 
 ### Estatísticas
 
@@ -70,13 +72,16 @@ Antes, abra o Termux no telefone e rode `sshd` (ele não sobe no boot). Com o ba
 .\stats.bat --watch   # repete até Ctrl+C
 ```
 
-Usa o perfil salvo por `run.bat --ssh`; se faltar ou o telefone não responder, pergunta host, porta, usuário e chave.
+Usa o perfil compartilhado `%LOCALAPPDATA%\jpgma\a14.env`; se faltar ou o telefone não responder, pergunta host, porta, usuário e chave. O PostgreSQL e o túnel aparecem aqui, mas são compartilhados: detalhes com `run.bat stats` no `Environment`.
 
 ### Backups
 
-No telefone, `deploy/backup.sh` grava o dump do banco e um arquivo das evidências em `~/wrexercise/dados/backups`, mantém os últimos 7 dias e confere se os arquivos podem ser lidos. As datas nos nomes estão em UTC. Ver `docs/decisoes/0022-backups.md` e `docs/decisoes/0032-a14-como-producao.md`.
+No telefone, o banco e os arquivos têm backups separados, com 7 dias de retenção, conferidos e com datas em UTC (ver `docs/decisoes/0022-backups.md`, `0032` e `0044`):
 
-Para gravar um backup no telefone e copiá-lo para o Windows:
+- **Banco:** o `Environment` grava `~/ambiente/backups/wrexercise-*.dump`, junto com os dos outros apps. Cópia para o Windows: `run.bat ssh-backup` no `Environment` (agendado com `run.bat agendar-backup` de lá).
+- **Evidências e avatares:** `deploy/backup.sh` grava em `~/wrexercise/dados/backups`.
+
+Para gravar o backup dos arquivos no telefone e copiá-lo para o Windows:
 
 ```powershell
 .\run.bat ssh-backup
@@ -90,10 +95,11 @@ schtasks /create /sc daily /st 03:00 /tn WrexerciseBackup /tr "\"D:\Repos\jpgma\
 
 Um backup que só existe no telefone não protege contra a perda do aparelho. Aponte `BACKUP_DIR` para uma pasta sincronizada (OneDrive, Google Drive); o padrão é `%LOCALAPPDATA%\Wrexercise\backups`. O `ssh-backup` não apaga cópias antigas no Windows. Os backups contêm as evidências e os hashes das senhas: mantenha a pasta privada.
 
-Para restaurar no telefone, com o par `wrexercise-*.dump` e `evidencias-*.tar.gz` já em `~/wrexercise/dados/backups`:
+Para restaurar no telefone, com o dump em `~/ambiente/backups` e os arquivos em `~/wrexercise/dados/backups`:
 
 ```bash
-sh ~/wrexercise/deploy/remote-termux.sh restore 20261105-030000
+sh ~/wrexercise/deploy/remote-termux.sh restore 20261105-030000      # para o app e restaura os arquivos
+sh ~/ambiente/deploy/ambiente.sh restore wrexercise 20261105-030500  # data do dump do banco
 sh ~/wrexercise/deploy/remote-termux.sh iniciar
 ```
 
