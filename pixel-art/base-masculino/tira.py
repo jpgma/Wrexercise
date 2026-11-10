@@ -5,7 +5,10 @@ Gera:
   transparente, na ordem do PixelLab (DIRECOES do build.py);
 - saida/referencia-gemini.png: as mesmas 8 direções numa grade de 4 colunas e 2 linhas, na
   mesma ordem e no mesmo formato que prompts-gemini.md §3 pede (1536×1024, fundo magenta),
-  ampliada 8× sem suavização. É a imagem de referência para anexar no Gemini.
+  ampliada 8× sem suavização. É a imagem de referência da `rotations` no Gemini;
+- saida/referencia-gemini/<direcao>.png: cada direção sozinha, no mesmo recorte de 48×64,
+  ampliada 8× sobre magenta (384×512). É a imagem para anexar nas animações
+  (prompts-gemini.md §4).
 
 Uso: python tira.py   (exige Pillow)
 """
@@ -55,7 +58,16 @@ def main() -> None:
     grade = grade.resize((grade.width * ESCALA, grade.height * ESCALA), Image.NEAREST)
     grade.convert("RGB").save(SAIDA / "referencia-gemini.png")
 
-    print(f"saida/rotations-tira.png {tira.size}, saida/referencia-gemini.png {grade.size}")
+    pasta = SAIDA / "referencia-gemini"
+    pasta.mkdir(exist_ok=True)
+    for nome, q in zip(DIRECOES, quadros):
+        celula = Image.new("RGBA", (CELULA_L, QUADRO), MAGENTA)
+        celula.alpha_composite(q.crop((CELULA_X0, 0, CELULA_X0 + CELULA_L, QUADRO)))
+        celula = celula.resize((CELULA_L * ESCALA, QUADRO * ESCALA), Image.NEAREST)
+        celula.convert("RGB").save(pasta / f"{nome}.png")
+
+    print(f"saida/rotations-tira.png {tira.size}, saida/referencia-gemini.png {grade.size}, "
+          f"saida/referencia-gemini/<direcao>.png {celula.size}")
 
 
 if __name__ == "__main__":
