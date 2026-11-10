@@ -476,10 +476,14 @@ ACTION: accepts a challenge with confidence, played once. The feet do not move.
 Frame 1: an exact copy of the reference image.
 Frame 2: a short crouch: the knees bend and the whole body is 2 blocks lower. Both hands close
 into fists at the waist.
-Frame 3: the body is back at the reference height. The right arm goes straight up above the
-head, with the fist closed. The left fist stays at the waist.
-Frame 4: the same as frame 3, with a small confident nod: the head is 1 block lower and the
-mouth is a small smile.
+Frame 3: the body is back at the reference height, with the feet exactly as in frame 1. The
+right arm goes straight up, fully extended, with the fist closed: the whole fist is above the
+top of the hair, higher than the head. The arm is behind the head or next to it and never
+covers the face, the eye or the mouth; the full face stays visible. The left fist stays at the
+waist.
+Frame 4: the same as frame 3, with the same raised arm and the feet exactly as in frame 1,
+plus a small confident nod: the head is 1 block lower and the mouth is a small smile. The arm
+does not cover the smile.
 
 STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
 Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
