@@ -108,7 +108,6 @@ def main():
         total = sum(len(q) for _, _, q in tags)
         i = 0
         for nome, ms, quadros in tags:
-            inicio = i + 1
             for q in quadros:
                 i += 1
                 if i == 1:
@@ -119,8 +118,14 @@ def main():
                 q.save(png)
                 a("import_image", sprite_path=s, image_path=str(png), layer_name=CAMADA, frame_number=i)
                 print(f"quadro {i}/{total}", end="\r", flush=True)
-            a("create_tag", sprite_path=s, tag_name=nome, from_frame=inicio, to_frame=i, direction="forward")
         print()
+        # As tags vêm depois de todos os quadros: uma tag que termina no último quadro cresce
+        # a cada add_frame.
+        inicio = 1
+        for nome, _, quadros in tags:
+            a("create_tag", sprite_path=s, tag_name=nome, from_frame=inicio, to_frame=inicio + len(quadros) - 1,
+              direction="forward")
+            inicio += len(quadros)
     for nome, ms, quadros in tags:
         print(f"{nome}: {len(quadros)} quadros, {ms} ms")
     print(f"gerado: {SAIDA.relative_to(AQUI)}")
