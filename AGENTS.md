@@ -122,3 +122,8 @@ chore(deploy): fixa versão do Caddy
 ```
 
 Cada commit deve deixar `scripts/verify.sh` passando.
+
+### Branches e worktrees
+
+- Não crie worktrees nem branches sem pedido explícito do mantenedor.
+- Trabalhe direto em `main`: faça o commit e o push para `origin/main` assim que `scripts/verify.sh` passar.
