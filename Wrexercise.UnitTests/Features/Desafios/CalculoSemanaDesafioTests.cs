@@ -16,6 +16,17 @@ public class CalculoSemanaDesafioTests
     public void ParticipaDaSemana_SoSemanasInteiras(int diasDaEntrada, bool esperado) =>
         Assert.Equal(esperado, CalculoSemanaDesafio.ParticipaDaSemana(Segunda, Segunda.AddDays(diasDaEntrada)));
 
+    [Theory]
+    [InlineData(0, 7)] // segunda
+    [InlineData(3, 4)] // quinta
+    [InlineData(6, 1)] // domingo: último dia
+    public void CountDiasRestantes_ContaHoje(int diasDesdeSegunda, int esperado)
+    {
+        var semana = CalculoSemanaDesafio.GetSemana(Segunda, Segunda.AddDays(27), Segunda.AddDays(7 + diasDesdeSegunda))!;
+
+        Assert.Equal(esperado, CalculoSemanaDesafio.CountDiasRestantes(semana, Segunda.AddDays(7 + diasDesdeSegunda)));
+    }
+
     [Fact]
     public void MontarHistorico_MarcaAsSemanasAnterioresAEntrada()
     {

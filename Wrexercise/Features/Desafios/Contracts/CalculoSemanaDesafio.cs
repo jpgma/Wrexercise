@@ -25,6 +25,10 @@ internal static class CalculoSemanaDesafio
         return new SemanaDesafio(indice + 1, inicioSemana, inicioSemana.AddDays(DiasPorSemana - 1));
     }
 
+    /// <returns>Os dias que faltam para a semana fechar, contando hoje: 7 na segunda, 1 no domingo.</returns>
+    public static int CountDiasRestantes(SemanaDesafio semana, DateOnly hoje) =>
+        semana.Fim.DayNumber - hoje.DayNumber + 1;
+
     public static int GetIndiceSemana(DateOnly inicio, DateOnly diaLocal) =>
         (diaLocal.DayNumber - inicio.DayNumber) / DiasPorSemana;
 

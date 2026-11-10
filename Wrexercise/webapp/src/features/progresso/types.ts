@@ -45,6 +45,8 @@ export type ResumoGrupo = {
     metaCumprida: boolean;
     semanaNumero: number | null;
     contaNestaSemana: boolean;
+    /** Dias até a semana fechar, contando hoje: 7 na segunda, 1 no domingo. */
+    diasRestantes: number;
   } | null;
   classificacao: {
     posicao: number;

@@ -17,9 +17,15 @@ import {
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import { useGrupo } from "@/features/grupos";
-import { CartasDoGrupo, CenaGrupo, ConviteJogo } from "@/features/jogo";
+import {
+  CartasDoGrupo,
+  CenaGrupo,
+  ConviteJogo,
+  SaudacaoAlternada,
+} from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
+  getMotivacao,
   LinhaParticipante,
   useResumoGrupo,
   type ResumoGrupo,
@@ -32,25 +38,17 @@ function getSaudacao(agora: Date): string {
   return hora < 18 ? "Boa tarde" : "Boa noite";
 }
 
-function getMotivacao(verificadas: number, provisorias: number, meta: number) {
-  if (verificadas >= meta) {
-    return "Mandou bem! Meta da semana batida.";
-  }
-  if (provisorias >= meta) return "Meta no papo. Só falta a galera conferir.";
-  const faltam = meta - provisorias;
-  return faltam === 1
-    ? "Falta só mais um treino!"
-    : `Faltam ${faltam} treinos. Ainda dá tempo!`;
-}
-
 function SuaSemana({
   grupoId,
   desafioId,
   usuarioId,
+  diasRestantes,
 }: {
   grupoId: string;
   desafioId: string;
   usuarioId: string;
+  /** Do resumo; sem ele, a semana já acabou ou ainda não começou. */
+  diasRestantes: number | undefined;
 }) {
   const desafio = useDesafio(desafioId);
   const progresso = useProgresso(desafioId);
@@ -84,6 +82,13 @@ function SuaSemana({
       b.sessoesVerificadas - a.sessoesVerificadas ||
       b.sessoesProvisorias - a.sessoesProvisorias,
   );
+  const motivacao = getMotivacao({
+    verificadas,
+    provisorias,
+    meta,
+    diasRestantes: diasRestantes ?? 7,
+    contaNestaSemana: eu?.contaNestaSemana ?? true,
+  });
   const contando = participantes.filter((p) => p.contaNestaSemana);
   const bateram = contando.filter((p) => p.metaCumprida).length;
 
@@ -115,8 +120,9 @@ function SuaSemana({
           </ProgressRing>
           <div className="min-w-0 flex-1">
             <p className="font-display text-2xl leading-tight uppercase">
-              {getMotivacao(verificadas, provisorias, meta)}
+              {motivacao.titulo}
             </p>
+            <p className="mt-1 text-sm">{motivacao.detalhe}</p>
             {semanaAtual && (
               <p className="mt-2 flex items-center gap-1.5 text-sm text-muted">
                 <Clock aria-hidden="true" className="size-4 shrink-0" />
@@ -203,44 +209,20 @@ function InicioJogo({
   usuarioId: string;
   resumo: ResumoGrupo | undefined;
 }) {
-  const progresso = resumo?.meuProgresso;
-  const meta = resumo?.sessoesPorSemana;
+  // Com meta, o progresso fica no cabeçalho (anel no avatar e saudação alternada).
+  const temMeta = !!(resumo?.meuProgresso && resumo.sessoesPorSemana);
 
   return (
     <div className="mt-6 space-y-4">
       <CenaGrupo grupoId={grupoId} usuarioId={usuarioId} />
-      {progresso && meta ? (
-        <div className="card flex items-center gap-4 p-4">
-          <ProgressRing
-            label="Seu progresso nesta semana"
-            valor={progresso.sessoesVerificadas}
-            provisorio={progresso.sessoesProvisorias}
-            max={meta}
-            size={72}
-          >
-            <p className="font-display text-xl leading-none">
-              {Math.min(progresso.sessoesVerificadas, meta)}
-              <span className="text-sm text-muted">/{meta}</span>
-            </p>
-          </ProgressRing>
-          <p className="min-w-0 flex-1 font-display text-lg leading-tight uppercase">
-            {getMotivacao(
-              progresso.sessoesVerificadas,
-              progresso.sessoesProvisorias,
-              meta,
-            )}
-          </p>
-        </div>
-      ) : (
-        resumo && (
-          <p className="card p-4 text-sm text-muted">
-            {!resumo.desafio
-              ? "O grupo está sem desafio no momento."
-              : resumo.desafio.situacao === "Agendado"
-                ? `O desafio ${resumo.desafio.nome} ainda não começou.`
-                : "Sem meta para você nesta semana."}
-          </p>
-        )
+      {!temMeta && resumo && (
+        <p className="card p-4 text-sm text-muted">
+          {!resumo.desafio
+            ? "O grupo está sem desafio no momento."
+            : resumo.desafio.situacao === "Agendado"
+              ? `O desafio ${resumo.desafio.nome} ainda não começou.`
+              : "Sem meta para você nesta semana."}
+        </p>
       )}
       <CartasDoGrupo grupoId={grupoId} />
     </div>
@@ -281,17 +263,56 @@ export function InicioPage() {
     .format(agora)
     .replace(".", "");
   const primeiroNome = usuario.nomeExibicao.trim().split(/\s+/)[0];
+  const saudacao = `${getSaudacao(agora)}, ${primeiroNome}!`;
+  const progresso = resumo.data?.meuProgresso;
+  const meta = resumo.data?.sessoesPorSemana;
+  const jogoComMeta = usuario.modoInicio === "Jogo" && progresso && meta;
+  const avatar = (
+    <Avatar
+      nome={usuario.nomeExibicao}
+      id={usuario.id}
+      size={jogoComMeta ? 42 : 44}
+    />
+  );
 
   return (
     <>
       <header className="flex items-center gap-3">
-        <Avatar nome={usuario.nomeExibicao} id={usuario.id} size={44} />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-muted first-letter:uppercase">{hoje}</p>
-          <h1 className="truncate text-3xl uppercase">
-            {getSaudacao(agora)}, {primeiroNome}!
-          </h1>
-        </div>
+        {jogoComMeta ? (
+          <ProgressRing
+            label="Seu progresso nesta semana"
+            valor={progresso.sessoesVerificadas}
+            provisorio={progresso.sessoesProvisorias}
+            max={meta}
+            size={58}
+            stroke={5}
+            segmentado
+          >
+            {avatar}
+          </ProgressRing>
+        ) : (
+          avatar
+        )}
+        {jogoComMeta ? (
+          <SaudacaoAlternada
+            saudacao={{ linha: hoje, titulo: saudacao }}
+            progresso={(() => {
+              const m = getMotivacao({
+                verificadas: progresso.sessoesVerificadas,
+                provisorias: progresso.sessoesProvisorias,
+                meta,
+                diasRestantes: progresso.diasRestantes,
+                contaNestaSemana: progresso.contaNestaSemana,
+              });
+              return { linha: m.detalhe, titulo: m.titulo };
+            })()}
+          />
+        ) : (
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted first-letter:uppercase">{hoje}</p>
+            <h1 className="truncate text-3xl uppercase">{saudacao}</h1>
+          </div>
+        )}
         <SinoNotificacoes />
       </header>
 
@@ -346,6 +367,7 @@ function InicioApp({
             grupoId={id}
             desafioId={desafio.id}
             usuarioId={usuarioId}
+            diasRestantes={resumo.data.meuProgresso?.diasRestantes}
           />
         )}
         {resumo.data && !desafio && (
