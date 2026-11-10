@@ -313,10 +313,16 @@ ACTION: a quick casual stretch while standing, played once. The feet do not move
 stay exactly as in the reference.
 Frame 1: both arms are raised straight out in front at shoulder height. The rest is the
 reference pose.
-Frame 2: both arms reach straight up above the head, with the hands together. The body
-stretches 1 block taller.
-Frame 3: the arms stay up as in frame 2. The upper body leans 2 blocks to one side, bending at
-the waist.
+Frame 2: both arms reach straight up above the head, with the hands together. The arms are
+two separate thin vertical shapes, 2 blocks wide each, one on each side of the head, from
+the shoulders up past the top of the hair; the hands meet about 6 blocks above the top of
+the hair. The whole head, the hair and the face stay fully visible between the arms, with
+the same size and shape as in the reference. The arms never cover or wrap around the head.
+The body stretches 1 block taller.
+Frame 3: the arms stay up as in frame 2. The upper body leans to one side by shifting, not
+by rotating: the hips stay in place, the chest moves 1 block to the side and the head and
+the raised arms move 2 blocks to the same side, keeping their upright shape. The head, the
+face and the hair are not tilted or distorted. The legs stay vertical, as in the reference.
 Frame 4: the upper body is straight again and the arms come down to shoulder height.
 
 STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
