@@ -19,7 +19,7 @@ A decisão 0028 colocou a pilha no Galaxy A14 dentro do Podroid: guest Alpine, Q
 - O binário sai da imagem construída pelo `deploy/Dockerfile` (`docker create` e `docker cp`, sem mudar o Dockerfile) e vai por `tar` em pipe para `~/wrexercise/app.novo`. A credencial do túnel segue o mesmo caminho.
 - `deploy/remote-termux.sh` roda no telefone, em `sh` POSIX, com os comandos `implantar`, `iniciar`, `parar`, `status`, `backup` e `restore`. Ele não instala pacotes: se faltarem, imprime o comando. `implantar` troca o app (o anterior fica em `app.antigo`), migra e reinicia.
 - O PostgreSQL escuta só em `127.0.0.1`, com `scram-sha-256`, `synchronous_commit=off` (um corte de energia perde no máximo cerca de 0,5 s de commits e não corrompe o banco), `shared_buffers=128MB`, `max_connections=20` e `wal_compression=on`. A senha é gerada na primeira vez e fica em `~/wrexercise/.env` (modo 600).
-- O app e o `cloudflared` rodam como tarefas que reiniciam sozinhas (laço com pausa de 3 s). `termux-wake-lock` impede a suspensão da CPU, e o Termux:Boot executa `iniciar` ao ligar o telefone.
+- O app e o `cloudflared` rodam como tarefas que reiniciam sozinhas (laço com pausa de 3 s). `termux-wake-lock` impede a suspensão da CPU, e o Termux:Boot executa `iniciar` ao ligar o telefone. `iniciar` só considera a tarefa rodando se o PID de `run/*.pid` ainda for o laço dela (confere `/proc/<pid>/cmdline`): os PIDs do boot se repetem, e o PID antigo pode ser de outro processo do Termux.
 - `deploy/backup.sh` passou a aceitar `BACKUP_DESTINO` e `EVIDENCIAS_DIR`; os padrões continuam os do contêiner.
 - Dados em `~/wrexercise/dados/{postgres,evidencias,backups}`. Túnel próprio (`wx-a14`), cadastro sem convite fechado, como em 0028.
 
@@ -29,7 +29,7 @@ A decisão 0028 colocou a pilha no Galaxy A14 dentro do Podroid: guest Alpine, Q
 - Pacotes: `pkg install -y glibc-repo && pkg update -y && pkg install -y postgresql cloudflared glibc-runner curl openssh`.
 - Android 12 ou mais novo mata processos em segundo plano. Desligue o monitor: `adb shell settings put global settings_enable_monitor_phantom_procs false` e `adb shell device_config put activity_manager max_phantom_processes 2147483647`.
 - Para o Termux:Boot funcionar: conceda "Exibir sobre outros apps" ao Termux e ao Termux:Boot (`adb shell cmd appops set <pacote> SYSTEM_ALERT_WINDOW allow`), abra o Termux:Boot uma vez, e no Samsung desligue "Colocar apps não usados para dormir" e ponha os dois em "Apps que nunca dormem" (bateria Sem restrições).
-- Depois de reiniciar o telefone, desbloqueie-o com o PIN: o armazenamento do Termux só abre no primeiro desbloqueio.
+- Sem bloqueio de tela (decisão de 2026-11-10, `docs/a14-enxugamento.md` §4): o Android abre o armazenamento do Termux sozinho no boot, e a pilha volta depois de queda de energia ou reinício sem ninguém por perto. Custo aceito: quem pegar o telefone tem acesso ao banco e às evidências. Com um PIN, o armazenamento só abre no primeiro desbloqueio, e a pilha espera alguém desbloquear.
 - Com `adb forward tcp:8022 tcp:8022`, o `run.bat` fala com o telefone por USB, sem depender do IP do Wi-Fi. Use `127.0.0.1` como host do perfil: o OpenSSH do Windows tenta IPv6 com `localhost`, e o `adb forward` só escuta em IPv4.
 
 ## Impacto
