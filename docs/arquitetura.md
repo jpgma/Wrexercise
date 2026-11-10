@@ -1055,7 +1055,7 @@ Estrutura sugerida:
 ```text
 /dados/
 ├── postgres/
-├── avatares/        # folhas de avatar importadas (nome aleatório .png)
+├── avatares/        # folhas de avatar importadas (nome aleatório .png); limpeza diária dos arquivos sem dono
 └── evidencias/
     ├── 2026/
     │   ├── 11/

@@ -27,8 +27,8 @@ export function hashFnv1a(texto: string): number {
 }
 
 /**
- * A folha de avatar padrão, em 8 direções. Por enquanto é a mesma para todos (ADR 0039, Andamento),
- * até existirem os personagens padrão novos.
+ * A folha de avatar padrão, em 8 direções, de quem não importou uma folha. Por enquanto é a mesma para
+ * todos (ADR 0039, Andamento), até existirem os personagens padrão novos.
  */
 export function folhaPadrao(): string {
   return "/avatar-jpgma.png";
@@ -67,12 +67,12 @@ function useMapaAvatares() {
 }
 
 /**
- * A folha de uma pessoa. A importação está pausada (ADR 0039, Andamento): as folhas importadas são
- * de lado, no formato antigo, e a cena só desenha o formato em 8 direções. Por isso todos usam a
- * padrão, mesmo quem importou uma folha.
+ * A folha de uma pessoa: a importada, se houver, ou a padrão. Sem `usuarioId` (ou antes de o mapa
+ * chegar), a padrão. As folhas importadas seguem o mesmo formato em 8 direções (ADR 0039, Andamento).
  */
-export function useFolhaAvatar(): string {
-  return folhaPadrao();
+export function useFolhaAvatar(usuarioId?: string): string {
+  const { data } = useMapaAvatares();
+  return (usuarioId && data?.get(usuarioId)?.folha) || folhaPadrao();
 }
 
 /** A vitrine de Enfeites de uma pessoa (vazia para quem está no modo App). */

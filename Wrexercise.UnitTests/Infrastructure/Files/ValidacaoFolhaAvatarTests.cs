@@ -8,11 +8,18 @@ public class ValidacaoFolhaAvatarTests
     public void FolhaNoFormato_EhValida() => Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar()));
 
     [Theory]
-    [InlineData(255, 384)]
-    [InlineData(256, 383)]
-    [InlineData(512, 768)]
+    [InlineData(431, 2352)]
+    [InlineData(432, 2351)]
+    [InlineData(256, 384)]
     public void TamanhoDiferente_EhRecusado(int largura, int altura) =>
         Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(largura, altura)));
+
+    [Theory]
+    [InlineData(8)]
+    [InlineData(4)]
+    [InlineData(1)]
+    public void PaletaIndexada_EhValida(int profundidade) =>
+        Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(tipoCor: 3, profundidade: (byte)profundidade)));
 
     [Fact]
     public void SemCanalAlfa_EhRecusado() =>
@@ -23,6 +30,10 @@ public class ValidacaoFolhaAvatarTests
         Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(profundidade: 16)));
 
     [Fact]
+    public void TonsDeCinza_EhRecusado() =>
+        Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(tipoCor: 4)));
+
+    [Fact]
     public void Apng_EhRecusado() =>
         Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(blocoExtra: "acTL")));
 
@@ -31,7 +42,7 @@ public class ValidacaoFolhaAvatarTests
         Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(blocoExtra: "pHYs")));
 
     [Fact]
-    public void MaisDe64Kb_EhRecusado() =>
+    public void MaisDe1000Kb_EhRecusado() =>
         Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(bytesExtras: ValidacaoFolhaAvatar.MaxBytes)));
 
     [Fact]

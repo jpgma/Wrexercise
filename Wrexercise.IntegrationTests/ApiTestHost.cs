@@ -24,6 +24,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     internal Npgsql.NpgsqlDataSource DataSource => _database.DataSource;
 
+    /// <summary>Os serviços do servidor de teste (sobe o servidor, se ainda não subiu).</summary>
+    internal IServiceProvider Services => _factory.Services;
+
     private ApiTestHost(TestDatabase database, string evidenciasDiretorio, string avataresDiretorio)
     {
         _database = database;

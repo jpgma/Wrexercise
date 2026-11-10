@@ -2,7 +2,7 @@
 
 > Especificação pública da folha de sprites usada pelos avatares do modo Jogo (`gamificacao.md` §4). Qualquer pessoa pode desenhar uma folha neste formato e importá-la no aplicativo.
 >
-> **Em revisão:** a troca por uma folha vista de cima, em 8 direções, está proposta em `decisoes/0039-avatar-em-8-direcoes.md`. Por enquanto, a cena só desenha a folha em 8 direções do bundle (§6), e a importação está pausada. As §1 a §5 continuam valendo para o servidor, que ainda aceita e guarda folhas neste formato.
+> **Em revisão:** a folha vista de cima, em 8 direções, está proposta em `decisoes/0039-avatar-em-8-direcoes.md`. A cena e a importação usam só o formato de §6. As §1 a §5 descrevem o formato de lado antigo, que não é mais aceito; ficam como referência.
 
 ## 1. Arquivo
 
@@ -63,11 +63,13 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 
 ## 6. Folha em 8 direções (em teste)
 
-É o formato da folha padrão do bundle, `avatar-jpgma.png`, gerada por `pixel-art/jpgma/build.py` (ADR 0039, Andamento). Ainda não pode ser importada.
+É o formato da folha padrão do bundle, `avatar-jpgma.png`, gerada por `pixel-art/jpgma/build.py`, e o único aceito na importação (ADR 0039, Andamento).
 
 | Requisito | Valor |
 |---|---|
-| Tipo | PNG com paleta indexada (o índice 0 é transparente) |
+| Tipo | PNG RGBA de 8 bits ou com paleta indexada (a folha padrão é indexada, com o índice 0 transparente) |
+| Tamanho máximo | 1000 KB |
+| Animação | proibida dentro do PNG (sem `acTL`) |
 | Dimensões | 432 × 2352 px: 9 colunas × 49 linhas de células de 48 × 48 px |
 | Vista | de cima, em 8 direções, sem espelho |
 | Âncora | o ponto entre os pés fica em (24, 44), em todos os quadros |
@@ -85,4 +87,5 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 | 33 | `receber` | 6 | 200 ms | `receber`; a carta atinge o peito no terceiro quadro |
 | 41 | `parado` | 4 | 200 ms | `parado` e, até terem arte, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` |
 
+- **Importação:** só o tamanho é conferido; o desenho é livre, e linhas vazias ficam transparentes na cena. Em `/perfil/avatar`, "Exportar folha" baixa a folha atual, e "Exportar guia" baixa uma camada do mesmo tamanho com a grade, o nome de cada linha, as células sem uso sombreadas e a âncora. O navegador envia como veio um PNG RGBA de 8 bits ou indexado; qualquer outra imagem do tamanho certo é re-codificada como PNG RGBA. O servidor confere tudo de novo.
 - **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, olha para o centro da elipse, na direção mais próxima (quem fica embaixo aparece de costas).

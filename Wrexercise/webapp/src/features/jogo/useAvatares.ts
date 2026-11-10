@@ -8,12 +8,18 @@ import {
   putFormData,
 } from "@/services/api";
 
+export const meuAvatarKey = ["jogo", "meu-avatar"] as const;
+
 type FolhaEnviada = { folha: string };
 
-/** Depois de qualquer troca, o mapa de folhas é buscado de novo. */
+/** Depois de qualquer troca, o mapa de folhas e o avatar de quem vê são buscados de novo. */
 function useInvalidarAvatares() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: avataresKey });
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: avataresKey }),
+      queryClient.invalidateQueries({ queryKey: meuAvatarKey }),
+    ]);
 }
 
 export function useEnviarFolha() {
@@ -45,8 +51,6 @@ export function useRedefinirAvatarMembro(grupoId: string) {
     onSuccess: invalidar,
   });
 }
-
-export const meuAvatarKey = ["jogo", "meu-avatar"] as const;
 
 export type MeuAvatar = {
   folha: string | null;

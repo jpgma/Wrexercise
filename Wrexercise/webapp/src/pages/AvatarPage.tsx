@@ -6,7 +6,7 @@ export function AvatarPage() {
     <div className="mx-auto max-w-xl">
       <PageHeader
         title="Avatar"
-        subtitle="Importe a sua folha de sprites"
+        subtitle="Exporte, edite e importe a sua folha de sprites"
         back="/perfil"
       />
       <div className="space-y-4">

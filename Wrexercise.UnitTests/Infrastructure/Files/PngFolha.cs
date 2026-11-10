@@ -11,12 +11,12 @@ internal static class PngFolha
 {
     private static readonly byte[] Assinatura = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
-    /// <param name="tipoCor">6 = RGBA, 2 = RGB.</param>
+    /// <param name="tipoCor">6 = RGBA, 3 = paleta indexada, 2 = RGB.</param>
     /// <param name="blocoExtra">Um bloco a inserir depois do IHDR, como o <c>acTL</c> de um APNG.</param>
     /// <param name="bytesExtras">Dados (num bloco <c>tEXt</c>) para estourar o limite de tamanho.</param>
     public static byte[] Criar(
-        int largura = 256,
-        int altura = 384,
+        int largura = 432,
+        int altura = 2352,
         byte tipoCor = 6,
         byte profundidade = 8,
         string? blocoExtra = null,
@@ -34,6 +34,13 @@ internal static class PngFolha
         ihdr[9] = tipoCor;
         EscreverBloco(saida, "IHDR", ihdr);
 
+        if (tipoCor == 3)
+        {
+            // Paleta de duas cores; o índice 0 é transparente.
+            EscreverBloco(saida, "PLTE", new byte[6]);
+            EscreverBloco(saida, "tRNS", [0]);
+        }
+
         if (blocoExtra is not null)
         {
             EscreverBloco(saida, blocoExtra, new byte[8]);
@@ -44,7 +51,7 @@ internal static class PngFolha
             EscreverBloco(saida, "tEXt", new byte[bytesExtras]);
         }
 
-        EscreverBloco(saida, "IDAT", Comprimir(largura, altura, tipoCor == 6 ? 4 : 3));
+        EscreverBloco(saida, "IDAT", Comprimir(largura, altura, BytesPorLinha(largura, tipoCor, profundidade)));
         if (comIend)
         {
             EscreverBloco(saida, "IEND", []);
@@ -54,13 +61,19 @@ internal static class PngFolha
         return saida.ToArray();
     }
 
-    private static byte[] Comprimir(int largura, int altura, int bytesPorPixel)
+    private static int BytesPorLinha(int largura, byte tipoCor, byte profundidade)
+    {
+        var canais = tipoCor switch { 6 => 4, 2 => 3, _ => 1 };
+        return ((largura * canais * profundidade) + 7) / 8;
+    }
+
+    private static byte[] Comprimir(int largura, int altura, int bytesPorLinha)
     {
         using var saida = new MemoryStream();
         using (var zlib = new ZLibStream(saida, CompressionLevel.SmallestSize, leaveOpen: true))
         {
             // Cada linha: o byte do filtro (0) e os pixels, todos transparentes.
-            var linha = new byte[1 + (largura * bytesPorPixel)];
+            var linha = new byte[1 + bytesPorLinha];
             for (var y = 0; y < altura; y++)
             {
                 zlib.Write(linha);

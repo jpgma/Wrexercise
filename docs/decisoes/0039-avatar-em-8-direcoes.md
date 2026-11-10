@@ -30,9 +30,9 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 
 ## Pontos em aberto
 
-- **Limite de importação:** 256×384 e 64 KB não servem. A folha do `jpgma` tem 139 KB (RGBA) só com 6 animações; com as do Jogo, ela deve passar de 250 KB. Opções: aceitar PNG com paleta indexada (45 KB hoje, o navegador regrava assim antes de enviar), subir o limite, reduzir as linhas obrigatórias, ou aceitar 5 direções com espelho para folhas importadas.
+- **Limite de importação** (resolvido em 2026-11-09, ver Andamento)**:** 256×384 e 64 KB não servem. A folha do `jpgma` tem 139 KB (RGBA) só com 6 animações; com as do Jogo, ela deve passar de 250 KB. Opções: aceitar PNG com paleta indexada (45 KB hoje, o navegador regrava assim antes de enviar), subir o limite, reduzir as linhas obrigatórias, ou aceitar 5 direções com espelho para folhas importadas.
 - **Folhas padrão:** as 6 folhas do rig precisam de personagens novos em 8 direções, gerados no PixelLab e dedicados ao domínio público (CC0). Eles saem de um personagem base neutro (prompts em `pixel-art/base-masculino/prompts-pixellab.md`). O rig de 16 px (`pixel-art/avatar-base/`) e o editor por peças (`avatar-kit.md` §5) deixam de valer.
-- **Folhas importadas antigas:** converter (impossível sem redesenho), aceitar os dois formatos por um tempo, ou redefinir para o padrão com aviso.
+- **Folhas importadas antigas** (resolvido em 2026-11-09, ver Andamento)**:** converter (impossível sem redesenho), aceitar os dois formatos por um tempo, ou redefinir para o padrão com aviso.
 - **`receber` como impacto:** hoje a carta é pega com as mãos à frente do peito no segundo quadro (`avatar-formato.md` §3), e a encenação só começa o `receber` quando o voo termina (`useEncenacoes.ts`). Com o `Taking_Punch`, o impacto fica no terceiro quadro (400 ms depois do início, a 200 ms por quadro). O `receber` precisa começar 2 quadros antes do fim do voo, e a especificação passa a dizer "a carta atinge o peito no terceiro quadro". Quem recebe também precisa estar virado para quem arremessa.
 - **Pose de guarda:** o `Taking_Punch` começa e termina com os punhos levantados, não na pose de `rotacao`. Na cena, há um salto de pose na entrada e na saída. Opções: aceitar o salto, ou gerar de novo a reação a partir da pose parada (prompt em `pixel-art/jpgma/prompts-pixellab.md`). O tom também muda: era "pegar" um convite, e agora é "levar uma cartada". Isso combina com o humor das Provocações, mas vale para toda carta, inclusive para as Respostas.
 - **Tempos:** as animações do PixelLab têm 200 ms por quadro e outras quantidades de quadros (por exemplo, `receber` tem 6 × 200 ms = 1,2 s, contra 4 × 100 ms = 0,4 s hoje; `arremessar` tem 7 × 200 ms, e a carta sai em outro quadro). A especificação fixa os tempos, então eles precisam ser revistos linha por linha, junto com as encenações.
@@ -51,6 +51,12 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 - A carta sai da mão no quarto quadro de `arremessar`, e o `receber` começa 2 quadros antes do fim do voo: a carta atinge o peito no terceiro quadro, e quem recebe fica virado para quem arremessou.
 - **Direção de quem está parado:** virado para o centro da elipse, como diz a decisão proposta (item 5). Quem fica embaixo (a própria pessoa) aparece de costas, e quem fica em cima, de frente.
 - O formato está em `avatar-formato.md` §6.
+
+**2026-11-09 — a importação volta, no formato em 8 direções.** A decisão continua proposta, mas dois pontos em aberto ficam resolvidos:
+
+- **Limite de importação:** 432 × 2352 px, PNG RGBA de 8 bits ou com paleta indexada, sem APNG, até 1000 KB (abaixo do limite de 1 MiB do corpo da API, com o envelope multipart). Só o tamanho é conferido: o desenho é livre, para cada pessoa editar o avatar como quiser. O navegador envia como veio um PNG RGBA ou indexado (uma exportação indexada do Aseprite fica com cerca de 54 KB) e re-codifica qualquer outro como RGBA. As linhas obrigatórias e as 5 direções com espelho ficaram de fora.
+- **Folhas importadas antigas:** a migração `022-limpa-folhas-de-lado.sql` volta todos ao padrão. Os arquivos de lado ficam sem dono e saem na limpeza diária de `/dados/avatares` (`LimpezaAvatares`), que apaga todo arquivo sem dono há mais de 1 hora.
+- Em `/perfil/avatar`, "Exportar folha" baixa a folha atual (importada ou padrão), "Exportar guia" baixa uma camada com a grade, os nomes das linhas e a âncora, gerada no navegador a partir do formato, e "Importar folha" mostra uma prévia das 8 direções antes de salvar.
 
 ## Impacto, se aprovada
 

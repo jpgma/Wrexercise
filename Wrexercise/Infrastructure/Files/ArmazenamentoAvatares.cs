@@ -54,6 +54,26 @@ internal sealed class ArmazenamentoAvatares(IOptions<AvataresOptions> options)
     /// <returns>O caminho do arquivo, ou <c>null</c> se o nome não é um dos que este armazenamento gera.</returns>
     public string? ResolverCaminho(string nome) => IsNomeValido(nome) ? Path.Combine(_raiz, nome) : null;
 
+    /// <summary>
+    /// Os arquivos gerados por este armazenamento e gravados há mais de <paramref name="idadeMinima"/>.
+    /// A idade protege um envio que acabou de gravar o arquivo e ainda não gravou a linha no banco.
+    /// </summary>
+    public IReadOnlyList<string> ListarArquivosAntigos(TimeSpan idadeMinima)
+    {
+        if (!Directory.Exists(_raiz))
+        {
+            return [];
+        }
+
+        var limite = DateTime.UtcNow - idadeMinima;
+        return Directory.EnumerateFiles(_raiz, "*.png")
+            .Where(caminho => File.GetLastWriteTimeUtc(caminho) < limite)
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Where(IsNomeValido)
+            .ToList();
+    }
+
     public void ExcluirSeExistir(string nome)
     {
         if (ResolverCaminho(nome) is { } caminho && File.Exists(caminho))

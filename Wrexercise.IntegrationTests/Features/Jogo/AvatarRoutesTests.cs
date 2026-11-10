@@ -69,8 +69,9 @@ public sealed class AvatarRoutesTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(255, 384, 6)]
-    [InlineData(256, 384, 2)]
+    [InlineData(256, 384, 6)]
+    [InlineData(431, 2352, 6)]
+    [InlineData(432, 2352, 2)]
     public async Task EnviarFolha_FormatoErrado_Recusa400SemGuardarNada(int largura, int altura, int tipoCor)
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
@@ -93,11 +94,24 @@ public sealed class AvatarRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task EnviarFolha_Maior64Kb_Recusa400()
+    public async Task EnviarFolha_PaletaIndexada_GuardaSemMudar()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var png = PngFolha.Criar(tipoCor: 3);
+
+        var response = await EnviarAsync(ana, png);
+
+        response.EnsureSuccessStatusCode();
+        var enviada = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.FolhaEnviadaResponse, Token);
+        Assert.Equal(png, await ana.Client.GetByteArrayAsync(enviada!.Folha, Token));
+    }
+
+    [Fact]
+    public async Task EnviarFolha_Maior1000Kb_Recusa400()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
 
-        var response = await EnviarAsync(ana, PngFolha.Criar(bytesExtras: 70 * 1024));
+        var response = await EnviarAsync(ana, PngFolha.Criar(bytesExtras: 1001 * 1024));
 
         await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.BadRequest, "FOLHA_INVALIDA");
         Assert.Equal(0, ArquivosNoDisco());

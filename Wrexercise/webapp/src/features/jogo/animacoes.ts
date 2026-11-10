@@ -18,8 +18,11 @@ export const direcoes = [
 
 export type Direcao = (typeof direcoes)[number];
 
-/** As linhas da folha: cada uma tem 8 linhas, uma por direção. */
-const linhas = {
+/**
+ * As animações da folha: cada uma ocupa 8 linhas, uma por direção. A linha 0 é a `rotacao`, com uma
+ * direção por coluna. Também desenha o guia de edição (guiaFolha.ts).
+ */
+export const linhasFolha = {
   andar: { linha: 1, quadros: 8, ms: 200 },
   correr: { linha: 9, quadros: 8, ms: 200 },
   arremessar: { linha: 17, quadros: 7, ms: 200 },
@@ -42,17 +45,17 @@ export type Animacao = {
 // `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` ainda não têm arte: usam `parado`
 // (ADR 0039, Andamento). `treinando` usa `correr` e `comemorando` usa `comemorar`.
 export const animacoes = {
-  parado: { ...linhas.parado, repete: true, quadroEstatico: 0 },
-  treinando: { ...linhas.correr, repete: true, quadroEstatico: 2 },
-  comemorando: { ...linhas.comemorar, repete: true, quadroEstatico: 4 },
-  alongar: { ...linhas.parado, repete: true, quadroEstatico: 0 },
-  olhar: { ...linhas.parado, repete: true, quadroEstatico: 0 },
-  andar: { ...linhas.andar, repete: true, quadroEstatico: 0 },
-  arremessar: { ...linhas.arremessar, repete: false, quadroEstatico: 3 },
-  receber: { ...linhas.receber, repete: false, quadroEstatico: 2 },
-  aceitar: { ...linhas.parado, repete: true, quadroEstatico: 0 },
-  recusar: { ...linhas.parado, repete: true, quadroEstatico: 0 },
-  provocar: { ...linhas.parado, repete: true, quadroEstatico: 0 },
+  parado: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  treinando: { ...linhasFolha.correr, repete: true, quadroEstatico: 2 },
+  comemorando: { ...linhasFolha.comemorar, repete: true, quadroEstatico: 4 },
+  alongar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  olhar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  andar: { ...linhasFolha.andar, repete: true, quadroEstatico: 0 },
+  arremessar: { ...linhasFolha.arremessar, repete: false, quadroEstatico: 3 },
+  receber: { ...linhasFolha.receber, repete: false, quadroEstatico: 2 },
+  aceitar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  recusar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  provocar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
 } as const satisfies Record<string, Animacao>;
 
 export type NomeAnimacao = keyof typeof animacoes;

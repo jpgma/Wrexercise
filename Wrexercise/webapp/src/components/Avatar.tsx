@@ -28,7 +28,7 @@ function getHue(semente: string): number {
 }
 
 export function Avatar({ nome, id, size = 40, ring = false }: AvatarProps) {
-  const folha = useFolhaAvatar();
+  const folha = useFolhaAvatar(id);
   if (id) {
     // Retrato: a cabeça e os ombros da `rotacao` `sul` (linha 0, coluna 0), ampliados sem suavizar.
     const { x, y, lado } = formato.retrato;

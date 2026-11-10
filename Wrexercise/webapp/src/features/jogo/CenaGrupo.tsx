@@ -144,7 +144,7 @@ function AvatarCena({
   brilho: boolean;
   onToque: () => void;
 }) {
-  const folha = useFolhaAvatar();
+  const folha = useFolhaAvatar(membro.usuarioId);
   const enfeite = useVitrine(membro.usuarioId)[0];
   // O Enfeite (32 px) acompanha a escala da cena sem crescer demais: 32 px, ou 16 px com muita gente.
   const escalaEnfeite = escala >= 3 ? 2 : 1;

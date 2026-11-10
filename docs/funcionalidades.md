@@ -204,11 +204,17 @@ The user cannot change the e-mail.
 
 ### 3.3.5. Imported avatar (`Avatar`)
 
-- **Import is paused.** All users show the same default avatar (`avatar-jpgma.png`, 8 directions). This is also true for users with an imported sheet. The page `/perfil/avatar` shows a notice and the default avatar in the 8 directions. It has no file input. The button "Apagar a folha importada" deletes the imported file. The server API below does not change.
-- The page `/perfil/avatar` lets the user import a sprite sheet (paused, see above). A link "Trocar avatar" on the profile page opens it.
-- The sheet is a PNG with 256 by 384 px (8 columns, 12 rows of 32 px), colour type RGBA, 8 bits, and at most 64 KB. An animated PNG is not valid.
-- The browser opens the file, checks the size, and writes the PNG again. The server checks the file again and refuses an invalid one with `FOLHA_INVALIDA`. The server gives the file a random name.
-- `GET /api/jogo/avatares` returns the sheet URL of the user and of each active member of the groups of the user. While import is paused, the app uses only the `Vitrine` from this response.
+- A user with no imported sheet shows the default avatar (`avatar-jpgma.png`, 8 directions). A user with an imported sheet shows that sheet in the scene and in the portrait.
+- The page `/perfil/avatar` lets the user change the sprite sheet. A link "Trocar avatar" on the profile page opens it. The page has these buttons:
+  - "Exportar folha" downloads the current sheet (the imported sheet or the default sheet).
+  - "Exportar guia" downloads a guide of the same size. The guide shows the grid, the name of each row, the unused cells in grey and the anchor point. The browser makes the guide.
+  - "Importar folha" opens a PNG file. The page shows the 8 directions of the new sheet in the selected animation. The user clicks "Salvar avatar" or "Cancelar".
+  - "Voltar ao avatar padrão" deletes the imported file. It shows only when the user has an imported sheet.
+- The sheet is a PNG with 432 by 2352 px (9 columns, 49 rows of 48 px, see `avatar-formato.md` §6). The colour type is RGBA with 8 bits, or indexed. The maximum size is 1000 KB. An animated PNG is not valid. The app does not check the drawing.
+- The browser opens the file and checks the size. It sends an RGBA or indexed PNG without changes. It writes any other image again as an RGBA PNG. The server checks the file again and refuses an invalid one with `FOLHA_INVALIDA`. The server gives the file a random name.
+- Sheets in the old side format (256 by 384 px) are not valid. Migration `022` changed all of them to the default.
+- Each day, the server deletes the sheet files that no user has, if they are older than 1 hour.
+- `GET /api/jogo/avatares` returns the sheet URL of the user and of each active member of the groups of the user.
 - `GET /api/avatares/{arquivo}` returns the file only to its owner and to people who share an active group with the owner. For anyone else, it returns 404.
 - The `Proprietario` or an `Administrador` of a group can use "Voltar o avatar ao padrão" on the page of a member. This deletes the imported file of that member. The action is not for the own avatar of the actor.
 - An import is limited to 10 per minute for each user.
