@@ -48,11 +48,18 @@ ler_env() {
   DB_PASSWORD=$(sed -n 's/^DB_PASSWORD=//p' .env)
 }
 
+# Verdadeiro se o PID gravado ainda é o laço desta tarefa. Depois de um reinício, o PID antigo pode
+# pertencer a outro processo do Termux (como o script de boot de outro app): só kill -0 não basta.
+tarefa_rodando() {
+  pid=$(cat "run/$1.pid" 2>/dev/null) || return 1
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -qF "$base/"
+}
+
 # Uma tarefa que reinicia sozinha se cair; a pausa evita laço apertado em erro de configuração.
 iniciar_tarefa() {
   nome=$1
   shift
-  if [ -f "run/$nome.pid" ] && kill -0 "$(cat "run/$nome.pid")" 2>/dev/null; then
+  if tarefa_rodando "$nome"; then
     return 0
   fi
   [ -f "log/$nome.log" ] && tail -c 1048576 "log/$nome.log" > "log/$nome.log.tmp" && mv "log/$nome.log.tmp" "log/$nome.log"
@@ -130,7 +137,7 @@ implantar() {
 status() {
   curl -fs --max-time 5 http://127.0.0.1:8080/health || echo "app sem resposta"
   echo
-  if [ -f run/app.pid ] && kill -0 "$(cat run/app.pid)" 2>/dev/null; then echo "app: rodando"; else echo "app: parado"; fi
+  if tarefa_rodando app; then echo "app: rodando"; else echo "app: parado"; fi
   if pg_isready -q -h 127.0.0.1 -p 5432 2>/dev/null; then echo "PostgreSQL (Environment): aceita conexões"; else echo "PostgreSQL (Environment): sem resposta"; fi
   free -m | head -2
 }
