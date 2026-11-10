@@ -91,7 +91,7 @@ A pele e o cabelo vêm das rampas do `jpgma`. A camiseta e a calça seguem a ram
 
 ### `rotations` prontas
 
-`build.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Os acertos à mão de olhos e sobrancelhas ficam em `RETOQUES`, no próprio script. Use `saida/rotations/<direcao>.png` (nome sem hífen, por exemplo `northeast.png`) como referência no PixelLab, ou importe as 8 como as rotações do personagem.
+`build.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Os acertos à mão de olhos e sobrancelhas ficam em `RETOQUES`, no próprio script. Use `saida/rotations/<direcao>.png` (nome sem hífen, por exemplo `northeast.png`) como referência no PixelLab, ou importe as 8 como as rotações do personagem. `tira.py` monta as 8 de `fonte/<direcao>.png` (iguais às de `saida/rotations/`) em `saida/rotations-tira.png`, numa linha em tamanho real, e em `saida/referencia-gemini.png`, a referência do Gemini.
 
 ### Conferência da `rotations`
 
@@ -107,17 +107,47 @@ Se algo falhar, gere de novo antes de seguir. Toda animação parte desta `rotat
 
 ## 3. Como gerar as animações
 
-- **Fluxo:** *animate character*, a partir da `rotations` aprovada, nas 8 direções e na ordem `south`, `south-east`, `east`, `north-east`, `north`, `north-west`, `west`, `south-west`.
-- **Modelo do PixelLab ou texto:** quando houver um modelo pronto equivalente (andar, correr, respirar), prefira o modelo, porque ele mantém o corpo mais estável. Nos outros casos, ou se o modelo sair estranho, use o prompt desta seção como descrição da ação.
-- **Ponto de partida comum:** toda animação que toca uma vez começa e termina na pose parada de `rotations`, salvo quando o prompt diz outra coisa. Isso evita o salto de pose que o `Taking_Punch` do `jpgma` tem.
-- **Pés:** só `andar` e `correr` deslocam os pés. Nas outras, os pés ficam no lugar, para que a âncora valha.
+Toda animação parte **só** das imagens de `saida/rotations/` que o `build.py` já gerou. Nada de geração do zero, de folha com várias direções ou de referência em outro tamanho: sem um quadro de partida do mesmo tamanho, o modelo redesenha o personagem a cada quadro, e os quadros saem com altura, largura e proporções diferentes.
+
+- **Uma direção por vez:** *animate with text* (ou um modelo pronto, ver abaixo) com `saida/rotations/<direcao>.png` como imagem de referência, na tela de 64×64, igual à da imagem. Ordem: `south`, `south-east`, `east`, `north-east`, `north`, `north-west`, `west`, `south-west`. Arquivos: `south.png`, `southeast.png`, `east.png`, `northeast.png`, `north.png`, `northwest.png`, `west.png`, `southwest.png`.
+- **Prompt:** o bloco de âncora abaixo, com `<direction>` trocado pela direção, seguido do prompt da ação em §4. Os prompts de §4 descrevem cada quadro como uma mudança de poucos pixels em relação à pose parada, para que o modelo mexa só nas partes que a ação move.
+- **Modelo do PixelLab:** quando houver um modelo pronto equivalente (andar, correr, respirar), prefira o modelo, sempre com a mesma imagem de referência. Se o modelo sair estranho, volte ao texto.
+- **No lugar:** todas as animações ficam no centro do quadro, inclusive `andar` e `correr`: o deslocamento na cena é feito pelo Jogo. Só `andar`, `correr`, `treinando` e `comemorar` tiram os pés da linha 45, e só pelos pixels que o prompt diz.
 - **Nada de objetos:** a carta voa em CSS na cena (`docs/gamificacao.md` §3.3). Não desenhe carta, bola, peso ou garrafa.
 - **Saída:** 200 ms por quadro (o padrão do PixelLab), fundo transparente, sem sombra no chão.
-- **Paleta:** a mesma de §2. Cores novas vão para a mais próxima no build; evite cores que o personagem não tem.
-- **Quadros:** os da tabela. Se o PixelLab gerar outra quantidade, tudo bem: o build lê a quantidade das tags.
+- **Paleta:** a mesma de `rotations` (`PALETA` no `build.py`). Cores novas vão para a mais próxima no build; evite cores que o personagem não tem.
+- **Quadros:** os da tabela de §4. Se o PixelLab gerar outra quantidade, tudo bem: o build lê a quantidade das tags.
 - **Exportar:** `.aseprite` com uma camada e tags `Acao-direcao` (por exemplo, `Idle_Breathing-south`), como em `../jpgma/fonte/`. Salve em `fonte/base-masculino-a.aseprite`, `-b` e assim por diante.
 
-Acrescente o bloco de estilo de §1 em toda animação.
+### Bloco de âncora
+
+Cole antes do prompt da ação, em toda animação:
+
+```text
+Animate the character in the reference image, facing <direction>. The reference image is the
+standing pose that the animation starts from and returns to. Keep the facing direction of the
+reference in every frame. Keep the 64x64 canvas, the same pixel grid and the same scale in
+every frame: the character is 33 pixels tall in the standing pose, centered horizontally,
+with the feet on row 45, exactly as in the reference. Do not redraw, resize, restyle or
+recolor the character: same head size, same body proportions, same outline, same 3-tone
+shading and the same colors as the reference. Change only the body parts that the action
+moves, by the number of pixels given for each frame. Everything not mentioned stays exactly
+as in the reference. The animation stays in place, no travel across the canvas.
+Transparent background, no floor shadow, no anti-aliasing, no new colors.
+```
+
+Depois do prompt da ação, acrescente o bloco de estilo de §1.
+
+### Conferência de cada animação
+
+Antes de exportar, compare cada quadro com a imagem de `rotations` da mesma direção, um sobre o outro:
+
+- A cabeça, o tronco e as pernas têm o mesmo tamanho da referência; só mudam de lugar.
+- Fora dos movimentos que o prompt descreve, a altura é 33 px e os pés ficam na linha 45.
+- O personagem não andou no quadro e não virou para outra direção.
+- Nenhuma cor nova, nenhum objeto, nenhuma sombra no chão.
+
+Se um quadro falhar, gere a direção de novo. Não corrija tamanho ou proporção à mão: isso só esconde o problema nas outras direções.
 
 ## 4. Animações
 
@@ -137,105 +167,193 @@ Acrescente o bloco de estilo de §1 em toda animação.
 | `provocar` | `Taunting` | encontro dos rivais | 4 | uma vez |
 | `comemorar` | `Cheering` | meta cumprida, Jogada concluída, Missão, Enfeite | 8 | sim |
 
+`rotacao` não é gerada: é a própria imagem de `saida/rotations/`.
+
 ### `parado` — Idle_Breathing
 
 ```text
-Idle breathing loop, standing still in place in the relaxed neutral pose. Arms at the sides.
-The chest and shoulders rise 1 pixel and fall back, the head follows by 1 pixel.
-Feet do not move. Calm, subtle, seamless loop. 4 frames.
+Action: calm idle breathing loop. 4 frames:
+1. Exactly the reference pose.
+2. The head, the shoulders and the chest move 1 pixel up. The arms follow the shoulders.
+   The legs and the feet do not change.
+3. Same as frame 2.
+4. Exactly the reference pose.
+Seamless loop: frame 4 leads back to frame 1.
 ```
 
 ### `andar` — Walking
 
 ```text
-Casual relaxed walk at a normal pace. Arms swing gently opposite to the legs, small steps,
-the body bobs 1 pixel on each step. Upright posture, friendly and unhurried.
-Seamless loop, the first frame matches the standing pose as closely as possible. 8 frames.
+Action: casual relaxed walk in place, at a normal pace. Small steps: a foot moves at most
+3 pixels from its standing position. Each arm swings at most 2 pixels, opposite to the leg
+on the same side. 8 frames:
+1. The reference pose: legs together, arms at the sides.
+2. The right leg moves forward, the left arm swings forward, the right arm swings back.
+   The body moves 1 pixel up.
+3. Widest step: the right foot is forward, the left foot is back, both feet on row 45.
+   The arms are at the end of their swing. The body is at the reference height.
+4. The weight moves onto the right foot, the legs start to come together, the arms move
+   back toward the sides. The body moves 1 pixel down.
+5. Legs together and arms at the sides, as in frame 1.
+6. Same as frame 2, but with the left leg forward, the right arm forward, the left arm back.
+7. Same as frame 3, but with the left foot forward.
+8. Same as frame 4, but with the weight on the left foot.
+Seamless loop: frame 8 leads back to frame 1.
 ```
 
 ### `correr` — Running
 
 ```text
-Light athletic run, like a morning jog in the park, not a sprint. Arms bent at the elbows
-swing forward and back, knees lift moderately, the torso leans forward slightly,
-the body bounces 1 to 2 pixels. Seamless loop. 8 frames.
+Action: light athletic run in place, like a morning jog in the park, not a sprint. In every
+frame the elbows are bent at about 90 degrees and the torso leans 1 pixel forward. A knee
+lifts at most 3 pixels, and in the air the feet are at most 2 pixels above row 45. 8 frames:
+1. The reference pose with the elbows bent and the torso leaning 1 pixel forward.
+2. The right knee lifts forward, the left leg pushes back, the left arm swings forward,
+   the right arm swings back. The body moves 1 pixel up.
+3. Both feet off the ground, at most 2 pixels above row 45, widest stride.
+   The body moves 2 pixels up from the reference.
+4. The right foot lands on row 45, the left leg starts to come forward.
+   The body moves 1 pixel down from the reference.
+5. Same as frame 1.
+6. Same as frame 2, but with the left knee forward, the right arm forward, the left arm back.
+7. Same as frame 3, but with the left leg forward.
+8. Same as frame 4, but landing on the left foot.
+Seamless loop: frame 8 leads back to frame 1.
 ```
 
 ### `treinando` — Jogging_In_Place
 
 ```text
-Light jogging in place, warming up before a workout. Knees lift a little, one at a time,
-arms swing bent at the elbows. The body bounces 1 pixel. The feet stay over the same spot,
-no forward travel at all. Seamless loop. 6 frames.
+Action: light jogging in place, warming up before a workout. In every frame the elbows are
+bent at about 90 degrees. The feet stay over the same spot, no forward travel at all.
+6 frames:
+1. The reference pose with the elbows bent. Both feet on row 45.
+2. The right knee starts to lift: the right foot is 1 pixel above row 45. The left arm
+   swings 1 pixel forward. The body moves 1 pixel up.
+3. The right knee is at its highest: the right foot is 3 pixels above row 45. The left arm
+   is 2 pixels forward. The body stays 1 pixel up.
+4. Same as frame 1.
+5. Same as frame 2, but with the left knee and the right arm.
+6. Same as frame 3, but with the left knee and the right arm.
+Seamless loop: frame 6 leads back to frame 1.
 ```
 
 ### `alongar` — Stretching
 
 ```text
-Quick casual stretch while standing: both arms reach straight up over the head with the
-hands together, the body leans a little to one side, then the arms come down and the
-character returns to the relaxed neutral pose. Feet do not move.
-4 frames, starts and ends in the idle pose.
+Action: quick casual stretch while standing. The feet do not move. 4 frames:
+1. Both arms rise to shoulder height. The rest is the reference pose.
+2. Both arms reach straight up over the head, with the hands together. The body stretches
+   1 pixel taller.
+3. Same arms as frame 2. The upper body leans 1 to 2 pixels to one side, from the waist.
+4. The upper body is straight again and the arms come down to shoulder height.
+After frame 4 the character returns to the reference pose.
 ```
 
 ### `olhar` — Looking_Around
 
 ```text
-Looks around while standing, a little curious: the head turns to one side, then to the
-other side, then back to the front. The body and arms stay still, feet do not move.
-4 frames, starts and ends in the idle pose.
+Action: looks around while standing, a little curious. Only the head moves; the body, the
+arms and the feet stay exactly as in the reference. The head keeps its size. 4 frames:
+1. Exactly the reference pose.
+2. The head turns to one side: the face features move 1 pixel to that side.
+3. The head turns to the other side: the face features move 1 pixel to the other side
+   of the reference position.
+4. Exactly the reference pose.
 ```
 
 ### `arremessar` — Throw_Card
 
 ```text
-Tosses a small playing card overhand toward someone in front, playful and confident,
-like flicking a note to a friend. Starts from the relaxed idle pose, frames 2 and 3 wind up
-with the throwing arm back and the weight shifting to the back foot, frame 4 snaps
-the arm forward and releases, frames 5 and 6 follow through and return to the idle pose.
-Feet stay in place. Do not draw the card. 6 frames.
+Action: tosses a small playing card overhand toward someone in front, playful and confident,
+like flicking a note to a friend. Only the right arm and the upper body move. The feet stay
+on row 45 and do not move. Do not draw the card. 6 frames:
+1. Exactly the reference pose.
+2. Wind-up: the right arm bends and lifts, the hand goes up next to the right shoulder.
+   The upper body turns a little toward the right arm.
+3. Full wind-up: the right hand is behind and above the right shoulder. The upper body leans
+   1 pixel back, the weight is on the back foot.
+4. Release: the right arm snaps forward, straight, at shoulder height, pointing at the
+   person in front. The upper body leans 1 pixel forward.
+5. Follow-through: the right arm comes down across the front of the body.
+   The upper body is upright again.
+6. The right arm returns toward the side, almost the reference pose.
 ```
 
 ### `receber` — Hit_By_Card
 
 ```text
-Gets hit in the chest by a small card thrown at them, comic surprise, not pain. Starts from
-the relaxed idle pose, frame 2 notices it coming, frame 3 is the impact: the upper body jolts
-back, the head tilts back, the arms flick outward. Frames 4 to 6 recover with a small shake
-of the head and end in the same relaxed idle pose. Feet do not move. Do not draw the card. 6 frames.
+Action: gets hit in the chest by a small card thrown at them, comic surprise, not pain.
+The feet stay on row 45 and do not move. Do not draw the card. 6 frames:
+1. Exactly the reference pose.
+2. Notices it coming: the head moves 1 pixel up, the eyes open wide, the arms lift 1 pixel
+   away from the body.
+3. Impact: the upper body jolts 1 to 2 pixels back, the head tilts back, both arms flick
+   outward 2 pixels from the torso.
+4. Recovers: the upper body comes back to its place, the arms come back to the sides.
+5. A small shake of the head: the head moves 1 pixel to one side. The body is as in
+   the reference.
+6. Exactly the reference pose.
 ```
 
 ### `aceitar` — Fist_Pump
 
 ```text
-Accepts a challenge with confidence: starts from the relaxed idle pose, a short crouch on
-frame 2, then a fist pump with one arm raised straight above the head and a small nod.
-Feet do not move. 4 frames, ends with the fist up.
+Action: accepts a challenge with confidence. The feet stay on row 45 and do not move.
+Only the raised arm may go above the 33-pixel standing height. 4 frames:
+1. Exactly the reference pose.
+2. Short crouch: the knees bend and the body moves 2 pixels down. Both hands close into
+   fists at the waist.
+3. The body comes back to the reference height. The right arm goes straight up above the
+   head with the fist closed.
+4. Same as frame 3, with a small nod: the head moves 1 pixel down.
+The animation ends on frame 4, with the fist up.
 ```
 
 ### `recusar` — Shrug
 
 ```text
-Shrugs to decline, relaxed and good-humored, no hard feelings: starts from the relaxed idle
-pose, both shoulders lift, the forearms come up with open palms facing up, the head tilts
-a little to the side. Feet do not move. 3 frames, ends at the top of the shrug.
+Action: shrugs to decline, relaxed and good-humored, no hard feelings. The feet stay on
+row 45 and do not move. 3 frames:
+1. Exactly the reference pose.
+2. Both shoulders lift 1 pixel. The forearms come halfway up, with the elbows next to
+   the torso.
+3. The shoulders stay 1 pixel up. The forearms point forward at waist height, with the open
+   palms facing up. The head tilts 1 pixel to one side.
+The animation ends on frame 3, at the top of the shrug.
 ```
 
 ### `provocar` — Taunting
 
 ```text
-Friendly taunt to a rival standing in front of them, like trash talk between friends before
-a game: points forward with one arm extended, leans forward a little, a quick bounce on the
-spot, then points again with a confident grin. Not aggressive, no fists, no fighting stance.
-Feet do not move. 4 frames.
+Action: friendly taunt to a rival standing in front of them, like trash talk between friends
+before a game. Not aggressive, no fists, no fighting stance. The feet stay on row 45 and do
+not move. 4 frames:
+1. Exactly the reference pose.
+2. Points forward: the right arm extends straight at shoulder height, toward the front.
+   The upper body leans 1 pixel forward.
+3. Quick bounce: the right hand comes back to the chest, the knees bend and the body moves
+   1 pixel down.
+4. Points again as in frame 2, with a confident grin.
 ```
 
 ### `comemorar` — Cheering
 
 ```text
-Celebrates a goal reached: jumps up a little with both fists raised above the head, happy
-open-mouth smile, lands and bounces, both arms pump in the air again. Joyful, like finishing
-a workout streak. The feet return to the same spot on every landing. Seamless loop. 8 frames.
+Action: celebrates a goal reached, joyful, like finishing a workout streak. The jump is
+small: the feet go at most 3 pixels above row 45 and land back on the same spot.
+8 frames:
+1. Exactly the reference pose.
+2. Crouch: the knees bend, the body moves 2 pixels down, both fists come up to the chest.
+3. Jump: both feet leave the ground, 2 pixels above row 45. Both fists go straight up
+   above the head.
+4. Top of the jump: the feet are 3 pixels above row 45, the fists are up, the mouth is a
+   happy open smile.
+5. Landing: both feet back on row 45, the body 1 pixel down, the fists still up.
+6. The body returns to the reference height. Both fists pump down to the level of the head.
+7. Both fists pump up again, straight above the head.
+8. The fists come down to the shoulders. The legs are as in the reference.
+Seamless loop: frame 8 leads back to frame 1.
 ```
 
 ## 5. Derivar personagens

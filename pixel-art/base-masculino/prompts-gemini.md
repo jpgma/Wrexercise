@@ -9,7 +9,7 @@
 - **Onde:** de preferência o Google AI Studio, com o modelo de imagem do Gemini. O app do Gemini pode pôr uma marca visível num canto da imagem, por cima de um personagem.
 - **Proporção:** 3:2, deitada (o `build.py` foi feito para 1536×1024). A grade tem 4 colunas e 2 linhas.
 - **Fundo:** magenta chapado `#FF00FF`. O Gemini não gera transparência, e o magenta não existe no personagem. **Atenção:** o `build.py` atual separa o personagem de um fundo escuro com brilho (o da `fonte/base.png` de hoje). Para uma fonte em magenta, ele precisa tratar o magenta como fundo antes de procurar o contorno.
-- **Referência:** anexe `../jpgma/saida/` ou a `saida/rotations/` atual, montada numa imagem só, como referência de proporção e de vista. Diga que ela mostra o corpo e o ângulo, e não o rosto, o cabelo ou a roupa. Não anexe arte de terceiros: as folhas padrão são CC0.
+- **Referência:** anexe `saida/referencia-gemini.png` (as 8 direções de `fonte/<direcao>.png` na grade e na ordem de §3, sobre magenta, ampliadas 8×; gere de novo com `python tira.py`) como referência de proporção e de vista. Diga que ela mostra o corpo e o ângulo, e não o rosto, o cabelo ou a roupa. Não anexe arte de terceiros: as folhas padrão são CC0.
 - **Iteração:** corrija uma direção por vez na mesma conversa ("keep the other seven identical, only redraw the north-east one: the head must turn further away"). Gerar do zero muda o personagem.
 - **Salvar:** baixe o PNG em resolução cheia e salve em `fonte/base.png`.
 
@@ -84,7 +84,7 @@ Os mesmos itens de `prompts-pixellab.md` §2 ("Conferência da `rotations`"), e 
 
 ## 4. Tira de animação (opcional)
 
-Use só quando o PixelLab não der conta de uma ação. Gere **uma direção por vez**, anexando a imagem dessa direção em `saida/rotations/` como referência do personagem. A ação vem da tabela e dos prompts de `prompts-pixellab.md` §4, com a mesma quantidade de quadros.
+Use só quando o PixelLab não der conta de uma ação. Gere **uma direção por vez**, anexando a imagem dessa direção em `saida/rotations/` como referência do personagem. Uma tira gerada só com texto sai com quadros de tamanho e proporção irregulares; por isso, cole também o bloco de âncora de `prompts-pixellab.md` §3. A ação vem da tabela e dos prompts de `prompts-pixellab.md` §4, com a mesma quantidade de quadros.
 
 ```text
 Animation strip of the character in the attached reference image, facing <south>, in
@@ -93,7 +93,7 @@ magenta background (#FF00FF), with no grid lines and no floor. Same character, s
 same size, same colors, same outline and same proportions as the reference in every frame.
 The feet stay on the same horizontal line in every frame<, and do not move>.
 The first and last frames match the reference standing pose.
-Action: <paste the action text from prompts-pixellab.md §4, without the frame count line>.
+<paste the action prompt from prompts-pixellab.md §4, with its frame list>
 Do not draw any card, ball, weight or bottle.
 ```
 
