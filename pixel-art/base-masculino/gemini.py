@@ -9,8 +9,9 @@ da quantidade de quadros da animação (QUADROS e GRADES). Este script, para cad
 - calibra PALETA (a mesma do build.py) pelos tons da folha e leva cada pixel para a cor dela;
 - tira as manchas de cor de transição, separa a gola da sombra da calça e redesenha o
   contorno de 1 px;
-- põe a linha do chão do 1º quadro na linha 45 de um quadro de 64×64, centrado, e mantém o
-  deslocamento dos outros quadros em relação ao 1º (pulos e inclinações continuam).
+- põe a linha do chão do 1º quadro na linha 45 de um quadro de 64×64, centrado; os outros
+  quadros ficam com as pernas no mesmo lugar e a mesma altura do chão em relação ao 1º
+  (pulos e inclinações do tronco continuam).
 
 Uso: python gemini.py [arquivo ...]   (sem argumentos: todas as folhas de fonte/gemini/)
 Gera saida/gemini/<animacao>-<direcao>.png (os quadros lado a lado, 64×64 cada, para importar
@@ -41,6 +42,8 @@ GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2)}
 
 MANCHA = 0.5  # componente com menos que esta fração de um bloco é mancha solta
 MARGEM = 0.2  # fração do bloco ignorada em cada borda ao votar a cor (fica só o miolo)
+PERNAS = 8  # linhas de baixo (em pixels do Jogo) usadas para alinhar os quadros pelas pernas
+AJUSTE = 3  # deslocamento máximo (px) do ajuste fino pelos tênis
 MANCHA_PX = 2  # grupo de até tantos pixels da mesma cor, cercado por outra cor, é mancha
 # Cores que podem ficar isoladas (1 px sem vizinho igual): olhos e contorno.
 ISOLADAS_OK = {hex_rgb(PALETA["branco"]), CONTORNO}
@@ -103,7 +106,8 @@ def reduzir(px, x0, y0, m, bx, by, tw, th, escala, cor) -> dict[tuple[int, int],
         for tx in range(tw):
             votos, total = Counter(), 0
             for sy in range(round(by + ty * escala + borda), round(by + (ty + 1) * escala - borda)):
-                for sx in range(round(bx + tx * escala + borda), round(bx + (tx + 1) * escala - borda)):
+                sx0, sx1 = round(bx + tx * escala + borda), round(bx + (tx + 1) * escala - borda)
+                for sx in range(sx0, sx1):
                     total += 1
                     if (sx, sy) in m:
                         votos[cor(px[x0 + sx, y0 + sy])] += 1
@@ -196,22 +200,39 @@ def processar(arq: pathlib.Path) -> None:
     _, _, _, x1min, y1min, x1max, y1max = celulas[0]
     escala = (y1max - y1min) / alt_ref
 
-    # 2. Cada quadro numa grade de blocos alinhada à borda do próprio personagem, e no quadro
-    #    de 64 deslocado do 1º pelo que andou na célula.
+    def centro_pernas(m, ymax) -> float:
+        """Centro horizontal das pernas (as PERNAS linhas de baixo), que não saem do lugar."""
+        xs = [x for x, y in m if y >= ymax - PERNAS * escala]
+        return (min(xs) + max(xs) + 1) / 2
+
+    # 2. Cada quadro numa grade de blocos alinhada à borda do próprio personagem. No quadro de
+    #    64, as pernas ficam onde estão no 1º (o Gemini não põe o personagem no mesmo lugar de
+    #    cada célula) e a altura acompanha o 1º pela linha do chão (pulos continuam).
     tira = Image.new("RGBA", (QUADRO * n, QUADRO), (0, 0, 0, 0))
     largura1 = round((x1max - x1min) / escala)
-    centro1 = (x1min + x1max) / 2
+    ox1 = round(CENTRO_X - largura1 / 2 + 0.01)
+    pernas1 = ox1 + (centro_pernas(celulas[0][2], y1max) - x1min) / escala
     for i, (x0, y0, m, xmin, ymin, xmax, ymax) in enumerate(celulas):
         tw = round((xmax - xmin) / escala)
         th = round((ymax - ymin) / escala)
         grade = separar_gola(limpar(reduzir(px, x0, y0, m, xmin, ymin, tw, th, escala, cor)))
-        dx = round(((xmin + xmax) / 2 - centro1) / escala - (tw - largura1) / 2)
         dy = round((ymax - y1max) / escala)
-        ox = round(CENTRO_X - largura1 / 2 + 0.01) + dx
+        ox = round(pernas1 - (centro_pernas(m, ymax) - xmin) / escala)
+        # Com os pés no chão, o ajuste fino vem dos tênis: o deslocamento (até AJUSTE px) que
+        # mais sobrepõe as linhas de baixo às do 1º quadro, com o pé de apoio no mesmo lugar.
+        chao = {(ox + tx, th - ty) for tx, ty in grade if ty >= th - 2}
+        if i == 0:
+            chao1 = chao
+        elif dy == 0:
+            ox += max(
+                range(-AJUSTE, AJUSTE + 1),
+                key=lambda s: (len({(x + s, y) for x, y in chao} & chao1), -abs(s)),
+            )
         oy = PE_Y + 1 - th + dy
         q = Image.new("RGBA", (QUADRO, QUADRO), (0, 0, 0, 0))
         for (tx, ty), c in grade.items():
-            borda = any(v not in grade for v in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)))
+            viz = ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1))
+            borda = any(v not in grade for v in viz)
             q.putpixel((ox + tx, oy + ty), (CONTORNO if borda else c) + (255,))
         tira.paste(q, (i * QUADRO, 0))
         print(f"{arq.name} quadro {i + 1}: {tw}×{th} px, caixa no quadro {q.getbbox()}")
@@ -227,7 +248,8 @@ def processar(arq: pathlib.Path) -> None:
         p.alpha_composite(q, ((i + 1) * CELULA, 0))
     prev = AQUI / "preview"
     prev.mkdir(exist_ok=True)
-    p.resize((p.width * 6, p.height * 6), Image.NEAREST).save(prev / f"gemini-{animacao}-{direcao}-6x.png")
+    p = p.resize((p.width * 6, p.height * 6), Image.NEAREST)
+    p.save(prev / f"gemini-{animacao}-{direcao}-6x.png")
     print(f"escala {escala:.2f}; saida/gemini/{animacao}-{direcao}.png")
 
 
