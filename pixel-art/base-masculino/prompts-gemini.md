@@ -187,6 +187,8 @@ Frame 6: the same as frame 2, mirrored: the left leg forward, the right arm forw
 arm back. The whole body is 1 block higher.
 Frame 7: the same as frame 3, mirrored: the left foot forward, the right foot back.
 Frame 8: the same as frame 4, mirrored: the weight on the left foot, the body 1 block lower.
+In frames 6 to 8 the OTHER leg leads: the leg that was back in frames 2 to 4 is now forward.
+Frame 7 is not a copy of frame 3: the forward foot is on the other side of the body.
 
 STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
 Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
@@ -280,6 +282,8 @@ Frame 5: the same as frame 2, mirrored: the left knee starts to lift, the right 
 1 block forward.
 Frame 6: the same as frame 3, mirrored: the left sole is 3 blocks above the ground line, the
 right fist is 2 blocks forward, the right sole stays on the ground line.
+In frames 5 and 6 the OTHER leg lifts: the leg that stayed on the ground in frames 2 and 3.
+Frame 6 is not a copy of frame 3: the raised knee is on the other side of the body.
 
 STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
 Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
