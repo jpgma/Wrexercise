@@ -8,3 +8,4 @@ export { RedefinirAvatar } from "./RedefinirAvatar";
 export { EditorVitrine } from "./EditorVitrine";
 export { EnfeiteIcone } from "./EnfeiteIcone";
 export { EnfeiteBloqueadoIcone } from "./EnfeiteBloqueadoIcone";
+export { SaudacaoAlternada } from "./SaudacaoAlternada";

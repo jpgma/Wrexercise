@@ -104,7 +104,8 @@ The user cannot change the e-mail.
 
 ### 3.3.2. Game home screen (scene)
 
-- In the mode `Jogo`, the home screen of a group shows the scene, the weekly ring and the notice of activities to review. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
+- In the mode `Jogo`, the home screen of a group shows the scene and the notice of activities to review. The weekly ring is in the header, around the `Avatar` of the user. The ring has one segment for each activity of the weekly goal. A verified activity fills one segment. An activity that waits for verification fills one segment in a light colour.
+- In the mode `Jogo`, with a weekly goal, the header text changes every 4 seconds. It shows the greeting and the date, then the progress message and its detail (see "Weekly progress message" below). A tap on the text shows the other text and stops the change. The change also stops while the pointer is on the text. Screen readers always get the greeting and the progress message. If the device asks for reduced motion, the text does not change: the header shows the greeting and the detail of the progress message. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
 - The scene (`Cena`) is a street plaza ("praça") seen from above. It shows one `Avatar` for each active member, on a tall ellipse that uses the full height of the plaza (360 by 460 px). The current user stands at the front (bottom). The other members follow in the order of joining.
 - Each `Avatar` has the first name below it. A tap opens a window with a link to the page of the member. For another member in the mode `Jogo`, the window also shows the free cards of the hand: the user selects one card and taps "Jogar". For a member in the mode `App`, the window says that the member does not receive cards. The scene shows the `Avatar` from above, in 8 directions. A standing `Avatar` faces the centre of the ellipse. Thus the `Avatar` at the bottom shows its back. During an animation, the `Avatar` faces the direction of movement or the target. The animations `alongar`, `olhar`, `aceitar`, `recusar` and `provocar` show the idle animation `parado` until they have their own art.
 - The `Avatar` is 3 times larger for up to 5 members. For more members, it is 2 times larger.
@@ -115,7 +116,18 @@ The user cannot change the e-mail.
 - Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.
 - In all other cases, the pose is `parado`. From time to time, a member that is `parado` stretches (`alongar`) or looks around (`olhar`). The moments are random and differ for each member. The animation stops when the page is hidden.
 - If the device asks for reduced motion, the scene does not animate. Each pose shows one fixed frame. The frames of `treinando` and `comemorando` differ from the frame of `parado`.
-- Under the scene, a short note replaces the weekly ring when the user has no weekly goal. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
+- Under the scene, a short note shows when the user has no weekly goal. Then the `Avatar` in the header has no ring and the header text does not change. The note says that the group has no challenge, or that the featured challenge did not start yet, or that the user has no goal this week.
+- Weekly progress message. The `App` home and the `Jogo` header show the same message. It has a short title and a detail. `GET /api/grupos/{id}/resumo` gives `meuProgresso.diasRestantes`: the days until the week closes, including today (7 on Monday, 1 on Sunday). An activity counts one time each day at most. The app uses the first rule that applies:
+  1. The user met the goal with verified activities: "Meta batida!".
+  2. The goal is met if the pending activities are verified: "Meta no papo!".
+  3. The week does not count for the user: "Começa segunda".
+  4. The missing activities are more than the remaining days: "Fica pra próxima".
+  5. Today is the last day: "Último dia!".
+  6. The missing activities are equal to the remaining days: "Sem folga".
+  7. The remaining days are one more than the missing activities: "Aperta o passo".
+  8. The user has no activity and 6 or more days remain: "Semana nova".
+  9. One activity is missing: "Falta só 1!".
+  10. Other cases: "Faltam N", with "Ainda dá tempo!" in the detail.
 - The scene uses the sheet that each member imported (see 3.3.5). A member without an imported sheet uses a default sheet from the app bundle.
 - Above the scene, a badge shows the Energy balance of the user: a lightning icon, the number and "EN" (see 3.3.3). A tap on the badge opens the shop.
 - Under the weekly ring, the section "Cartas na mesa" shows the plays of the user in the group (see 3.3.4). A received card that waits for an answer has the buttons "Aceitar" and "Recusar". If the hand has answer cards, the panel "Aceitar com uma Resposta" shows them. With "MUDANÇA DE PLANOS", the user selects the new goal. Each play shows the card, the goal, the deadline, a state label and the answer card that the recipient used. A play that `DesafioDuplo` created shows "devolveu o desafio". The menu of an avatar shows only the challenge cards of the hand.
@@ -573,7 +585,7 @@ The system makes a notification for these events:
 | Invitation | `/convite#token` | Preview of the group and "Aceitar convite". |
 | Reset password | `/redefinir-senha#token` | New password. |
 | Root | `/` | Opens the home page of the first group. If the user has no group, it shows the options to create a group or to use an invitation. |
-| Home ("Início") | `/grupos/:id/inicio` | Greeting, bell, weekly progress ring, days of the week, message about activities to examine, recent activities. |
+| Home ("Início") | `/grupos/:id/inicio` | Greeting, bell, weekly progress ring, days of the week, message about activities to examine, recent activities. In the mode `Jogo`: segmented ring around the avatar, header text that changes between greeting and progress, scene. |
 | Group ("Grupo") | `/grupos/:id` | Group goal for the week, progress of each member, disputes (administrators), members, feed, "Sair do grupo". |
 | Activities | `/grupos/:id/atividades` | Group feed with filters. |
 | Record activity | `/grupos/:id/atividades/nova` | Activity form. |
@@ -596,7 +608,7 @@ The system makes a notification for these events:
 
 - The application uses the Wrexercise visual identity (see `docs/decisoes/0027-identidade-visual-wrexercise.md`).
 - The application has a light theme and a dark theme. It uses the theme of the system.
-- When the user completes the weekly goal, the progress ring changes to green and shows a short burst one time.
+- When the user completes the weekly goal, the progress ring changes to green and shows a short burst one time. This is also true for the segmented ring around the avatar.
 - After the user records an activity, the page shows "Boa! Tá registrado." and a short burst.
 - When the user has reduced motion on in the system, the application does not show these animations.
 

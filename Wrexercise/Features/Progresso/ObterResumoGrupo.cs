@@ -67,7 +67,8 @@ internal static class ObterResumoGrupo
                     progresso.Provisorias,
                     progresso.MetaCumprida,
                     semana.Numero,
-                    CalculoSemanaDesafio.ParticipaDaSemana(semana.Inicio, desafio.EntradaUsuario));
+                    CalculoSemanaDesafio.ParticipaDaSemana(semana.Inicio, desafio.EntradaUsuario),
+                    CalculoSemanaDesafio.CountDiasRestantes(semana, desafio.Hoje));
             }
         }
 

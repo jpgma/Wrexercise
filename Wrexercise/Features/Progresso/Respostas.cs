@@ -39,7 +39,8 @@ internal sealed record ProgressoResumoResponse(
     int SessoesProvisorias,
     bool MetaCumprida,
     int? SemanaNumero,
-    bool ContaNestaSemana);
+    bool ContaNestaSemana,
+    int DiasRestantes);
 
 internal sealed record ClassificacaoResumoItemResponse(
     int Posicao,
