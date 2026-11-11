@@ -116,14 +116,16 @@ internal static class JogoTestes
 
     /// <summary>
     /// Atividades verificadas de dois meses atrás: rendem Energia, mas não cumprem nenhuma Jogada.
-    /// Cada uma rende pelo menos 10 EN.
+    /// Cada uma rende pelo menos 10 EN. Ficam todas numa quarta-feira, de dia, para não liberar
+    /// por acaso as conquistas de fim de semana, de madrugada ou noturnas, conforme a data de hoje.
     /// </summary>
     public static Task DarEnergiaAsync(ApiTestHost host, TestUsuario usuario, Guid grupoId, int atividades) =>
         host.ExecuteAsync($"""
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
                 situacao_verificacao, verified_at, created_at)
-            SELECT '{grupoId}', '{usuario.Id}', 'Outro', 1800, now() - interval '60 days' - s * interval '1 hour',
+            SELECT '{grupoId}', '{usuario.Id}', 'Outro', 1800,
+                date_trunc('week', now() - interval '60 days') + interval '2 days 23 hours' - s * interval '30 minutes',
                 'RegistroManual', 'Verificada', now() - interval '60 days', now() - interval '60 days'
             FROM generate_series(1, {atividades}) s
             """);
