@@ -16,6 +16,8 @@ type SpriteAvatarProps = {
   escala: number;
   /** Mostra um só quadro da pose, sem animar (movimento reduzido). */
   estatico?: boolean;
+  /** O quadro mostrado quando `estatico`; sem valor, o que melhor identifica a pose. */
+  quadro?: number;
   className?: string;
   style?: CSSProperties;
   /** Chamado ao fim de uma animação que toca uma vez. */
@@ -28,6 +30,7 @@ export function SpriteAvatar({
   direcao,
   escala,
   estatico = false,
+  quadro,
   className = "",
   style,
   onFim,
@@ -48,7 +51,7 @@ export function SpriteAvatar({
           backgroundImage: `url(${folha})`,
           backgroundSize: `${celula * formato.colunas}px ${celula * formato.linhas}px`,
           backgroundPositionX: estatico
-            ? `${-quadroEstatico * celula}px`
+            ? `${-(quadro ?? quadroEstatico) * celula}px`
             : undefined,
           backgroundPositionY: `${-(linha + direcoes.indexOf(direcao)) * celula}px`,
           "--quadros": quadros,

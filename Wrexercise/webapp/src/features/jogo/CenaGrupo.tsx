@@ -1,5 +1,13 @@
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router";
+import { useToast } from "@/components/Toast";
+import { getErrorMessage } from "@/services/api";
 import {
   formatoFolha,
   hashFnv1a,
@@ -9,12 +17,21 @@ import {
 import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
+import { MaoFoco } from "./MaoFoco";
 import { MenuAvatar } from "./MenuAvatar";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
-import { useJogadas, useMarcarJogadasVistas } from "./useCartas";
+import { PainelFoco } from "./PainelFoco";
+import { primeiroNome } from "./textosCartas";
+import {
+  type CartaMao,
+  type CodigoCarta,
+  useJogadas,
+  useJogarCarta,
+  useMarcarJogadasVistas,
+} from "./useCartas";
 import { useCena, type Cena, type MembroCena } from "./useCena";
 import {
   type Atuacao,
@@ -23,6 +40,7 @@ import {
   useEncenacoes,
 } from "./useEncenacoes";
 import { useEntrada } from "./useEntrada";
+import { type EfeitoFoco, useFoco } from "./useFoco";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 import { useVidaNaPraca } from "./useVidaNaPraca";
 import { usePeriodoDoDia } from "./periodoDoDia";
@@ -30,6 +48,7 @@ import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
 import {
   getVencedorId,
   type Rival,
+  useEscolherRival,
   useMarcarRivaisVistos,
   useRivais,
 } from "./useRivais";
@@ -76,19 +95,12 @@ function mulberry32(semente: number): () => number {
 
 type Posicao = { x: number; y: number };
 
-/** Prefixo da provocação de quem acabou de escolher: só existe na tela, o servidor não a conhece. */
-const idLocal = "agora-";
-
 /**
  * O que ainda não foi visto do Rival: a provocação, para quem foi escolhido; o resultado, para quem
- * escolheu. A provocação de quem acabou de escolher toca na hora e não tem o que registrar.
+ * escolheu. A provocação de quem acabou de escolher toca no Foco e não tem o que registrar.
  */
-function getRivaisEmCena(
-  rivais: Rival[] | undefined,
-  usuarioId: string,
-  escolhidoAgora: string | null,
-): RivalEmCena[] {
-  const daApi: RivalEmCena[] = (rivais ?? [])
+function getRivaisEmCena(rivais: Rival[] | undefined): RivalEmCena[] {
+  return (rivais ?? [])
     .filter((r) => r.nova)
     .map((r) => ({
       id: r.id,
@@ -97,17 +109,6 @@ function getRivaisEmCena(
       efeito: r.escolhido ? "resultado" : "provocacao",
       vencedorId: r.escolhido ? getVencedorId(r) : null,
     }));
-  if (!escolhidoAgora) return daApi;
-  return [
-    {
-      id: `${idLocal}${escolhidoAgora}`,
-      escolhedorId: usuarioId,
-      rivalId: escolhidoAgora,
-      efeito: "provocacao",
-      vencedorId: null,
-    },
-    ...daApi,
-  ];
 }
 
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
@@ -144,6 +145,8 @@ function AvatarCena({
   brilho,
   nomeVisivel,
   posicaoClassificacao,
+  proprio,
+  apagado,
   onToque,
 }: {
   membro: MembroCena;
@@ -156,6 +159,10 @@ function AvatarCena({
   nomeVisivel: boolean;
   /** 1, 2 ou 3 no desafio em destaque: a medalha aparece sempre, com ou sem o nome. */
   posicaoClassificacao: number | undefined;
+  /** O avatar de quem vê a cena: o toque abre o menu, e não o Foco. */
+  proprio: boolean;
+  /** Durante o Foco em outra pessoa, quem não atua fica apagado. */
+  apagado: boolean;
   onToque: () => void;
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
@@ -201,7 +208,8 @@ function AvatarCena({
     transform: atuacao
       ? `translate(${atuacao.dx}px, ${atuacao.dy}px)`
       : undefined,
-    transition: `transform ${atuacao?.passoMs ?? 0}ms linear`,
+    transition: `transform ${atuacao?.passoMs ?? 0}ms linear, opacity 300ms ease-out`,
+    opacity: apagado ? 0.45 : undefined,
     // Atrás da porta, antes de sair na entrada do dia.
     visibility: atuacao?.oculto ? "hidden" : undefined,
   } as const;
@@ -219,7 +227,7 @@ function AvatarCena({
             ? `${membro.nomeExibicao}, ${posicaoClassificacao}º lugar no desafio`
             : membro.nomeExibicao
         }
-        aria-haspopup="dialog"
+        aria-haspopup={proprio ? "dialog" : undefined}
         onClick={() => {
           if (!reduzido) setPulos((n) => n + 1);
           onToque();
@@ -257,7 +265,8 @@ function AvatarCena({
             animacao={animacao}
             direcao={direcao}
             escala={escala}
-            estatico={reduzido}
+            estatico={reduzido || atuacao?.quadro !== undefined}
+            quadro={atuacao?.quadro}
             className="pointer-events-none absolute"
             style={{
               left: -corpo.esquerda * escala,
@@ -361,7 +370,11 @@ export function CenaGrupo({
 }
 
 /** A carta da encenação: voa até quem recebe, cai no lugar ao ser aceita ou sai pelo lado. */
-function CartaVoando({ carta }: { carta: CartaEmCena }) {
+function CartaVoando({
+  carta,
+}: {
+  carta: Pick<CartaEmCena, "efeito" | "de" | "para"> & { codigo: CodigoCarta };
+}) {
   // A carta (40 px) fica na altura do peito, centrada no avatar.
   const acima = 13 * escala + 20;
   return (
@@ -380,7 +393,25 @@ function CartaVoando({ carta }: { carta: CartaEmCena }) {
         } as CSSProperties
       }
     >
-      <IconeCarta codigo={carta.jogada.carta.codigo} />
+      <IconeCarta codigo={carta.codigo} />
+    </span>
+  );
+}
+
+/** O nome da carta estoura sobre quem recebe. O "VS" do Rival fica fora da câmera, no alto da praça. */
+function ImpactoNoFoco({ efeito }: { efeito: EfeitoFoco }) {
+  if (efeito.tipo !== "impacto") return null;
+  return (
+    <span
+      aria-hidden="true"
+      className="foco-impacto pointer-events-none absolute rounded-md border-2 border-outline bg-reward px-1.5 py-0.5 font-display text-sm leading-none whitespace-nowrap text-on-reward uppercase shadow-sticker-sm"
+      style={{
+        left: efeito.ponto.x,
+        top: efeito.ponto.y - alturaCorpo * escala - 24,
+        zIndex: 1001,
+      }}
+    >
+      {efeito.texto}!
     </span>
   );
 }
@@ -399,6 +430,7 @@ function Praca({
   podio: PodioCena;
 }) {
   const { ref, fator } = useFatorDeEncaixe();
+  const { showToast } = useToast();
   const [tocado, setTocado] = useState<MembroCena | null>(null);
   const [nomeTocado, setNomeTocado] = useState<string | null>(null);
   // O menu cobre a praça: o tempo do nome só começa a contar quando ele fecha.
@@ -417,10 +449,11 @@ function Praca({
   const { mutate: marcarEnfeitesVistos } = useMarcarEnfeitesVistos();
   const rivais = useRivais(grupoId);
   const { mutate: marcarRivaisVistos } = useMarcarRivaisVistos(grupoId);
-  const [escolhidoAgora, setEscolhidoAgora] = useState<string | null>(null);
+  const jogar = useJogarCarta(grupoId);
+  const escolherRival = useEscolherRival(grupoId);
   const rivaisEmCena = useMemo(
-    () => getRivaisEmCena(rivais.data?.rivais, usuarioId, escolhidoAgora),
-    [rivais.data, usuarioId, escolhidoAgora],
+    () => getRivaisEmCena(rivais.data?.rivais),
+    [rivais.data],
   );
 
   const { membros } = cena;
@@ -441,36 +474,52 @@ function Praca({
     altura,
     reduzido,
   });
-  // As encenações esperam a entrada terminar.
+  const foco = useFoco({
+    posicoes: porUsuario,
+    centro,
+    alturaPeito: Math.round((alturaCorpo * escala) / 2),
+    usuarioId,
+    reduzido,
+    pausado: entrada.ativa,
+  });
+  const emFoco = foco.alvoId !== null;
+  const palco = useRef<HTMLDivElement>(null);
+  // Ao abrir o Foco, a praça sobe para o alto da tela: o painel fica acima da Mão.
+  useEffect(() => {
+    if (!emFoco) return;
+    palco.current?.scrollIntoView({
+      block: "start",
+      behavior: reduzido ? "auto" : "smooth",
+    });
+  }, [emFoco, reduzido]);
+  const emAcao = foco.fase !== "aberto";
+  const alvo = membros.find((m) => m.usuarioId === foco.alvoId);
+  // As encenações esperam a entrada terminar e o Foco fechar.
+  const aguardar = entrada.ativa || emFoco;
   const encenacao = useEncenacoes({
-    jogadas: entrada.ativa ? undefined : jogadas.data,
+    jogadas: aguardar ? undefined : jogadas.data,
     posicoes: porUsuario,
     centro,
     reduzido,
     onVistas: marcarVistas,
     usuarioId,
-    enfeitesNovos: entrada.ativa
-      ? semNovos
-      : (meuAvatar.data?.novos ?? semNovos),
+    enfeitesNovos: aguardar ? semNovos : (meuAvatar.data?.novos ?? semNovos),
     onEnfeitesVistos: marcarEnfeitesVistos,
-    rivais: entrada.ativa ? semRivais : rivaisEmCena,
-    onRivaisVistos: (ids) => {
-      const doServidor = ids.filter((id) => !id.startsWith(idLocal));
-      if (doServidor.length > 0) marcarRivaisVistos(doServidor);
-      if (doServidor.length < ids.length) setEscolhidoAgora(null);
-    },
+    rivais: aguardar ? semRivais : rivaisEmCena,
+    onRivaisVistos: marcarRivaisVistos,
   });
   const vida = useVidaNaPraca({
     membros,
     posicoes: porUsuario,
     largura,
     altura,
-    pausada: entrada.ativa || encenacao.ativa,
+    pausada: entrada.ativa || encenacao.ativa || emFoco,
     reduzido,
     comPombos: periodo !== "noite",
   });
   const getAtuacao = (id: string) =>
     entrada.atuacoes.get(id) ??
+    foco.atuacoes.get(id) ??
     encenacao.atuacoes.get(id) ??
     vida.atuacoes.get(id);
   /** Quem atua na encenação, ou a carta que voa até alguém, mostra o nome. */
@@ -478,9 +527,51 @@ function Praca({
     encenacao.atuacoes.has(id) ||
     encenacao.carta?.jogada.remetenteId === id ||
     encenacao.carta?.jogada.destinatarioId === id;
+  /** No Foco, só o alvo e, durante a ação, quem vê a cena ficam acesos. */
+  const atuaNoFoco = (id: string) =>
+    id === foco.alvoId || (emAcao && id === usuarioId);
+
+  const arremessar = (carta: CartaMao) => {
+    if (!alvo) return;
+    const nome = primeiroNome(alvo.nomeExibicao);
+    const envio = jogar.mutateAsync({
+      cartaId: carta.id,
+      destinatarioId: alvo.usuarioId,
+    });
+    void Promise.allSettled([
+      envio,
+      foco.arremessar(carta.codigo, carta.nome, envio),
+    ]).then(([resultado]) =>
+      showToast(
+        resultado.status === "fulfilled"
+          ? `Carta entregue para ${nome}!`
+          : getErrorMessage(resultado.reason),
+      ),
+    );
+  };
+
+  const rivalizar = () => {
+    if (!alvo) return;
+    const nome = primeiroNome(alvo.nomeExibicao);
+    const envio = escolherRival.mutateAsync(alvo.usuarioId);
+    void Promise.allSettled([envio, foco.rivalizar(envio)]).then(
+      ([resultado]) =>
+        showToast(
+          resultado.status === "fulfilled"
+            ? `${nome} é o seu Rival da semana!`
+            : getErrorMessage(resultado.reason),
+        ),
+    );
+  };
+
+  const { camera } = foco;
 
   return (
-    <div className="mx-auto w-full" style={{ maxWidth: largura }}>
+    <div
+      ref={palco}
+      className="mx-auto w-full scroll-mt-2"
+      style={{ maxWidth: largura }}
+    >
       <div className="mb-2 flex min-h-6 justify-end">
         <Link to="/jogo/loja" aria-label="Energia e Loja" className="tap">
           <SaldoEnergia />
@@ -489,40 +580,100 @@ function Praca({
       <div ref={ref} className="w-full" style={{ height: altura * fator }}>
         <section
           aria-label="Praça do grupo"
-          className="relative overflow-hidden rounded-xl"
+          className={`relative overflow-hidden rounded-xl transition-colors duration-300 ${emFoco ? "bg-surface-muted" : ""}`}
           style={{
             width: largura,
             height: altura,
             transform: `scale(${fator})`,
             transformOrigin: "top left",
-            backgroundImage: "url(/praca.png)",
-            backgroundSize: `${largura}px ${altura}px`,
-            imageRendering: "pixelated",
           }}
         >
-          {membros.map((membro, i) => (
-            <AvatarCena
-              key={membro.usuarioId}
-              membro={membro}
-              posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
-              reduzido={reduzido}
-              atuacao={getAtuacao(membro.usuarioId)}
-              brilho={encenacao.brilho && membro.usuarioId === usuarioId}
-              nomeVisivel={
-                nomeTocado === membro.usuarioId || emEncenacao(membro.usuarioId)
-              }
-              posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
-              onToque={() => {
-                setTocado(membro);
-                setNomeTocado(membro.usuarioId);
+          {/* O tremor do impacto fica numa camada própria: a câmera já usa o transform. */}
+          <div
+            className={`absolute inset-0 ${foco.tremor ? "camera-tremor" : ""}`}
+          >
+            {/* A câmera: aproxima e desloca a praça inteira, com avatares e objetos. */}
+            <div
+              className="absolute inset-0"
+              style={{
+                transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`,
+                transformOrigin: "0 0",
+                transition: `transform ${camera.ms}ms cubic-bezier(0.2, 0.8, 0.2, 1)`,
+                backgroundImage: "url(/praca.png)",
+                backgroundSize: `${largura}px ${altura}px`,
+                imageRendering: "pixelated",
               }}
+              onClick={(e) => {
+                // Tocar no chão, fora dos avatares, fecha o Foco.
+                if (emFoco && !emAcao && e.target === e.currentTarget) {
+                  foco.fechar();
+                }
+              }}
+            >
+              {membros.map((membro, i) => (
+                <AvatarCena
+                  key={membro.usuarioId}
+                  membro={membro}
+                  posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
+                  reduzido={reduzido}
+                  atuacao={getAtuacao(membro.usuarioId)}
+                  brilho={encenacao.brilho && membro.usuarioId === usuarioId}
+                  nomeVisivel={
+                    !emFoco &&
+                    (nomeTocado === membro.usuarioId ||
+                      emEncenacao(membro.usuarioId))
+                  }
+                  posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
+                  proprio={membro.usuarioId === usuarioId}
+                  apagado={emFoco && !atuaNoFoco(membro.usuarioId)}
+                  onToque={() => {
+                    if (emAcao) return;
+                    if (membro.usuarioId !== usuarioId) {
+                      foco.abrir(membro.usuarioId);
+                    } else if (emFoco) {
+                      foco.fechar();
+                    } else {
+                      setTocado(membro);
+                      setNomeTocado(membro.usuarioId);
+                    }
+                  }}
+                />
+              ))}
+              <ObjetosPraca portaAberta={entrada.portaAberta} />
+              {vida.pombo && <Pombo pombo={vida.pombo} />}
+              {vida.bola && <Bola bola={vida.bola} />}
+              <LuzDaPraca periodo={periodo} />
+              {encenacao.carta && (
+                <CartaVoando
+                  carta={{
+                    ...encenacao.carta,
+                    codigo: encenacao.carta.jogada.carta.codigo,
+                  }}
+                />
+              )}
+              {foco.carta && <CartaVoando carta={foco.carta} />}
+              {foco.efeito && <ImpactoNoFoco efeito={foco.efeito} />}
+            </div>
+          </div>
+          {foco.efeito?.tipo === "vs" && (
+            <span
+              aria-hidden="true"
+              className="vs-batida pointer-events-none absolute inset-x-0 top-20 mx-auto w-fit rounded-xl border-4 border-outline bg-game px-4 font-display text-7xl leading-tight text-on-game shadow-sticker"
+              style={{ zIndex: 1003 }}
+            >
+              VS
+            </span>
+          )}
+          {alvo && (
+            <PainelFoco
+              key={alvo.usuarioId}
+              grupoId={grupoId}
+              usuarioId={usuarioId}
+              membro={alvo}
+              oculto={emAcao}
+              onFechar={foco.fechar}
             />
-          ))}
-          <ObjetosPraca portaAberta={entrada.portaAberta} />
-          {vida.pombo && <Pombo pombo={vida.pombo} />}
-          {vida.bola && <Bola bola={vida.bola} />}
-          <LuzDaPraca periodo={periodo} />
-          {encenacao.carta && <CartaVoando carta={encenacao.carta} />}
+          )}
           {(entrada.ativa || encenacao.ativa) && (
             // Tocar na praça pula a entrada e a encenação: elas nunca prendem a pessoa.
             <button
@@ -536,12 +687,25 @@ function Praca({
           )}
         </section>
       </div>
+      {alvo && (
+        <MaoFoco
+          key={alvo.usuarioId}
+          membro={alvo}
+          podeRival={rivais.data?.candidatos.includes(alvo.usuarioId) ?? false}
+          recolhida={emAcao}
+          onArremessar={arremessar}
+          onRival={rivalizar}
+        />
+      )}
+      <p aria-live="polite" className="sr-only">
+        {foco.efeito?.tipo === "impacto" && alvo
+          ? `${foco.efeito.texto} entregue para ${primeiroNome(alvo.nomeExibicao)}.`
+          : ""}
+      </p>
       <MenuAvatar
         grupoId={grupoId}
         membro={tocado}
-        usuarioId={usuarioId}
         onClose={() => setTocado(null)}
-        onRival={setEscolhidoAgora}
       />
     </div>
   );

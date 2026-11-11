@@ -92,3 +92,16 @@ export function getDirecao(
   const indice = (((Math.round((90 - graus) / 45) % 8) + 8) % 8) as number;
   return direcoes[indice] ?? "sul";
 }
+
+/** O caminho mais curto de uma direção a outra, passando pelas vizinhas, sem a de partida. */
+export function getGiro(de: Direcao, para: Direcao): Direcao[] {
+  const inicio = direcoes.indexOf(de);
+  const fim = direcoes.indexOf(para);
+  const voltas = (fim - inicio + 8) % 8;
+  const sentido = voltas <= 4 ? 1 : -1;
+  const passos = sentido === 1 ? voltas : 8 - voltas;
+  return Array.from(
+    { length: passos },
+    (_, i) => direcoes[(inicio + sentido * (i + 1) + 8) % 8] ?? para,
+  );
+}

@@ -670,6 +670,109 @@
     }
   }
 
+  /* Foco na Cena (docs/gamificacao.md §3.5): a carta escolhida balança na Mão. */
+  .carta-balanca {
+    animation: carta-balanca 420ms ease-in-out infinite alternate;
+  }
+
+  @keyframes carta-balanca {
+    from {
+      transform: rotate(-3deg);
+    }
+    to {
+      transform: rotate(3deg);
+    }
+  }
+
+  /* O impacto da carta sacode a câmera. */
+  .camera-tremor {
+    animation: camera-tremor 220ms linear 1;
+  }
+
+  @keyframes camera-tremor {
+    0%,
+    100% {
+      transform: translate(0, 0);
+    }
+    20% {
+      transform: translate(-3px, 2px);
+    }
+    40% {
+      transform: translate(3px, -2px);
+    }
+    60% {
+      transform: translate(-2px, -1px);
+    }
+    80% {
+      transform: translate(2px, 1px);
+    }
+  }
+
+  /* O nome da carta estoura sobre quem recebe. */
+  .foco-impacto {
+    animation: foco-impacto 900ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes foco-impacto {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 0) scale(0.4) rotate(-12deg);
+    }
+    25% {
+      opacity: 1;
+      transform: translate(-50%, -10px) scale(1.1) rotate(-6deg);
+    }
+    75% {
+      opacity: 1;
+      transform: translate(-50%, -14px) scale(1) rotate(-6deg);
+    }
+    to {
+      opacity: 0;
+      transform: translate(-50%, -22px) scale(0.9) rotate(-6deg);
+    }
+  }
+
+  /* O "VS" do Rival bate na tela, grande, e assenta. */
+  .vs-batida {
+    animation: vs-batida 1100ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes vs-batida {
+    from {
+      opacity: 0;
+      transform: scale(3) rotate(-20deg);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1) rotate(-8deg);
+    }
+    85% {
+      opacity: 1;
+      transform: scale(1.05) rotate(-8deg);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.3) rotate(-8deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carta-balanca,
+    .camera-tremor {
+      animation: none;
+    }
+
+    .foco-impacto {
+      animation: none;
+      transform: translate(-50%, -10px) rotate(-6deg);
+    }
+
+    .vs-batida {
+      animation: none;
+      transform: rotate(-8deg);
+    }
+  }
+
   /* Enfeite novo: um brilho que pulsa enquanto a encenação toca (docs/gamificacao.md §9.2). */
   .enfeite-brilho {
     animation: enfeite-brilho 700ms ease-in-out infinite alternate;
