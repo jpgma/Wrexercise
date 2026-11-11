@@ -7,7 +7,7 @@ export const formatoFolha = {
   /** Lado da célula, em px. */
   celula: 48,
   colunas: 9,
-  linhas: 49,
+  linhas: 97,
   /** Ponto entre os pés, igual em todos os quadros. */
   ancora: { x: 24, y: 44 },
   /** Área do corpo dentro da célula: é a área de toque na cena. */
@@ -27,11 +27,11 @@ export function hashFnv1a(texto: string): number {
 }
 
 /**
- * A folha de avatar padrão, em 8 direções, de quem não importou uma folha. Por enquanto é a mesma para
- * todos (ADR 0039, Andamento), até existirem os personagens padrão novos.
+ * A folha de avatar padrão, em 8 direções, de quem não importou uma folha: o base masculino, a mesma
+ * para todos (ADR 0039, Andamento), gerada por `pixel-art/base-masculino/build.py`.
  */
 export function folhaPadrao(): string {
-  return "/avatar-jpgma.png";
+  return "/avatar-base-masculino.png";
 }
 
 export const avataresKey = ["jogo", "avatares"] as const;

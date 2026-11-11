@@ -1,0 +1,87 @@
+{
+  "largura": 432,
+  "altura": 4656,
+  "celula": 48,
+  "ancora": {
+    "x": 24,
+    "y": 44
+  },
+  "direcoes": [
+    "sul",
+    "sudeste",
+    "leste",
+    "nordeste",
+    "norte",
+    "noroeste",
+    "oeste",
+    "sudoeste"
+  ],
+  "animacoes": {
+    "rotacao": {
+      "linha": 0,
+      "quadros": 1,
+      "ms": null
+    },
+    "andar": {
+      "linha": 1,
+      "quadros": 8,
+      "ms": 100
+    },
+    "correr": {
+      "linha": 9,
+      "quadros": 8,
+      "ms": 100
+    },
+    "arremessar": {
+      "linha": 17,
+      "quadros": 6,
+      "ms": 80
+    },
+    "comemorar": {
+      "linha": 25,
+      "quadros": 9,
+      "ms": 120
+    },
+    "receber": {
+      "linha": 33,
+      "quadros": 6,
+      "ms": 100
+    },
+    "parado": {
+      "linha": 41,
+      "quadros": 4,
+      "ms": 200
+    },
+    "treinando": {
+      "linha": 49,
+      "quadros": 6,
+      "ms": 90
+    },
+    "alongar": {
+      "linha": 57,
+      "quadros": 4,
+      "ms": 150
+    },
+    "olhar": {
+      "linha": 65,
+      "quadros": 4,
+      "ms": 200
+    },
+    "aceitar": {
+      "linha": 73,
+      "quadros": 4,
+      "ms": 120
+    },
+    "recusar": {
+      "linha": 81,
+      "quadros": 3,
+      "ms": 150
+    },
+    "provocar": {
+      "linha": 89,
+      "quadros": 4,
+      "ms": 120
+    }
+  },
+  "sha256": "6b6d1ac7fb06705c4f22fcb1f93a34f508ad2f8035dc24bbc9016726bb471b4c"
+}

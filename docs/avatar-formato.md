@@ -63,14 +63,14 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 
 ## 6. Folha em 8 direções (em teste)
 
-É o formato da folha padrão do bundle, `avatar-jpgma.png`, gerada por `pixel-art/jpgma/build.py`, e o único aceito na importação (ADR 0039, Andamento).
+É o formato da folha padrão do bundle, `avatar-base-masculino.png`, gerada por `pixel-art/base-masculino/build.py`, e o único aceito na importação (ADR 0039, Andamento).
 
 | Requisito | Valor |
 |---|---|
 | Tipo | PNG RGBA de 8 bits ou com paleta indexada (a folha padrão é indexada, com o índice 0 transparente) |
 | Tamanho máximo | 1000 KB |
 | Animação | proibida dentro do PNG (sem `acTL`) |
-| Dimensões | 432 × 2352 px: 9 colunas × 49 linhas de células de 48 × 48 px |
+| Dimensões | 432 × 4656 px: 9 colunas × 97 linhas de células de 48 × 48 px |
 | Vista | de cima, em 8 direções, sem espelho |
 | Âncora | o ponto entre os pés fica em (24, 44), em todos os quadros |
 
@@ -80,12 +80,21 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 | Primeira linha | Nome | Quadros | Tempo por quadro | Usada no Jogo como |
 |---:|---|---:|---:|---|
 | 0 | `rotacao` | 1 por direção | — | `retrato` (recorte de 24 × 24 px em (12, 10) da direção `sul`) |
-| 1 | `andar` | 8 | 200 ms | `andar` |
-| 9 | `correr` | 8 | 200 ms | `treinando` |
-| 17 | `arremessar` | 7 | 200 ms | `arremessar`; a carta sai no quarto quadro |
-| 25 | `comemorar` | 9 | 200 ms | `comemorando` |
-| 33 | `receber` | 6 | 200 ms | `receber`; a carta atinge o peito no terceiro quadro |
-| 41 | `parado` | 4 | 200 ms | `parado` e, até terem arte, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` |
+| 1 | `andar` | 8 | 100 ms | `andar` |
+| 9 | `correr` | 8 | 100 ms | sem uso por enquanto |
+| 17 | `arremessar` | 6 | 80 ms | `arremessar`; a carta sai no quarto quadro |
+| 25 | `comemorar` | 9 | 120 ms | `comemorando` |
+| 33 | `receber` | 6 | 100 ms | `receber`; a carta atinge o peito no terceiro quadro |
+| 41 | `parado` | 4 | 200 ms | `parado` |
+| 49 | `treinando` | 6 | 90 ms | `treinando` |
+| 57 | `alongar` | 4 | 150 ms | `alongar`, de vez em quando, para quem está parado; uma vez |
+| 65 | `olhar` | 4 | 200 ms | `olhar`, de vez em quando, para quem está parado; uma vez |
+| 73 | `aceitar` | 4 | 120 ms | `aceitar` uma carta; uma vez |
+| 81 | `recusar` | 3 | 150 ms | `recusar` uma carta; uma vez |
+| 89 | `provocar` | 4 | 120 ms | `provocar`; uma vez |
+
+- As linhas 0 a 48 são as da primeira versão, de 49 linhas (432 × 2352), que não é mais aceita (migração `023`). Para adaptar uma folha dessa versão, copie as linhas de `correr` para `treinando` e as de `parado` para as outras animações novas, como faz `pixel-art/jpgma/build.py`.
+- As colunas além da quantidade de quadros de cada linha ficam sem uso.
 
 - **Importação:** só o tamanho é conferido; o desenho é livre, e linhas vazias ficam transparentes na cena. Em `/perfil/avatar`, "Exportar folha" baixa a folha atual, e "Exportar guia" baixa uma camada do mesmo tamanho com a grade, o nome de cada linha, as células sem uso sombreadas e a âncora. O navegador envia como veio um PNG RGBA de 8 bits ou indexado; qualquer outra imagem do tamanho certo é re-codificada como PNG RGBA. O servidor confere tudo de novo.
 - **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, olha para o centro da elipse, na direção mais próxima (quem fica embaixo aparece de costas).

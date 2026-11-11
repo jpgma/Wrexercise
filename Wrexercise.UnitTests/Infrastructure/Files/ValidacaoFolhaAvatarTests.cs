@@ -8,8 +8,9 @@ public class ValidacaoFolhaAvatarTests
     public void FolhaNoFormato_EhValida() => Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar()));
 
     [Theory]
-    [InlineData(431, 2352)]
-    [InlineData(432, 2351)]
+    [InlineData(431, 4656)]
+    [InlineData(432, 4655)]
+    [InlineData(432, 2352)] // a primeira versão da folha em 8 direções, só com 6 animações
     [InlineData(256, 384)]
     public void TamanhoDiferente_EhRecusado(int largura, int altura) =>
         Assert.False(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(largura, altura)));

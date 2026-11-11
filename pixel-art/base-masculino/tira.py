@@ -2,7 +2,7 @@
 
 Gera:
 - saida/rotations-tira.png: as 8 direções lado a lado (512×64), em tamanho real, fundo
-  transparente, na ordem do PixelLab (DIRECOES do build.py);
+  transparente, na ordem do PixelLab (DIRECOES do rotacoes.py);
 - saida/referencia-gemini.png: as mesmas 8 direções numa grade de 4 colunas e 2 linhas, na
   mesma ordem e no mesmo formato que prompts-gemini.md §3 pede (1536×1024, fundo magenta),
   ampliada 8× sem suavização. É a imagem de referência da `rotations` no Gemini;
@@ -23,7 +23,7 @@ AQUI = pathlib.Path(__file__).resolve().parent
 FONTE = AQUI / "fonte"
 SAIDA = AQUI / "saida"
 
-# Mesma ordem do build.py (DIRECOES), com o nome do arquivo sem hífen.
+# Mesma ordem do rotacoes.py (DIRECOES), com o nome do arquivo sem hífen.
 DIRECOES = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
 
 QUADRO = 64

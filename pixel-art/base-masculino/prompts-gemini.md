@@ -1,14 +1,14 @@
 # Prompts do Gemini — personagem base masculino
 
-> Prompts para gerar no Gemini (Nano Banana) o personagem base masculino **neutro** em 8 direções, a mesma peça descrita em `prompts-pixellab.md` (identidade, paleta e regras de §1 e §2 de lá continuam valendo). A imagem gerada é só a **fonte**: ela vai para `fonte/base.png`, e o `build.py` separa as 8 direções, as reduz para 33 px de altura e grava `saida/rotations/<direcao>.png`. Nunca copie a imagem gerada direto para `saida/` ou `webapp/public/`.
+> Prompts para gerar no Gemini (Nano Banana) o personagem base masculino **neutro** em 8 direções, a mesma peça descrita em `prompts-pixellab.md` (identidade, paleta e regras de §1 e §2 de lá continuam valendo). A imagem gerada é só a **fonte**: ela vai para `fonte/base.png`, e o `rotacoes.py` separa as 8 direções, as reduz para 33 px de altura e grava `saida/rotations/<direcao>.png`. Nunca copie a imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Divisão de trabalho:** o Gemini faz bem uma folha de poses paradas e mal uma animação quadro a quadro. Use o Gemini para a `rotations` (§3). Para as animações, prefira o PixelLab (`prompts-pixellab.md` §3 e §4), partindo da `rotations` que o `build.py` gerou; §4 traz um prompt completo do Gemini para cada animação, sempre a partir da imagem parada de uma direção, para quando o PixelLab não der conta.
+> **Divisão de trabalho:** o Gemini faz bem uma folha de poses paradas e mal uma animação quadro a quadro. Use o Gemini para a `rotations` (§3). Para as animações, prefira o PixelLab (`prompts-pixellab.md` §3 e §4), partindo da `rotations` que o `rotacoes.py` gerou; §4 traz um prompt completo do Gemini para cada animação, sempre a partir da imagem parada de uma direção, para quando o PixelLab não der conta.
 
 ## 1. Como usar o Gemini
 
 - **Onde:** de preferência o Google AI Studio, com o modelo de imagem do Gemini. O app do Gemini pode pôr uma marca visível num canto da imagem, por cima de um personagem.
-- **Proporção:** 3:2, deitada (o `build.py` foi feito para 1536×1024). A grade tem 4 colunas e 2 linhas.
-- **Fundo:** magenta chapado `#FF00FF`. O Gemini não gera transparência, e o magenta não existe no personagem. **Atenção:** o `build.py` atual separa o personagem de um fundo escuro com brilho (o da `fonte/base.png` de hoje). Para uma fonte em magenta, ele precisa tratar o magenta como fundo antes de procurar o contorno.
+- **Proporção:** 3:2, deitada (o `rotacoes.py` foi feito para 1536×1024). A grade tem 4 colunas e 2 linhas.
+- **Fundo:** magenta chapado `#FF00FF`. O Gemini não gera transparência, e o magenta não existe no personagem. **Atenção:** o `rotacoes.py` atual separa o personagem de um fundo escuro com brilho (o da `fonte/base.png` de hoje). Para uma fonte em magenta, ele precisa tratar o magenta como fundo antes de procurar o contorno.
 - **Referência:** anexe `saida/referencia-gemini.png` (as 8 direções de `fonte/<direcao>.png` na grade e na ordem de §3, sobre magenta, ampliadas 8×; gere de novo com `python tira.py`) como referência de proporção e de vista. Diga que ela mostra o corpo e o ângulo, e não o rosto, o cabelo ou a roupa. Não anexe arte de terceiros: as folhas padrão são CC0.
 - **Iteração:** corrija uma direção por vez na mesma conversa ("keep the other seven identical, only redraw the north-east one: the head must turn further away"). Gerar do zero muda o personagem.
 - **Salvar:** baixe o PNG em resolução cheia e salve em `fonte/base.png`.
@@ -71,16 +71,16 @@ Depois do prompt, acrescente o bloco de estilo de §2.
 
 ### Paleta
 
-Se o Gemini fugir das cores, anexe uma imagem com as amostras da paleta de `prompts-pixellab.md` §2 ou cite os valores no prompt. O `build.py` leva cada pixel para a cor mais próxima de `PALETA`; se a geração nova mudar os tons, atualize `PALETA` no script, nunca o PNG.
+Se o Gemini fugir das cores, anexe uma imagem com as amostras da paleta de `prompts-pixellab.md` §2 ou cite os valores no prompt. O `rotacoes.py` leva cada pixel para a cor mais próxima de `PALETA`; se a geração nova mudar os tons, atualize `PALETA` no script, nunca o PNG.
 
 ### Conferência
 
 Os mesmos itens de `prompts-pixellab.md` §2 ("Conferência da `rotations`"), e mais:
 
-- As 8 figuras estão na ordem de §3: o `build.py` lê as células nessa ordem (`DIRECOES`).
+- As 8 figuras estão na ordem de §3: o `rotacoes.py` lê as células nessa ordem (`DIRECOES`).
 - O fundo é só magenta, sem chão, sombra ou brilho em volta do personagem.
 - A grade de pixels é uniforme e igual nas 8 figuras.
-- Depois do `build.py`, confira `preview/rotacao-6x.png` e acerte olhos e sobrancelhas em `RETOQUES`, como hoje.
+- Depois do `rotacoes.py`, confira `preview/rotacao-6x.png` e acerte olhos e sobrancelhas em `RETOQUES`, como hoje.
 
 ## 4. Animações
 
@@ -113,7 +113,7 @@ O personagem tem cerca de 0,6 de largura para 1 de altura. Uma linha só com 6 o
 
 ### Redução
 
-`python gemini.py` lê todas as folhas de `fonte/gemini/` e grava `saida/gemini/<animacao>-<direcao>.png`: os quadros lado a lado, 64×64 cada, na escala da `rotations` (a altura do 1º quadro vira a altura de `fonte/<direcao>.png`), com os pés do 1º quadro na linha 45, a paleta fixa `PALETA` do `build.py` e o contorno de 1 px refeito. Confira `preview/gemini-<animacao>-<direcao>-6x.png`, que mostra a pose parada ao lado dos quadros.
+`python gemini.py` lê todas as folhas de `fonte/gemini/` e grava `saida/gemini/<animacao>-<direcao>.png`: os quadros lado a lado, 64×64 cada, na escala da `rotations` (a altura do 1º quadro vira a altura de `fonte/<direcao>.png`), com os pés do 1º quadro na linha 45, a paleta fixa `PALETA` do `rotacoes.py` e o contorno de 1 px refeito. Confira `preview/gemini-<animacao>-<direcao>-6x.png`, que mostra a pose parada ao lado dos quadros.
 
 Depois, importe a tira no Aseprite (pelo `pixel-plugin`), acerte o que faltar e exporte o `.aseprite` com as tags `Acao-direcao`, como em `prompts-pixellab.md` §3.
 

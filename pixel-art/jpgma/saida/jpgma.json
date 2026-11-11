@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 2352,
+  "altura": 4656,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -58,6 +58,42 @@
       "quadros": 4,
       "ms": 200,
       "origem": "desenho"
+    },
+    "treinando": {
+      "linha": 49,
+      "quadros": 8,
+      "ms": 200,
+      "origem": "correr"
+    },
+    "alongar": {
+      "linha": 57,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "parado"
+    },
+    "olhar": {
+      "linha": 65,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "parado"
+    },
+    "aceitar": {
+      "linha": 73,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "parado"
+    },
+    "recusar": {
+      "linha": 81,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "parado"
+    },
+    "provocar": {
+      "linha": 89,
+      "quadros": 4,
+      "ms": 200,
+      "origem": "parado"
     }
   },
   "paleta": [
@@ -80,5 +116,5 @@
     "#e74647",
     "#702623"
   ],
-  "sha256": "fec0427ef2cb3bf91e921c6f099011e58f494341b6cef7285f4309f7efdc75bb"
+  "sha256": "2bf093bfab82b1b0db1234d658b274da8311377f5783602815a30558609e7a3b"
 }

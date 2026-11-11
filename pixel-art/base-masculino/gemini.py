@@ -6,7 +6,7 @@ da quantidade de quadros da animação (QUADROS e GRADES). Este script, para cad
 - separa cada quadro do magenta e descarta as manchas soltas;
 - reduz todos com a mesma escala, a do 1º quadro, que é a pose parada: a altura dele vira a
   altura do personagem em fonte/<direcao>.png;
-- calibra PALETA (a mesma do build.py) pelos tons da folha e leva cada pixel para a cor dela;
+- calibra PALETA (a mesma do rotacoes.py) pelos tons da folha e leva cada pixel para a cor dela;
 - tira as manchas de cor de transição, separa a gola da sombra da calça e redesenha o
   contorno de 1 px;
 - põe a linha do chão do 1º quadro na linha 45 de um quadro de 64×64, centrado; os outros

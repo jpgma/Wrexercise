@@ -91,7 +91,7 @@ A pele e o cabelo vêm das rampas do `jpgma`. A camiseta e a calça seguem a ram
 
 ### `rotations` prontas
 
-`build.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Os acertos à mão de olhos e sobrancelhas ficam em `RETOQUES`, no próprio script. Use `saida/rotations/<direcao>.png` (nome sem hífen, por exemplo `northeast.png`) como referência no PixelLab, ou importe as 8 como as rotações do personagem. `tira.py` monta as 8 de `fonte/<direcao>.png` (iguais às de `saida/rotations/`) em `saida/rotations-tira.png`, numa linha em tamanho real, em `saida/referencia-gemini.png`, a referência da `rotations` no Gemini, e em `saida/referencia-gemini/<direcao>.png`, a referência de cada direção para as animações no Gemini.
+`rotacoes.py` recorta as 8 direções de `fonte/base.png` (uma imagem gerada, em escala grande) e as reduz para o tamanho do `jpgma`: 33 px de altura, os pés na linha 45 e centrado num quadro de 64×64, com contorno de 1 px e a paleta fixa `PALETA` do script. Os acertos à mão de olhos e sobrancelhas ficam em `RETOQUES`, no próprio script. Use `saida/rotations/<direcao>.png` (nome sem hífen, por exemplo `northeast.png`) como referência no PixelLab, ou importe as 8 como as rotações do personagem. `tira.py` monta as 8 de `fonte/<direcao>.png` (iguais às de `saida/rotations/`) em `saida/rotations-tira.png`, numa linha em tamanho real, em `saida/referencia-gemini.png`, a referência da `rotations` no Gemini, e em `saida/referencia-gemini/<direcao>.png`, a referência de cada direção para as animações no Gemini.
 
 ### Conferência da `rotations`
 
@@ -107,7 +107,7 @@ Se algo falhar, gere de novo antes de seguir. Toda animação parte desta `rotat
 
 ## 3. Como gerar as animações
 
-Toda animação parte **só** das imagens de `saida/rotations/` que o `build.py` já gerou. Nada de geração do zero, de folha com várias direções ou de referência em outro tamanho: sem um quadro de partida do mesmo tamanho, o modelo redesenha o personagem a cada quadro, e os quadros saem com altura, largura e proporções diferentes.
+Toda animação parte **só** das imagens de `saida/rotations/` que o `rotacoes.py` já gerou. Nada de geração do zero, de folha com várias direções ou de referência em outro tamanho: sem um quadro de partida do mesmo tamanho, o modelo redesenha o personagem a cada quadro, e os quadros saem com altura, largura e proporções diferentes.
 
 - **Uma direção por vez:** *animate with text* (ou um modelo pronto, ver abaixo) com `saida/rotations/<direcao>.png` como imagem de referência, na tela de 64×64, igual à da imagem. Ordem: `south`, `south-east`, `east`, `north-east`, `north`, `north-west`, `west`, `south-west`. Arquivos: `south.png`, `southeast.png`, `east.png`, `northeast.png`, `north.png`, `northwest.png`, `west.png`, `southwest.png`.
 - **Prompt:** o bloco de âncora abaixo, com `<direction>` trocado pela direção, seguido do prompt da ação em §4. Os prompts de §4 descrevem cada quadro como uma mudança de poucos pixels em relação à pose parada, para que o modelo mexa só nas partes que a ação move.
@@ -115,7 +115,7 @@ Toda animação parte **só** das imagens de `saida/rotations/` que o `build.py`
 - **No lugar:** todas as animações ficam no centro do quadro, inclusive `andar` e `correr`: o deslocamento na cena é feito pelo Jogo. Só `andar`, `correr`, `treinando` e `comemorar` tiram os pés da linha 45, e só pelos pixels que o prompt diz.
 - **Nada de objetos:** a carta voa em CSS na cena (`docs/gamificacao.md` §3.3). Não desenhe carta, bola, peso ou garrafa.
 - **Saída:** 200 ms por quadro (o padrão do PixelLab), fundo transparente, sem sombra no chão.
-- **Paleta:** a mesma de `rotations` (`PALETA` no `build.py`). Cores novas vão para a mais próxima no build; evite cores que o personagem não tem.
+- **Paleta:** a mesma de `rotations` (`PALETA` no `rotacoes.py`). Cores novas vão para a mais próxima no build; evite cores que o personagem não tem.
 - **Quadros:** os da tabela de §4. Se o PixelLab gerar outra quantidade, tudo bem: o build lê a quantidade das tags.
 - **Exportar:** `.aseprite` com uma camada e tags `Acao-direcao` (por exemplo, `Idle_Breathing-south`), como em `../jpgma/fonte/`. Salve em `fonte/base-masculino-a.aseprite`, `-b` e assim por diante.
 

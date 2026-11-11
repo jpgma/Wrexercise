@@ -16,7 +16,7 @@ internal static class PngFolha
     /// <param name="bytesExtras">Dados (num bloco <c>tEXt</c>) para estourar o limite de tamanho.</param>
     public static byte[] Criar(
         int largura = 432,
-        int altura = 2352,
+        int altura = 4656,
         byte tipoCor = 6,
         byte profundidade = 8,
         string? blocoExtra = null,

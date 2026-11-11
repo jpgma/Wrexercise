@@ -18,7 +18,7 @@ public sealed class SpaFallbackTests : IDisposable
         File.WriteAllText(Path.Combine(_webRoot.FullName, "index.html"), IndexHtml);
         File.WriteAllText(Path.Combine(_webRoot.FullName, "sw.js"), "// sw");
         File.WriteAllText(Path.Combine(_webRoot.FullName, "manifest.webmanifest"), "{}");
-        File.WriteAllBytes(Path.Combine(_webRoot.FullName, "avatar-jpgma.png"), [0x89, 0x50, 0x4E, 0x47]);
+        File.WriteAllBytes(Path.Combine(_webRoot.FullName, "avatar-base-masculino.png"), [0x89, 0x50, 0x4E, 0x47]);
         Directory.CreateDirectory(Path.Combine(_webRoot.FullName, "assets"));
         File.WriteAllText(Path.Combine(_webRoot.FullName, "assets", "index-abc123.js"), "// app");
     }
@@ -59,7 +59,7 @@ public sealed class SpaFallbackTests : IDisposable
     [Theory]
     [InlineData("/sw.js", "text/javascript")]
     [InlineData("/manifest.webmanifest", "application/manifest+json")]
-    [InlineData("/avatar-jpgma.png", "image/png")]
+    [InlineData("/avatar-base-masculino.png", "image/png")]
     public async Task FixedNameFiles_AreAlwaysRevalidated(string path, string contentType)
     {
         await using var factory = CreateFactory();

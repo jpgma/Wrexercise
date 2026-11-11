@@ -10,7 +10,7 @@ const CACHE = `wrexercise-${VERSAO}`;
 const SEMPRE_REDE = ["/api/", "/health", "/ready"];
 
 // O `?v=` faz cada versão buscar o arquivo na origem: sem ele, uma CDN (Cloudflare) ainda com a cópia
-// antiga de um arquivo de nome fixo (por exemplo, `avatar-jpgma.png`) a entregaria, e ela ficaria
+// antiga de um arquivo de nome fixo (por exemplo, `avatar-base-masculino.png`) a entregaria, e ela ficaria
 // no pré-cache até a versão seguinte. O cache guarda a resposta com a URL sem o `?v=`.
 async function preencher() {
   const cache = await caches.open(CACHE);

@@ -8,7 +8,7 @@ Na medida do possível segundo a lei, os autores renunciam a todos os direitos
 autorais e conexos sobre estas imagens. Você pode copiá-las, modificá-las,
 distribuí-las e usá-las, inclusive para fins comerciais, sem pedir permissão.
 
-A folha de avatar (avatar-jpgma.png) foi gerada pelo autor com o PixelLab, e a
-animação parado foi desenhada à mão. O chão da praça foi gerado pelo autor com o
+A folha de avatar (avatar-base-masculino.png) foi gerada pelo autor com o PixelLab
+e o Gemini e montada por código. O chão da praça foi gerado pelo autor com o
 Gemini e reduzido à paleta do jogo por código. As cartas e os Enfeites são gerados
 por código, sem arte de terceiros. As fontes ficam em pixel-art/.

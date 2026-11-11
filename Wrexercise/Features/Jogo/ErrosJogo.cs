@@ -13,7 +13,7 @@ internal static class ErrosJogo
     public static IResult FolhaInvalida() => ApiProblem.Create(
         StatusCodes.Status400BadRequest,
         "FOLHA_INVALIDA",
-        "A folha de sprites precisa ser um PNG de 432×2352 px, com até 1000 KB.");
+        "A folha de sprites precisa ser um PNG de 432×4656 px, com até 1000 KB.");
 
     public static IResult AvatarNaoEncontrado() => ApiProblem.Create(
         StatusCodes.Status404NotFound,

@@ -1,6 +1,6 @@
 /**
  * As animações do Jogo, ligadas às linhas da folha em 8 direções (docs/avatar-formato.md §6, ADR 0039).
- * Os valores seguem `pixel-art/jpgma/saida/jpgma.json`. Nunca mude os tempos: todos veem a mesma animação.
+ * Os valores seguem `pixel-art/base-masculino/saida/base-masculino.json`. Nunca mude os tempos: todos veem a mesma animação.
  */
 export { formatoFolha as folha } from "@/components/folhaAvatar";
 
@@ -23,12 +23,18 @@ export type Direcao = (typeof direcoes)[number];
  * direção por coluna. Também desenha o guia de edição (guiaFolha.ts).
  */
 export const linhasFolha = {
-  andar: { linha: 1, quadros: 8, ms: 200 },
-  correr: { linha: 9, quadros: 8, ms: 200 },
-  arremessar: { linha: 17, quadros: 7, ms: 200 },
-  comemorar: { linha: 25, quadros: 9, ms: 200 },
-  receber: { linha: 33, quadros: 6, ms: 200 },
+  andar: { linha: 1, quadros: 8, ms: 100 },
+  correr: { linha: 9, quadros: 8, ms: 100 },
+  arremessar: { linha: 17, quadros: 6, ms: 80 },
+  comemorar: { linha: 25, quadros: 9, ms: 120 },
+  receber: { linha: 33, quadros: 6, ms: 100 },
   parado: { linha: 41, quadros: 4, ms: 200 },
+  treinando: { linha: 49, quadros: 6, ms: 90 },
+  alongar: { linha: 57, quadros: 4, ms: 150 },
+  olhar: { linha: 65, quadros: 4, ms: 200 },
+  aceitar: { linha: 73, quadros: 4, ms: 120 },
+  recusar: { linha: 81, quadros: 3, ms: 150 },
+  provocar: { linha: 89, quadros: 4, ms: 120 },
 } as const;
 
 export type Animacao = {
@@ -42,20 +48,19 @@ export type Animacao = {
   quadroEstatico: number;
 };
 
-// `alongar`, `olhar`, `aceitar`, `recusar` e `provocar` ainda não têm arte: usam `parado`
-// (ADR 0039, Andamento). `treinando` usa `correr` e `comemorando` usa `comemorar`.
+// `comemorando` usa a linha `comemorar`. `correr` está na folha, mas o Jogo ainda não o usa.
 export const animacoes = {
   parado: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
-  treinando: { ...linhasFolha.correr, repete: true, quadroEstatico: 2 },
+  treinando: { ...linhasFolha.treinando, repete: true, quadroEstatico: 2 },
   comemorando: { ...linhasFolha.comemorar, repete: true, quadroEstatico: 4 },
-  alongar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
-  olhar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  alongar: { ...linhasFolha.alongar, repete: false, quadroEstatico: 2 },
+  olhar: { ...linhasFolha.olhar, repete: false, quadroEstatico: 1 },
   andar: { ...linhasFolha.andar, repete: true, quadroEstatico: 0 },
   arremessar: { ...linhasFolha.arremessar, repete: false, quadroEstatico: 3 },
   receber: { ...linhasFolha.receber, repete: false, quadroEstatico: 2 },
-  aceitar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
-  recusar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
-  provocar: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
+  aceitar: { ...linhasFolha.aceitar, repete: false, quadroEstatico: 3 },
+  recusar: { ...linhasFolha.recusar, repete: false, quadroEstatico: 2 },
+  provocar: { ...linhasFolha.provocar, repete: false, quadroEstatico: 2 },
 } as const satisfies Record<string, Animacao>;
 
 export type NomeAnimacao = keyof typeof animacoes;
@@ -71,11 +76,8 @@ export function getDuracao(animacao: NomeAnimacao): number {
   return quadros * ms;
 }
 
-/**
- * Variações ocasionais de quem está parado. Vazia enquanto `alongar` e `olhar` não têm arte:
- * tocar o próprio `parado` de novo só reiniciaria a respiração.
- */
-export const variacoesDeParado: readonly NomeAnimacao[] = [];
+/** Variações ocasionais de quem está parado. */
+export const variacoesDeParado: readonly NomeAnimacao[] = ["alongar", "olhar"];
 
 /** A direção, das 8, mais próxima do vetor de `de` para `para` na tela (y para baixo). */
 export function getDirecao(

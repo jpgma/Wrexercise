@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 namespace Wrexercise.Infrastructure.Files;
 
 /// <summary>
-/// Confere o formato público da folha de sprites em 8 direções (docs/avatar-formato.md §6): PNG de 432×2352,
+/// Confere o formato público da folha de sprites em 8 direções (docs/avatar-formato.md §6): PNG de 432×4656,
 /// RGBA de 8 bits ou com paleta indexada, sem animação APNG e com até 1000 KB. O conteúdo não é conferido:
 /// cada pessoa desenha o que quiser. O navegador já conferiu o tamanho; isto é a segunda barreira.
 /// </summary>
@@ -12,7 +12,7 @@ internal static class ValidacaoFolhaAvatar
     // Abaixo de 1 MiB, para caber com o envelope multipart no limite do Kestrel (Program.cs).
     public const int MaxBytes = 1000 * 1024;
     public const int Largura = 432;
-    public const int Altura = 2352;
+    public const int Altura = 4656;
 
     private const int TamanhoIhdr = 13;
     private const byte TipoCorIndexada = 3;

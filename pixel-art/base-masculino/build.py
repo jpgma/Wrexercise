@@ -1,282 +1,181 @@
-"""Rotações do personagem base masculino em 8 direções, a partir de fonte/base.png.
+"""Folha de avatar padrão do Jogo: o base masculino em 8 direções (docs/avatar-formato.md §6, ADR 0039).
 
-fonte/base.png é uma imagem gerada (1536×1024) com as 8 direções em 2 linhas de 4, sobre um
-fundo escuro com brilho, desenhada numa escala bem maior que a do Jogo. Este script:
-- separa cada personagem do fundo (o brilho em volta é marrom e escuro; o contorno é quase preto);
-- reduz todos com a mesma escala para 33 px de altura (o tamanho do `jpgma`), por moda de cor;
-- redesenha o contorno de 1 px e põe os pés na linha 45 de um quadro de 64×64, centrado.
+A fonte da verdade é saida/base-masculino.aseprite, montado por montar.py e editado à mão no
+Aseprite: quadros de 64×64, uma tag por animação e direção (por exemplo, andar-north-west) e a tag
+`rotacao` com um quadro por direção. O build só lê esse arquivo e nunca escreve nele.
 
-Uso: python build.py   (exige Pillow)
-Gera saida/rotations/<direcao>.png (64×64, referência para o PixelLab; o nome da direção vai
-sem hífen, por exemplo northeast.png) e preview/rotacao-6x.png.
+Cada quadro é recortado de 64×64 para a célula de 48×48 em (8, 1), sem reamostrar, como no `jpgma`:
+os pés ficam na linha 44 da célula. O build recusa um quadro com pixels fora do recorte, com alfa
+parcial ou com quantidade de quadros diferente da tabela ANIMACOES.
+
+Uso: python build.py   (exige Pillow e o pixel-plugin configurado; ver docs/avatar-kit.md §6)
+Gera saida/base-masculino.png, saida/base-masculino.json, preview/ e a folha padrão do frontend,
+Wrexercise/webapp/public/avatar-base-masculino.png (PNG indexado).
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import pathlib
-from collections import Counter, deque
+import sys
+import tempfile
 
 from PIL import Image
 
 AQUI = pathlib.Path(__file__).resolve().parent
-FONTE = AQUI / "fonte" / "base.png"
+sys.path.insert(0, str(AQUI.parent / "avatar-base"))
+from aseprite_mcp import Aseprite  # noqa: E402
 
-# Ordem das células na imagem (2 linhas de 4) = ordem do PixelLab.
-DIRECOES = ["south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"]
+FONTE = AQUI / "saida" / "base-masculino.aseprite"
+QUADRO = 64  # quadro do .aseprite
+N = 48  # célula da folha
+OX, OY = 8, 1  # recorte do quadro de 64 para a célula: pés na linha 44
 
-QUADRO = 64  # quadro do PixelLab
-ALTURA = 33  # altura do personagem parado, com o contorno (igual ao jpgma)
-PE_Y = 45  # linha dos pés no quadro de 64
-CENTRO_X = 31.5  # centro horizontal do quadro
-OX, OY, CELULA = 8, 1, 48  # recorte do quadro de 64 para a célula da folha (igual ao jpgma)
+# Direções da folha (pt-BR) e da tag do .aseprite (PixelLab), na mesma ordem.
+DIRECOES = ["sul", "sudeste", "leste", "nordeste", "norte", "noroeste", "oeste", "sudoeste"]
+TAGS = ["south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"]
 
-ESCURO = 22  # max(r,g,b) abaixo disso é contorno (ou o fundo preto dos cantos)
-CONTORNO = (14, 7, 27)  # #0e071b, o contorno do jpgma
-# Cores de cada região, tiradas dos grupos de cor de fonte/base.png (que é quase chapada).
-# Cada pixel da fonte vai para a mais próxima; as cores de transição da fonte somem.
-PALETA = {
-    "cabelo_sombra": "#231514",
-    "cabelo": "#33201f",
-    "pele": "#ca8c65",
-    "pele_sombra": "#896354",
-    "camiseta": "#9e9599",
-    "camiseta_gola": "#3b3236",  # gola e barra das mangas
-    "calca": "#3e3e48",
-    "calca_sombra": "#2a2830",
-    "branco": "#d3cfd1",  # tênis e branco dos olhos
-}
-
-# Retoques à mão depois da redução, em coordenadas do quadro de 64: {(x, y): cor de PALETA,
-# "contorno" ou None (transparente)}. Acertam olhos e sobrancelhas onde a redução os borrou.
-RETOQUES: dict[str, dict[tuple[int, int], str | None]] = {
-    "west": {
-        (24, 22): "contorno", (25, 22): "pele",
-        (24, 23): "contorno", (25, 23): "pele", (26, 23): "contorno", (27, 23): "contorno",
-        (24, 24): "contorno", (25, 24): "pele", (28, 24): "branco",
-        (27, 25): "contorno", (28, 25): "branco",
-    },
-    "south-west": {
-        (23, 18): None,
-        (25, 22): "cabelo_sombra", (26, 22): "cabelo_sombra", (27, 22): "cabelo_sombra",
-        (32, 22): "cabelo_sombra",
-        (26, 23): "contorno", (30, 23): "contorno", (31, 23): "contorno",
-        (25, 24): "contorno", (27, 24): "branco", (31, 24): "contorno", (32, 24): "branco",
-        (25, 25): "contorno", (27, 25): "branco", (31, 25): "contorno", (32, 25): "branco",
-    },
-}
-LIMIAR_LINHA = 0.55  # fração de escuro nos votos do bloco para virar linha interna
-PUREZA = 3  # distância (px da fonte) dos vizinhos que precisam ter a mesma cor para votar
+# Animações da folha, na ordem das linhas (docs/avatar-formato.md §6): (nome, quadros, ms por quadro).
+# A linha 0 é `rotacao`; cada animação tem 8 linhas, uma por direção. As 6 primeiras mantêm as linhas
+# da primeira versão da folha; as 6 últimas vêm depois. Os tempos são os do .aseprite.
+ANIMACOES = [
+    ("andar", 8, 100),
+    ("correr", 8, 100),
+    ("arremessar", 6, 80),
+    ("comemorar", 9, 120),
+    ("receber", 6, 100),
+    ("parado", 4, 200),
+    ("treinando", 6, 90),
+    ("alongar", 4, 150),
+    ("olhar", 4, 200),
+    ("aceitar", 4, 120),
+    ("recusar", 3, 150),
+    ("provocar", 4, 120),
+]
+COLUNAS = max(qt for _, qt, _ in ANIMACOES)  # 9
+LINHAS = 1 + 8 * len(ANIMACOES)  # 97
 
 
-def hex_rgb(h: str) -> tuple[int, int, int]:
-    return int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+def ler_tags() -> dict[str, list[Image.Image]]:
+    """Os quadros de 64×64 de cada tag do .aseprite, com a duração conferida."""
+    with Aseprite() as a, tempfile.TemporaryDirectory() as t:
+        png = pathlib.Path(t) / "folha.png"
+        a("export_spritesheet", sprite_path=str(FONTE), output_path=str(png), layout="horizontal", padding=0,
+          include_json=True)
+        meta = json.loads(png.with_suffix(".json").read_text(encoding="utf-8"))
+        tira = Image.open(png).convert("RGBA")
+    quadros = meta["frames"] if isinstance(meta["frames"], list) else list(meta["frames"].values())
+    duracoes = [q["duration"] for q in quadros]
+    imagens = [tira.crop((i * QUADRO, 0, (i + 1) * QUADRO, QUADRO)) for i in range(tira.width // QUADRO)]
+    tags = {}
+    for tag in meta["meta"]["frameTags"]:
+        tags[tag["name"]] = imagens[tag["from"]:tag["to"] + 1]
+        tags[tag["name"] + ":ms"] = sorted(set(duracoes[tag["from"]:tag["to"] + 1]))
+    return tags
 
 
-def cor_de(nome: str) -> tuple[int, int, int]:
-    """Cor de um nome de PALETA ou "contorno"."""
-    return CONTORNO if nome == "contorno" else hex_rgb(PALETA[nome])
+def celula(q: Image.Image, onde: str) -> Image.Image:
+    """Recorta o quadro de 64 para a célula de 48, sem perder pixel nem aceitar alfa parcial."""
+    caixa = q.getbbox()
+    if caixa and caixa[3] == OY + N + 1 and caixa[1] > OY:
+        # O `comemorar` leste e oeste afunda e passa 1 px do chão da célula em 3 quadros: o quadro
+        # sobe 1 px, rente aos vizinhos (que já tocam a linha 47 da célula). Mais que isso é erro.
+        print(f"aviso: {onde} sobe 1 px para caber na célula")
+        q = q.crop((0, 1, QUADRO, QUADRO + 1))
+        caixa = q.getbbox()
+    if caixa and (caixa[0] < OX or caixa[1] < OY or caixa[2] > OX + N or caixa[3] > OY + N):
+        sys.exit(f"{onde}: desenho em {caixa}, fora do recorte de {N}×{N} em ({OX}, {OY})")
+    if any(0 < p[3] < 255 for p in q.get_flattened_data()):
+        sys.exit(f"{onde}: pixel semitransparente")
+    return q.crop((OX, OY, OX + N, OY + N))
 
 
-def escuro(p) -> bool:
-    return max(p[:3]) < ESCURO
+def montar(tags: dict) -> tuple[list[list[Image.Image]], dict]:
+    """Linhas da folha (células de 48×48) e o JSON da folha."""
+    if len(tags.get("rotacao", [])) != 8:
+        sys.exit("a tag rotacao precisa de 8 quadros, um por direção")
+    linhas = [[celula(q, f"rotacao {d}") for q, d in zip(tags["rotacao"], DIRECOES)]]
+    meta = {
+        "celula": N,
+        "ancora": {"x": N // 2, "y": None},
+        "direcoes": DIRECOES,
+        "animacoes": {"rotacao": {"linha": 0, "quadros": 1, "ms": None}},
+    }
+    for nome, qt, ms in ANIMACOES:
+        meta["animacoes"][nome] = {"linha": len(linhas), "quadros": qt, "ms": ms}
+        for d, tag in zip(DIRECOES, TAGS):
+            chave = f"{nome}-{tag}"
+            quadros = tags.get(chave)
+            if quadros is None or len(quadros) != qt:
+                sys.exit(f"tag {chave}: esperado {qt} quadros; veio {len(quadros or [])}")
+            if tags[chave + ":ms"] != [ms]:
+                sys.exit(f"tag {chave}: esperado {ms} ms por quadro; veio {tags[chave + ':ms']}")
+            linhas.append([celula(q, f"{chave} quadro {i + 1}") for i, q in enumerate(quadros)])
+    # Ponto entre os pés: centro da célula, na linha mais baixa da rotação de frente.
+    meta["ancora"]["y"] = linhas[0][0].getbbox()[3] - 1
+    return linhas, meta
 
 
-def brilho(p) -> bool:
-    """Cor mediana do brilho em volta do personagem: bem escura (as partes escuras do personagem,
-    cabelo e calça, ficam acima de 50)."""
-    return max(p[:3]) < 40
+def escrever_folha(linhas: list[list[Image.Image]]) -> Image.Image:
+    folha = Image.new("RGBA", (COLUNAS * N, LINHAS * N), (0, 0, 0, 0))
+    for j, linha in enumerate(linhas):
+        for i, q in enumerate(linha):
+            folha.paste(q, (i * N, j * N))
+    return folha
 
 
-def componentes(px, x0, y0, w, h, pred):
-    """Componentes 4-conectados de pixels que satisfazem pred, dentro da célula."""
-    rot = [-1] * (w * h)
-    comps = []
-    for sy in range(h):
-        for sx in range(w):
-            i = sy * w + sx
-            if rot[i] >= 0 or not pred(px[x0 + sx, y0 + sy]):
-                continue
-            k = len(comps)
-            rot[i] = k
-            q = deque([(sx, sy)])
-            pts = []
-            while q:
-                x, y = q.popleft()
-                pts.append((x, y))
-                for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-                    if 0 <= nx < w and 0 <= ny < h:
-                        j = ny * w + nx
-                        if rot[j] < 0 and pred(px[x0 + nx, y0 + ny]):
-                            rot[j] = k
-                            q.append((nx, ny))
-            comps.append(pts)
-    return comps
-
-
-def mascara(px, x0, y0, w, h) -> set[tuple[int, int]]:
-    """Pixels do personagem na célula: as regiões claras de dentro e o contorno escuro em volta."""
-    dentro = set()
-    for pts in componentes(px, x0, y0, w, h, lambda p: not escuro(p)):
-        toca_borda = any(x in (0, w - 1) or y in (0, h - 1) for x, y in pts)
-        ordem = sorted(pts, key=lambda t: sum(px[x0 + t[0], y0 + t[1]]))
-        mx, my = ordem[len(ordem) // 2]
-        if toca_borda or len(pts) < 40 or brilho(px[x0 + mx, y0 + my]):
-            continue
-        dentro.update(pts)
-    # O contorno: pixels escuros a até R_MAX pixels de dentro (o contorno da fonte tem ~12 px).
-    r_max = 14
-    dist = {p: 0 for p in dentro}
-    q = deque(dentro)
-    while q:
-        x, y = q.popleft()
-        d = dist[(x, y)]
-        if d == r_max:
-            continue
-        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-            if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in dist and escuro(px[x0 + nx, y0 + ny]):
-                dist[(nx, ny)] = d + 1
-                q.append((nx, ny))
-    return set(dist)
-
-
-VIZ4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
-VIZ8 = VIZ4 + ((1, 1), (1, -1), (-1, 1), (-1, -1))
-
-
-def limpar(grade: dict[tuple[int, int], int]) -> dict[tuple[int, int], int]:
-    """Tira as sobras da redução: a sombra da pele longe da pele (vem da mistura do cinza com o
-    contorno) e os pixels soltos, sem nenhum vizinho da mesma cor. O branco (olhos) e as linhas
-    escuras ficam."""
-    nomes = list(PALETA)
-    pele, sombra, branco = nomes.index("pele"), nomes.index("pele_sombra"), nomes.index("branco")
-    g = dict(grade)
-    # A borda da silhueta vira contorno no fim; aqui ela já conta como escura.
-    for p in grade:
-        if any((p[0] + dx, p[1] + dy) not in grade for dx, dy in VIZ4):
-            g[p] = -1
-    for _ in range(2):
-        novo = dict(g)
-        for (x, y), k in g.items():
-            if k < 0 or k == branco:
-                continue
-            viz = [g.get((x + dx, y + dy)) for dx, dy in VIZ8]
-            iguais = sum(v == k for v in viz)
-            toca_pele = any(g.get((x + dx, y + dy)) == pele for dx, dy in VIZ4)
-            if iguais == 0 or (k == sombra and not toca_pele):
-                outros = Counter(v for v in viz if v is not None and v >= 0 and v != k)
-                if outros:
-                    novo[(x, y)] = outros.most_common(1)[0][0]
-        g = novo
-    return g
-
-
-def main() -> None:
-    img = Image.open(FONTE).convert("RGB")
-    W, H = img.size
-    px = img.load()
-    cw, ch = W // 4, H // 2
-
-    # 1. Máscara e caixa de cada direção.
-    recortes = []
-    for i, nome in enumerate(DIRECOES):
-        x0, y0 = (i % 4) * cw, (i // 4) * ch
-        m = mascara(px, x0, y0, cw, ch)
-        xs = [x for x, _ in m]
-        ys = [y for _, y in m]
-        recortes.append((nome, x0, y0, m, min(xs), min(ys), max(xs), max(ys)))
-        print(f"{nome:11s} {max(xs) - min(xs) + 1:4d}×{max(ys) - min(ys) + 1:4d} px na fonte")
-
-    # 2. Uma escala só para as 8 direções, pela maior altura.
-    alt = max(r[7] - r[5] + 1 for r in recortes)
-    escala = alt / ALTURA
-    print(f"escala: {escala:.2f} px da fonte por pixel")
-
-    # 3. Paleta fixa por região (PALETA), em vez de reduzir as cores da fonte.
-    paleta = [hex_rgb(c) for c in PALETA.values()]
-    n_cores = len(paleta)
-
-    cache: dict[tuple, int] = {}
-
-    def idx(p) -> int:
-        """Índice na paleta, ou -1 para o contorno."""
-        if p not in cache:
-            cache[p] = -1 if escuro(p) else min(
-                range(n_cores), key=lambda k: sum((a - b) ** 2 for a, b in zip(p, paleta[k]))
-            )
-        return cache[p]
-
-    quadros = []
-    for nome, x0, y0, m, xmin, ymin, xmax, ymax in recortes:
-        tw = round((xmax - xmin + 1) / escala)
-        th = round((ymax - ymin + 1) / escala)
-        # Origem na fonte: centrado na horizontal, a base dos pés na última linha.
-        bx = xmin + (xmax - xmin + 1) / 2 - tw * escala / 2
-        by = ymax + 1 - th * escala
-        grade = {}
-        for ty in range(th):
-            for tx in range(tw):
-                sx0, sx1 = bx + tx * escala, bx + (tx + 1) * escala
-                sy0, sy1 = by + ty * escala, by + (ty + 1) * escala
-                votos, todos = Counter(), Counter()
-                total = dentro = 0
-                for sy in range(round(sy0), round(sy1)):
-                    for sx in range(round(sx0), round(sx1)):
-                        total += 1
-                        if (sx, sy) in m:
-                            dentro += 1
-                            k = idx(px[x0 + sx, y0 + sy])
-                            todos[k] += 1
-                            # Só vota o pixel "puro", da mesma cor que os vizinhos a PUREZA px:
-                            # assim as cores de transição da fonte (antisserrilhado) não entram.
-                            if all(
-                                idx(px[x0 + sx + dx, y0 + sy + dy]) == k
-                                for dx, dy in ((PUREZA, 0), (-PUREZA, 0), (0, PUREZA), (0, -PUREZA))
-                            ):
-                                votos[k] += 1
-                if total and dentro / total >= 0.5:
-                    if sum(votos.values()) < 0.15 * dentro:
-                        votos = todos  # bloco todo de transição: vale a maioria simples
-                    claros = [k for k in votos if k >= 0]
-                    # Linha interna (olho, braço, entre as pernas): escuro só quando domina o bloco.
-                    if votos[-1] > LIMIAR_LINHA * sum(votos.values()) or not claros:
-                        grade[(tx, ty)] = -1
-                    else:
-                        grade[(tx, ty)] = max(claros, key=lambda k: votos[k])
-        quadros.append((nome, tw, th, limpar(grade)))
-
-    # 4. Quadro de 64×64: contorno de 1 px na borda da silhueta, pés na linha PE_Y.
-    saida = AQUI / "saida"
-    (saida / "rotations").mkdir(parents=True, exist_ok=True)
+def escrever_previews(folha: Image.Image, linhas: list[list[Image.Image]], meta: dict):
     prev = AQUI / "preview"
     prev.mkdir(exist_ok=True)
-    faixa = Image.new("RGBA", (QUADRO * 8, QUADRO), (0, 0, 0, 0))
-    faixa48 = Image.new("RGBA", (CELULA * 8, CELULA), (0, 0, 0, 0))
-    for i, (nome, tw, th, grade) in enumerate(quadros):
-        q = Image.new("RGBA", (QUADRO, QUADRO), (0, 0, 0, 0))
-        ox = round(CENTRO_X - tw / 2 + 0.01)
-        oy = PE_Y + 1 - th
-        for (tx, ty), k in grade.items():
-            borda = any((tx + dx, ty + dy) not in grade for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-            cor = CONTORNO if borda or k < 0 else paleta[k]
-            q.putpixel((ox + tx, oy + ty), cor + (255,))
-        for (x, y), nome_cor in RETOQUES.get(nome, {}).items():
-            q.putpixel((x, y), (0, 0, 0, 0) if nome_cor is None else cor_de(nome_cor) + (255,))
-        q.save(saida / "rotations" / f"{nome.replace('-', '')}.png")
-        faixa.paste(q, (i * QUADRO, 0))
-        faixa48.paste(q.crop((OX, OY, OX + CELULA, OY + CELULA)), (i * CELULA, 0))
-        print(f"{nome:11s} {tw}×{th} px, caixa no quadro {q.getbbox()}")
+    fundo = (0x2B, 0x30, 0x42, 255)
+    # O `retrato` do `Avatar`: recorte de 24×24 em (12, 10) da `rotacao` `sul` (formatoFolha.retrato), em 8×.
+    folha.crop((12, 10, 36, 34)).resize((24 * 8, 24 * 8), Image.NEAREST).save(prev / "retrato.png")
+    # Um GIF por animação, com as 8 direções lado a lado, em 3×.
+    for nome, info in meta["animacoes"].items():
+        if nome == "rotacao":
+            continue
+        quadros = []
+        for i in range(info["quadros"]):
+            tela = Image.new("RGBA", (8 * N, N), fundo)
+            for k in range(8):
+                tela.alpha_composite(linhas[info["linha"] + k][i], (k * N, 0))
+            quadros.append(tela.resize((tela.width * 3, tela.height * 3), Image.NEAREST))
+        quadros[0].save(prev / f"folha-{nome}.gif", save_all=True, append_images=quadros[1:],
+                        duration=info["ms"], loop=0, disposal=2)
 
-    # Prévia: 6× sobre o asfalto da cena, com o jpgma embaixo para comparar o tamanho.
-    linhas = [faixa48]
-    jp = AQUI.parent / "jpgma" / "saida" / "jpgma.png"
-    if jp.exists():
-        linhas.append(Image.open(jp).convert("RGBA").crop((0, 0, CELULA * 8, CELULA)))
-    p = Image.new("RGBA", (CELULA * 8, CELULA * len(linhas)), (0x22, 0x26, 0x33, 255))
-    for k, linha in enumerate(linhas):
-        p.alpha_composite(linha, (0, k * CELULA))
-    p.resize((p.width * 6, p.height * 6), Image.NEAREST).save(prev / "rotacao-6x.png")
-    usadas = {c for c in faixa.get_flattened_data() if c[3]}
-    print(f"{len(usadas)} cores; saida/rotations/*.png, preview/rotacao-6x.png")
+
+def escrever_bundle(folha: Image.Image) -> pathlib.Path:
+    """A folha padrão do frontend: o mesmo desenho em PNG indexado (índice 0 transparente)."""
+    cores = sorted({p for p in folha.get_flattened_data() if p[3]})
+    if len(cores) > 255:
+        sys.exit(f"{len(cores)} cores: o PNG indexado aceita até 255 mais o transparente")
+    indice = {c: i + 1 for i, c in enumerate(cores)}
+    ind = Image.new("P", folha.size, 0)
+    ind.putpalette([0, 0, 0] + [v for c in cores for v in c[:3]])
+    ind.putdata([indice[p] if p[3] else 0 for p in folha.get_flattened_data()])
+    destino = AQUI.parents[1] / "Wrexercise/webapp/public/avatar-base-masculino.png"
+    ind.save(destino, optimize=True, transparency=0)
+    if Image.open(destino).convert("RGBA").tobytes() != folha.tobytes():
+        sys.exit(f"{destino}: a versão indexada difere da folha")
+    return destino
+
+
+def main():
+    sys.stdout.reconfigure(encoding="utf-8")
+    linhas, meta = montar(ler_tags())
+    folha = escrever_folha(linhas)
+    saida = AQUI / "saida"
+    png = saida / "base-masculino.png"
+    folha.save(png, optimize=True)
+    meta = {"largura": folha.width, "altura": folha.height, **meta,
+            "sha256": hashlib.sha256(folha.tobytes()).hexdigest()}
+    (saida / "base-masculino.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+                                               encoding="utf-8", newline="\n")
+    escrever_previews(folha, linhas, meta)
+    bundle = escrever_bundle(folha)
+    print(f"{png.relative_to(AQUI).as_posix()}: {folha.width}×{folha.height}, {png.stat().st_size / 1024:.1f} KB; "
+          f"{bundle.name}: {bundle.stat().st_size / 1024:.1f} KB; âncora {meta['ancora']}")
 
 
 if __name__ == "__main__":

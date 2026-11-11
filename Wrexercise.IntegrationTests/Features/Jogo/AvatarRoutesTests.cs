@@ -70,8 +70,9 @@ public sealed class AvatarRoutesTests : IAsyncLifetime
 
     [Theory]
     [InlineData(256, 384, 6)]
-    [InlineData(431, 2352, 6)]
-    [InlineData(432, 2352, 2)]
+    [InlineData(432, 2352, 6)]
+    [InlineData(431, 4656, 6)]
+    [InlineData(432, 4656, 2)]
     public async Task EnviarFolha_FormatoErrado_Recusa400SemGuardarNada(int largura, int altura, int tipoCor)
     {
         var ana = await _host.CreateUsuarioAsync("Ana");

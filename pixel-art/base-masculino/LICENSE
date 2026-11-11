@@ -1,0 +1,12 @@
+Avatar base masculino do modo Jogo do Wrexercise: fonte/*, saida/* e preview/*
+
+Dedicado ao domínio público sob CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Na medida do possível segundo a lei, os autores renunciam a todos os direitos
+autorais e conexos sobre esta arte. Você pode copiá-la, modificá-la,
+distribuí-la e usá-la, inclusive para fins comerciais, sem pedir permissão.
+
+Os quadros foram gerados pelo autor com o PixelLab e o Gemini. montar.py junta
+as fontes em saida/base-masculino.aseprite, e build.py gera a folha do Jogo a
+partir dele, sem redesenho.

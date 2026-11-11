@@ -1,6 +1,6 @@
 # Avatar base e kit de camadas — Wrexercise
 
-> **Fora do bundle:** as 6 folhas padrão de lado saíram de `Wrexercise/webapp/public/`. A folha padrão agora é a do `jpgma`, em 8 direções (`decisoes/0039-avatar-em-8-direcoes.md`, Andamento). O rig continua aqui como referência.
+> **Fora do bundle:** as 6 folhas padrão de lado saíram de `Wrexercise/webapp/public/`. A folha padrão agora é a do base masculino (`pixel-art/base-masculino/`), em 8 direções (`decisoes/0039-avatar-em-8-direcoes.md`, Andamento). O rig continua aqui como referência.
 >
 > Como são feitas as folhas padrão de avatar (`gamificacao.md` §4.4) e como trocar cor de pele, cabelo, roupa e acessórios. O formato da folha final está em `avatar-formato.md`. Este documento também descreve o editor de avatar por peças, ainda sem fase (§7).
 

@@ -58,6 +58,14 @@ A cena já é um chão visto de cima (`gamificacao.md` §3.1), e os avatares and
 - **Folhas importadas antigas:** a migração `022-limpa-folhas-de-lado.sql` volta todos ao padrão. Os arquivos de lado ficam sem dono e saem na limpeza diária de `/dados/avatares` (`LimpezaAvatares`), que apaga todo arquivo sem dono há mais de 1 hora.
 - Em `/perfil/avatar`, "Exportar folha" baixa a folha atual (importada ou padrão), "Exportar guia" baixa uma camada com a grade, os nomes das linhas e a âncora, gerada no navegador a partir do formato, e "Importar folha" mostra uma prévia das 8 direções antes de salvar.
 
+**2026-11-10 — o base masculino é o avatar padrão, e a folha passa a ter todas as animações.** A decisão continua proposta.
+
+- **Folha padrão:** `Wrexercise/webapp/public/avatar-base-masculino.png` (PNG indexado de 60 KB), gerada por `pixel-art/base-masculino/build.py` a partir de `saida/base-masculino.aseprite` (quadros de 64×64 recortados em (8, 1) para 48×48, como no `jpgma`). A folha do `jpgma` saiu do bundle. O `build.py` dele gera `saida/jpgma-importar.png`, no formato novo, para importar.
+- **Formato:** 432 × 4656 px, 97 linhas. As linhas 0 a 48 ficam como estavam; depois vêm `treinando`, `alongar`, `olhar`, `aceitar`, `recusar` e `provocar`, 8 linhas cada. Resolve o ponto em aberto **Tempos:** cada linha tem os quadros e o tempo da arte do base masculino (por exemplo, `andar` 8 × 100 ms, `arremessar` 6 × 80 ms), e não mais 200 ms para todas. A carta continua saindo no quarto quadro do `arremessar` e atingindo o peito no terceiro do `receber`.
+- **Animações:** `treinando` deixa de usar `correr`, as que caíam para `parado` têm arte própria, e as variações de `parado` (`alongar` e `olhar`) voltam.
+- **Folhas importadas:** a migração `023-limpa-folhas-de-6-animacoes.sql` volta todos ao padrão, como a `022`. Os arquivos antigos saem na limpeza diária.
+- **Ajuste da arte:** no `comemorar` leste e oeste, os quadros 3, 6 e 9 passam 1 px do chão da célula. O build sobe esses quadros 1 px e avisa. Para tirar o ajuste, corrija os quadros no `.aseprite`.
+
 ## Impacto, se aprovada
 
 - `avatar-formato.md`, `gamificacao.md` §3.1, §3.3, §4 e `avatar-kit.md` reescritos para o formato novo.

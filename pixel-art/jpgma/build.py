@@ -9,10 +9,13 @@ Origem do desenho: duas exportações do PixelLab (`rotations`, Walking, Running
 Taking_Punch), com o ruído de cor levado para a paleta e recortadas de 64×64 para 48×48 sem reamostrar.
 O `parado` (respiração) foi desenhado sobre a `rotacao`. Desde 2026-11-09, tudo se edita no .aseprite.
 
+Desde 2026-11-10, a folha padrão do aplicativo é o base masculino (pixel-art/base-masculino/). A folha
+do `jpgma` fica fora do bundle: saida/jpgma-importar.png é a mesma folha em PNG indexado, no formato de
+97 linhas, pronta para importar em /perfil/avatar. As animações que o `jpgma` não tem repetem as linhas
+de outra (EMPRESTADAS), como o aplicativo fazia quando ela era a padrão.
+
 Uso: python build.py   (exige Pillow e o pixel-plugin configurado; ver docs/avatar-kit.md §6)
-Gera saida/jpgma.png, saida/jpgma.json, preview/ e a folha padrão do frontend,
-Wrexercise/webapp/public/avatar-jpgma.png (PNG indexado). O `retrato` do `Avatar` é um recorte da
-`rotacao` `sul` dessa folha, então muda junto.
+Gera saida/jpgma.png, saida/jpgma.json, saida/jpgma-importar.png e preview/.
 """
 
 from __future__ import annotations
@@ -44,6 +47,16 @@ ANIMACOES = [
     ("comemorar", 9, "Cheering"),
     ("receber", 6, "Taking_Punch"),  # reação ao ser atingido pela carta
     ("parado", 4, "desenho"),  # respiração, desenhada sobre a `rotacao`
+]
+# Animações do formato (docs/avatar-formato.md §6) que o `jpgma` não tem, depois das de ANIMACOES, na
+# ordem das linhas: (nome, animação cujas linhas são copiadas).
+EMPRESTADAS = [
+    ("treinando", "correr"),
+    ("alongar", "parado"),
+    ("olhar", "parado"),
+    ("aceitar", "parado"),
+    ("recusar", "parado"),
+    ("provocar", "parado"),
 ]
 TOTAL = len(DIRECOES) * (1 + sum(qt for _, qt, _ in ANIMACOES))
 
@@ -110,6 +123,10 @@ def montar(quadros: list[dict]) -> tuple[list[list[dict]], dict]:
         for _ in DIRECOES:
             linhas.append(quadros[i:i + qt])
             i += qt
+    for nome, origem in EMPRESTADAS:
+        info = meta["animacoes"][origem]
+        meta["animacoes"][nome] = {**info, "linha": len(linhas), "origem": origem}
+        linhas.extend(linhas[info["linha"]:info["linha"] + len(DIRECOES)])
     return linhas, meta
 
 
@@ -153,13 +170,13 @@ def escrever_previews(folha: Image.Image, linhas: list[list[dict]], meta: dict):
                         loop=0, disposal=2)
 
 
-def escrever_bundle(folha: Image.Image):
-    """A folha padrão do frontend: o mesmo desenho em PNG indexado (índice 0 transparente), bem menor que o RGBA."""
+def escrever_importavel(folha: Image.Image):
+    """A folha para importar: o mesmo desenho em PNG indexado (índice 0 transparente), bem menor que o RGBA."""
     indice = {(*rgb(c), 255): i + 1 for i, c in enumerate(PALETA)}
     ind = Image.new("P", folha.size, 0)
     ind.putpalette([0, 0, 0] + [v for c in PALETA for v in rgb(c)])
     ind.putdata([indice[p] if p[3] else 0 for p in folha.getdata()])
-    destino_png = AQUI.parents[1] / "Wrexercise/webapp/public/avatar-jpgma.png"
+    destino_png = AQUI / "saida/jpgma-importar.png"
     ind.save(destino_png, optimize=True, transparency=0)
     if Image.open(destino_png).convert("RGBA").tobytes() != folha.tobytes():
         sys.exit(f"{destino_png}: a versão indexada difere da folha")
@@ -178,7 +195,7 @@ def main():
             "sha256": hashlib.sha256(folha.tobytes()).hexdigest()}
     (saida / "jpgma.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     escrever_previews(folha, linhas, meta)
-    escrever_bundle(folha)
+    escrever_importavel(folha)
     print(f"{png.relative_to(AQUI).as_posix()}: {folha.width}×{folha.height}, "
           f"{png.stat().st_size / 1024:.1f} KB, {sum(len(linha) for linha in linhas)} quadros")
 

@@ -726,7 +726,7 @@ A interface deve distinguir progresso confirmado de progresso provisório.
 
 ## Q034 — Como será a folha de avatar em 8 direções?
 
-**Status:** PROPOSTA — ver `decisoes/0039-avatar-em-8-direcoes.md`. Andamento: a folha do `jpgma` é a padrão, em teste, e a importação voltou no formato em 8 direções (seção "Andamento" do ADR).
+**Status:** PROPOSTA — ver `decisoes/0039-avatar-em-8-direcoes.md`. Andamento: o base masculino é a folha padrão, a folha tem as 12 animações do Jogo (432×4656), e a importação aceita só esse formato (seção "Andamento" do ADR).
 
 A folha atual é de lado (256×384, células de 32×32, espelhada para a esquerda). A proposta é trocar por personagens vistos de cima, em 8 direções, gerados no PixelLab.
 
