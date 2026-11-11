@@ -63,7 +63,7 @@ A tela Jogo mostra:
 
 - a cena com o avatar de cada membro ativo do grupo;
 - o seu progresso na semana (o mesmo anel da tela App, em versão compacta);
-- o saldo de Energia e a sua Mão de cartas (a partir das fases G2 e G3);
+- o saldo de Energia e, logo abaixo da praça, a sua Mão de cartas com a Mesa (a partir das fases G2 e G3);
 - o aviso de atividades para avaliar, como hoje.
 
 A tela não tem um botão próprio de "Registrar atividade": o registro já está na navegação inferior (celular) e na lateral (computador).
@@ -131,12 +131,14 @@ Entre as encenações, a praça tem luz e movimento próprios. Nada disso é enc
 
 ### 3.5. Foco
 
-Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria praça, e é dali que se joga uma carta ou se escolhe o Rival. O alvo fica na URL (`?foco=`), então o botão voltar fecha o Foco. A lógica está em `useFoco.ts`; o painel, em `PainelFoco.tsx`; a Mão fixa, em `MaoFoco.tsx`.
+Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria praça, e é dali que se joga uma carta ou se escolhe o Rival. O alvo fica na URL (`?foco=`), então o botão voltar fecha o Foco. A lógica está em `useFoco.ts`; o painel, em `PainelFoco.tsx`; a Mão, em `MaoJogo.tsx`; a Mesa, em `MesaJogadas.tsx`.
 
-- **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares ficam apagados; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até a praça.
-- **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais, as Jogadas ativas entre os dois e o Rival da semana, com link para a página do membro.
-- **Mão fixa:** presa ao pé da tela, por cima da navegação, com as cartas em leque. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto.
-- **Arremesso:** o painel e a Mão descem; a câmera vai até quem joga, que gira para o alvo e faz `arremessar`. O envio corre junto, e o braço espera no quadro da soltura até o servidor responder. Deu certo: a carta voa girando, a câmera a acompanha, o alvo faz `receber`, a câmera treme, o nome da carta estoura sobre o alvo e o aparelho vibra. Deu errado: a carta cai, quem jogou faz `recusar` e a mensagem do erro aparece.
+- **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares ficam apagados; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até a praça com a Mão logo abaixo; se as duas não cabem acima da navegação, a Mão fica inteira e o alto da praça sai da tela.
+- **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. As Jogadas entre os dois ficam na Mesa.
+- **Mão:** uma só, logo abaixo da praça, dentro e fora do Foco. Ao abrir o Foco, ela sobe até ficar sob o painel e as cartas são distribuídas uma a uma, em leque. As cartas em Jogadas abertas ficam na Mesa e deixam na Mão uma vaga reservada, tracejada. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto. Durante o arrasto, um anel de mira pulsa sob os pés do alvo.
+- **Carta primeiro:** fora do Foco, escolher uma Provocação faz um anel pulsar sob os colegas que recebem cartas. Tocar num deles abre o Foco com a carta já escolhida. Um toque no chão ou de novo na carta desfaz a escolha.
+- **Mesa:** dentro da Mão, abaixo das cartas, uma fileira de mini-cartas com as Jogadas de quem vê no grupo: ícone com um anel do prazo que resta, o outro nome e a situação. As que pedem resposta vêm primeiro e pulsam; as encerradas, no fim e apagadas. No Foco, só as Jogadas com o alvo. Tocar numa abre uma janela com o objetivo, o prazo e, se for o caso, Aceitar, Recusar e Aceitar com uma Resposta.
+- **Arremesso:** o painel desce e a Mão some sem mudar de altura; a câmera vai até quem joga, que gira para o alvo e faz `arremessar`. O envio corre junto, e o braço espera no quadro da soltura até o servidor responder. Deu certo: a carta voa girando, a câmera a acompanha, o alvo faz `receber`, a câmera treme, o nome da carta estoura sobre o alvo e o aparelho vibra. Deu errado: a carta cai, quem jogou faz `recusar` e a mensagem do erro aparece.
 - **Rival:** a carta "VS" abre a Mão quando o colega pode ser escolhido. A câmera enquadra os dois, que dão um passo para o centro e se encaram; o "VS" bate na tela e os dois fazem `provocar`. Como a escolha toca no Foco, ela não se repete como encenação para quem escolheu; o Rival a vê na próxima visita (§3.3).
 - **Fechar:** "✕", Esc, o botão voltar ou um toque no chão. Tocar noutro colega muda o Foco para ele.
 - **Movimento reduzido:** a câmera e o giro vão direto ao fim, a carta não voa e o impacto vira um quadro fixo de `receber`; o "VS" aparece sem animação. O arrasto continua valendo, porque é entrada, não enfeite.
@@ -375,7 +377,7 @@ Decidido em `decisoes/0038-rival-da-semana.md`.
 - Venceu e Perdeu são finais assim que aparecem, porque `Verificada` é final. Tudo é calculado na leitura, sem tarefa agendada.
 - Prêmio: 15 EN e um selo, só para quem escolheu. Cada grupo paga à parte.
 - O Rival recebe a `Notificacao` `RivalEscolhido`. Só as duas pessoas do par veem o par.
-- O painel "Rival da semana", embaixo da Mão, mostra o par e o selo (`RIVAL` ou `VENCEU · +15 EN`) com o total de vitórias no grupo. A escolha é a carta "VS" do Foco (§3.5).
+- Na praça, um marcador ⚔ ao lado do avatar mostra o par: cheio em quem você escolheu, contornado em quem escolheu você. O painel do Foco diz a relação por extenso. A escolha é a carta "VS" do Foco (§3.5). O resultado aparece na encenação e na notificação; não há painel próprio do Rival.
 - Não há aposta de Energia.
 - Na cena, os rivais fazem `provocar`, e o vencedor faz `comemorando` (§3.3).
 
@@ -502,7 +504,7 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 - Migração `019-create-rivais.sql`: tabela `rivais`, coluna `atividades.verified_at` e o tipo de notificação `RivalEscolhido`.
 - `GET` e `POST /api/grupos/{id}/rivais` e `POST /api/grupos/{id}/rivais/vistos`.
 - Resultado e recompensa derivados das atividades verificadas (`ResultadoRival`, `Rivais`).
-- Painel "Rival da semana", escolha no menu do avatar e encenações `provocar` e `comemorando`.
+- Painel "Rival da semana" (depois trocado pelo marcador ⚔ na praça, §8), escolha no menu do avatar e encenações `provocar` e `comemorando`.
 
 ## 11. Adiado e descartado
 

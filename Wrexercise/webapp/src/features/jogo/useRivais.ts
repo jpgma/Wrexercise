@@ -71,3 +71,27 @@ export function getVencedorId(rival: Rival): string | null {
   if (rival.situacao === "Perdeu") return rival.rivalId;
   return null;
 }
+
+/** Como quem consulta se liga a outro membro no Rival desta semana. */
+export type RelacaoRival = "escolhido" | "escolheu";
+
+/** `escolhido`: quem consulta escolheu o outro; `escolheu`: o outro escolheu quem consulta. */
+export function getRelacaoRival(
+  dados: Rivais | undefined,
+  usuarioId: string,
+  outroId: string,
+): RelacaoRival | null {
+  if (!dados?.semanaInicio) return null;
+  const daSemana = dados.rivais.filter(
+    (r) => r.semanaInicio === dados.semanaInicio,
+  );
+  if (
+    daSemana.some((r) => r.escolhedorId === usuarioId && r.rivalId === outroId)
+  )
+    return "escolhido";
+  if (
+    daSemana.some((r) => r.escolhedorId === outroId && r.rivalId === usuarioId)
+  )
+    return "escolheu";
+  return null;
+}

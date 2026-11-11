@@ -44,7 +44,7 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`.
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 
@@ -52,7 +52,7 @@ Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 
-Modos da tela inicial: `App`, `Jogo` (ver `docs/gamificacao.md`). A tela do modo `Jogo` mostra a `Cena` do grupo; tocar num colega abre o `Foco`, a câmera aproximada nele.
+Modos da tela inicial: `App`, `Jogo` (ver `docs/gamificacao.md`). A tela do modo `Jogo` mostra a `Cena` do grupo; tocar num colega abre o `Foco`, a câmera aproximada nele. A `Mao` fica logo abaixo da praça, com a `Mesa` (as Jogadas de quem vê) embaixo das cartas.
 
 Ao introduzir um conceito novo, acrescente-o aqui na mesma alteração.
 

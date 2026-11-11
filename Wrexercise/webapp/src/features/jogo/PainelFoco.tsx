@@ -4,37 +4,15 @@ import { Link } from "react-router";
 import { useVitrine } from "@/components/folhaAvatar";
 import { formatarDuracao } from "@/features/atividades";
 import { usePerfilMembro } from "@/features/usuarios";
-import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
-import { formatarPrazo, getSeloSituacao, primeiroNome } from "./textosCartas";
-import { type SituacaoJogada, useJogadas } from "./useCartas";
+import { primeiroNome } from "./textosCartas";
 import type { MembroCena } from "./useCena";
-import { useRivais } from "./useRivais";
+import { getRelacaoRival, useRivais } from "./useRivais";
 
-const ativas: readonly SituacaoJogada[] = [
-  "Enviada",
-  "Aceita",
-  "AguardandoVerificacao",
-];
-
-/** A relação de Rival entre quem vê e o alvo nesta semana, se houver. */
-function useTextoRival(grupoId: string, usuarioId: string, alvoId: string) {
-  const rivais = useRivais(grupoId);
-  const dados = rivais.data;
-  if (!dados?.semanaInicio) return null;
-  const daSemana = dados.rivais.filter(
-    (r) => r.semanaInicio === dados.semanaInicio,
-  );
-  if (
-    daSemana.some((r) => r.escolhedorId === usuarioId && r.rivalId === alvoId)
-  )
-    return "Seu Rival da semana";
-  if (
-    daSemana.some((r) => r.escolhedorId === alvoId && r.rivalId === usuarioId)
-  )
-    return "Escolheu você como Rival";
-  return null;
-}
+const textoRival = {
+  escolhido: "Seu Rival da semana",
+  escolheu: "Escolheu você como Rival",
+} as const;
 
 function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
   return (
@@ -48,8 +26,9 @@ function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
 }
 
 /**
- * O painel do Foco, sobre a parte de baixo da praça: nome, Vitrine, como a pessoa vai no desafio,
- * as cartas ativas entre as duas e o Rival. Some durante o arremesso e a escolha do Rival.
+ * O painel do Foco, sobre a parte de baixo da praça: nome, Vitrine, como a pessoa vai no desafio e
+ * o Rival. As cartas entre as duas ficam na Mesa, logo abaixo. Some durante o arremesso e a escolha
+ * do Rival.
  */
 export function PainelFoco({
   grupoId,
@@ -67,8 +46,9 @@ export function PainelFoco({
   const alvoId = membro.usuarioId;
   const perfil = usePerfilMembro(grupoId, alvoId);
   const vitrine = useVitrine(alvoId);
-  const jogadas = useJogadas(grupoId);
-  const rival = useTextoRival(grupoId, usuarioId, alvoId);
+  const rivais = useRivais(grupoId);
+  const relacao = getRelacaoRival(rivais.data, usuarioId, alvoId);
+  const rival = relacao ? textoRival[relacao] : null;
   const titulo = useRef<HTMLHeadingElement>(null);
   const nome = primeiroNome(membro.nomeExibicao);
 
@@ -77,14 +57,6 @@ export function PainelFoco({
     titulo.current?.focus({ preventScroll: true });
   }, [alvoId]);
 
-  const entreVoces = (jogadas.data ?? [])
-    .filter(
-      (j) =>
-        ativas.includes(j.situacao) &&
-        ((j.remetenteId === usuarioId && j.destinatarioId === alvoId) ||
-          (j.remetenteId === alvoId && j.destinatarioId === usuarioId)),
-    )
-    .slice(0, 2);
   const desafio = perfil.data?.desafio;
 
   return (
@@ -165,28 +137,6 @@ export function PainelFoco({
           </>
         )}
       </ul>
-
-      {entreVoces.length > 0 && (
-        <ul aria-label="Cartas entre vocês" className="mt-2 space-y-1">
-          {entreVoces.map((j) => {
-            const selo = getSeloSituacao(j.situacao, j.recebida);
-            return (
-              <li key={j.id} className="flex items-center gap-2 text-xs">
-                <IconeCarta codigo={j.carta.codigo} />
-                <span className="min-w-0 flex-1 truncate">
-                  {j.recebida ? `${nome} jogou` : "Você jogou"}{" "}
-                  <span className="font-semibold">{j.carta.nome}</span>
-                  <span className="text-muted">
-                    {" "}
-                    · até {formatarPrazo(j.expiraEm)}
-                  </span>
-                </span>
-                <span className={`chip ${selo.classe}`}>{selo.texto}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
 
       {!membro.recebeCartas && (
         <p className="mt-2 text-xs text-muted">

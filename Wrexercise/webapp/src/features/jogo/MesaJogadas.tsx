@@ -1,11 +1,8 @@
-import { Plus } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router";
-import { SectionTitle } from "@/components/PageHeader";
+import { Dialog } from "@/components/Dialog";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
-import { CartaJogo, IconeCarta } from "./CartaJogo";
-import { RivalDaSemana } from "./RivalDaSemana";
+import { IconeCarta } from "./CartaJogo";
 import {
   formatarPrazo,
   getObjetivo,
@@ -23,74 +20,22 @@ import {
   useResponderJogada,
 } from "./useCartas";
 
-/** Vaga vazia da Mão, no formato da carta. A próxima a ser preenchida tem "+"; todas abrem a Loja. */
-function VagaVazia({ proxima }: { proxima: boolean }) {
-  return (
-    <Link
-      to="/jogo/loja"
-      aria-label={proxima ? "Comprar carta na Loja" : undefined}
-      aria-hidden={proxima ? undefined : true}
-      tabIndex={proxima ? undefined : -1}
-      className={`grid aspect-[3/4] w-full place-items-center rounded-md border-2 border-dashed tap ${proxima ? "border-border-strong text-muted" : "border-border"}`}
-    >
-      {proxima && <Plus aria-hidden="true" className="size-6" />}
-    </Link>
-  );
-}
-
-/** A Mão de quem está vendo a cena: uma vaga por carta do limite, as vazias levam à Loja. */
-function MaoCartas() {
-  const loja = useLoja();
-  if (!loja.data) return null;
-  const { mao, limiteMao } = loja.data;
-  const vagas = Array.from({ length: Math.max(limiteMao, mao.length) });
-
-  return (
-    <section aria-labelledby="mao-titulo">
-      <SectionTitle>
-        <span id="mao-titulo">
-          Sua Mão{" "}
-          <span className="font-score text-base text-muted">
-            {mao.length}/{limiteMao}
-          </span>
-        </span>
-      </SectionTitle>
-      <ul className="grid max-w-md grid-cols-5 gap-2 pt-1 pb-1.5">
-        {vagas.map((_, i) => {
-          const carta = mao[i];
-          return (
-            <li key={carta?.id ?? `vaga-${i}`} className="relative">
-              {carta ? (
-                <>
-                  <CartaJogo carta={carta} apagada={carta.emJogo} compacta />
-                  {carta.emJogo && (
-                    <span className="chip absolute inset-x-0 top-[3%] mx-auto w-fit px-1">
-                      Em jogo
-                    </span>
-                  )}
-                </>
-              ) : (
-                <VagaVazia proxima={i === mao.length} />
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <p className="mt-1 text-xs text-muted">
-        {mao.length === 0
-          ? "Toque no + para comprar cartas na Loja."
-          : "Toque no avatar de um colega para jogar uma carta."}
-      </p>
-    </section>
-  );
-}
-
 const avisoResposta: Record<CodigoResposta, string> = {
   DesafioDuplo: "Carta aceita e devolvida. Agora são dois desafios!",
   Aposta: "Aposta feita. Cumprindo, a recompensa dobra!",
   PrazoExtra: "Carta aceita com 24 horas a mais.",
   MudancaDePlanos: "Objetivo trocado. Bora treinar!",
 };
+
+const encerradas: readonly string[] = ["Concluida", "Recusada", "Expirada"];
+
+function getTitulo(jogada: Jogada): string {
+  const remetente = primeiroNome(jogada.remetenteNome);
+  if (!jogada.recebida) return `Para ${primeiroNome(jogada.destinatarioNome)}`;
+  return jogada.desafioDuplo
+    ? `${remetente} devolveu o desafio`
+    : `${remetente} te provocou`;
+}
 
 /** Aceitar usando uma Resposta da Mão: escolhe a carta e, na MUDANÇA DE PLANOS, o objetivo novo. */
 function AceitarComResposta({
@@ -199,22 +144,20 @@ function AceitarComResposta({
   );
 }
 
-function JogadaItem({ jogada, grupoId }: { jogada: Jogada; grupoId: string }) {
+/** Os detalhes de uma carta da Mesa, dentro da janela: objetivo, prazo e, se pendente, a resposta. */
+function DetalheJogada({
+  jogada,
+  grupoId,
+}: {
+  jogada: Jogada;
+  grupoId: string;
+}) {
   const responder = useResponderJogada(grupoId);
   const loja = useLoja();
   const { showToast } = useToast();
   const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
   const pendente = jogada.recebida && jogada.situacao === "Enviada";
-  const encerrada = ["Concluida", "Recusada", "Expirada"].includes(
-    jogada.situacao,
-  );
-
-  const remetente = primeiroNome(jogada.remetenteNome);
-  const titulo = jogada.recebida
-    ? jogada.desafioDuplo
-      ? `${remetente} devolveu o desafio`
-      : `${remetente} te provocou`
-    : `Para ${primeiroNome(jogada.destinatarioNome)}`;
+  const encerrada = encerradas.includes(jogada.situacao);
 
   const enviar = (
     resposta: "Aceita" | "Recusada",
@@ -241,14 +184,16 @@ function JogadaItem({ jogada, grupoId }: { jogada: Jogada; grupoId: string }) {
   const aposta = jogada.cartaResposta?.codigo === "Aposta";
 
   return (
-    <li className="card p-3">
+    <div>
       <div className="flex gap-3">
         <span className="grid size-11 shrink-0 place-items-center self-start rounded-md bg-carta-giz">
           <IconeCarta codigo={jogada.carta.codigo} />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-sm font-semibold">{titulo}</p>
+            <p className="font-display text-base leading-tight uppercase">
+              {jogada.carta.nome}
+            </p>
             <span className={`chip uppercase ${selo.classe}`}>
               {selo.texto}
             </span>
@@ -258,10 +203,7 @@ function JogadaItem({ jogada, grupoId }: { jogada: Jogada; grupoId: string }) {
               </span>
             )}
           </div>
-          <p className="mt-0.5 font-display text-base leading-tight uppercase">
-            {jogada.carta.nome}
-          </p>
-          <p className="text-sm text-muted">{getObjetivo(jogada)}</p>
+          <p className="mt-0.5 text-sm text-muted">{getObjetivo(jogada)}</p>
           {!encerrada && (
             <p className="mt-1 text-xs text-muted">
               {pendente ? "Responda até" : "Vale até"}{" "}
@@ -311,27 +253,62 @@ function JogadaItem({ jogada, grupoId }: { jogada: Jogada; grupoId: string }) {
           />
         </>
       )}
-    </li>
+    </div>
   );
 }
 
-/** As Jogadas de quem está vendo a cena neste grupo: recebidas primeiro. */
-function MesaJogadas({ grupoId }: { grupoId: string }) {
-  const jogadas = useJogadas(grupoId);
-  const lista = [...(jogadas.data ?? [])].sort((a, b) => ordem(a) - ordem(b));
-  if (lista.length === 0) return null;
+/** Quanto do prazo ainda resta, de 0 a 1. */
+function getRestante(jogada: Jogada, agora: number): number {
+  const inicio = Date.parse(jogada.enviadaEm);
+  const fim = Date.parse(jogada.expiraEm);
+  if (!(fim > inicio)) return 0;
+  return Math.min(1, Math.max(0, (fim - agora) / (fim - inicio)));
+}
 
+/** O ícone da carta com um anel em volta: a parte cheia é o prazo que ainda resta. */
+function PrazoCarta({
+  jogada,
+  restante,
+}: {
+  jogada: Jogada;
+  restante: number | null;
+}) {
+  const lado = 40;
+  const raio = 18;
+  const volta = 2 * Math.PI * raio;
   return (
-    <section aria-labelledby="mesa-titulo">
-      <SectionTitle>
-        <span id="mesa-titulo">Cartas na mesa</span>
-      </SectionTitle>
-      <ul className="space-y-2">
-        {lista.map((jogada) => (
-          <JogadaItem key={jogada.id} jogada={jogada} grupoId={grupoId} />
-        ))}
-      </ul>
-    </section>
+    <span className="relative grid size-10 shrink-0 place-items-center">
+      {restante !== null && (
+        <svg
+          aria-hidden="true"
+          width={lado}
+          height={lado}
+          className="absolute inset-0 -rotate-90"
+        >
+          <circle
+            cx={lado / 2}
+            cy={lado / 2}
+            r={raio}
+            fill="none"
+            stroke="var(--color-border)"
+            strokeWidth={3}
+          />
+          <circle
+            cx={lado / 2}
+            cy={lado / 2}
+            r={raio}
+            fill="none"
+            stroke="var(--color-game)"
+            strokeWidth={3}
+            strokeDasharray={volta}
+            strokeDashoffset={volta * (1 - restante)}
+          />
+        </svg>
+      )}
+      <span className="grid size-7 place-items-center overflow-hidden rounded-sm bg-carta-giz">
+        <IconeCarta codigo={jogada.carta.codigo} />
+      </span>
+    </span>
   );
 }
 
@@ -339,17 +316,90 @@ function MesaJogadas({ grupoId }: { grupoId: string }) {
 function ordem(jogada: Jogada): number {
   if (jogada.recebida && jogada.situacao === "Enviada") return 0;
   if (jogada.recebida && jogada.situacao === "Aceita") return 1;
-  if (["Enviada", "Aceita", "AguardandoVerificacao"].includes(jogada.situacao))
-    return 2;
+  if (!encerradas.includes(jogada.situacao)) return 2;
   return 3;
 }
 
-export function CartasDoGrupo({ grupoId }: { grupoId: string }) {
+/**
+ * A Mesa, embaixo da Mão: as Jogadas de quem vê, numa fileira de mini-cartas. No Foco, só as
+ * Jogadas entre quem vê e o alvo. Tocar numa abre os detalhes e, se for o caso, a resposta.
+ */
+export function MesaJogadas({
+  grupoId,
+  filtro,
+}: {
+  grupoId: string;
+  /** O alvo do Foco: a Mesa mostra só as Jogadas com ele. */
+  filtro?: string;
+}) {
+  const jogadas = useJogadas(grupoId);
+  const [abertaId, setAbertaId] = useState<string | null>(null);
+  // O prazo é lido uma vez por montagem: a Mesa remonta a cada Foco.
+  const [agora] = useState(() => Date.now());
+  const lista = (jogadas.data ?? [])
+    .filter(
+      (j) => !filtro || j.remetenteId === filtro || j.destinatarioId === filtro,
+    )
+    .sort((a, b) => ordem(a) - ordem(b));
+  const aberta = jogadas.data?.find((j) => j.id === abertaId);
+
+  if (lista.length === 0 && !filtro) return null;
+
   return (
-    <div className="space-y-2">
-      <MesaJogadas grupoId={grupoId} />
-      <MaoCartas />
-      <RivalDaSemana grupoId={grupoId} />
-    </div>
+    <section
+      aria-labelledby="mesa-titulo"
+      className="mt-2 border-t-2 border-border pt-2"
+    >
+      <h3 id="mesa-titulo" className="eyebrow">
+        {filtro ? "Na mesa entre vocês" : "Na mesa"}
+      </h3>
+      {lista.length === 0 ? (
+        <p className="mt-1 text-xs text-muted">Nenhuma carta entre vocês.</p>
+      ) : (
+        <ul className="-mx-3 mt-1.5 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 pb-1 [scrollbar-width:none]">
+          {lista.map((jogada) => {
+            const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
+            const pendente = jogada.recebida && jogada.situacao === "Enviada";
+            const encerrada = encerradas.includes(jogada.situacao);
+            const outro = primeiroNome(
+              jogada.recebida ? jogada.remetenteNome : jogada.destinatarioNome,
+            );
+            return (
+              <li key={jogada.id} className="shrink-0 snap-start">
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-label={`${getTitulo(jogada)}: ${jogada.carta.nome}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
+                  onClick={() => setAbertaId(jogada.id)}
+                  className={`flex min-h-11 items-center gap-2 rounded-lg border-2 bg-surface py-1 pr-3 pl-1 text-left tap ${pendente ? "mesa-pendente border-game" : "border-border"} ${encerrada ? "opacity-60" : ""}`}
+                >
+                  <PrazoCarta
+                    jogada={jogada}
+                    restante={encerrada ? null : getRestante(jogada, agora)}
+                  />
+                  <span className="leading-tight">
+                    <span className="block text-xs font-semibold whitespace-nowrap">
+                      {jogada.recebida ? `De ${outro}` : `Para ${outro}`}
+                    </span>
+                    <span
+                      className={`block text-2xs whitespace-nowrap ${pendente ? "font-semibold text-game" : "text-muted"}`}
+                    >
+                      {selo.texto}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Dialog
+        open={aberta !== undefined}
+        title={aberta ? getTitulo(aberta) : ""}
+        onClose={() => setAbertaId(null)}
+      >
+        {aberta && <DetalheJogada jogada={aberta} grupoId={grupoId} />}
+      </Dialog>
+    </section>
   );
 }

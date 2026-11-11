@@ -1,3 +1,4 @@
+import { Swords } from "lucide-react";
 import {
   type CSSProperties,
   useEffect,
@@ -17,7 +18,7 @@ import {
 import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
-import { MaoFoco } from "./MaoFoco";
+import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { MenuAvatar } from "./MenuAvatar";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SaldoEnergia } from "./SaldoEnergia";
@@ -46,7 +47,9 @@ import { useVidaNaPraca } from "./useVidaNaPraca";
 import { usePeriodoDoDia } from "./periodoDoDia";
 import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
 import {
+  getRelacaoRival,
   getVencedorId,
+  type RelacaoRival,
   type Rival,
   useEscolherRival,
   useMarcarRivaisVistos,
@@ -147,6 +150,8 @@ function AvatarCena({
   posicaoClassificacao,
   proprio,
   apagado,
+  mira,
+  rival,
   onToque,
 }: {
   membro: MembroCena;
@@ -163,6 +168,10 @@ function AvatarCena({
   proprio: boolean;
   /** Durante o Foco em outra pessoa, quem não atua fica apagado. */
   apagado: boolean;
+  /** Anel de mira sob os pés, de 0 a 1: alvo de uma carta escolhida ou arrastada. */
+  mira: number | null;
+  /** O par do Rival desta semana com quem vê a cena. */
+  rival: RelacaoRival | null;
   onToque: () => void;
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
@@ -217,16 +226,20 @@ function AvatarCena({
   const medalha = posicaoClassificacao
     ? medalhas[posicaoClassificacao]
     : undefined;
+  const rotulo = [
+    membro.nomeExibicao,
+    medalha && `${posicaoClassificacao}º lugar no desafio`,
+    rival === "escolhido" && "seu Rival da semana",
+    rival === "escolheu" && "escolheu você como Rival",
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <>
       <button
         type="button"
-        aria-label={
-          medalha
-            ? `${membro.nomeExibicao}, ${posicaoClassificacao}º lugar no desafio`
-            : membro.nomeExibicao
-        }
+        aria-label={rotulo}
         aria-haspopup={proprio ? "dialog" : undefined}
         onClick={() => {
           if (!reduzido) setPulos((n) => n + 1);
@@ -243,6 +256,20 @@ function AvatarCena({
           ...deslocamento,
         }}
       >
+        {mira !== null && (
+          <span
+            aria-hidden="true"
+            className="mira-alvo pointer-events-none absolute rounded-[50%] border-2 border-game"
+            style={{
+              left: (ancora.x - corpo.esquerda) * escala - 18,
+              top: alturaCorpo * escala - 7,
+              width: 36,
+              height: 14,
+              opacity: 0.5 + mira * 0.5,
+              transform: `scale(${1 + mira * 0.35})`,
+            }}
+          />
+        )}
         {/* A sombra fica no chão, sob os pés: não acompanha o pulinho. */}
         <span
           aria-hidden="true"
@@ -291,7 +318,7 @@ function AvatarCena({
         />
       )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
-      {(nomeVisivel || medalha) && (
+      {(nomeVisivel || medalha || rival) && (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
@@ -303,7 +330,12 @@ function AvatarCena({
           }}
         >
           {medalha && <span className="text-sm leading-none">{medalha}</span>}
-          {medalha && nomeVisivel && " "}
+          {rival && (
+            <Swords
+              className={`inline size-3 align-[-2px] ${rival === "escolhido" ? "rounded-sm bg-game p-px text-on-game" : "text-game"}`}
+            />
+          )}
+          {(medalha || rival) && nomeVisivel && " "}
           {nomeVisivel && primeiroNome}
         </span>
       )}
@@ -483,17 +515,47 @@ function Praca({
     pausado: entrada.ativa,
   });
   const emFoco = foco.alvoId !== null;
+  const [selecao, setSelecao] = useState<SelecaoMao | null>(null);
+  /** Quanto falta para a carta arrastada soltar, de 0 a 1. */
+  const [arrasto, setArrasto] = useState(0);
+  // Ao trocar de alvo, a carta escolhida vai junto (fluxo carta primeiro); a "VS" é de um alvo só.
+  // Ao fechar o Foco, a escolha acaba.
+  const [alvoAnterior, setAlvoAnterior] = useState(foco.alvoId);
+  if (alvoAnterior !== foco.alvoId) {
+    setAlvoAnterior(foco.alvoId);
+    setSelecao((s) => (foco.alvoId && s?.tipo === "carta" ? s : null));
+    setArrasto(0);
+  }
   const palco = useRef<HTMLDivElement>(null);
-  // Ao abrir o Foco, a praça sobe para o alto da tela: o painel fica acima da Mão.
+  // Ao abrir o Foco, a praça sobe para o alto da tela, com a Mão logo abaixo. Se as duas não
+  // couberem acima da navegação, a Mão fica inteira e o alto da praça sai da tela.
   useEffect(() => {
-    if (!emFoco) return;
-    palco.current?.scrollIntoView({
-      block: "start",
-      behavior: reduzido ? "auto" : "smooth",
-    });
+    const elemento = palco.current;
+    if (!emFoco || !elemento) return;
+    const navegacao = document.querySelector<HTMLElement>(
+      'nav[aria-label="Principal"]',
+    );
+    const rodape = navegacao?.offsetParent ? navegacao.offsetHeight : 0;
+    const caixa = elemento.getBoundingClientRect();
+    const visivel = window.innerHeight - rodape - 8;
+    const topo =
+      window.scrollY + caixa.top - 8 + Math.max(0, caixa.height + 8 - visivel);
+    window.scrollTo({ top: topo, behavior: reduzido ? "auto" : "smooth" });
   }, [emFoco, reduzido]);
   const emAcao = foco.fase !== "aberto";
   const alvo = membros.find((m) => m.usuarioId === foco.alvoId);
+  const cartaEscolhida = !emFoco && selecao?.tipo === "carta";
+  /** O anel sob os pés: no Foco, quando a carta é arrastada; fora dele, em quem pode receber. */
+  const getMira = (membro: MembroCena) => {
+    if (emAcao) return null;
+    if (emFoco)
+      return membro.usuarioId === foco.alvoId && arrasto > 0 ? arrasto : null;
+    return cartaEscolhida &&
+      membro.usuarioId !== usuarioId &&
+      membro.recebeCartas
+      ? 0
+      : null;
+  };
   // As encenações esperam a entrada terminar e o Foco fechar.
   const aguardar = entrada.ativa || emFoco;
   const encenacao = useEncenacoes({
@@ -604,10 +666,10 @@ function Praca({
                 imageRendering: "pixelated",
               }}
               onClick={(e) => {
-                // Tocar no chão, fora dos avatares, fecha o Foco.
-                if (emFoco && !emAcao && e.target === e.currentTarget) {
-                  foco.fechar();
-                }
+                // Tocar no chão, fora dos avatares, fecha o Foco ou solta a carta escolhida.
+                if (emAcao || e.target !== e.currentTarget) return;
+                if (emFoco) foco.fechar();
+                else setSelecao(null);
               }}
             >
               {membros.map((membro, i) => (
@@ -626,6 +688,16 @@ function Praca({
                   posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
                   proprio={membro.usuarioId === usuarioId}
                   apagado={emFoco && !atuaNoFoco(membro.usuarioId)}
+                  mira={getMira(membro)}
+                  rival={
+                    membro.usuarioId === usuarioId
+                      ? null
+                      : getRelacaoRival(
+                          rivais.data,
+                          usuarioId,
+                          membro.usuarioId,
+                        )
+                  }
                   onToque={() => {
                     if (emAcao) return;
                     if (membro.usuarioId !== usuarioId) {
@@ -687,16 +759,20 @@ function Praca({
           )}
         </section>
       </div>
-      {alvo && (
-        <MaoFoco
-          key={alvo.usuarioId}
-          membro={alvo}
-          podeRival={rivais.data?.candidatos.includes(alvo.usuarioId) ?? false}
-          recolhida={emAcao}
-          onArremessar={arremessar}
-          onRival={rivalizar}
-        />
-      )}
+      <MaoJogo
+        key={alvo?.usuarioId ?? ""}
+        grupoId={grupoId}
+        alvo={alvo ?? null}
+        podeRival={
+          !!alvo && (rivais.data?.candidatos.includes(alvo.usuarioId) ?? false)
+        }
+        recolhida={emAcao}
+        selecao={selecao}
+        onSelecao={setSelecao}
+        onArremessar={arremessar}
+        onRival={rivalizar}
+        onArrasto={setArrasto}
+      />
       <p aria-live="polite" className="sr-only">
         {foco.efeito?.tipo === "impacto" && alvo
           ? `${foco.efeito.texto} entregue para ${primeiroNome(alvo.nomeExibicao)}.`

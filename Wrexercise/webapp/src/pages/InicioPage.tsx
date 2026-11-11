@@ -17,12 +17,7 @@ import {
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import { useGrupo } from "@/features/grupos";
-import {
-  CartasDoGrupo,
-  CenaGrupo,
-  ConviteJogo,
-  SaudacaoAlternada,
-} from "@/features/jogo";
+import { CenaGrupo, ConviteJogo, SaudacaoAlternada } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
   getMotivacao,
@@ -233,7 +228,6 @@ function InicioJogo({
               : "Sem meta para você nesta semana."}
         </p>
       )}
-      <CartasDoGrupo grupoId={grupoId} />
     </div>
   );
 }
