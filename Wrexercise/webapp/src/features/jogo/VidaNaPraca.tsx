@@ -109,9 +109,10 @@ export function Bola({ bola }: { bola: BolaEmCena }) {
  * As posições acompanham o chão atual (pixel-art/praca/): mude-as se a praça mudar.
  */
 const luminarias = [
-  { tipo: "parede", x: 206, y: 46, brilho: { x: 208, y: 42, raio: 52 } },
-  { tipo: "chao", x: 44, y: 374, brilho: { x: 44, y: 356, raio: 44 } },
-  { tipo: "chao", x: 318, y: 180, brilho: { x: 318, y: 162, raio: 44 } },
+  // Na mureta lisa, à direita da assinatura; as do chão ficam ao lado das floreiras da frente.
+  { tipo: "parede", x: 190, y: 120, brilho: { x: 190, y: 108, raio: 52 } },
+  { tipo: "chao", x: 66, y: 398, brilho: { x: 66, y: 380, raio: 44 } },
+  { tipo: "chao", x: 294, y: 398, brilho: { x: 294, y: 380, raio: 44 } },
 ] as const;
 
 /**

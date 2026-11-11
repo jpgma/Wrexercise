@@ -30,7 +30,7 @@ O avatar é uma versão estilizada de uma pessoa real.
 
 O Jogo é a parte mais expressiva da identidade Wrexercise (`decisoes/0027-identidade-visual-wrexercise.md`): um fliperama urbano onde a turma se encontra. As regras abaixo valem para as fases G1 a G7 e não mudam nenhuma mecânica.
 
-- **Cena:** uma quadra ou praça urbana vista de cima, com asfalto, marcações tracejadas de quadra, um alambrado ou mureta, a barra de calistenia (§9.3) e no máximo um grafite discreto. Nada de grama de RPG, pedras, tochas ou castelos.
+- **Cena:** uma quadra ou praça urbana vista em ¾, no mesmo ângulo dos avatares, com asfalto, marcações tracejadas de quadra, um alambrado ou mureta, a barra de calistenia (§9.3) e no máximo um grafite discreto. Nada de grama de RPG, pedras, tochas ou castelos.
 - **Paleta da pixel art:** os tons da marca guiam o cenário e as molduras: Asphalt `#222633` e uma rampa de cinzas-azulados para o chão, Chalk `#F5F1E8` para as linhas, Coral `#FF684A`, Electric Violet `#7957E8`, Signal Yellow `#FFD34E` e Lime `#A8D978` como acentos. Peles e cabelos continuam com as próprias rampas (`avatar-kit.md`). Salve a paleta na skill como `wrexercise` e use `Sprite(palette="wrexercise")`.
 - **UI em volta da cena:** componentes comuns do aplicativo (tokens de `styles/index.css`). Violeta (`game`) marca o que é do Jogo: saldo de Energia, Mão, botão de jogar carta. Amarelo (`reward`) é recompensa e conquista; lime (`progress`), progresso das Missões e da meta.
 - **Selos:** Missões, Rival e situação de Jogada usam os selos `badge-*` (caixa alta, contorno, sombra de adesivo). O Rival da semana ganha um selo com o número da posição, como placar.
@@ -70,10 +70,11 @@ A tela não tem um botão próprio de "Registrar atividade": o registro já est�
 
 ### 3.1. Layout
 
-- Vista 2,5D, de cima e de lado: o chão é uma praça vista de cima, e os avatares são desenhados de lado.
-- Os avatares ficam numa **elipse em pé**, que ocupa a altura da praça. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar olha para o centro da elipse: quem fica embaixo aparece de costas (`norte`), e quem fica em cima, de frente (`sul`). Nas encenações, ele olha para onde anda ou para o alvo.
-- A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente.
-- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×460 px e encolhe por inteiro em telas mais estreitas. A elipse tem raio horizontal de cerca de 130 px, e cabem 10 avatares com folga. A escala é sempre 2×, qualquer que seja o tamanho do grupo.
+- Vista em ¾, a mesma dos avatares: a mureta do fundo, a porta e os prédios aparecem de frente, e o chão aparece achatado. O céu é transparente: o fundo do aplicativo faz o papel de céu.
+- Os avatares ficam numa **elipse larga e baixa**, no centro do chão, sobre o oval pintado na praça. Quem fica na frente cobre parte de quem fica atrás. A folha é vista de cima, em 8 direções, sem espelho (`avatar-formato.md` §6). Parado, cada avatar olha para o centro da elipse: quem fica embaixo aparece de costas (`norte`), e quem fica em cima, de frente (`sul`). Nas encenações, ele olha para onde anda ou para o alvo.
+- A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente. Os objetos soltos no chão (barra, caixotes, floreiras) são camadas à parte, ordenadas pela base da mesma forma: quem passa atrás de um objeto some por trás dele.
+- Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×400 px e encolhe por inteiro em telas mais estreitas. Com 10 membros, a elipse tem raios de 148 px e 76 px; com menos, ela encolhe na mesma proporção, para que os vizinhos fiquem à mesma distância, até um mínimo de 60 px e 48 px. O raio vertical mínimo deixa quem fica atrás visível acima de quem fica na frente. A escala é sempre 2×, qualquer que seja o tamanho do grupo.
+- O nome de cada avatar só aparece por 3 s depois de um toque e durante as encenações, para quem atua nelas. Os 3 primeiros da Classificacao do desafio em destaque têm sempre uma medalha embaixo do avatar (🥇, 🥈, 🥉), antes do nome quando ele aparece; só com o desafio em curso ou encerrado, e só para quem já cumpriu alguma semana.
 - O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
 - Tocar num avatar mostra a vitrine de Enfeites e dá acesso à página do membro. No modo Jogo, também permite jogar uma carta da Mão para esse colega.
 
@@ -117,13 +118,13 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 Entre as encenações, a praça tem luz e movimento próprios. Nada disso é encenação: não conta no limite de 3 por visita, não marca nada como visto e não depende do servidor.
 
 - **Sombras:** cada avatar, o pombo e a bola têm uma sombra oval sob os pés. A sombra fica no chão quando o avatar pula.
-- **Período do dia:** a luz segue a hora do aparelho de quem vê a cena. Amanhecer (5h às 7h): tom coral claro. Dia (7h às 17h): sem filtro. Entardecer (17h às 19h): violeta para coral. Noite (19h às 5h): violeta escuro. Os nomes dos avatares ficam acima da luz.
-- **Luminárias:** uma na mureta do fundo e duas no chão, nas bordas. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
+- **Período do dia:** a luz segue a hora do aparelho de quem vê a cena. Amanhecer (5h às 7h): tom coral claro. Dia (7h às 17h): sem filtro. Entardecer (17h às 19h): violeta para coral. Noite (19h às 5h): violeta escuro. Os nomes dos avatares ficam acima da luz. A luz tinge só a praça: o céu transparente fica de fora.
+- **Luminárias:** uma na mureta do fundo e duas no chão, ao lado das floreiras da frente. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
 - **Eventos de ambiente:** um de cada vez, a cada 12 a 25 s, e o primeiro de 3 a 6 s depois de abrir a cena:
-  - Um pombo pousa num canto livre (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos.
+  - Um pombo pousa num trecho livre do chão (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos.
   - Dois vizinhos `parado` se viram um para o outro e conversam por 5 s; no meio, um deles faz `olhar`.
-  - Uma bola rola da borda até um avatar `parado`, que a devolve com `arremessar`.
-- **Entrada:** na primeira visita do dia (cookie `wx_entrada_praca`, com a data local), cada avatar entra correndo (`correr`) pela borda mais próxima até o seu lugar, um depois do outro. As encenações começam depois da entrada. Tocar na praça pula a entrada.
+  - Uma bola entra pela borda de baixo e rola até um avatar `parado`, que a devolve com `arremessar`.
+- **Entrada:** na primeira visita do dia (cookie `wx_entrada_praca`, com a data local), cada avatar chega ao seu lugar sem atravessar parede. A porta do fundo abre, e quem fica na metade de trás da elipse sai por ela, um de cada vez: dá um passo para fora (`andar`) e corre (`correr`) até o lugar; depois, a porta fecha. Quem fica na metade da frente sobe correndo pela borda de baixo, que é aberta. Em grupos de até 3 pessoas, todos saem pela porta. A porta é um recorte à parte (`ObjetosPraca.tsx`), pronta para outras encenações. As encenações começam depois da entrada. Tocar na praça pula a entrada.
 - **Toque:** tocar num avatar faz ele dar um pulinho enquanto o menu abre.
 - Durante uma encenação ou a entrada, os eventos param e o pombo levanta voo. Com `prefers-reduced-motion`, não há eventos, entrada nem pulinho; a luz e as luminárias continuam. Com a página escondida, nenhum evento começa.
 - A arte (pombo, bola e luminárias) fica em `webapp/public/ambiente.png`, gerada por `pixel-art/ambiente/build.py`.
@@ -188,7 +189,8 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Peça | Tamanho | Quantidade |
 |---|---|---:|
 | Folhas padrão de avatar (pele clara, morena e negra; corpo masculino e feminino) | 256×384 | 6 |
-| Chão da praça (vista de cima, quadra urbana; ver §1.3), com barra fixa num canto | 180×230 (mestre 1×, mostrado em 2×, ou seja, 360×460) | 1 |
+| Praça (vista em ¾, quadra urbana; ver §1.3), com céu transparente | 180×200 (mestre 1×, mostrado em 2×, ou seja, 360×400) | 1 |
+| Objetos soltos da praça (barra de calistenia, caixotes, floreiras) e porta aberta | folha `praca-objetos.png`, recortes de tamanhos variados | 6 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 32×32 | 9 |
 | Enfeite | 32×32 | 19 (§9.1) |

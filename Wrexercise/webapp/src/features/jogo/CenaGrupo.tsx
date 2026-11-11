@@ -10,6 +10,7 @@ import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MenuAvatar } from "./MenuAvatar";
+import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
@@ -33,30 +34,34 @@ import {
   useRivais,
 } from "./useRivais";
 
-// O chão tem 180×230 px e é mostrado em 2×.
+// A praça tem 180×200 px, vista em ¾, e é mostrada em 2×.
 const semNovos: string[] = [];
 const semRivais: RivalEmCena[] = [];
 const largura = 360;
-const altura = 460;
+const altura = 400;
 const centroX = largura / 2;
-const raioX = 130;
-/** Onde os pés podem pisar: abaixo da mureta e com espaço para o nome embaixo. */
-const topoDosPes = 46;
-const folgaInferior = 22;
 const { ancora, corpo } = formatoFolha;
 /** Altura do corpo acima dos pés, em px da folha. */
 const alturaCorpo = ancora.y - corpo.topo;
-/** O quadro aparece sempre em 2×, o tamanho de um grupo cheio (10 membros), qualquer que seja o grupo. */
+/** O quadro aparece sempre em 2×, qualquer que seja o tamanho do grupo. */
 const escala = 2;
 
-/** Elipse em pé: ocupa a altura toda da praça, deixando espaço para o avatar (o corpo × escala) e o nome. */
-const elipse = (() => {
-  const minY = topoDosPes + alturaCorpo * escala;
-  const maxY = altura - folgaInferior;
-  return { centroY: (minY + maxY) / 2, raioY: (maxY - minY) / 2 };
-})();
+/**
+ * Elipse larga e baixa, no centro do chão, sobre o oval pintado na praça. Com 10 membros ela tem o
+ * tamanho máximo; com menos, encolhe e mantém a distância entre vizinhos. O raio vertical mínimo
+ * deixa quem fica atrás visível acima de quem fica na frente.
+ */
+const elipse = {
+  centroY: 288,
+  raioX: { max: 148, min: 60 },
+  raioY: { max: 76, min: 48 },
+};
+const GrupoCheio = 10;
 /** Centro da praça: para onde olha quem está parado. */
 const centro: Posicao = { x: centroX, y: elipse.centroY };
+const medalhas: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+/** Por quanto tempo o nome aparece depois de um toque no avatar. */
+const NomeMs = 3000;
 
 function mulberry32(semente: number): () => number {
   let a = semente;
@@ -108,8 +113,11 @@ function getRivaisEmCena(
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
 function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
   const n = membros.length;
-  const { centroY, raioY } = elipse;
+  const { centroY } = elipse;
   if (n === 1) return [{ x: centroX, y: centroY }];
+  const fracao = Math.min(n, GrupoCheio) / GrupoCheio;
+  const raioX = Math.max(elipse.raioX.min, elipse.raioX.max * fracao);
+  const raioY = Math.max(elipse.raioY.min, elipse.raioY.max * fracao);
   const outros = membros.filter((m) => m.usuarioId !== usuarioId);
   const ordenados = [
     ...membros.filter((m) => m.usuarioId === usuarioId),
@@ -134,6 +142,8 @@ function AvatarCena({
   reduzido,
   atuacao,
   brilho,
+  nomeVisivel,
+  posicaoClassificacao,
   onToque,
 }: {
   membro: MembroCena;
@@ -142,6 +152,10 @@ function AvatarCena({
   atuacao: Atuacao | undefined;
   /** O Enfeite do avatar brilha: é o Enfeite novo de quem vê a cena. */
   brilho: boolean;
+  /** O nome só aparece depois de um toque e durante as encenações. */
+  nomeVisivel: boolean;
+  /** 1, 2 ou 3 no desafio em destaque: a medalha aparece sempre, com ou sem o nome. */
+  posicaoClassificacao: number | undefined;
   onToque: () => void;
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
@@ -188,14 +202,23 @@ function AvatarCena({
       ? `translate(${atuacao.dx}px, ${atuacao.dy}px)`
       : undefined,
     transition: `transform ${atuacao?.passoMs ?? 0}ms linear`,
-  };
+    // Atrás da porta, antes de sair na entrada do dia.
+    visibility: atuacao?.oculto ? "hidden" : undefined,
+  } as const;
   const primeiroNome = membro.nomeExibicao.trim().split(/\s+/)[0];
+  const medalha = posicaoClassificacao
+    ? medalhas[posicaoClassificacao]
+    : undefined;
 
   return (
     <>
       <button
         type="button"
-        aria-label={membro.nomeExibicao}
+        aria-label={
+          medalha
+            ? `${membro.nomeExibicao}, ${posicaoClassificacao}º lugar no desafio`
+            : membro.nomeExibicao
+        }
         aria-haspopup="dialog"
         onClick={() => {
           if (!reduzido) setPulos((n) => n + 1);
@@ -259,18 +282,22 @@ function AvatarCena({
         />
       )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
-        style={{
-          left: posicao.x,
-          top: posicao.y + 3,
-          zIndex: 1000,
-          ...deslocamento,
-        }}
-      >
-        {primeiroNome}
-      </span>
+      {(nomeVisivel || medalha) && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
+          style={{
+            left: posicao.x,
+            top: posicao.y + 3,
+            zIndex: 1000,
+            ...deslocamento,
+          }}
+        >
+          {medalha}
+          {medalha && nomeVisivel && " "}
+          {nomeVisivel && primeiroNome}
+        </span>
+      )}
     </>
   );
 }
@@ -294,12 +321,17 @@ function useFatorDeEncaixe() {
   return { ref: setElemento, fator };
 }
 
+/** O pódio do desafio em destaque: até 3 pessoas, cada uma com a sua posição. */
+export type PodioCena = { usuarioId: string; posicao: number }[];
+
 export function CenaGrupo({
   grupoId,
   usuarioId,
+  podio = [],
 }: {
   grupoId: string;
   usuarioId: string;
+  podio?: PodioCena;
 }) {
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
@@ -323,6 +355,7 @@ export function CenaGrupo({
       grupoId={grupoId}
       usuarioId={usuarioId}
       reduzido={reduzido}
+      podio={podio}
     />
   );
 }
@@ -357,14 +390,26 @@ function Praca({
   grupoId,
   usuarioId,
   reduzido,
+  podio,
 }: {
   cena: Cena;
   grupoId: string;
   usuarioId: string;
   reduzido: boolean;
+  podio: PodioCena;
 }) {
   const { ref, fator } = useFatorDeEncaixe();
   const [tocado, setTocado] = useState<MembroCena | null>(null);
+  const [nomeTocado, setNomeTocado] = useState<string | null>(null);
+  useEffect(() => {
+    if (!nomeTocado) return;
+    const t = window.setTimeout(() => setNomeTocado(null), NomeMs);
+    return () => window.clearTimeout(t);
+  }, [nomeTocado]);
+  const posicaoNoPodio = useMemo(
+    () => new Map(podio.map((p) => [p.usuarioId, p.posicao])),
+    [podio],
+  );
   const jogadas = useJogadas(grupoId);
   const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
   const meuAvatar = useMeuAvatar();
@@ -387,7 +432,14 @@ function Praca({
     [membros, posicoes],
   );
   const periodo = usePeriodoDoDia();
-  const entrada = useEntrada({ posicoes: porUsuario, largura, reduzido });
+  const entrada = useEntrada({
+    posicoes: porUsuario,
+    centroY: elipse.centroY,
+    porta: vaoDaPorta,
+    largura,
+    altura,
+    reduzido,
+  });
   // As encenações esperam a entrada terminar.
   const encenacao = useEncenacoes({
     jogadas: entrada.ativa ? undefined : jogadas.data,
@@ -411,6 +463,7 @@ function Praca({
     membros,
     posicoes: porUsuario,
     largura,
+    altura,
     pausada: entrada.ativa || encenacao.ativa,
     reduzido,
     comPombos: periodo !== "noite",
@@ -419,6 +472,11 @@ function Praca({
     entrada.atuacoes.get(id) ??
     encenacao.atuacoes.get(id) ??
     vida.atuacoes.get(id);
+  /** Quem atua na encenação, ou a carta que voa até alguém, mostra o nome. */
+  const emEncenacao = (id: string) =>
+    encenacao.atuacoes.has(id) ||
+    encenacao.carta?.jogada.remetenteId === id ||
+    encenacao.carta?.jogada.destinatarioId === id;
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: largura }}>
@@ -449,9 +507,17 @@ function Praca({
               reduzido={reduzido}
               atuacao={getAtuacao(membro.usuarioId)}
               brilho={encenacao.brilho && membro.usuarioId === usuarioId}
-              onToque={() => setTocado(membro)}
+              nomeVisivel={
+                nomeTocado === membro.usuarioId || emEncenacao(membro.usuarioId)
+              }
+              posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
+              onToque={() => {
+                setTocado(membro);
+                setNomeTocado(membro.usuarioId);
+              }}
             />
           ))}
+          <ObjetosPraca portaAberta={entrada.portaAberta} />
           {vida.pombo && <Pombo pombo={vida.pombo} />}
           {vida.bola && <Bola bola={vida.bola} />}
           <LuzDaPraca periodo={periodo} />

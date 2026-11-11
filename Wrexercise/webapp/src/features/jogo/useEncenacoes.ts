@@ -21,6 +21,8 @@ export type Atuacao = {
   direcao?: Direcao;
   /** Duração do deslocamento até `dx`/`dy`, em ms. */
   passoMs: number;
+  /** Fora da cena: ainda não saiu pela porta. */
+  oculto?: boolean;
 };
 
 /** A carta em cena: voando entre dois pontos, saindo pelo lado ou caindo no lugar. */

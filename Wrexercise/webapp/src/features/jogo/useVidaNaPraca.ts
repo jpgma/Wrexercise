@@ -28,12 +28,17 @@ export type BolaEmCena = {
   curva: "linear" | "ease-out";
 };
 
-/** Onde o pombo pousa: fora da elipse dos avatares, nos cantos livres da praça. */
+/**
+ * Onde o pombo pousa: fora da elipse dos avatares, no chão livre entre a porta e a barra e perto da
+ * borda de baixo, ao lado das floreiras. Acompanha a praça atual (pixel-art/praca/).
+ */
 const pousos: readonly { x: [number, number]; y: number }[] = [
-  { x: [112, 146], y: 98 },
-  { x: [34, 72], y: 404 },
-  { x: [288, 322], y: 404 },
+  { x: [126, 150], y: 168 },
+  { x: [96, 128], y: 394 },
+  { x: [232, 264], y: 394 },
 ];
+/** A bola entra pela borda de baixo, que é aberta, entre as floreiras dos cantos. */
+const MargemDaBola = 60;
 
 const VooMs = 1400;
 /** A bola percorre a praça em px por ms. */
@@ -53,6 +58,7 @@ export function useVidaNaPraca({
   membros,
   posicoes,
   largura,
+  altura,
   pausada,
   reduzido,
   comPombos,
@@ -60,6 +66,7 @@ export function useVidaNaPraca({
   membros: MembroCena[];
   posicoes: Map<string, Ponto>;
   largura: number;
+  altura: number;
   /** Uma encenação ou a entrada está tocando: o pombo voa embora e o resto para. */
   pausada: boolean;
   reduzido: boolean;
@@ -204,10 +211,19 @@ export function useVidaNaPraca({
         candidatos[Math.floor(Math.random() * candidatos.length)]!;
       const daEsquerda = p.x < largura / 2;
       const lado: 1 | -1 = daEsquerda ? -1 : 1;
-      const borda = { x: daEsquerda ? -20 : largura + 20, y: p.y + 2 };
       const chegada = { x: p.x + lado * 22, y: p.y + 2 };
-      const ida = Math.round(Math.abs(chegada.x - borda.x) / VelocidadeBola);
-      const sentidoIda: 1 | -1 = daEsquerda ? 1 : -1;
+      // Vem de baixo e um pouco de fora, na diagonal: as laterais da praça têm alambrado.
+      const borda = {
+        x: Math.min(
+          Math.max(chegada.x + lado * 40, MargemDaBola),
+          largura - MargemDaBola,
+        ),
+        y: altura + 20,
+      };
+      const ida = Math.round(
+        Math.hypot(chegada.x - borda.x, chegada.y - borda.y) / VelocidadeBola,
+      );
+      const sentidoIda: 1 | -1 = chegada.x >= borda.x ? 1 : -1;
 
       const olhando: Atuacao = {
         animacao: "parado",
@@ -288,7 +304,7 @@ export function useVidaNaPraca({
     }
     agendar(sortear(3000, 6000));
     return limpar;
-  }, [pausada, reduzido, largura]);
+  }, [pausada, reduzido, largura, altura]);
 
   return { pombo, bola, atuacoes };
 }
