@@ -293,7 +293,7 @@ function AvatarCena({
             ...deslocamento,
           }}
         >
-          {medalha}
+          {medalha && <span className="text-sm leading-none">{medalha}</span>}
           {medalha && nomeVisivel && " "}
           {nomeVisivel && primeiroNome}
         </span>
@@ -401,11 +401,12 @@ function Praca({
   const { ref, fator } = useFatorDeEncaixe();
   const [tocado, setTocado] = useState<MembroCena | null>(null);
   const [nomeTocado, setNomeTocado] = useState<string | null>(null);
+  // O menu cobre a praça: o tempo do nome só começa a contar quando ele fecha.
   useEffect(() => {
-    if (!nomeTocado) return;
+    if (!nomeTocado || tocado) return;
     const t = window.setTimeout(() => setNomeTocado(null), NomeMs);
     return () => window.clearTimeout(t);
-  }, [nomeTocado]);
+  }, [nomeTocado, tocado]);
   const posicaoNoPodio = useMemo(
     () => new Map(podio.map((p) => [p.usuarioId, p.posicao])),
     [podio],

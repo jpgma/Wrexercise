@@ -232,6 +232,7 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         Assert.InRange(resumo.MeuProgresso.DiasRestantes, 1, 7);
         Assert.Single(resumo.Classificacao);
         Assert.Equal("Ana", resumo.Classificacao[0].NomeExibicao);
+        Assert.Equal(1, resumo.Classificacao[0].SessoesVerificadas);
         Assert.Equal(ana.Id, resumo.Classificacao[0].UsuarioId);
     }
 

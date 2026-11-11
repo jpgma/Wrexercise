@@ -48,7 +48,8 @@ internal static class ObterResumoGrupo
             index + 1,
             item.UsuarioId,
             item.NomeExibicao,
-            item.SemanasCumpridas)).ToList();
+            item.SemanasCumpridas,
+            item.SessoesVerificadas)).ToList();
 
         ProgressoResumoResponse? meuProgresso = null;
         if (!desafio.Cancelado)

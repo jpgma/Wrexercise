@@ -53,5 +53,6 @@ export type ResumoGrupo = {
     usuarioId: string;
     nomeExibicao: string;
     semanasCumpridas: number;
+    sessoesVerificadas: number;
   }[];
 };
