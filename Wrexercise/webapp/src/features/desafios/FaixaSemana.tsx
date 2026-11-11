@@ -5,8 +5,8 @@ import { getRotuloMeta, type MetaPorTipo } from "./metas";
 const letras = ["S", "T", "Q", "Q", "S", "S", "D"];
 
 /**
- * As semanas de um desafio sempre começam na segunda-feira. Um dia que contou por uma meta por tipo,
- * e não pela duração mínima, mostra o ícone dela embaixo, com a legenda no fim (decisão 0043).
+ * As semanas de um desafio sempre começam na segunda-feira. Um dia em que os tipos de uma meta por tipo
+ * preencheram a maior parte mostra o ícone dela embaixo, com a legenda no fim (decisões 0043 e 0045).
  */
 export function FaixaSemana({
   inicio,
@@ -46,7 +46,7 @@ export function FaixaSemana({
             <li
               key={dia}
               aria-current={eHoje ? "date" : undefined}
-              aria-label={`Dia ${Number(dia.slice(8))}${treinou ? ": treinou" : ""}${meta ? `, contou por ${getRotuloMeta(meta)}` : ""}`}
+              aria-label={`Dia ${Number(dia.slice(8))}${treinou ? ": treinou" : ""}${meta ? `, contou com ${getRotuloMeta(meta)}` : ""}`}
             >
               <div
                 className={`relative mx-auto mb-1 grid size-8 place-items-center rounded-md text-xs font-bold ${
@@ -82,7 +82,7 @@ export function FaixaSemana({
             return (
               <span key={meta.id} className="inline-flex items-center gap-1">
                 <Icone className="size-3" />
-                Contou por {getRotuloMeta(meta)}
+                Contou com {getRotuloMeta(meta)}
               </span>
             );
           })}

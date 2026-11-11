@@ -53,7 +53,8 @@ const metaPorTipoSchema = z.object({
   minutos: z
     .number({ error: "Informe os minutos" })
     .int("Use um número inteiro")
-    .min(1, "Use pelo menos 1 minuto"),
+    .min(1, "Use pelo menos 1 minuto")
+    .max(1440, "Use no máximo 1440 minutos"),
 });
 
 // Os limites acompanham Features/Desafios/ValidacaoDesafio.cs; o backend é quem decide.
@@ -84,24 +85,24 @@ const schema = z
     metasPorTipo: z.array(metaPorTipoSchema).max(maxMetasPorTipo),
   })
   .superRefine((data, ctx) => {
-    const conjuntos = new Set<string>();
+    const usados = new Set<TipoAtividade>();
     data.metasPorTipo.forEach((meta, indice) => {
-      if (meta.minutos >= data.duracaoMinutos) {
+      if (meta.minutos === data.duracaoMinutos) {
         ctx.addIssue({
           code: "custom",
           path: ["metasPorTipo", indice, "minutos"],
-          message: `Use menos que os ${data.duracaoMinutos} min do dia, senão esta meta nunca ajuda`,
+          message: `Use um valor diferente dos ${data.duracaoMinutos} min do dia, senão esta meta não muda nada`,
         });
       }
-      const conjunto = [...meta.tipos].sort().join(",");
-      if (meta.tipos.length > 0 && conjuntos.has(conjunto)) {
+      const repetido = meta.tipos.find((t) => usados.has(t));
+      if (repetido) {
         ctx.addIssue({
           code: "custom",
           path: ["metasPorTipo", indice, "tipos"],
-          message: "Outra meta já tem exatamente estes tipos",
+          message: `${tipoAtividadeLabels[repetido]} já está em outra meta`,
         });
       }
-      conjuntos.add(conjunto);
+      meta.tipos.forEach((t) => usados.add(t));
     });
   });
 
@@ -124,6 +125,11 @@ function MetaPorTipoCard({
 }) {
   const erros = errors.metasPorTipo?.[indice];
   const tiposErroId = `meta-${indice}-tipos-erro`;
+  // Um tipo fica em no máximo uma meta (decisão 0045).
+  const todas = useWatch({ control, name: "metasPorTipo" });
+  const emOutraMeta = new Set(
+    todas.flatMap((m, i) => (i === indice ? [] : m.tipos)),
+  );
 
   return (
     <li className="card space-y-3 p-4">
@@ -149,11 +155,14 @@ function MetaPorTipoCard({
               {tiposAtividade.map((tipo) => {
                 const Icone = tipoAtividadeIcones[tipo];
                 const marcado = field.value.includes(tipo);
+                const bloqueado = !marcado && emOutraMeta.has(tipo);
                 return (
                   <button
                     key={tipo}
                     type="button"
                     aria-pressed={marcado}
+                    disabled={bloqueado}
+                    title={bloqueado ? "Já está em outra meta" : undefined}
                     onClick={() =>
                       field.onChange(
                         marcado
@@ -164,7 +173,7 @@ function MetaPorTipoCard({
                     className={`inline-flex h-11 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors ${
                       marcado
                         ? "border-primary bg-primary text-on-primary"
-                        : "border-border bg-surface text-muted"
+                        : "border-border bg-surface text-muted disabled:opacity-40"
                     }`}
                   >
                     <Icone aria-hidden="true" className="size-4" />
@@ -188,6 +197,7 @@ function MetaPorTipoCard({
         type="number"
         inputMode="numeric"
         min={1}
+        max={1440}
         error={erros?.minutos?.message}
         {...register(`metasPorTipo.${indice}.minutos`, { valueAsNumber: true })}
       />
@@ -332,12 +342,14 @@ function CriarDesafioForm({
       <section aria-labelledby="metas-por-tipo-titulo" className="space-y-3">
         <div>
           <p id="metas-por-tipo-titulo" className="input-label mb-0">
-            Ou o dia conta com… (opcional)
+            Mínimo por tipo (opcional)
           </p>
           <p className="mt-1 text-sm text-muted">
-            Metas por tipo deixam um treino mais puxado contar com menos
-            minutos. Por exemplo: 20 min de corrida em vez de 60 min de qualquer
-            treino.
+            Dê a alguns tipos um mínimo próprio: menos minutos para um treino
+            puxado, como 20 min de corrida, ou mais para um que não deve bastar
+            sozinho, como 90 min de pedal para quem vai de bicicleta ao
+            trabalho. Tipos diferentes somam em proporção: metade de um mínimo e
+            metade de outro fecham o dia.
           </p>
         </div>
 
@@ -488,8 +500,8 @@ export function CriarDesafioPage() {
       <PageHeader title="Criar desafio" back={`/grupos/${id}`} />
       <p className="mb-6 text-sm text-balance text-muted">
         Todos os participantes seguem a mesma meta, em semanas de segunda a
-        domingo. Um dia conta quando alcança o mínimo do dia ou uma das metas
-        por tipo.
+        domingo. Um dia conta quando os treinos dele alcançam o mínimo do dia,
+        com cada tipo valendo em proporção ao mínimo dele.
       </p>
 
       <CriarDesafioForm grupoId={id} fusoHorario={grupo.data.fusoHorario} />

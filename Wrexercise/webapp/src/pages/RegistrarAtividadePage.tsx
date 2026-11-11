@@ -218,7 +218,7 @@ export function RegistrarAtividadePage() {
     [],
   );
 
-  // As atividades do mesmo dia se somam, no total e por tipo (decisões 0040 e 0043). O dia do
+  // As atividades do mesmo dia se somam, em proporção ao mínimo de cada tipo (decisões 0040 e 0045). O dia do
   // campo é o do aparelho, que costuma ser o fuso do grupo.
   const diaEscolhido = startedAt?.slice(0, 10);
   const doDia = progresso.data?.seusSegundosPorDia.find(
@@ -359,7 +359,10 @@ export function RegistrarAtividadePage() {
           <p>
             Para contar na meta do grupo, some no dia pelo menos{" "}
             <b>{descreverMeta(desafio.data)}</b>. Vale dividir em mais de um
-            treino.
+            treino
+            {desafio.data.metasPorTipo.length > 0 &&
+              ", e tipos diferentes somam em proporção ao mínimo de cada um"}
+            .
           </p>
         </div>
       )}

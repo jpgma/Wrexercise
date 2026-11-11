@@ -340,7 +340,9 @@ function DesafioConteudo({ desafio }: { desafio: Desafio }) {
           {desafio.metasPorTipo.length > 0 && (
             <div className="col-span-2 rounded-xl bg-surface-muted p-3">
               <ListChecks aria-hidden="true" className="size-4 text-link" />
-              <p className="mt-2 text-xs text-muted">Ou o dia conta com</p>
+              <p className="mt-2 text-xs text-muted">
+                Mínimo por tipo · tipos diferentes somam em proporção
+              </p>
               <ul className="mt-1 space-y-1">
                 {desafio.metasPorTipo.map((meta) => (
                   <li

@@ -180,23 +180,25 @@ public class ValidacaoDesafioTests
     }
 
     [Fact]
-    public void MetasPorTipo_AcceptsUpToFourDistinctSets_BelowTheDesafioMinimum()
+    public void MetasPorTipo_AcceptsUpToFourDisjointMetas_AboveOrBelowTheDesafioMinimum()
     {
         Assert.True(ValidacaoDesafio.IsValidMetasPorTipo(
             [
                 new("Cardio", [TipoAtividade.Corrida, TipoAtividade.Caminhada], 1200),
-                new(null, [TipoAtividade.Corrida], 1200),
+                new("Pedal", [TipoAtividade.Ciclismo], 5400),
                 new(null, [TipoAtividade.Calistenia], 3599),
                 new(new string('a', 20), [TipoAtividade.Yoga], 60),
             ],
             3600));
+        Assert.True(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Ciclismo], 24 * 3600)], 3600));
     }
 
     [Fact]
-    public void MetasPorTipo_RejectsAMinimumThatNeverHelps()
+    public void MetasPorTipo_RejectsAMinimumOutOfRangeOrEqualToTheDesafio()
     {
         Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Corrida], 3600)], 3600));
         Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Corrida], 59)], 3600));
+        Assert.False(ValidacaoDesafio.IsValidMetasPorTipo([new(null, [TipoAtividade.Ciclismo], (24 * 3600) + 1)], 3600));
     }
 
     [Fact]
@@ -207,10 +209,15 @@ public class ValidacaoDesafioTests
         Assert.False(ValidacaoDesafio.IsValidMetasPorTipo(
             [new(null, [TipoAtividade.Corrida, TipoAtividade.Corrida], 1200)],
             3600));
+    }
+
+    [Fact]
+    public void MetasPorTipo_RejectsATipoInTwoMetas()
+    {
         Assert.False(ValidacaoDesafio.IsValidMetasPorTipo(
             [
-                new(null, [TipoAtividade.Corrida, TipoAtividade.Yoga], 1200),
-                new(null, [TipoAtividade.Yoga, TipoAtividade.Corrida], 1800),
+                new(null, [TipoAtividade.Corrida], 1200),
+                new("Cardio", [TipoAtividade.Caminhada, TipoAtividade.Corrida], 1800),
             ],
             3600));
     }

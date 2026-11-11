@@ -109,7 +109,7 @@ public sealed class DesafiosRoutesTests : IAsyncLifetime
         }
     }
 
-    // A duração mínima do desafio é 3600: uma meta por tipo precisa de menos.
+    // A duração mínima do desafio é 3600: uma meta por tipo precisa de outro mínimo, até 24 h.
     private static readonly MetaPorTipoRequest?[][] MetasPorTipoInvalidas =
     [
         [null],
@@ -120,9 +120,10 @@ public sealed class DesafiosRoutesTests : IAsyncLifetime
         [new(null, [TipoAtividade.Corrida], null)],
         [new(null, [TipoAtividade.Corrida], 59)],
         [new(null, [TipoAtividade.Corrida], 3600)],
+        [new(null, [TipoAtividade.Ciclismo], (24 * 3600) + 1)],
         [new(new string('a', 21), [TipoAtividade.Corrida], 1200)],
         [
-            new(null, [TipoAtividade.Corrida, TipoAtividade.Yoga], 1200),
+            new(null, [TipoAtividade.Corrida], 1200),
             new(null, [TipoAtividade.Yoga, TipoAtividade.Corrida], 1800),
         ],
         [

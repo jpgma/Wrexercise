@@ -2,9 +2,10 @@ namespace Wrexercise.Infrastructure.Database;
 
 /// <summary>
 /// Fragmento SQL canônico para contagens de dias elegíveis a um desafio: as atividades de um dia se somam,
-/// e um dia conta como uma sessão quando a soma alcança a duração mínima do desafio ou quando a soma
-/// dos tipos de uma meta por tipo alcança o mínimo dela.
-/// Ver docs/decisoes/0013-competicao-e-progresso.md, 0040-meta-diaria.md e 0043-metas-por-tipo.md.
+/// cada uma valendo a parte do dia dada pelo mínimo do tipo dela, e um dia conta como uma sessão quando
+/// as partes somam 100%.
+/// Ver docs/decisoes/0013-competicao-e-progresso.md, 0040-meta-diaria.md, 0043-metas-por-tipo.md e
+/// 0045-metas-proporcionais.md.
 /// </summary>
 internal static class ContagensAtividadeDesafio
 {
@@ -13,10 +14,10 @@ internal static class ContagensAtividadeDesafio
     internal const string IndiceSemanaSql =
         "((a.started_at AT TIME ZONE g.fuso_horario)::date - d.data_inicio) / 7";
 
-    /// <summary>Dias em que as atividades verificadas cumprem alguma condição.</summary>
+    /// <summary>Dias que as atividades verificadas completam.</summary>
     internal const string VerificadasSql = "count(*) FILTER (WHERE dias.conta_verificada)::int";
 
-    /// <summary>Dias que só cumprem alguma condição somando as atividades pendentes.</summary>
+    /// <summary>Dias que só se completam somando as atividades pendentes.</summary>
     internal const string PendentesSql =
         "count(*) FILTER (WHERE NOT dias.conta_verificada AND dias.conta_provisoria)::int";
 
@@ -38,47 +39,70 @@ internal static class ContagensAtividadeDesafio
     private const string FiltroSemanaSql = $"AND {DiaSql} >= $2 AND {DiaSql} <= $3";
 
     /// <summary>
-    /// Avalia as condições de cada pessoa e dia. <paramref name="diasPorTipoSql"/> devolve uma linha por
-    /// desafio, pessoa, dia e tipo, com as colunas <c>desafio_id</c>, <c>usuario_id</c>, <c>dia</c>,
-    /// <c>indice_semana</c>, <c>minimo</c>, <c>tipo</c>, <c>segundos_verificados</c> e <c>segundos_provisorios</c>.
-    /// O resultado tem uma linha por desafio, pessoa e dia, com as somas totais, <c>conta_verificada</c>,
-    /// <c>conta_provisoria</c> e <c>meta_por_tipo_id</c>: nulo quando a duração mínima do desafio foi
-    /// alcançada, senão a primeira meta por tipo cumprida, contando as pendentes.
+    /// Junta à atividade <c>a</c> a meta por tipo do desafio <c>d</c> que inclui o tipo dela, se houver
+    /// (colunas <c>mt.id</c>, <c>mt.ordem</c> e <c>mt.duracao_minima_segundos</c>). Um tipo fica em no
+    /// máximo uma meta (decisão 0045); o <c>LIMIT 1</c> só protege dados anteriores a essa regra.
     /// </summary>
-    internal static string BuildDiasPorCondicao(string diasPorTipoSql) => $"""
-        WITH dias_tipo AS ({diasPorTipoSql}),
-        condicoes AS (
-            SELECT dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana,
-                NULL::uuid AS meta_id, NULL::smallint AS meta_ordem, dt.minimo,
-                sum(dt.segundos_verificados) AS segundos_verificados,
-                sum(dt.segundos_provisorios) AS segundos_provisorios
-            FROM dias_tipo dt
-            GROUP BY dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana, dt.minimo
-            UNION ALL
-            SELECT dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana,
-                mt.id, mt.ordem, mt.duracao_minima_segundos,
-                sum(dt.segundos_verificados),
-                sum(dt.segundos_provisorios)
-            FROM dias_tipo dt
-            JOIN metas_tipo_desafio mt ON mt.desafio_id = dt.desafio_id AND dt.tipo = ANY(mt.tipos)
-            GROUP BY dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana,
-                mt.id, mt.ordem, mt.duracao_minima_segundos
-        )
-        SELECT c.desafio_id, c.usuario_id, c.dia, c.indice_semana,
-            max(c.segundos_verificados) FILTER (WHERE c.meta_id IS NULL)::int AS segundos_verificados,
-            max(c.segundos_provisorios) FILTER (WHERE c.meta_id IS NULL)::int AS segundos_provisorios,
-            bool_or(c.segundos_verificados >= c.minimo) AS conta_verificada,
-            bool_or(c.segundos_provisorios >= c.minimo) AS conta_provisoria,
-            CASE WHEN bool_or(c.segundos_provisorios >= c.minimo) FILTER (WHERE c.meta_id IS NULL) THEN NULL
-                ELSE (array_agg(c.meta_id ORDER BY c.meta_ordem)
-                    FILTER (WHERE c.meta_id IS NOT NULL AND c.segundos_provisorios >= c.minimo))[1]
-            END AS meta_por_tipo_id
-        FROM condicoes c
-        GROUP BY c.desafio_id, c.usuario_id, c.dia, c.indice_semana
+    internal static string JoinMetaDoTipoSql(string desafioId = "d.id", string tipo = "a.tipo") => $"""
+        LEFT JOIN LATERAL (
+            SELECT m.id, m.ordem, m.duracao_minima_segundos
+            FROM metas_tipo_desafio m
+            WHERE m.desafio_id = {desafioId} AND {tipo} = ANY(m.tipos)
+            ORDER BY m.ordem
+            LIMIT 1
+        ) mt ON true
         """;
 
     /// <summary>
-    /// Uma linha por pessoa e dia, com as somas e as condições cumpridas (ver <see cref="BuildDiasPorCondicao"/>).
+    /// A parte do dia que <paramref name="segundos"/> preenchem: os segundos divididos pelo mínimo do tipo
+    /// (o da meta por tipo dele ou, sem meta, o do desafio).
+    /// </summary>
+    internal static string ParteDoDiaSql(string segundos, string minimo) => $"({segundos})::numeric / ({minimo})";
+
+    /// <summary>
+    /// O dia conta quando as partes somam 1. O arredondamento evita perder um dia por um resíduo da divisão
+    /// (por exemplo, 3 × 30/90): a diferença ignorada é menor que um milissegundo.
+    /// </summary>
+    internal static string CompletaODiaSql(string somaDasPartes) => $"round({somaDasPartes}, 9) >= 1";
+
+    /// <summary>
+    /// Avalia cada pessoa e dia pela regra proporcional (decisão 0045): cada atividade preenche uma parte
+    /// do dia, os segundos dela divididos pelo mínimo do tipo, e o dia conta quando as partes somam 100%.
+    /// <paramref name="diasPorTipoSql"/> devolve uma linha por desafio, pessoa, dia e tipo, com as colunas
+    /// <c>desafio_id</c>, <c>usuario_id</c>, <c>dia</c>, <c>indice_semana</c>, <c>minimo</c>, <c>tipo</c>,
+    /// <c>segundos_verificados</c> e <c>segundos_provisorios</c>.
+    /// O resultado tem uma linha por desafio, pessoa e dia, com as somas totais, <c>conta_verificada</c>,
+    /// <c>conta_provisoria</c> e <c>meta_por_tipo_id</c>: a meta por tipo que mais preencheu o dia, ou
+    /// nulo quando os tipos sem meta preencheram mais (ou quando o dia não conta).
+    /// </summary>
+    internal static string BuildDiasPorCondicao(string diasPorTipoSql) => $"""
+        WITH dias_tipo AS ({diasPorTipoSql}),
+        partes AS (
+            SELECT dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana, mt.id AS meta_id, mt.ordem AS meta_ordem,
+                sum(dt.segundos_verificados) AS segundos_verificados,
+                sum(dt.segundos_provisorios) AS segundos_provisorios,
+                sum({ParteDoDiaSql("dt.segundos_verificados", "coalesce(mt.duracao_minima_segundos, dt.minimo)")})
+                    AS parte_verificada,
+                sum({ParteDoDiaSql("dt.segundos_provisorios", "coalesce(mt.duracao_minima_segundos, dt.minimo)")})
+                    AS parte_provisoria
+            FROM dias_tipo dt
+            {JoinMetaDoTipoSql("dt.desafio_id", "dt.tipo")}
+            GROUP BY dt.desafio_id, dt.usuario_id, dt.dia, dt.indice_semana, mt.id, mt.ordem
+        )
+        SELECT p.desafio_id, p.usuario_id, p.dia, p.indice_semana,
+            sum(p.segundos_verificados)::int AS segundos_verificados,
+            sum(p.segundos_provisorios)::int AS segundos_provisorios,
+            {CompletaODiaSql("sum(p.parte_verificada)")} AS conta_verificada,
+            {CompletaODiaSql("sum(p.parte_provisoria)")} AS conta_provisoria,
+            CASE WHEN {CompletaODiaSql("sum(p.parte_provisoria)")}
+                THEN (array_agg(p.meta_id ORDER BY p.parte_provisoria DESC, p.meta_ordem NULLS FIRST))[1]
+            END AS meta_por_tipo_id
+        FROM partes p
+        GROUP BY p.desafio_id, p.usuario_id, p.dia, p.indice_semana
+        """;
+
+    /// <summary>
+    /// Uma linha por pessoa e dia, com as somas e se o dia conta (ver <see cref="BuildDiasPorCondicao"/>).
     /// <paramref name="filtros"/> acrescenta condições <c>AND</c> ao <see cref="FromElegiveisSql"/>.
     /// </summary>
     private static string BuildDias(string filtros = "") => BuildDiasPorCondicao($"""

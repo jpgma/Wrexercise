@@ -207,7 +207,7 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
     [Fact]
     public async Task MetaPorTipo_ContaODiaNoRival()
     {
-        // Mínimo de 30 min, ou 10 min de Corrida: a Ana cumpre o dia com 10 min de Corrida, antes da Bia.
+        // Mínimo de 30 min, e de 10 min para Corrida: a Ana fecha o dia com 10 min de Corrida, antes da Bia.
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
         var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
@@ -221,7 +221,7 @@ public sealed class RivaisRoutesTests : IAsyncLifetime
         await VerificarAsync(ana, "now() - interval '2 hours'");
         await VerificarAsync(bia, "now() - interval '1 hour'");
 
-        // 10 min de Musculacao não cumprem nada: a Bia chegou primeiro.
+        // 10 min de Musculacao preenchem só 1/3 do dia: a Bia chegou primeiro.
         Assert.Equal(ResultadoRival.Perdeu, Assert.Single((await GetRivaisAsync(ana, grupoId)).Rivais).Situacao);
 
         await PostAtividadeAsync(ana, grupoId, 600, TipoAtividade.Corrida);

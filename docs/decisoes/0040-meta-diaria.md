@@ -1,6 +1,6 @@
 # 0040 — Meta diária
 
-**Status:** DECIDIDA. Substitui a regra "uma atividade elegível = uma sessão" de `0011-atividades.md` e `0013-competicao-e-progresso.md`, a base de Energia por atividade de `0033-regras-de-energia-e-jogadas.md` e o objetivo de uma atividade só em +10 MIN e +20 MIN de `0035-cartas-e-jogadas.md`. Ajusta o critério de `0038-rival-da-semana.md`. Complementada por `0043-metas-por-tipo.md` (metas por tipo como alternativas ao mínimo do dia).
+**Status:** DECIDIDA. Substitui a regra "uma atividade elegível = uma sessão" de `0011-atividades.md` e `0013-competicao-e-progresso.md`, a base de Energia por atividade de `0033-regras-de-energia-e-jogadas.md` e o objetivo de uma atividade só em +10 MIN e +20 MIN de `0035-cartas-e-jogadas.md`. Ajusta o critério de `0038-rival-da-semana.md`. Complementada por `0043-metas-por-tipo.md` e `0045-metas-proporcionais.md` (mínimos por tipo, somados em proporção).
 
 ## Contexto
 

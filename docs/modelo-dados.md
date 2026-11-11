@@ -94,7 +94,7 @@ As datas são dias do calendário no fuso do grupo. Só semanas inteiras, garant
 
 ## `metas_tipo_desafio`
 
-Alternativas à duração mínima do desafio: um dia também conta quando a soma das atividades destes tipos alcança o mínimo da meta. Não mudam depois da criação. Ver `decisoes/0043-metas-por-tipo.md`.
+Um mínimo próprio para estes tipos, menor ou maior que a duração mínima do desafio. Um tipo fica em no máximo uma meta. Cada atividade preenche os segundos dela divididos pelo mínimo do tipo, e o dia conta quando as partes somam 100%. Não mudam depois da criação. Ver `decisoes/0043-metas-por-tipo.md` e `decisoes/0045-metas-proporcionais.md`.
 
 | Coluna | Tipo | Observações |
 |---|---|---|

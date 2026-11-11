@@ -53,29 +53,25 @@ internal static class Rivais
 {
     /// <summary>
     /// Quando a pessoa cumpriu a meta da semana: cada dia conta no <c>verified_at</c> da primeira atividade verificada
-    /// que levou uma condição do dia ao mínimo dela (a soma do dia, contra a duração mínima do desafio, ou a soma
-    /// dos tipos de uma meta por tipo), e a meta, no N-ésimo dia a contar, N = sessões por semana
-    /// (decisões 0040 e 0043).
+    /// que levou as partes do dia a 100% (cada atividade vale os segundos dela divididos pelo mínimo do tipo), e a
+    /// meta, no N-ésimo dia a contar, N = sessões por semana (decisões 0040 e 0045).
     /// </summary>
     private static string MetaCumpridaEmSql(string usuarioColuna) => $"""
         (SELECT v.concluido_em
          FROM (
              SELECT c.concluido_em, row_number() OVER (ORDER BY c.concluido_em) AS n
              FROM (
-                 SELECT min(s.verified_at) FILTER (WHERE s.acumulado >= s.minimo) AS concluido_em
+                 SELECT min(s.verified_at) FILTER (WHERE {ContagensAtividadeDesafio.CompletaODiaSql("s.acumulado")})
+                     AS concluido_em
                  FROM (
-                     SELECT a.verified_at, (a.started_at AT TIME ZONE g.fuso_horario)::date AS dia, c.minimo,
-                         sum(a.duracao_segundos) OVER (
-                             PARTITION BY (a.started_at AT TIME ZONE g.fuso_horario)::date, c.meta_id
-                             ORDER BY a.verified_at, a.id) AS acumulado
+                     SELECT a.verified_at, (a.started_at AT TIME ZONE g.fuso_horario)::date AS dia,
+                         sum({ContagensAtividadeDesafio.ParteDoDiaSql(
+                             "a.duracao_segundos", "coalesce(mt.duracao_minima_segundos, d.duracao_minima_segundos)")})
+                             OVER (
+                                 PARTITION BY (a.started_at AT TIME ZONE g.fuso_horario)::date
+                                 ORDER BY a.verified_at, a.id) AS acumulado
                      FROM atividades a
-                     CROSS JOIN LATERAL (
-                         SELECT NULL::uuid AS meta_id, d.duracao_minima_segundos AS minimo
-                         UNION ALL
-                         SELECT mt.id, mt.duracao_minima_segundos
-                         FROM metas_tipo_desafio mt
-                         WHERE mt.desafio_id = d.id AND a.tipo = ANY(mt.tipos)
-                     ) c
+                     {ContagensAtividadeDesafio.JoinMetaDoTipoSql()}
                      WHERE a.usuario_id = {usuarioColuna}
                        AND a.grupo_id = r.grupo_id
                        AND a.situacao_verificacao = 'Verificada'

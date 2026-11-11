@@ -36,9 +36,10 @@ internal static class ValidacaoDesafio
         sessoes is > 0 and <= MaxSessoesPorSemana;
 
     /// <summary>
-    /// As metas por tipo são alternativas à duração mínima do desafio (decisão 0043): cada uma tem tipos
-    /// válidos e sem repetição, e um mínimo menor que o do desafio, senão ela nunca faria um dia contar.
-    /// Duas metas com o mesmo conjunto de tipos seriam redundantes.
+    /// Cada meta por tipo dá um mínimo próprio aos tipos dela (decisão 0045): menor que o do desafio para
+    /// um treino mais puxado, maior para um que não deve bastar sozinho, como a bicicleta de quem vai ao
+    /// trabalho pedalando. Um tipo fica em no máximo uma meta, para cada minuto ter um único valor, e o
+    /// mínimo não repete o do desafio, senão a meta não mudaria nada.
     /// </summary>
     public static bool IsValidMetasPorTipo(IReadOnlyList<MetaPorTipoRequest?>? metas, int duracaoMinimaSegundos)
     {
@@ -52,17 +53,16 @@ internal static class ValidacaoDesafio
             return false;
         }
 
-        var conjuntos = new HashSet<string>();
+        var tiposUsados = new HashSet<string>(StringComparer.Ordinal);
         foreach (var meta in metas)
         {
             if (meta?.Tipos is not { Count: > 0 } tipos
                 || !tipos.All(TipoAtividade.IsValid)
-                || tipos.Distinct().Count() != tipos.Count
+                || !tipos.All(tiposUsados.Add)
                 || meta.DuracaoMinimaSegundos is not { } minimo
-                || minimo < MinDuracaoSegundos
-                || minimo >= duracaoMinimaSegundos
-                || (meta.Nome?.Trim().Length ?? 0) > MaxNomeMetaLength
-                || !conjuntos.Add(string.Join(',', tipos.Order(StringComparer.Ordinal))))
+                || !IsValidDuracaoMinima(minimo)
+                || minimo == duracaoMinimaSegundos
+                || (meta.Nome?.Trim().Length ?? 0) > MaxNomeMetaLength)
             {
                 return false;
             }

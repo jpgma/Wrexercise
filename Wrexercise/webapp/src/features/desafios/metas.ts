@@ -1,7 +1,7 @@
 import { tipoAtividadeLabels, type TipoAtividade } from "@/features/atividades";
 import { formatarDuracao } from "./datas";
 
-/** Uma alternativa à duração mínima do desafio: a soma das atividades destes tipos num dia. */
+/** Um mínimo próprio para estes tipos, no lugar da duração mínima do desafio (decisão 0045). */
 export type MetaPorTipo = {
   id: string;
   nome: string | null;
@@ -19,42 +19,55 @@ export function getRotuloMeta(meta: Pick<MetaPorTipo, "nome" | "tipos">) {
   return meta.nome ?? meta.tipos.map((t) => tipoAtividadeLabels[t]).join(" + ");
 }
 
-/** "60 min por dia · ou 20 min de Corrida · ou 30 min de Cardio". */
-export function formatarMeta(desafio: MetaDoDesafio) {
-  return [
-    `${formatarDuracao(desafio.duracaoMinimaSegundos)} por dia`,
-    ...desafio.metasPorTipo.map(
-      (m) =>
-        `ou ${formatarDuracao(m.duracaoMinimaSegundos)} de ${getRotuloMeta(m)}`,
-    ),
-  ].join(" · ");
+/** O mínimo que vale para um tipo: o da meta por tipo que o inclui ou, sem meta, o do desafio. */
+function getMinimoDoTipo(desafio: MetaDoDesafio, tipo: string) {
+  return (
+    desafio.metasPorTipo.find((m) => m.tipos.includes(tipo as TipoAtividade))
+      ?.duracaoMinimaSegundos ?? desafio.duracaoMinimaSegundos
+  );
 }
 
-/** "60 min de qualquer treino, ou 20 min de Corrida, ou 30 min de Cardio". */
+/** "Pedal: 90 min, Corrida: 20 min". */
+function listarMinimosPorTipo(desafio: MetaDoDesafio) {
+  return desafio.metasPorTipo
+    .map(
+      (m) => `${getRotuloMeta(m)}: ${formatarDuracao(m.duracaoMinimaSegundos)}`,
+    )
+    .join(", ");
+}
+
+/** "60 min por dia (Pedal: 90 min, Corrida: 20 min)". */
+export function formatarMeta(desafio: MetaDoDesafio) {
+  const base = `${formatarDuracao(desafio.duracaoMinimaSegundos)} por dia`;
+  return desafio.metasPorTipo.length > 0
+    ? `${base} (${listarMinimosPorTipo(desafio)})`
+    : base;
+}
+
+/** "60 min de treino (Pedal: 90 min, Corrida: 20 min)". */
 export function descreverMeta(desafio: MetaDoDesafio) {
-  return [
-    `${formatarDuracao(desafio.duracaoMinimaSegundos)} de qualquer treino`,
-    ...desafio.metasPorTipo.map(
-      (m) =>
-        `ou ${formatarDuracao(m.duracaoMinimaSegundos)} de ${getRotuloMeta(m)}`,
-    ),
-  ].join(", ");
+  const base = `${formatarDuracao(desafio.duracaoMinimaSegundos)} de treino`;
+  return desafio.metasPorTipo.length > 0
+    ? `${base} (${listarMinimosPorTipo(desafio)})`
+    : base;
 }
 
 export type FaltaNoDia =
   | { conta: true }
   | {
       conta: false;
-      /** Os minutos que faltam para a duração mínima do desafio. */
-      totalMinutos: number;
-      /** A meta por tipo mais perto de ser cumprida com o tipo escolhido, se estiver mais perto que o total. */
-      meta: { rotulo: string; minutos: number } | null;
+      /** Os minutos que faltam do tipo escolhido. */
+      minutos: number;
+      /** A meta por tipo do tipo escolhido, ou nulo quando ele usa o mínimo do desafio. */
+      rotulo: string | null;
+      /** Um caminho mais curto, com o tipo de menor mínimo, se houver. */
+      alternativa: { rotulo: string; minutos: number } | null;
     };
 
 /**
- * Quanto falta para o dia contar (decisões 0040 e 0043): o dia conta quando a soma alcança a duração
- * mínima do desafio ou quando a soma dos tipos de uma meta por tipo alcança o mínimo dela. Só as metas
- * que incluem o tipo da atividade nova entram na sugestão, porque só elas avançam com ela.
+ * Quanto falta para o dia contar pela regra proporcional (decisão 0045): cada atividade preenche os
+ * segundos dela divididos pelo mínimo do tipo, e o dia conta quando as partes somam 100%. Arredonda
+ * como o backend (`ContagensAtividadeDesafio.CompletaODiaSql`), para não perder um dia por resíduo.
  */
 export function calcularFaltaNoDia(
   desafio: MetaDoDesafio,
@@ -66,45 +79,50 @@ export function calcularFaltaNoDia(
     | undefined,
   nova: { tipo: TipoAtividade; segundos: number },
 ): FaltaNoDia {
-  const total = (doDia?.segundos ?? 0) + nova.segundos;
-  const segundosDosTipos = (tipos: TipoAtividade[]) =>
-    (doDia?.segundosPorTipo ?? [])
-      .filter((t) => tipos.includes(t.tipo as TipoAtividade))
-      .reduce((soma, t) => soma + t.segundos, 0) +
-    (tipos.includes(nova.tipo) ? nova.segundos : 0);
+  const parte = [
+    ...(doDia?.segundosPorTipo ?? []),
+    { tipo: nova.tipo, segundos: nova.segundos },
+  ].reduce(
+    (soma, t) => soma + t.segundos / getMinimoDoTipo(desafio, t.tipo),
+    0,
+  );
+  const falta = 1 - Math.round(parte * 1e9) / 1e9;
+  if (falta <= 0) return { conta: true };
 
-  if (
-    total >= desafio.duracaoMinimaSegundos ||
-    desafio.metasPorTipo.some(
-      (m) => segundosDosTipos(m.tipos) >= m.duracaoMinimaSegundos,
-    )
-  ) {
-    return { conta: true };
-  }
-
-  const totalMinutos = Math.ceil((desafio.duracaoMinimaSegundos - total) / 60);
-  const meta = desafio.metasPorTipo
-    .filter((m) => m.tipos.includes(nova.tipo))
+  const minutosDe = (minimo: number) => Math.ceil((falta * minimo) / 60);
+  const metaDoTipo = desafio.metasPorTipo.find((m) =>
+    m.tipos.includes(nova.tipo),
+  );
+  const minutos = minutosDe(getMinimoDoTipo(desafio, nova.tipo));
+  const maisCurta = desafio.metasPorTipo
     .map((m) => ({
       rotulo: getRotuloMeta(m),
-      minutos: Math.ceil(
-        (m.duracaoMinimaSegundos - segundosDosTipos(m.tipos)) / 60,
-      ),
+      minutos: minutosDe(m.duracaoMinimaSegundos),
     }))
-    .sort((a, b) => a.minutos - b.minutos)[0];
+    .reduce((menor, opcao) => (opcao.minutos < menor.minutos ? opcao : menor), {
+      rotulo: "outro treino",
+      minutos: minutosDe(desafio.duracaoMinimaSegundos),
+    });
 
   return {
     conta: false,
-    totalMinutos,
-    meta: meta && meta.minutos < totalMinutos ? meta : null,
+    minutos,
+    rotulo: metaDoTipo ? getRotuloMeta(metaDoTipo) : null,
+    alternativa:
+      desafio.metasPorTipo.length > 0 && maisCurta.minutos < minutos
+        ? maisCurta
+        : null,
   };
 }
 
-/** "Faltam 5 min de Corrida (ou 25 min no total)". */
+/** "Faltam 30 min de Pedal (ou 10 min de Corrida)". */
 export function formatarFaltaNoDia(
   falta: Exclude<FaltaNoDia, { conta: true }>,
 ) {
-  return falta.meta
-    ? `Faltam ${falta.meta.minutos} min de ${falta.meta.rotulo} (ou ${falta.totalMinutos} min no total)`
-    : `Faltam ${falta.totalMinutos} min no dia`;
+  const principal = falta.rotulo
+    ? `Faltam ${falta.minutos} min de ${falta.rotulo}`
+    : `Faltam ${falta.minutos} min no dia`;
+  return falta.alternativa
+    ? `${principal} (ou ${falta.alternativa.minutos} min de ${falta.alternativa.rotulo})`
+    : principal;
 }

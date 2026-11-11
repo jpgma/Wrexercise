@@ -88,7 +88,7 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task MetaPorTipo_ContaODiaComMenosMinutosDosTiposDela()
+    public async Task MetaPorTipo_SomaAsPartesDoDia()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -96,31 +96,55 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         await IniciarAsync(desafio.Id);
         var hoje = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3).AddMinutes(-30));
 
-        // 20 min de Musculacao não cumprem nenhuma condição.
+        // 20 min de Musculacao preenchem 1/3 do dia; 10 min de Corrida, mais 1/2: ainda não fecha.
         await PostAtividadeAsync(ana, grupoId, 1200, TipoAtividade.Musculacao);
+        await PostAtividadeAsync(ana, grupoId, 600, TipoAtividade.Corrida);
         var progresso = await GetProgressoAsync(ana, desafio.Id);
         Assert.Empty(progresso.SeusDias);
         Assert.Equal(0, Assert.Single(progresso.Participantes).SessoesVerificadas);
 
-        // 20 min de Corrida cumprem a primeira meta por tipo, mesmo com 40 min no total.
-        await PostAtividadeAsync(ana, grupoId, 1200, TipoAtividade.Corrida);
+        // Mais 5 min de Corrida: 1/3 + 3/4 passa de 100%, e a Corrida foi o que mais preencheu o dia.
+        await PostAtividadeAsync(ana, grupoId, 300, TipoAtividade.Corrida);
         progresso = await GetProgressoAsync(ana, desafio.Id);
         Assert.Equal([new DiaQueContaResponse(hoje, desafio.MetasPorTipo[0].Id)], progresso.SeusDias);
         Assert.Equal(1, Assert.Single(progresso.Participantes).SessoesVerificadas);
         Assert.Equal(1, (await GetClassificacaoAsync(ana, desafio.Id)).Participantes[0].SessoesVerificadas);
         var dia = Assert.Single(progresso.SeusSegundosPorDia);
-        Assert.Equal(2400, dia.Segundos);
+        Assert.Equal(2100, dia.Segundos);
         Assert.Equal(
             [
-                new SegundosPorTipoResponse(TipoAtividade.Corrida, 1200),
+                new SegundosPorTipoResponse(TipoAtividade.Corrida, 900),
                 new SegundosPorTipoResponse(TipoAtividade.Musculacao, 1200),
             ],
             dia.SegundosPorTipo);
 
-        // Com a duração mínima do desafio alcançada, o dia conta pela meta geral.
-        await PostAtividadeAsync(ana, grupoId, 1200, TipoAtividade.Musculacao);
+        // Com os tipos sem meta preenchendo mais, o dia aparece pela duração mínima do desafio.
+        await PostAtividadeAsync(ana, grupoId, 2400, TipoAtividade.Musculacao);
         progresso = await GetProgressoAsync(ana, desafio.Id);
         Assert.Equal([new DiaQueContaResponse(hoje, null)], progresso.SeusDias);
+        Assert.Equal(1, Assert.Single(progresso.Participantes).SessoesVerificadas);
+    }
+
+    [Fact]
+    public async Task MetaPorTipo_MaiorQueODesafio_PedeMaisMinutosDosTiposDela()
+    {
+        // Quem vai ao trabalho pedalando: 60 min de qualquer treino, mas 90 min de Ciclismo.
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var desafio = await CreateDesafioAsync(
+            ana,
+            grupoId,
+            [new("Pedal", [TipoAtividade.Ciclismo], 5400), new(null, [TipoAtividade.Corrida], 1800)]);
+        await IniciarAsync(desafio.Id);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3).AddMinutes(-30));
+
+        await PostAtividadeAsync(ana, grupoId, 3600, TipoAtividade.Ciclismo);
+        Assert.Empty((await GetProgressoAsync(ana, desafio.Id)).SeusDias);
+
+        // 2/3 de Ciclismo + 1/3 de Corrida fecham o dia.
+        await PostAtividadeAsync(ana, grupoId, 600, TipoAtividade.Corrida);
+        var progresso = await GetProgressoAsync(ana, desafio.Id);
+        Assert.Equal([new DiaQueContaResponse(hoje, desafio.MetasPorTipo[0].Id)], progresso.SeusDias);
         Assert.Equal(1, Assert.Single(progresso.Participantes).SessoesVerificadas);
     }
 
@@ -282,7 +306,7 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         Assert.False(resumo.MeuProgresso!.ContaNestaSemana);
     }
 
-    /// <summary>20 min de Corrida, ou 30 min de Caminhada e Ciclismo somados, contra 60 min de qualquer treino.</summary>
+    /// <summary>Mínimo de 20 min para Corrida e de 30 min para Caminhada e Ciclismo; 60 min para os outros tipos.</summary>
     private static readonly MetaPorTipoRequest[] MetasCorridaECardio =
     [
         new(null, [TipoAtividade.Corrida], 1200),

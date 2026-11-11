@@ -1,6 +1,6 @@
 # 0043 — Metas por tipo
 
-**Status:** DECIDIDA. Complementa os itens 1, 2 e 6 de `0040-meta-diaria.md`: um dia passa a contar por mais de uma condição.
+**Status:** DECIDIDA. Complementa os itens 1, 2 e 6 de `0040-meta-diaria.md`: um dia passa a contar por mais de uma condição. Itens 1, 2, 4 e 6 substituídos por `0045-metas-proporcionais.md`: as metas por tipo passaram a valer em proporção, e o mínimo delas pode ser maior que o do desafio.
 
 ## Contexto
 
