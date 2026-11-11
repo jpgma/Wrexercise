@@ -10,10 +10,10 @@ import {
   type MeuAvatar,
 } from "./useAvatares";
 
-const maxVitrine = 3;
+export const maxVitrine = 3;
 
 /** Um Enfeite que ainda falta: não é botão, porque não pode entrar na vitrine. */
-function Bloqueado({ enfeite }: { enfeite: EnfeiteBloqueado }) {
+export function Bloqueado({ enfeite }: { enfeite: EnfeiteBloqueado }) {
   return (
     <li className="flex flex-col items-center gap-1 rounded-lg p-2 text-center">
       <EnfeiteBloqueadoIcone conquista={enfeite.conquista} tamanho={64} />

@@ -87,6 +87,8 @@ function useInvalidarVitrine() {
 export function useSalvarVitrine() {
   const invalidar = useInvalidarVitrine();
   return useMutation({
+    // Na praça, cada toque salva: os envios seguem em fila, e o último toque é o que fica.
+    scope: { id: "vitrine" },
     mutationFn: (enfeites: string[]) =>
       putJsonEmpty("/api/jogo/avatar/vitrine", { enfeites }),
     onSuccess: invalidar,

@@ -51,9 +51,10 @@ const pose = (
 ): Atuacao => ({ animacao, direcao, dx: 0, dy: 0, passoMs: 0, ...extra });
 
 /**
- * O Foco num colega da Cena (docs/gamificacao.md §3.5): a câmera se aproxima, o avatar gira até
+ * O Foco num membro da Cena (docs/gamificacao.md §3.5): a câmera se aproxima, o avatar gira até
  * olhar para quem vê a tela e, a partir dele, quem vê joga uma carta ou escolhe o Rival, com o
- * próprio avatar entrando em cena. O alvo fica na URL (`?foco=`): o botão voltar fecha o Foco.
+ * próprio avatar entrando em cena. O alvo pode ser o próprio avatar, que só gira e não tem ação.
+ * O alvo fica na URL (`?foco=`): o botão voltar fecha o Foco.
  */
 export function useFoco({
   posicoes,
@@ -74,10 +75,8 @@ export function useFoco({
 }) {
   const [params, setParams] = useSearchParams();
   const pedido = params.get(parametro);
-  const alvoId =
-    !pausado && pedido && pedido !== usuarioId && posicoes.has(pedido)
-      ? pedido
-      : null;
+  // O alvo pode ser quem vê a tela: o próprio Foco mostra a Vitrine no lugar da Mão.
+  const alvoId = !pausado && pedido && posicoes.has(pedido) ? pedido : null;
 
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const [fase, setFase] = useState<FaseFoco>("aberto");

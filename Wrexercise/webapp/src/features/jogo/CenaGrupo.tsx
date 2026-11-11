@@ -18,7 +18,6 @@ import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
-import { MenuAvatar } from "./MenuAvatar";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
@@ -42,6 +41,7 @@ import { useEntrada } from "./useEntrada";
 import { type EfeitoFoco, useFoco } from "./useFoco";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 import { useVidaNaPraca } from "./useVidaNaPraca";
+import { VitrineFoco } from "./VitrineFoco";
 import { usePeriodoDoDia } from "./periodoDoDia";
 import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
 import {
@@ -80,8 +80,6 @@ const GrupoCheio = 10;
 /** Centro da praça: para onde olha quem está parado. */
 const centro: Posicao = { x: centroX, y: elipse.centroY };
 const medalhas: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
-/** Por quanto tempo o nome aparece depois de um toque no avatar. */
-const NomeMs = 3000;
 /** Respiro entre a praça e as bordas da tela ao rolar para o Foco. */
 const Folga = 8;
 
@@ -148,7 +146,6 @@ function AvatarCena({
   brilho,
   nomeVisivel,
   posicaoClassificacao,
-  proprio,
   apagado,
   mira,
   rival,
@@ -160,13 +157,11 @@ function AvatarCena({
   atuacao: Atuacao | undefined;
   /** O Enfeite do avatar brilha: é o Enfeite novo de quem vê a cena. */
   brilho: boolean;
-  /** O nome só aparece depois de um toque e durante as encenações. */
+  /** O nome só aparece durante as encenações. */
   nomeVisivel: boolean;
   /** 1, 2 ou 3 no desafio em destaque: a medalha aparece sempre, com ou sem o nome. */
   posicaoClassificacao: number | undefined;
-  /** O avatar de quem vê a cena: o toque abre o menu, e não o Foco. */
-  proprio: boolean;
-  /** Durante o Foco em outra pessoa, quem não atua fica apagado. */
+  /** Durante o Foco, quem não atua fica apagado. */
   apagado: boolean;
   /** Anel de mira sob os pés, de 0 a 1: alvo de uma carta escolhida ou arrastada. */
   mira: number | null;
@@ -240,7 +235,6 @@ function AvatarCena({
       <button
         type="button"
         aria-label={rotulo}
-        aria-haspopup={proprio ? "dialog" : undefined}
         onClick={() => {
           if (!reduzido) setPulos((n) => n + 1);
           onToque();
@@ -463,14 +457,6 @@ function Praca({
 }) {
   const { ref, fator } = useFatorDeEncaixe();
   const { showToast } = useToast();
-  const [tocado, setTocado] = useState<MembroCena | null>(null);
-  const [nomeTocado, setNomeTocado] = useState<string | null>(null);
-  // O menu cobre a praça: o tempo do nome só começa a contar quando ele fecha.
-  useEffect(() => {
-    if (!nomeTocado || tocado) return;
-    const t = window.setTimeout(() => setNomeTocado(null), NomeMs);
-    return () => window.clearTimeout(t);
-  }, [nomeTocado, tocado]);
   const posicaoNoPodio = useMemo(
     () => new Map(podio.map((p) => [p.usuarioId, p.posicao])),
     [podio],
@@ -515,6 +501,8 @@ function Praca({
     pausado: entrada.ativa,
   });
   const emFoco = foco.alvoId !== null;
+  /** O Foco no próprio avatar: a Vitrine toma o lugar da Mão. */
+  const focoProprio = foco.alvoId === usuarioId;
   const [selecao, setSelecao] = useState<SelecaoMao | null>(null);
   /** O instante da escolha da carta: base do limite de 24 horas para os anéis da praça. */
   const [escolhidaEm, setEscolhidaEm] = useState(0);
@@ -525,11 +513,13 @@ function Praca({
   /** Quanto falta para a carta arrastada soltar, de 0 a 1. */
   const [arrasto, setArrasto] = useState(0);
   // Ao trocar de alvo, a carta escolhida vai junto (fluxo carta primeiro); a "VS" é de um alvo só.
-  // Ao fechar o Foco, a escolha acaba.
+  // Ao fechar o Foco, ou abrir o próprio, a escolha acaba.
   const [alvoAnterior, setAlvoAnterior] = useState(foco.alvoId);
   if (alvoAnterior !== foco.alvoId) {
     setAlvoAnterior(foco.alvoId);
-    setSelecao((s) => (foco.alvoId && s?.tipo === "carta" ? s : null));
+    setSelecao((s) =>
+      foco.alvoId && !focoProprio && s?.tipo === "carta" ? s : null,
+    );
     setArrasto(0);
   }
   const palco = useRef<HTMLDivElement>(null);
@@ -676,13 +666,8 @@ function Praca({
                   reduzido={reduzido}
                   atuacao={getAtuacao(membro.usuarioId)}
                   brilho={encenacao.brilho && membro.usuarioId === usuarioId}
-                  nomeVisivel={
-                    !emFoco &&
-                    (nomeTocado === membro.usuarioId ||
-                      emEncenacao(membro.usuarioId))
-                  }
+                  nomeVisivel={!emFoco && emEncenacao(membro.usuarioId)}
                   posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
-                  proprio={membro.usuarioId === usuarioId}
                   apagado={emFoco && !atuaNoFoco(membro.usuarioId)}
                   mira={getMira(membro)}
                   rival={
@@ -695,15 +680,7 @@ function Praca({
                         )
                   }
                   onToque={() => {
-                    if (emAcao) return;
-                    if (membro.usuarioId !== usuarioId) {
-                      foco.abrir(membro.usuarioId);
-                    } else if (emFoco) {
-                      foco.fechar();
-                    } else {
-                      setTocado(membro);
-                      setNomeTocado(membro.usuarioId);
-                    }
+                    if (!emAcao) foco.abrir(membro.usuarioId);
                   }}
                 />
               ))}
@@ -755,30 +732,30 @@ function Praca({
           )}
         </section>
       </div>
-      <MaoJogo
-        key={alvo?.usuarioId ?? ""}
-        grupoId={grupoId}
-        alvo={alvo ?? null}
-        podeRival={
-          !!alvo && (rivais.data?.candidatos.includes(alvo.usuarioId) ?? false)
-        }
-        recolhida={emAcao}
-        selecao={selecao}
-        onSelecao={escolher}
-        onArremessar={arremessar}
-        onRival={rivalizar}
-        onArrasto={setArrasto}
-      />
+      {focoProprio ? (
+        <VitrineFoco />
+      ) : (
+        <MaoJogo
+          key={alvo?.usuarioId ?? ""}
+          grupoId={grupoId}
+          alvo={alvo ?? null}
+          podeRival={
+            !!alvo &&
+            (rivais.data?.candidatos.includes(alvo.usuarioId) ?? false)
+          }
+          recolhida={emAcao}
+          selecao={selecao}
+          onSelecao={escolher}
+          onArremessar={arremessar}
+          onRival={rivalizar}
+          onArrasto={setArrasto}
+        />
+      )}
       <p aria-live="polite" className="sr-only">
         {foco.efeito?.tipo === "impacto" && alvo
           ? `${foco.efeito.texto} entregue para ${primeiroNome(alvo.nomeExibicao)}.`
           : ""}
       </p>
-      <MenuAvatar
-        grupoId={grupoId}
-        membro={tocado}
-        onClose={() => setTocado(null)}
-      />
     </div>
   );
 }

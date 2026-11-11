@@ -28,7 +28,7 @@ function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
 /**
  * O painel do Foco, sobre a parte de baixo da praça: nome, Vitrine, como a pessoa vai no desafio e
  * o Rival. As cartas entre as duas ficam na Mesa, logo abaixo. Some durante o arremesso e a escolha
- * do Rival.
+ * do Rival. No próprio Foco não há Rival nem cartas: a Vitrine se edita logo abaixo (VitrineFoco).
  */
 export function PainelFoco({
   grupoId,
@@ -44,10 +44,13 @@ export function PainelFoco({
   onFechar: () => void;
 }) {
   const alvoId = membro.usuarioId;
+  const proprio = alvoId === usuarioId;
   const perfil = usePerfilMembro(grupoId, alvoId);
   const vitrine = useVitrine(alvoId);
   const rivais = useRivais(grupoId);
-  const relacao = getRelacaoRival(rivais.data, usuarioId, alvoId);
+  const relacao = proprio
+    ? null
+    : getRelacaoRival(rivais.data, usuarioId, alvoId);
   const rival = relacao ? textoRival[relacao] : null;
   const titulo = useRef<HTMLHeadingElement>(null);
   const nome = primeiroNome(membro.nomeExibicao);
@@ -138,7 +141,7 @@ export function PainelFoco({
         )}
       </ul>
 
-      {!membro.recebeCartas && (
+      {!proprio && !membro.recebeCartas && (
         <p className="mt-2 text-xs text-muted">
           {nome} está no modo App e não recebe cartas.
         </p>
@@ -148,7 +151,7 @@ export function PainelFoco({
         to={`/grupos/${grupoId}/membros/${alvoId}`}
         className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-link"
       >
-        Ver a página de {nome}
+        {proprio ? "Ver a minha página" : `Ver a página de ${nome}`}
       </Link>
     </section>
   );
