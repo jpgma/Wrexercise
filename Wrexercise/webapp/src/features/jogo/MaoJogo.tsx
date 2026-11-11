@@ -3,6 +3,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
 import { MesaJogadas } from "./MesaJogadas";
+import { SaldoEnergia } from "./SaldoEnergia";
 import {
   getBloqueioJogada,
   getLimiteEnvio,
@@ -80,12 +81,13 @@ function CartaDaMao({
   };
 
   const pronta = -arrasto.y > ArrastoMinimo;
-  const subida = selecionada ? -22 + arrasto.y : Math.abs(inclinacao) * 1.5;
+  // A escolhida sobe por cima da linha do título: a Mão não reserva altura para ela.
+  const subida = selecionada ? -12 + arrasto.y : Math.abs(inclinacao) * 1.5;
   // Arrastando, a carta acompanha o dedo de lado e se inclina para onde vai.
   const giro = selecionada
     ? Math.max(-8, Math.min(8, arrasto.x * 0.15))
     : inclinacao;
-  const escala = selecionada ? (pronta ? 1.26 : 1.18) : 1;
+  const escala = selecionada ? (pronta ? 1.18 : 1.1) : 1;
 
   return (
     <li
@@ -156,6 +158,8 @@ function CartaVs() {
  * A Mão de quem vê a praça, logo abaixo dela, com a Mesa embaixo (docs/gamificacao.md §3.5). Fora
  * do Foco, escolher uma Provocação faz os colegas que recebem cartas brilharem; no Foco, a carta
  * escolhida é arremessada no alvo. As cartas em jogo ficam na Mesa e deixam a vaga reservada.
+ * Compacta para caber com a praça numa tela de 390×844: o texto de contexto toma o lugar do título
+ * só quando há o que dizer, e a carta escolhida sobe por cima dele.
  */
 export function MaoJogo({
   grupoId,
@@ -222,29 +226,19 @@ export function MaoJogo({
   const rivalMarcado = comRival && selecao?.tipo === "rival";
   const pronta = alvo ? (rivalMarcado ? selecao : escolhida && selecao) : null;
 
-  let instrucao: ReactNode;
+  // Sem nada a dizer, a linha mostra o título; com algo, o texto toma o lugar dele.
+  let contexto: string | null = null;
   if (rivalMarcado) {
-    instrucao =
-      "Vence quem cumprir a meta da semana primeiro e ganha 15 EN. A escolha vale até domingo.";
+    contexto =
+      "Vence quem cumprir a meta da semana primeiro e ganha 15 EN. Vale até domingo.";
   } else if (escolhida) {
-    instrucao = alvo
+    contexto = alvo
       ? escolhida.efeito
-      : `${escolhida.efeito} Toque num colega para arremessar.`;
+      : `${escolhida.efeito} Toque num colega.`;
   } else if (!recebe) {
-    instrucao = `${nome} não recebe cartas.`;
-  } else if (bloqueio) {
-    instrucao = bloqueio;
-  } else if (livres.length === 0) {
-    instrucao =
-      mao.length === 0
-        ? "Sem cartas. Compre na Loja com o +."
-        : mao.length < limite
-          ? "Todas as suas cartas estão na mesa. Compre mais na Loja com o +."
-          : "Todas as suas cartas estão na mesa.";
-  } else if (alvo) {
-    instrucao = "Toque numa carta e arraste para cima para arremessar.";
-  } else {
-    instrucao = "Escolha uma carta e toque num colega na praça.";
+    contexto = `${nome} não recebe cartas.`;
+  } else if (bloqueio && livres.length > 0) {
+    contexto = bloqueio;
   }
 
   let indice = 0;
@@ -255,7 +249,12 @@ export function MaoJogo({
       className={`card mt-2 p-3 transition-[opacity,translate] duration-300 ${recolhida ? "pointer-events-none translate-y-2 opacity-0" : alvo ? "animate-slide-up" : ""}`}
     >
       <div className="flex min-h-11 items-center gap-3">
-        <h2 id="mao-titulo" className="text-sm font-semibold">
+        <h2
+          id="mao-titulo"
+          className={
+            contexto ? "sr-only" : "min-w-0 flex-1 text-sm font-semibold"
+          }
+        >
           Sua Mão{" "}
           {loja.data && (
             <span className="font-score text-base font-normal text-muted">
@@ -263,8 +262,17 @@ export function MaoJogo({
             </span>
           )}
         </h2>
-        <div className="flex-1" />
-        {pronta && (
+        <p
+          aria-live="polite"
+          className={
+            contexto
+              ? "line-clamp-2 min-w-0 flex-1 text-xs text-muted"
+              : "sr-only"
+          }
+        >
+          {contexto}
+        </p>
+        {pronta ? (
           <button
             type="button"
             className="btn-primary h-10 shrink-0 px-3 text-xs"
@@ -272,13 +280,17 @@ export function MaoJogo({
           >
             {pronta.tipo === "rival" ? "Escolher Rival" : "Arremessar"}
           </button>
+        ) : (
+          <Link
+            to="/jogo/loja"
+            aria-label="Energia e Loja"
+            className="shrink-0 tap"
+          >
+            <SaldoEnergia />
+          </Link>
         )}
       </div>
-      <p aria-live="polite" className="min-h-8 text-xs text-muted">
-        {instrucao}
-      </p>
-      {/* O alto reserva a subida e o aumento da carta escolhida: ela não cobre a instrução. */}
-      <ul className="flex items-end gap-1.5 pt-10 pb-1">
+      <ul className="flex items-end gap-1.5 pt-3 pb-1">
         {comRival && (
           <CartaDaMao
             rotulo={`Escolher ${nome} como Rival da semana`}

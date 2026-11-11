@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { Link } from "react-router";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
 import {
@@ -21,7 +20,6 @@ import { EnfeiteIcone } from "./EnfeiteIcone";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { MenuAvatar } from "./MenuAvatar";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
-import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { PainelFoco } from "./PainelFoco";
@@ -84,8 +82,6 @@ const centro: Posicao = { x: centroX, y: elipse.centroY };
 const medalhas: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 /** Por quanto tempo o nome aparece depois de um toque no avatar. */
 const NomeMs = 3000;
-/** No Foco, quanto do alto da praça pode sair da tela para a Mão caber: o alvo continua visível. */
-const CorteMaximo = 40;
 /** Respiro entre a praça e as bordas da tela ao rolar para o Foco. */
 const Folga = 8;
 
@@ -537,29 +533,15 @@ function Praca({
     setArrasto(0);
   }
   const palco = useRef<HTMLDivElement>(null);
-  // Ao abrir o Foco, a praça sobe para o alto da tela, com a Mão logo abaixo. Se as duas não
-  // couberem acima da navegação, o alto da praça sai da tela, mas nunca o alvo: o corte tem limite,
-  // e o que ainda faltar da Mão fica para baixo.
+  // Ao abrir o Foco, a praça sobe para o alto da tela, com a Mão logo abaixo: numa tela de
+  // 390×844, as duas cabem sem rolar mais.
   useEffect(() => {
-    const elemento = palco.current;
-    const praca = elemento?.querySelector("section");
-    if (!emFoco || !elemento || !praca) return;
-    const navegacao = document.querySelector<HTMLElement>(
-      'nav[aria-label="Principal"]',
-    );
-    const rodape = navegacao?.offsetParent ? navegacao.offsetHeight : 0;
-    const visivel = window.innerHeight - rodape;
-    const topoPraca = praca.getBoundingClientRect().top;
-    const altura = elemento.getBoundingClientRect().bottom - topoPraca;
-    const corte = Math.min(
-      Math.max(0, altura + 2 * Folga - visivel),
-      CorteMaximo * fator,
-    );
+    if (!emFoco || !palco.current) return;
     window.scrollTo({
-      top: window.scrollY + topoPraca - Folga + corte,
+      top: window.scrollY + palco.current.getBoundingClientRect().top - Folga,
       behavior: reduzido ? "auto" : "smooth",
     });
-  }, [emFoco, reduzido, fator]);
+  }, [emFoco, reduzido]);
   const emAcao = foco.fase !== "aberto";
   const alvo = membros.find((m) => m.usuarioId === foco.alvoId);
   const cartaEscolhida = !emFoco && selecao?.tipo === "carta";
@@ -653,11 +635,6 @@ function Praca({
       className="mx-auto w-full scroll-mt-2"
       style={{ maxWidth: largura }}
     >
-      <div className="mb-2 flex min-h-6 justify-end">
-        <Link to="/jogo/loja" aria-label="Energia e Loja" className="tap">
-          <SaldoEnergia />
-        </Link>
-      </div>
       <div ref={ref} className="w-full" style={{ height: altura * fator }}>
         <section
           aria-label="Praça do grupo"

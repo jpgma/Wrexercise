@@ -273,11 +273,11 @@ function PrazoCarta({
   jogada: Jogada;
   restante: number | null;
 }) {
-  const lado = 40;
-  const raio = 18;
+  const lado = 36;
+  const raio = 16;
   const volta = 2 * Math.PI * raio;
   return (
-    <span className="relative grid size-10 shrink-0 place-items-center">
+    <span className="relative grid size-9 shrink-0 place-items-center">
       {restante !== null && (
         <svg
           aria-hidden="true"
@@ -305,7 +305,7 @@ function PrazoCarta({
           />
         </svg>
       )}
-      <span className="grid size-7 place-items-center overflow-hidden rounded-sm bg-carta-giz">
+      <span className="grid size-6 place-items-center overflow-hidden rounded-sm bg-carta-giz [&>img]:size-6">
         <IconeCarta codigo={jogada.carta.codigo} />
       </span>
     </span>
@@ -343,56 +343,54 @@ export function MesaJogadas({
     .sort((a, b) => ordem(a) - ordem(b));
   const aberta = jogadas.data?.find((j) => j.id === abertaId);
 
-  if (lista.length === 0 && !filtro) return null;
+  if (lista.length === 0) return null;
 
   return (
     <section
       aria-labelledby="mesa-titulo"
-      className="mt-2 border-t-2 border-border pt-2"
+      className="mt-1 flex items-center gap-2 border-t-2 border-border pt-1"
     >
-      <h3 id="mesa-titulo" className="eyebrow">
-        {filtro ? "Na mesa entre vocês" : "Na mesa"}
+      {/* O rótulo fica ao lado da fileira, e não acima: a Mão inteira cabe com a praça. */}
+      <h3 id="mesa-titulo" className="eyebrow w-12 shrink-0 leading-tight">
+        {filtro ? "Entre vocês" : "Na mesa"}
       </h3>
-      {lista.length === 0 ? (
-        <p className="mt-1 text-xs text-muted">Nenhuma carta entre vocês.</p>
-      ) : (
-        <ul className="-mx-3 mt-1.5 flex snap-x gap-2 overflow-x-auto scroll-px-3 px-3 pb-1 [scrollbar-width:none]">
-          {lista.map((jogada) => {
-            const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
-            const pendente = jogada.recebida && jogada.situacao === "Enviada";
-            const encerrada = encerradas.includes(jogada.situacao);
-            const outro = primeiroNome(
-              jogada.recebida ? jogada.remetenteNome : jogada.destinatarioNome,
-            );
-            return (
-              <li key={jogada.id} className="shrink-0 snap-start">
-                <button
-                  type="button"
-                  aria-haspopup="dialog"
-                  aria-label={`${getTitulo(jogada)}: ${jogada.carta.nome}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
-                  onClick={() => setAbertaId(jogada.id)}
-                  className={`flex min-h-11 items-center gap-2 rounded-lg border-2 bg-surface py-1 pr-3 pl-1 text-left tap ${pendente ? "mesa-pendente border-game" : "border-border"} ${encerrada ? "opacity-60" : ""}`}
-                >
-                  <PrazoCarta
-                    jogada={jogada}
-                    restante={encerrada ? null : getRestante(jogada, agora)}
-                  />
-                  <span className="leading-tight">
-                    <span className="block text-xs font-semibold whitespace-nowrap">
-                      {jogada.recebida ? `De ${outro}` : `Para ${outro}`}
-                    </span>
-                    <span
-                      className={`block text-2xs whitespace-nowrap ${pendente ? "font-semibold text-game" : "text-muted"}`}
-                    >
-                      {selo.texto}
-                    </span>
+      {/* O respiro vertical deixa o pulso da carta pendente aparecer: a rolagem corta o que passa. */}
+      <ul className="-mr-3 flex min-w-0 flex-1 snap-x gap-2 overflow-x-auto py-1 pr-3 [scrollbar-width:none]">
+        {lista.map((jogada) => {
+          const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
+          const pendente = jogada.recebida && jogada.situacao === "Enviada";
+          const encerrada = encerradas.includes(jogada.situacao);
+          const outro = primeiroNome(
+            jogada.recebida ? jogada.remetenteNome : jogada.destinatarioNome,
+          );
+          return (
+            <li key={jogada.id} className="shrink-0 snap-start">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-label={`${getTitulo(jogada)}: ${jogada.carta.nome}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
+                onClick={() => setAbertaId(jogada.id)}
+                className={`flex min-h-11 items-center gap-2 rounded-lg border-2 bg-surface py-0.5 pr-3 pl-0.5 text-left tap ${pendente ? "mesa-pendente border-game" : "border-border"} ${encerrada ? "opacity-60" : ""}`}
+              >
+                <PrazoCarta
+                  jogada={jogada}
+                  restante={encerrada ? null : getRestante(jogada, agora)}
+                />
+                <span className="leading-tight">
+                  <span className="block text-xs font-semibold whitespace-nowrap">
+                    {jogada.recebida ? `De ${outro}` : `Para ${outro}`}
                   </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <span
+                    className={`block text-2xs whitespace-nowrap ${pendente ? "font-semibold text-game" : "text-muted"}`}
+                  >
+                    {selo.texto}
+                  </span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       <Dialog
         open={aberta !== undefined}
         title={aberta ? getTitulo(aberta) : ""}
