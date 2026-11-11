@@ -423,6 +423,8 @@ The week of an activity is the week of its start date and time, in the time zone
 - Each reviewer can give one reaction: `Kudos`, `Suspeito` or `Rejeitar`.
 - The reaction window is 48 hours from the time when the author recorded the activity.
 - A reviewer can change his or her reaction while the window is open. A reviewer cannot remove a reaction.
+- The activity page shows the reactions in one row, from left to right: `Rejeitar` (1/4 of the width), `Suspeito` (1/4) and "Dar moral" (2/4). If the text of `Rejeitar` or `Suspeito` does not fit, the button shows only the symbol. After a reaction, its button is highlighted and the other buttons are faded. A faded button still changes the reaction.
+- The list of reactions shows the reaction of the user as "Você deu moral", "Você marcou como suspeito" or "Você rejeitou". The page does not show the reaction of the user in a separate card.
 - The `Rejeitar` reaction asks for a confirmation.
 - The number of rejections necessary to reject an activity is:
 

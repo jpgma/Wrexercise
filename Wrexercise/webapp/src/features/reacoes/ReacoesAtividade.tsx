@@ -3,6 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { SituacaoBadge, type SituacaoVerificacao } from "@/features/atividades";
+import { useSessao } from "@/features/autenticacao";
 import { canRevisarAtividade, useGrupo } from "@/features/grupos";
 import { getErrorMessage } from "@/services/api";
 import { Comentarios } from "./Comentarios";
@@ -22,6 +23,45 @@ const descricoes: Record<TipoReacao, { texto: string; sua: string }> = {
 
 function Emoji({ tipo }: { tipo: TipoReacao }) {
   return <span aria-hidden="true">{tipoReacaoEmojis[tipo]}</span>;
+}
+
+function BotaoReacao({
+  tipo,
+  label = tipoReacaoLabels[tipo],
+  className,
+  suaReacao,
+  pending,
+  onClick,
+}: {
+  tipo: TipoReacao;
+  label?: string;
+  className: string;
+  suaReacao: TipoReacao | null;
+  pending: boolean;
+  onClick: () => void;
+}) {
+  const selecionada = suaReacao === tipo;
+  const apagada = suaReacao !== null && !selecionada;
+  // Só o "Dar moral" tem largura garantida para o texto.
+  const largo = tipo === "Kudos";
+  return (
+    <button
+      type="button"
+      aria-pressed={selecionada}
+      className={`${className} h-11 min-w-0 gap-1.5 px-2 ${
+        selecionada
+          ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+          : ""
+      } ${apagada ? "opacity-40 shadow-none" : ""}`}
+      disabled={pending}
+      onClick={selecionada ? undefined : onClick}
+    >
+      <Emoji tipo={tipo} />
+      <span className={largo ? "truncate" : "truncate @max-[24rem]:sr-only"}>
+        {label}
+      </span>
+    </button>
+  );
 }
 
 export function ReacoesAtividade({
@@ -44,6 +84,7 @@ export function ReacoesAtividade({
   const registrar = useRegistrarReacao(atividadeId);
   const revisar = useRevisarAtividade(atividadeId);
   const grupo = useGrupo(grupoId);
+  const { data: usuario } = useSessao();
   const { showToast } = useToast();
   const [confirmandoRejeicao, setConfirmandoRejeicao] = useState(false);
   const [justificativa, setJustificativa] = useState("");
@@ -118,7 +159,8 @@ export function ReacoesAtividade({
               <li className="text-sm text-muted">Ninguém reagiu ainda.</li>
             )}
             {lista.map((item) => {
-              const { texto } = descricoes[item.tipo];
+              const { texto, sua } = descricoes[item.tipo];
+              const ehVoce = item.usuarioId === usuario?.id;
               return (
                 <li
                   key={item.usuarioId}
@@ -130,7 +172,14 @@ export function ReacoesAtividade({
                     size={30}
                   />
                   <span className="min-w-0 flex-1 truncate">
-                    <b>{item.nomeExibicao.trim().split(/\s+/)[0]}</b> {texto}
+                    {ehVoce ? (
+                      <b>{sua}</b>
+                    ) : (
+                      <>
+                        <b>{item.nomeExibicao.trim().split(/\s+/)[0]}</b>{" "}
+                        {texto}
+                      </>
+                    )}
                   </span>
                   <Emoji tipo={item.tipo} />
                 </li>
@@ -159,58 +208,40 @@ export function ReacoesAtividade({
         </p>
       )}
 
-      {!podeReagir && suaReacao && (
-        <p className="rounded-2xl bg-surface-muted p-4 text-sm font-medium">
-          {descricoes[suaReacao].sua}
-        </p>
-      )}
-
       {podeReagir && (
         <div className="space-y-2">
-          {suaReacao && (
-            <div className="rounded-2xl bg-surface-muted p-4 text-sm">
-              <p className="font-medium">{descricoes[suaReacao].sua}</p>
-              <p className="mt-1 text-muted">
-                Trocar reação: escolha outra opção até o prazo acabar.
-              </p>
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn-primary w-full"
-            disabled={registrar.isPending || suaReacao === "Kudos"}
-            onClick={() =>
-              reagir("Kudos", `Você deu moral para ${primeiroNome}!`)
-            }
-          >
-            <Emoji tipo="Kudos" />
-            Dar moral
-          </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
+          {/* Uma linha: Rejeitar (1/4), Suspeito (1/4), Dar moral (2/4). A
+              opção escolhida fica destacada e as outras, apagadas, mas ainda
+              tocáveis para trocar a reação até o prazo acabar. Nos botões
+              estreitos, o texto some quando não cabe e fica só o símbolo. */}
+          <div className="@container grid grid-cols-4 gap-2">
+            <BotaoReacao
+              tipo="Rejeitar"
+              className="btn-danger"
+              suaReacao={suaReacao}
+              pending={registrar.isPending}
+              onClick={() => setConfirmandoRejeicao(true)}
+            />
+            <BotaoReacao
+              tipo="Suspeito"
               className="btn-warning"
-              disabled={registrar.isPending || suaReacao === "Suspeito"}
+              suaReacao={suaReacao}
+              pending={registrar.isPending}
               onClick={() =>
                 reagir("Suspeito", "Marcado como suspeito para revisão.")
               }
-            >
-              <Emoji tipo="Suspeito" />
-              {tipoReacaoLabels.Suspeito}
-            </button>
-            <button
-              type="button"
-              className="btn-danger"
-              disabled={registrar.isPending || suaReacao === "Rejeitar"}
-              onClick={() => setConfirmandoRejeicao(true)}
-            >
-              <Emoji tipo="Rejeitar" />
-              {tipoReacaoLabels.Rejeitar}
-            </button>
+            />
+            <BotaoReacao
+              tipo="Kudos"
+              label="Dar moral"
+              className="btn-primary col-span-2"
+              suaReacao={suaReacao}
+              pending={registrar.isPending}
+              onClick={() =>
+                reagir("Kudos", `Você deu moral para ${primeiroNome}!`)
+              }
+            />
           </div>
-          <p className="pt-1 text-center text-xs text-muted">
-            “Suspeito” sinaliza uma dúvida, e um administrador decide.
-          </p>
           {registrar.isError && !confirmandoRejeicao && (
             <p role="alert" className="form-error">
               {getErrorMessage(registrar.error)}
