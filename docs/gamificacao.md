@@ -119,7 +119,7 @@ Entre as encenações, a praça tem luz e movimento próprios. Nada disso é enc
 
 - **Sombras:** cada avatar, o pombo e a bola têm uma sombra oval sob os pés. A sombra fica no chão quando o avatar pula.
 - **Período do dia:** a luz segue a hora do aparelho de quem vê a cena. Amanhecer (5h às 7h): tom coral claro. Dia (7h às 17h): sem filtro. Entardecer (17h às 19h): violeta para coral. Noite (19h às 5h): violeta escuro. Os nomes dos avatares ficam acima da luz. A luz tinge só a praça: o céu transparente fica de fora.
-- **Luminárias:** uma na mureta do fundo e duas no chão, ao lado das floreiras da frente. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
+- **Luminárias:** uma acima da porta do fundo, espelhada, com a cúpula centrada na porta, e duas no chão, ao lado das floreiras da frente. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
 - **Eventos de ambiente:** um de cada vez, a cada 12 a 25 s, e o primeiro de 3 a 6 s depois de abrir a cena:
   - Um pombo pousa num trecho livre do chão (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos.
   - Dois vizinhos `parado` se viram um para o outro e conversam por 5 s; no meio, um deles faz `olhar`.
