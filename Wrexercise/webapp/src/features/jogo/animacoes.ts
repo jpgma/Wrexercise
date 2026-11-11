@@ -48,8 +48,9 @@ export type Animacao = {
   quadroEstatico: number;
 };
 
-// `comemorando` usa a linha `comemorar`. `correr` está na folha, mas o Jogo ainda não o usa.
+// `comemorando` usa a linha `comemorar`. `correr` é a entrada na praça (docs/gamificacao.md §3.4).
 export const animacoes = {
+  correr: { ...linhasFolha.correr, repete: true, quadroEstatico: 0 },
   parado: { ...linhasFolha.parado, repete: true, quadroEstatico: 0 },
   treinando: { ...linhasFolha.treinando, repete: true, quadroEstatico: 2 },
   comemorando: { ...linhasFolha.comemorar, repete: true, quadroEstatico: 4 },

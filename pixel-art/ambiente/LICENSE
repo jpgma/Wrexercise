@@ -1,0 +1,12 @@
+Sprites de ambiente da praça do modo Jogo do Wrexercise: saida/ambiente.png
+
+Dedicada ao domínio público sob CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Na medida do possível segundo a lei, os autores renunciam a todos os direitos
+autorais e conexos sobre esta imagem. Você pode copiá-la, modificá-la,
+distribuí-la e usá-la, inclusive para fins comerciais, sem pedir permissão.
+
+A imagem é gerada por build.py a partir de fonte/folha.png, que o autor gerou com o
+Gemini (prompts-gemini.md); a bola é desenhada pelo próprio script. Nenhum pixel vem
+de arte de terceiros.

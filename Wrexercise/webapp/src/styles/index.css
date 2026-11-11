@@ -603,6 +603,70 @@
 }
 
 @layer components {
+  /*
+   * Luz e vida da praça (docs/gamificacao.md §3.4). A cena tem as mesmas cores nos dois temas, então
+   * estas classes usam a paleta direto.
+   */
+  .sombra-cena {
+    border-radius: 50%;
+    background: rgb(20 22 31 / 0.45);
+  }
+
+  .luz-praca {
+    mix-blend-mode: multiply;
+  }
+
+  .luz-amanhecer {
+    background: linear-gradient(to bottom, #ff9c80, #f5f1e8);
+    opacity: 0.35;
+  }
+
+  .luz-entardecer {
+    background: linear-gradient(to bottom, var(--violet), var(--coral));
+    opacity: 0.3;
+  }
+
+  .luz-noite {
+    background: #2f2468;
+    opacity: 0.55;
+  }
+
+  /* O brilho em degraus, e não em degradê suave, para combinar com a pixel art. */
+  .brilho-luminaria {
+    mix-blend-mode: screen;
+    background: radial-gradient(
+      circle,
+      rgb(255 211 78 / 0.45) 0 30%,
+      rgb(255 211 78 / 0.25) 30% 55%,
+      rgb(255 211 78 / 0.1) 55% 80%,
+      transparent 80%
+    );
+  }
+
+  /* O avatar dá um pulinho ao ser tocado. */
+  .avatar-pulo {
+    animation: avatar-pulo 260ms ease-out 1;
+  }
+
+  @keyframes avatar-pulo {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    35% {
+      transform: translateY(-8px);
+    }
+    65% {
+      transform: translateY(-4px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .avatar-pulo {
+      animation: none;
+    }
+  }
+
   /* Enfeite novo: um brilho que pulsa enquanto a encenação toca (docs/gamificacao.md §9.2). */
   .enfeite-brilho {
     animation: enfeite-brilho 700ms ease-in-out infinite alternate;

@@ -136,6 +136,13 @@ The user cannot change the e-mail.
   - An answer to a card that the user sent: the recipient accepts (`aceitar`, the card jumps above the head and folds) or refuses (`recusar`, the card slides out).
   - A tap on the plaza skips the scene. After the scene, or after a skip, the events become seen (`POST /api/grupos/{id}/jogadas/vistas`). If the user leaves the page during the scene, the events stay new.
   - If the device asks for reduced motion, or the page is hidden, the scene does not play, and the events become seen at once. The list shows the final state.
+- The plaza has its own light and life between the card events. These are not card events: they do not count in the limit of 3 and they do not mark events as seen.
+  - Each `Avatar`, the pigeon and the ball have an oval shadow under the feet. A tap on an `Avatar` makes it jump a little while the menu opens.
+  - The light follows the hour of the device: dawn (5 h to 7 h) is light coral, day (7 h to 17 h) has no filter, dusk (17 h to 19 h) is violet to coral, and night (19 h to 5 h) is dark violet. The names of the members stay above the light.
+  - Three lamps (one on the back wall, two on the floor at the edges) turn on at dusk and at night.
+  - One ambient event at a time, every 12 to 25 seconds: a pigeon lands in a free corner, pecks, walks and flies away (not at night); two near members that are `parado` turn to each other and talk for 5 seconds; or a ball rolls to a member that is `parado`, who throws it back (`arremessar`).
+  - On the first visit of the day, each `Avatar` runs (`correr`) in from the nearest side to its place. The card events start after this entry. A tap on the plaza skips the entry. The cookie `wx_entrada_praca` keeps the date of the last entry.
+  - During a card event or the entry, ambient events stop and the pigeon flies away. If the device asks for reduced motion, there are no ambient events, no entry and no jump. The light and the lamps stay.
 - Under it, the section "Sua Mão" shows the count (for example "2/5") and one slot for each card of the hand limit, in one row. A slot with a card shows a small card with the icon and the price. A card in an open play is dimmed and has the label "Em jogo". An empty slot shows the outline of a card. The first empty slot shows "+". A tap on an empty slot opens the shop. When the hand is full, the Energy badge above the scene opens the shop.
 
 ### 3.3.3. Energy (`Energia`)

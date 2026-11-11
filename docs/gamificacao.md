@@ -112,6 +112,22 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 - As animações só rodam com a página visível.
 - A cena sabe o que já foi visto pelas colunas `vista_em` (destinatário) e `resultado_visto_em` (remetente) da Jogada. Por isso, na G3, só "carta recebida", "carta aceita" e "carta recusada" têm encenação; Jogadas concluídas ou expiradas aparecem já no estado final, com o carimbo (`decisoes/0035-cartas-e-jogadas.md`).
 
+### 3.4. Vida na praça
+
+Entre as encenações, a praça tem luz e movimento próprios. Nada disso é encenação: não conta no limite de 3 por visita, não marca nada como visto e não depende do servidor.
+
+- **Sombras:** cada avatar, o pombo e a bola têm uma sombra oval sob os pés. A sombra fica no chão quando o avatar pula.
+- **Período do dia:** a luz segue a hora do aparelho de quem vê a cena. Amanhecer (5h às 7h): tom coral claro. Dia (7h às 17h): sem filtro. Entardecer (17h às 19h): violeta para coral. Noite (19h às 5h): violeta escuro. Os nomes dos avatares ficam acima da luz.
+- **Luminárias:** uma na mureta do fundo e duas no chão, nas bordas. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
+- **Eventos de ambiente:** um de cada vez, a cada 12 a 25 s, e o primeiro de 3 a 6 s depois de abrir a cena:
+  - Um pombo pousa num canto livre (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos.
+  - Dois vizinhos `parado` se viram um para o outro e conversam por 5 s; no meio, um deles faz `olhar`.
+  - Uma bola rola da borda até um avatar `parado`, que a devolve com `arremessar`.
+- **Entrada:** na primeira visita do dia (cookie `wx_entrada_praca`, com a data local), cada avatar entra correndo (`correr`) pela borda mais próxima até o seu lugar, um depois do outro. As encenações começam depois da entrada. Tocar na praça pula a entrada.
+- **Toque:** tocar num avatar faz ele dar um pulinho enquanto o menu abre.
+- Durante uma encenação ou a entrada, os eventos param e o pombo levanta voo. Com `prefers-reduced-motion`, não há eventos, entrada nem pulinho; a luz e as luminárias continuam. Com a página escondida, nenhum evento começa.
+- A arte (pombo, bola e luminárias) fica em `webapp/public/ambiente.png`, gerada por `pixel-art/ambiente/build.py`.
+
 ## 4. Avatar
 
 - Cada usuário tem um único avatar, igual em todos os grupos.

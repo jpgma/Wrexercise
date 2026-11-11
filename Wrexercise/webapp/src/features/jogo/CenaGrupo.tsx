@@ -21,7 +21,11 @@ import {
   type RivalEmCena,
   useEncenacoes,
 } from "./useEncenacoes";
+import { useEntrada } from "./useEntrada";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
+import { useVidaNaPraca } from "./useVidaNaPraca";
+import { usePeriodoDoDia } from "./periodoDoDia";
+import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
 import {
   getVencedorId,
   type Rival,
@@ -31,6 +35,7 @@ import {
 
 // O chão tem 180×230 px e é mostrado em 2×.
 const semNovos: string[] = [];
+const semRivais: RivalEmCena[] = [];
 const largura = 360;
 const altura = 460;
 const centroX = largura / 2;
@@ -142,6 +147,8 @@ function AvatarCena({
   const folha = useFolhaAvatar(membro.usuarioId);
   const enfeite = useVitrine(membro.usuarioId)[0];
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
+  /** Conta os toques: cada um recomeça o pulinho. */
+  const [pulos, setPulos] = useState(0);
   const parado = membro.pose === "parado";
 
   const sorteio = useMemo(
@@ -190,7 +197,10 @@ function AvatarCena({
         type="button"
         aria-label={membro.nomeExibicao}
         aria-haspopup="dialog"
-        onClick={onToque}
+        onClick={() => {
+          if (!reduzido) setPulos((n) => n + 1);
+          onToque();
+        }}
         className="absolute block cursor-pointer rounded-md focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none"
         style={{
           // A área de toque é só o corpo; a célula da folha (48 px) passa dela sem receber toques.
@@ -202,20 +212,37 @@ function AvatarCena({
           ...deslocamento,
         }}
       >
-        <SpriteAvatar
-          key={`${animacao}-${direcao}`}
-          folha={folha}
-          animacao={animacao}
-          direcao={direcao}
-          escala={escala}
-          estatico={reduzido}
-          className="pointer-events-none absolute"
+        {/* A sombra fica no chão, sob os pés: não acompanha o pulinho. */}
+        <span
+          aria-hidden="true"
+          className="sombra-cena pointer-events-none absolute"
           style={{
-            left: -corpo.esquerda * escala,
-            top: -corpo.topo * escala,
+            left: (ancora.x - corpo.esquerda) * escala - 11,
+            top: alturaCorpo * escala - 3,
+            width: 22,
+            height: 6,
           }}
-          onFim={() => setVariacao(null)}
         />
+        <span
+          key={pulos}
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 ${pulos > 0 ? "avatar-pulo" : ""}`}
+        >
+          <SpriteAvatar
+            key={`${animacao}-${direcao}`}
+            folha={folha}
+            animacao={animacao}
+            direcao={direcao}
+            escala={escala}
+            estatico={reduzido}
+            className="pointer-events-none absolute"
+            style={{
+              left: -corpo.esquerda * escala,
+              top: -corpo.topo * escala,
+            }}
+            onFim={() => setVariacao(null)}
+          />
+        </span>
       </button>
       {enfeite && (
         <EnfeiteIcone
@@ -359,22 +386,39 @@ function Praca({
     () => new Map(membros.map((m, i) => [m.usuarioId, posicoes[i]!])),
     [membros, posicoes],
   );
+  const periodo = usePeriodoDoDia();
+  const entrada = useEntrada({ posicoes: porUsuario, largura, reduzido });
+  // As encenações esperam a entrada terminar.
   const encenacao = useEncenacoes({
-    jogadas: jogadas.data,
+    jogadas: entrada.ativa ? undefined : jogadas.data,
     posicoes: porUsuario,
     centro,
     reduzido,
     onVistas: marcarVistas,
     usuarioId,
-    enfeitesNovos: meuAvatar.data?.novos ?? semNovos,
+    enfeitesNovos: entrada.ativa
+      ? semNovos
+      : (meuAvatar.data?.novos ?? semNovos),
     onEnfeitesVistos: marcarEnfeitesVistos,
-    rivais: rivaisEmCena,
+    rivais: entrada.ativa ? semRivais : rivaisEmCena,
     onRivaisVistos: (ids) => {
       const doServidor = ids.filter((id) => !id.startsWith(idLocal));
       if (doServidor.length > 0) marcarRivaisVistos(doServidor);
       if (doServidor.length < ids.length) setEscolhidoAgora(null);
     },
   });
+  const vida = useVidaNaPraca({
+    membros,
+    posicoes: porUsuario,
+    largura,
+    pausada: entrada.ativa || encenacao.ativa,
+    reduzido,
+    comPombos: periodo !== "noite",
+  });
+  const getAtuacao = (id: string) =>
+    entrada.atuacoes.get(id) ??
+    encenacao.atuacoes.get(id) ??
+    vida.atuacoes.get(id);
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: largura }}>
@@ -403,19 +447,22 @@ function Praca({
               membro={membro}
               posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
               reduzido={reduzido}
-              atuacao={encenacao.atuacoes.get(membro.usuarioId)}
+              atuacao={getAtuacao(membro.usuarioId)}
               brilho={encenacao.brilho && membro.usuarioId === usuarioId}
               onToque={() => setTocado(membro)}
             />
           ))}
+          {vida.pombo && <Pombo pombo={vida.pombo} />}
+          {vida.bola && <Bola bola={vida.bola} />}
+          <LuzDaPraca periodo={periodo} />
           {encenacao.carta && <CartaVoando carta={encenacao.carta} />}
-          {encenacao.ativa && (
-            // Tocar na praça pula a encenação: ela nunca prende a pessoa.
+          {(entrada.ativa || encenacao.ativa) && (
+            // Tocar na praça pula a entrada e a encenação: elas nunca prendem a pessoa.
             <button
               type="button"
               className="absolute inset-0 cursor-pointer"
               style={{ zIndex: 1002 }}
-              onClick={encenacao.pular}
+              onClick={entrada.ativa ? entrada.pular : encenacao.pular}
             >
               <span className="sr-only">Pular a encenação</span>
             </button>

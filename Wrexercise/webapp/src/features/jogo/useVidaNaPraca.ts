@@ -1,0 +1,294 @@
+import { useEffect, useRef, useState } from "react";
+import { animacoes, getDirecao, quadroSoltura } from "./animacoes";
+import type { Atuacao, Ponto } from "./useEncenacoes";
+import type { MembroCena } from "./useCena";
+
+/** As fases do pombo; cada uma tem a sua linha na folha `ambiente.png`. */
+export type FasePombo = "voando" | "bicando" | "andando";
+
+/** Um pombo na praça: `x`/`y` são os pés (ou o ponto de pouso, em voo). */
+export type PomboEmCena = {
+  x: number;
+  y: number;
+  /** 1 olha para a direita, como na folha; -1 é espelhado. */
+  virado: 1 | -1;
+  fase: FasePombo;
+  /** Duração da transição até `x`/`y`, em ms. */
+  ms: number;
+};
+
+/** A bola: `x`/`y` é o ponto em que ela toca o chão. */
+export type BolaEmCena = {
+  x: number;
+  y: number;
+  /** 1 rola para a direita; -1, para a esquerda. */
+  virado: 1 | -1;
+  rolando: boolean;
+  ms: number;
+  curva: "linear" | "ease-out";
+};
+
+/** Onde o pombo pousa: fora da elipse dos avatares, nos cantos livres da praça. */
+const pousos: readonly { x: [number, number]; y: number }[] = [
+  { x: [112, 146], y: 98 },
+  { x: [34, 72], y: 404 },
+  { x: [288, 322], y: 404 },
+];
+
+const VooMs = 1400;
+/** A bola percorre a praça em px por ms. */
+const VelocidadeBola = 0.16;
+const ConversaMs = 5000;
+
+function sortear(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+/**
+ * A vida da praça entre as encenações (docs/gamificacao.md §3.4): de vez em quando um pombo pousa,
+ * dois vizinhos conversam ou uma bola rola até alguém, que a devolve. Um evento de cada vez, nunca
+ * durante uma encenação, e nada com movimento reduzido.
+ */
+export function useVidaNaPraca({
+  membros,
+  posicoes,
+  largura,
+  pausada,
+  reduzido,
+  comPombos,
+}: {
+  membros: MembroCena[];
+  posicoes: Map<string, Ponto>;
+  largura: number;
+  /** Uma encenação ou a entrada está tocando: o pombo voa embora e o resto para. */
+  pausada: boolean;
+  reduzido: boolean;
+  /** À noite não há pombos. */
+  comPombos: boolean;
+}) {
+  const [pombo, setPombo] = useState<PomboEmCena | null>(null);
+  const [bola, setBola] = useState<BolaEmCena | null>(null);
+  const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
+  const temporizadores = useRef<number[]>([]);
+  // A cena muda (poses, membros) sem reiniciar o agendamento.
+  const cena = useRef({ membros, posicoes, comPombos });
+  useEffect(() => {
+    cena.current = { membros, posicoes, comPombos };
+  }, [membros, posicoes, comPombos]);
+  const saida = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    // Pausada (uma encenação ou a entrada está tocando) ou sem movimento: nada é agendado. O que
+    // estava na praça sai na limpeza do agendamento anterior, mais abaixo.
+    if (reduzido || pausada) return;
+    const lista = temporizadores.current;
+    const depois = (ms: number, executar: () => void) =>
+      lista.push(window.setTimeout(executar, ms));
+    const limpar = () => {
+      lista.forEach((t) => window.clearTimeout(t));
+      lista.length = 0;
+      // Alguém vai andar pela praça: o pombo levanta voo, e a bola e as conversas param.
+      setBola(null);
+      setAtuacoes(new Map());
+      setPombo((p) =>
+        p && p.fase !== "voando"
+          ? {
+              ...p,
+              fase: "voando",
+              x: p.x + p.virado * 160,
+              y: p.y - 220,
+              ms: VooMs,
+            }
+          : null,
+      );
+      window.clearTimeout(saida.current);
+      saida.current = window.setTimeout(() => setPombo(null), VooMs);
+    };
+
+    const parados = () =>
+      cena.current.membros
+        .filter((m) => m.pose === "parado")
+        .map((m) => ({
+          id: m.usuarioId,
+          p: cena.current.posicoes.get(m.usuarioId),
+        }))
+        .filter((m): m is { id: string; p: Ponto } => m.p !== undefined);
+
+    const atuar = (id: string, atuacao: Atuacao | null) =>
+      setAtuacoes((atual) => {
+        const proxima = new Map(atual);
+        if (atuacao) proxima.set(id, atuacao);
+        else proxima.delete(id);
+        return proxima;
+      });
+
+    function pombear(fim: () => void) {
+      const pouso = pousos[Math.floor(Math.random() * pousos.length)]!;
+      const x = Math.round(sortear(...pouso.x));
+      const y = pouso.y;
+      const virado: 1 | -1 = x < largura / 2 ? 1 : -1;
+      // Vem de fora da praça, do alto, pelo lado de trás.
+      setPombo({
+        x: x - virado * 140,
+        y: y - 220,
+        virado,
+        fase: "voando",
+        ms: 0,
+      });
+      depois(30, () => setPombo({ x, y, virado, fase: "voando", ms: VooMs }));
+      let t = 30 + VooMs;
+      depois(t, () => setPombo({ x, y, virado, fase: "bicando", ms: 0 }));
+      t += sortear(3000, 5000);
+      const passo = Math.round(sortear(10, 22)) * virado;
+      depois(t, () =>
+        setPombo({ x: x + passo, y, virado, fase: "andando", ms: 900 }),
+      );
+      t += 900;
+      depois(t, () =>
+        setPombo({ x: x + passo, y, virado, fase: "bicando", ms: 0 }),
+      );
+      t += sortear(2500, 4500);
+      depois(t, () =>
+        setPombo({
+          x: x + passo + virado * 160,
+          y: y - 220,
+          virado,
+          fase: "voando",
+          ms: VooMs,
+        }),
+      );
+      t += VooMs;
+      depois(t, () => {
+        setPombo(null);
+        fim();
+      });
+    }
+
+    function conversar(fim: () => void): boolean {
+      const candidatos = parados();
+      if (candidatos.length < 2) return false;
+      const a = candidatos[Math.floor(Math.random() * candidatos.length)]!;
+      const b = candidatos
+        .filter((c) => c.id !== a.id)
+        .sort(
+          (c, d) =>
+            Math.hypot(c.p.x - a.p.x, c.p.y - a.p.y) -
+            Math.hypot(d.p.x - a.p.x, d.p.y - a.p.y),
+        )[0]!;
+      const virar = (de: Ponto, para: Ponto): Atuacao => ({
+        animacao: "parado",
+        dx: 0,
+        dy: 0,
+        direcao: getDirecao(de, para),
+        passoMs: 0,
+      });
+      atuar(a.id, virar(a.p, b.p));
+      atuar(b.id, virar(b.p, a.p));
+      // No meio da conversa, um deles olha em volta.
+      depois(ConversaMs / 2, () =>
+        atuar(b.id, { ...virar(b.p, a.p), animacao: "olhar" }),
+      );
+      depois(ConversaMs / 2 + 800, () => atuar(b.id, virar(b.p, a.p)));
+      depois(ConversaMs, () => {
+        atuar(a.id, null);
+        atuar(b.id, null);
+        fim();
+      });
+      return true;
+    }
+
+    function jogarBola(fim: () => void): boolean {
+      const candidatos = parados();
+      if (candidatos.length === 0) return false;
+      const { id, p } =
+        candidatos[Math.floor(Math.random() * candidatos.length)]!;
+      const daEsquerda = p.x < largura / 2;
+      const lado: 1 | -1 = daEsquerda ? -1 : 1;
+      const borda = { x: daEsquerda ? -20 : largura + 20, y: p.y + 2 };
+      const chegada = { x: p.x + lado * 22, y: p.y + 2 };
+      const ida = Math.round(Math.abs(chegada.x - borda.x) / VelocidadeBola);
+      const sentidoIda: 1 | -1 = daEsquerda ? 1 : -1;
+
+      const olhando: Atuacao = {
+        animacao: "parado",
+        dx: 0,
+        dy: 0,
+        direcao: getDirecao(p, borda),
+        passoMs: 0,
+      };
+      setBola({
+        ...borda,
+        virado: sentidoIda,
+        rolando: true,
+        ms: 0,
+        curva: "linear",
+      });
+      depois(30, () => {
+        atuar(id, olhando);
+        setBola({
+          ...chegada,
+          virado: sentidoIda,
+          rolando: true,
+          ms: ida,
+          curva: "ease-out",
+        });
+      });
+      let t = 30 + ida;
+      depois(t, () => {
+        setBola({
+          ...chegada,
+          virado: sentidoIda,
+          rolando: false,
+          ms: 0,
+          curva: "linear",
+        });
+        atuar(id, { ...olhando, animacao: "arremessar" });
+      });
+      t += quadroSoltura * animacoes.arremessar.ms;
+      const volta = Math.round(ida * 0.7);
+      depois(t, () =>
+        setBola({
+          ...borda,
+          virado: (sentidoIda * -1) as 1 | -1,
+          rolando: true,
+          ms: volta,
+          curva: "linear",
+        }),
+      );
+      depois(
+        t +
+          (animacoes.arremessar.quadros - quadroSoltura) *
+            animacoes.arremessar.ms,
+        () => atuar(id, null),
+      );
+      t += volta;
+      depois(t, () => {
+        setBola(null);
+        fim();
+      });
+      return true;
+    }
+
+    function agendar(espera: number) {
+      depois(espera, () => {
+        if (document.visibilityState !== "visible") {
+          agendar(5000);
+          return;
+        }
+        const proximo = () => agendar(sortear(12_000, 25_000));
+        const sorteio = Math.random();
+        if (cena.current.comPombos && sorteio < 0.45) {
+          pombear(proximo);
+        } else if (sorteio < 0.8 && conversar(proximo)) {
+          // conversa em andamento
+        } else if (!jogarBola(proximo) && !conversar(proximo)) {
+          proximo();
+        }
+      });
+    }
+    agendar(sortear(3000, 6000));
+    return limpar;
+  }, [pausada, reduzido, largura]);
+
+  return { pombo, bola, atuacoes };
+}
