@@ -516,6 +516,7 @@ After each reaction, the system calculates the status again:
 - Provisional progress: days that get to 100% only with the activities in `AguardandoFeedback`, `EmRevisao` or `Contestada` added.
 - For each day of the user that counts (`seusDias`), the progress gives the type goal whose types filled the largest part of the day (`metaPorTipoId`). It is empty when the types without a type goal filled the largest part. If two parts are equal, the types without a type goal win, and then the first type goal in the order of creation.
 - On the home page, the days of the week show a small icon of that type goal. Under the days, a legend shows "Contou com [type goal]".
+- In the `App` mode, under the days of the week, the home page shows a small ring with the part of today that the user filled, in percent (see 6.1). The percent includes the activities that are not verified and is never more than 100%. If the day does not count yet, the text shows each way to fill the rest, from the shortest to the longest: "Faltam 10 min de Corrida, 20 min de outro treino ou 30 min de Pedal". Without type goals, the text is "Faltam N min de treino". When the day counts, the text is "Hoje já conta". The ring does not show on a day out of the current week of the challenge, or when the user does not count in this week.
 - A member completes a week when the definitive progress is equal to or more than the goal.
 
 ### 9.2. Group goal for the week

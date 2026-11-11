@@ -12,6 +12,8 @@ import {
   FaixaSemana,
   formatarMeta,
   formatarTempoAteFim,
+  getHojeNoFuso,
+  HojeNoDesafio,
   useDesafio,
   useProgresso,
 } from "@/features/desafios";
@@ -68,6 +70,7 @@ function SuaSemana({
     semanaAtual,
     participantes,
     seusDias,
+    seusSegundosPorDia,
   } = progresso.data;
   const eu = participantes.find((p) => p.usuarioId === usuarioId);
   const verificadas = eu?.sessoesVerificadas ?? 0;
@@ -85,6 +88,9 @@ function SuaSemana({
     contaNestaSemana: eu?.contaNestaSemana ?? true,
   });
   const contando = participantes.filter((p) => p.contaNestaSemana);
+  const hoje = getHojeNoFuso(desafio.data.fusoHorario);
+  const hojeNaSemana =
+    semanaAtual && hoje >= semanaAtual.inicio && hoje <= semanaAtual.fim;
   const bateram = contando.filter((p) => p.metaCumprida).length;
 
   return (
@@ -136,6 +142,15 @@ function SuaSemana({
             dias={seusDias}
             metasPorTipo={desafio.data.metasPorTipo}
             fusoHorario={desafio.data.fusoHorario}
+          />
+        )}
+        {hojeNaSemana && eu?.contaNestaSemana !== false && (
+          <HojeNoDesafio
+            desafio={desafio.data}
+            segundosPorTipo={
+              seusSegundosPorDia.find((d) => d.data === hoje)
+                ?.segundosPorTipo ?? []
+            }
           />
         )}
         {eu && !eu.contaNestaSemana && (

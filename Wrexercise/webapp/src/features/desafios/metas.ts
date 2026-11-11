@@ -65,10 +65,50 @@ export type FaltaNoDia =
     };
 
 /**
- * Quanto falta para o dia contar pela regra proporcional (decisão 0045): cada atividade preenche os
- * segundos dela divididos pelo mínimo do tipo, e o dia conta quando as partes somam 100%. Arredonda
- * como o backend (`ContagensAtividadeDesafio.CompletaODiaSql`), para não perder um dia por resíduo.
+ * A parte do dia já preenchida, pela regra proporcional (decisão 0045): cada atividade preenche os
+ * segundos dela divididos pelo mínimo do tipo, e o dia conta quando as partes somam 1. Arredonda como
+ * o backend (`ContagensAtividadeDesafio.CompletaODiaSql`), para não perder um dia por resíduo.
  */
+export function calcularParteDoDia(
+  desafio: MetaDoDesafio,
+  segundosPorTipo: { tipo: string; segundos: number }[],
+) {
+  const parte = segundosPorTipo.reduce(
+    (soma, t) => soma + t.segundos / getMinimoDoTipo(desafio, t.tipo),
+    0,
+  );
+  return Math.round(parte * 1e9) / 1e9;
+}
+
+/**
+ * Os caminhos para fechar o que falta do dia, do mais curto ao mais longo: cada meta por tipo e os
+ * tipos sem meta ("outro treino" ou, sem metas, "treino"). No empate, os tipos sem meta vêm antes.
+ */
+export function listarCaminhosDoDia(desafio: MetaDoDesafio, parte: number) {
+  const falta = Math.max(0, 1 - parte);
+  const minutosDe = (minimo: number) => Math.ceil((falta * minimo) / 60);
+  return [
+    {
+      rotulo: desafio.metasPorTipo.length > 0 ? "outro treino" : "treino",
+      minutos: minutosDe(desafio.duracaoMinimaSegundos),
+    },
+    ...desafio.metasPorTipo.map((m) => ({
+      rotulo: getRotuloMeta(m),
+      minutos: minutosDe(m.duracaoMinimaSegundos),
+    })),
+  ].sort((a, b) => a.minutos - b.minutos);
+}
+
+/** "Faltam 10 min de Corrida, 20 min de outro treino ou 30 min de Pedal". */
+export function formatarCaminhosDoDia(
+  caminhos: { rotulo: string; minutos: number }[],
+) {
+  const itens = caminhos.map((c) => `${c.minutos} min de ${c.rotulo}`);
+  const ultimo = itens.pop();
+  return `Faltam ${itens.length > 0 ? `${itens.join(", ")} ou ${ultimo}` : ultimo}`;
+}
+
+/** Quanto falta para o dia contar com a atividade nova somada às do dia (decisão 0045). */
 export function calcularFaltaNoDia(
   desafio: MetaDoDesafio,
   doDia:
@@ -79,14 +119,11 @@ export function calcularFaltaNoDia(
     | undefined,
   nova: { tipo: TipoAtividade; segundos: number },
 ): FaltaNoDia {
-  const parte = [
+  const parte = calcularParteDoDia(desafio, [
     ...(doDia?.segundosPorTipo ?? []),
     { tipo: nova.tipo, segundos: nova.segundos },
-  ].reduce(
-    (soma, t) => soma + t.segundos / getMinimoDoTipo(desafio, t.tipo),
-    0,
-  );
-  const falta = 1 - Math.round(parte * 1e9) / 1e9;
+  ]);
+  const falta = 1 - parte;
   if (falta <= 0) return { conta: true };
 
   const minutosDe = (minimo: number) => Math.ceil((falta * minimo) / 60);

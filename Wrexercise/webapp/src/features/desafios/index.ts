@@ -25,6 +25,7 @@ export {
   getProximasSegundas,
 } from "./datas";
 export { FaixaSemana } from "./FaixaSemana";
+export { HojeNoDesafio } from "./HojeNoDesafio";
 export {
   calcularFaltaNoDia,
   descreverMeta,
