@@ -25,7 +25,7 @@ import { SaldoEnergia } from "./SaldoEnergia";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { PainelFoco } from "./PainelFoco";
-import { primeiroNome } from "./textosCartas";
+import { getBloqueioJogada, primeiroNome } from "./textosCartas";
 import {
   type CartaMao,
   type CodigoCarta,
@@ -84,6 +84,10 @@ const centro: Posicao = { x: centroX, y: elipse.centroY };
 const medalhas: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 /** Por quanto tempo o nome aparece depois de um toque no avatar. */
 const NomeMs = 3000;
+/** No Foco, quanto do alto da praça pode sair da tela para a Mão caber: o alvo continua visível. */
+const CorteMaximo = 40;
+/** Respiro entre a praça e as bordas da tela ao rolar para o Foco. */
+const Folga = 8;
 
 function mulberry32(semente: number): () => number {
   let a = semente;
@@ -516,6 +520,12 @@ function Praca({
   });
   const emFoco = foco.alvoId !== null;
   const [selecao, setSelecao] = useState<SelecaoMao | null>(null);
+  /** O instante da escolha da carta: base do limite de 24 horas para os anéis da praça. */
+  const [escolhidaEm, setEscolhidaEm] = useState(0);
+  const escolher = (s: SelecaoMao | null) => {
+    setSelecao(s);
+    setEscolhidaEm(Date.now());
+  };
   /** Quanto falta para a carta arrastada soltar, de 0 a 1. */
   const [arrasto, setArrasto] = useState(0);
   // Ao trocar de alvo, a carta escolhida vai junto (fluxo carta primeiro); a "VS" é de um alvo só.
@@ -528,20 +538,28 @@ function Praca({
   }
   const palco = useRef<HTMLDivElement>(null);
   // Ao abrir o Foco, a praça sobe para o alto da tela, com a Mão logo abaixo. Se as duas não
-  // couberem acima da navegação, a Mão fica inteira e o alto da praça sai da tela.
+  // couberem acima da navegação, o alto da praça sai da tela, mas nunca o alvo: o corte tem limite,
+  // e o que ainda faltar da Mão fica para baixo.
   useEffect(() => {
     const elemento = palco.current;
-    if (!emFoco || !elemento) return;
+    const praca = elemento?.querySelector("section");
+    if (!emFoco || !elemento || !praca) return;
     const navegacao = document.querySelector<HTMLElement>(
       'nav[aria-label="Principal"]',
     );
     const rodape = navegacao?.offsetParent ? navegacao.offsetHeight : 0;
-    const caixa = elemento.getBoundingClientRect();
-    const visivel = window.innerHeight - rodape - 8;
-    const topo =
-      window.scrollY + caixa.top - 8 + Math.max(0, caixa.height + 8 - visivel);
-    window.scrollTo({ top: topo, behavior: reduzido ? "auto" : "smooth" });
-  }, [emFoco, reduzido]);
+    const visivel = window.innerHeight - rodape;
+    const topoPraca = praca.getBoundingClientRect().top;
+    const altura = elemento.getBoundingClientRect().bottom - topoPraca;
+    const corte = Math.min(
+      Math.max(0, altura + 2 * Folga - visivel),
+      CorteMaximo * fator,
+    );
+    window.scrollTo({
+      top: window.scrollY + topoPraca - Folga + corte,
+      behavior: reduzido ? "auto" : "smooth",
+    });
+  }, [emFoco, reduzido, fator]);
   const emAcao = foco.fase !== "aberto";
   const alvo = membros.find((m) => m.usuarioId === foco.alvoId);
   const cartaEscolhida = !emFoco && selecao?.tipo === "carta";
@@ -552,7 +570,8 @@ function Praca({
       return membro.usuarioId === foco.alvoId && arrasto > 0 ? arrasto : null;
     return cartaEscolhida &&
       membro.usuarioId !== usuarioId &&
-      membro.recebeCartas
+      membro.recebeCartas &&
+      !getBloqueioJogada(jogadas.data ?? [], membro.usuarioId, "", escolhidaEm)
       ? 0
       : null;
   };
@@ -768,7 +787,7 @@ function Praca({
         }
         recolhida={emAcao}
         selecao={selecao}
-        onSelecao={setSelecao}
+        onSelecao={escolher}
         onArremessar={arremessar}
         onRival={rivalizar}
         onArrasto={setArrasto}

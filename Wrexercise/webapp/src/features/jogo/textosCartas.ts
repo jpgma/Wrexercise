@@ -73,3 +73,46 @@ export function getSeloSituacao(
       return { texto: "Expirada", classe: "" };
   }
 }
+
+/** Os limites de envio que a Mesa deixa conferir antes do arremesso (`LimitesJogada.cs`). */
+const IntervaloMesmaPessoaMs = 24 * 60 * 60 * 1000;
+const EnviadasAtivas = 2;
+const ativa = (j: Jogada) =>
+  j.situacao === "Enviada" || j.situacao === "Aceita";
+
+/** O limite que vale para qualquer alvo: quem vê já tem 2 cartas enviadas em aberto. */
+export function getLimiteEnvio(jogadas: Jogada[]): string | null {
+  return jogadas.filter((j) => !j.recebida && ativa(j)).length >= EnviadasAtivas
+    ? "Você já tem 2 cartas enviadas esperando resposta ou atividade."
+    : null;
+}
+
+/**
+ * Por que quem vê não pode jogar uma carta no alvo agora, pelas Jogadas deste grupo, ou `null`. O
+ * servidor confere de novo com as Jogadas de todos os grupos: aqui só se evita um arremesso que já
+ * se sabe recusado.
+ */
+export function getBloqueioJogada(
+  jogadas: Jogada[],
+  alvoId: string,
+  nome: string,
+  agora: number,
+): string | null {
+  if (
+    jogadas.some(
+      (j) =>
+        ativa(j) && (j.remetenteId === alvoId || j.destinatarioId === alvoId),
+    )
+  )
+    return `Já existe uma carta aberta entre você e ${nome}.`;
+  if (
+    jogadas.some(
+      (j) =>
+        !j.recebida &&
+        j.destinatarioId === alvoId &&
+        agora - Date.parse(j.enviadaEm) < IntervaloMesmaPessoaMs,
+    )
+  )
+    return `Você já enviou uma carta para ${nome} nas últimas 24 horas.`;
+  return getLimiteEnvio(jogadas);
+}

@@ -3,8 +3,12 @@ import { type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
 import { MesaJogadas } from "./MesaJogadas";
-import { primeiroNome } from "./textosCartas";
-import { type CartaMao, useLoja } from "./useCartas";
+import {
+  getBloqueioJogada,
+  getLimiteEnvio,
+  primeiroNome,
+} from "./textosCartas";
+import { type CartaMao, useJogadas, useLoja } from "./useCartas";
 import type { MembroCena } from "./useCena";
 
 /** Arrastar a carta para cima além disto, ou rápido o bastante, arremessa. */
@@ -177,6 +181,9 @@ export function MaoJogo({
   onArrasto: (fracao: number) => void;
 }) {
   const loja = useLoja();
+  const jogadas = useJogadas(grupoId);
+  // A Mão remonta a cada Foco: o instante da abertura basta para o limite de 24 horas.
+  const [agora] = useState(() => Date.now());
   const mao = loja.data?.mao ?? [];
   const limite = loja.data?.limiteMao ?? 0;
   const livres = mao.filter((c) => !c.emJogo);
@@ -184,7 +191,14 @@ export function MaoJogo({
   const comRival = alvo !== null && podeRival;
   const recebe = alvo?.recebeCartas ?? true;
   const nome = alvo ? primeiroNome(alvo.nomeExibicao) : "";
-  const jogavel = (c: CartaMao) => recebe && c.tipo === "Provocacao";
+  // Fora do Foco, só o limite que vale para qualquer colega; no Foco, também os do alvo.
+  const bloqueio = !alvo
+    ? getLimiteEnvio(jogadas.data ?? [])
+    : recebe
+      ? getBloqueioJogada(jogadas.data ?? [], alvo.usuarioId, nome, agora)
+      : null;
+  const jogavel = (c: CartaMao) =>
+    recebe && !bloqueio && c.tipo === "Provocacao";
   const total =
     livres.length +
     reservadas.length +
@@ -218,11 +232,15 @@ export function MaoJogo({
       : `${escolhida.efeito} Toque num colega para arremessar.`;
   } else if (!recebe) {
     instrucao = `${nome} não recebe cartas.`;
+  } else if (bloqueio) {
+    instrucao = bloqueio;
   } else if (livres.length === 0) {
     instrucao =
-      mao.length < limite
-        ? "Sem cartas livres. Compre na Loja com o +."
-        : "Todas as suas cartas estão na mesa.";
+      mao.length === 0
+        ? "Sem cartas. Compre na Loja com o +."
+        : mao.length < limite
+          ? "Todas as suas cartas estão na mesa. Compre mais na Loja com o +."
+          : "Todas as suas cartas estão na mesa.";
   } else if (alvo) {
     instrucao = "Toque numa carta e arraste para cima para arremessar.";
   } else {
