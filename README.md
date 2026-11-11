@@ -20,6 +20,7 @@ Aplicação web privada para pequenos grupos de amigos manterem uma rotina de ex
 
 ```bash
 scripts/dev-db.sh                                  # PostgreSQL na porta 5433
+scripts/test-db.sh                                 # PostgreSQL dos testes de integração, na porta 5434
 dotnet run --project Wrexercise -- migrate         # aplica as migrações
 dotnet run --project Wrexercise                    # API em http://localhost:8080
 cd Wrexercise/webapp && npm ci && npm run dev      # interface em http://localhost:5173
@@ -49,7 +50,8 @@ Não há CI. Rode antes de concluir qualquer trabalho:
 
 ```bash
 scripts/verify.sh          # formatação, lint, build, testes unitários, build do frontend
-scripts/verify.sh --full   # também testes de integração e imagem arm64
+scripts/verify.sh --full   # também testes de integração e, se algo que a afeta mudou, imagem arm64
+scripts/verify.sh --image  # como --full, mas sempre constrói a imagem arm64
 ```
 
 ## Produção

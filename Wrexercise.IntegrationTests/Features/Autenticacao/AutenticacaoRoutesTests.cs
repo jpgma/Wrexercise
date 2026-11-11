@@ -3,10 +3,8 @@ using System.Net.Http.Json;
 using System.Text;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Logging.Abstractions;
 using Wrexercise.Features.Autenticacao;
 using Wrexercise.Infrastructure.Authentication;
-using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.IntegrationTests.Features.Autenticacao;
@@ -25,11 +23,7 @@ public sealed class AutenticacaoRoutesTests : IAsyncLifetime
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    public async ValueTask InitializeAsync()
-    {
-        _database = await TestDatabase.CreateAsync();
-        await MigrationRunner.RunAsync(_database.DataSource, MigrationCatalog.LoadEmbedded(), NullLogger.Instance, Token);
-    }
+    public async ValueTask InitializeAsync() => _database = await TestDatabase.CreateMigratedAsync();
 
     public ValueTask DisposeAsync() => _database.DisposeAsync();
 
@@ -425,6 +419,7 @@ public sealed class AutenticacaoRoutesTests : IAsyncLifetime
     private WebApplicationFactory<Program> CreateFactory(string environment = "Development") =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseTestDefaults();
             builder.UseEnvironment(environment);
             builder.UseSetting("ConnectionStrings:Database", _database.ConnectionString);
         });

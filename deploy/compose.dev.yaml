@@ -1,5 +1,5 @@
 # Desenvolvimento: apenas o PostgreSQL, acessível só nesta máquina.
-# A porta 5433 evita conflito com um PostgreSQL instalado localmente.
+# As portas 5433 e 5434 evitam conflito com um PostgreSQL instalado localmente.
 name: wrexercise-dev
 
 services:
@@ -16,6 +16,26 @@ services:
     # Por TCP: na primeira inicialização, o servidor temporário só atende pelo socket Unix.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U wrexercise -d wrexercise_dev"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # Só para os testes de integração (scripts/test-db.sh). Os dados ficam em memória e o
+  # servidor não espera o disco: é bem mais rápido, e perder tudo ao parar não importa.
+  db-test:
+    image: postgres:18.6-alpine
+    profiles: [test]
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    environment:
+      POSTGRES_DB: wrexercise_test
+      POSTGRES_USER: wrexercise
+      POSTGRES_PASSWORD: wrexercise_test
+    ports:
+      - "127.0.0.1:5434:5432"
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U wrexercise -d wrexercise_test"]
       interval: 2s
       timeout: 5s
       retries: 15

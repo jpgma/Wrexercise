@@ -1,11 +1,9 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Logging.Abstractions;
 using Wrexercise.Features.Grupos;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Infrastructure.Authentication;
-using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.IntegrationTests;
@@ -33,6 +31,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         AvataresDiretorio = avataresDiretorio;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseTestDefaults();
             builder.UseEnvironment("Development");
             builder.UseSetting("ConnectionStrings:Database", database.ConnectionString);
             builder.UseSetting("Evidencias:Diretorio", evidenciasDiretorio);
@@ -47,8 +46,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     public static async Task<ApiTestHost> CreateAsync()
     {
-        var database = await TestDatabase.CreateAsync();
-        await MigrationRunner.RunAsync(database.DataSource, MigrationCatalog.LoadEmbedded(), NullLogger.Instance, Token);
+        var database = await TestDatabase.CreateMigratedAsync();
         var evidenciasDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-evidencias", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(evidenciasDiretorio);
         var avataresDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-avatares", Guid.NewGuid().ToString("N"));

@@ -2,12 +2,13 @@
 #   docker buildx build --platform linux/arm64 -f deploy/Dockerfile -t wrexercise:latest --load .
 #
 # Os estágios de build rodam na arquitetura da máquina ($BUILDPLATFORM) e fazem
-# compilação cruzada, evitando a lentidão da emulação.
+# compilação cruzada, evitando a lentidão da emulação. Os caches do npm e do NuGet ficam
+# no BuildKit entre builds, sem entrar na imagem.
 
 FROM --platform=$BUILDPLATFORM node:24.22.2-alpine AS web
 WORKDIR /repo/Wrexercise/webapp
 COPY Wrexercise/webapp/package.json Wrexercise/webapp/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY Wrexercise/webapp/ ./
 RUN npm run build
 
@@ -24,7 +25,8 @@ WORKDIR /repo
 COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY Wrexercise/ Wrexercise/
 COPY --from=web /repo/Wrexercise/wwwroot/ Wrexercise/wwwroot/
-RUN case "$TARGETARCH" in \
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    case "$TARGETARCH" in \
       amd64) rid=linux-x64 ;; \
       arm64) rid=linux-arm64 ;; \
       *) echo "Arquitetura não suportada: $TARGETARCH" >&2; exit 1 ;; \

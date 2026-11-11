@@ -77,7 +77,7 @@ public class HealthRoutesTests
 
     private static WebApplicationFactory<Program> CreateFactory(string connectionString) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.UseSetting("ConnectionStrings:Database", connectionString));
+            builder.UseTestDefaults().UseSetting("ConnectionStrings:Database", connectionString));
 
     private static async Task AssertProblemAsync(HttpResponseMessage response, HttpStatusCode status, string code)
     {

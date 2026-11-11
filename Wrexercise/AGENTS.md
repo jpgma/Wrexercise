@@ -145,4 +145,4 @@ Use `ApiProblem` (`application/problem+json` com `code`). Códigos em `MAIUSCULA
 ## Testes
 
 - `Wrexercise.UnitTests`: regras puras e testes de arquitetura.
-- `Wrexercise.IntegrationTests`: HTTP e SQL contra o PostgreSQL de desenvolvimento (`scripts/dev-db.sh`), com um banco descartável por execução.
+- `Wrexercise.IntegrationTests`: HTTP e SQL contra o PostgreSQL dos testes (`scripts/test-db.sh`: porta 5434, em memória e sem `fsync`), com um banco descartável por teste. Use `TestDatabase.CreateMigratedAsync()`, que copia um modelo já migrado; `TestDatabase.CreateAsync()` só para testes das próprias migrações. Os servidores de teste usam `UseTestDefaults()`: logs só de avisos e sem os serviços periódicos.

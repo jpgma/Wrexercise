@@ -13,9 +13,10 @@ Não há CI nem hooks de git: este passo é a única verificação.
 ```bash
 scripts/verify.sh          # formatação, lint, build, testes unitários, build do frontend
 scripts/verify.sh --full   # também testes de integração e imagem arm64 (exige Docker)
+scripts/verify.sh --image  # como --full, mas sempre constrói a imagem arm64
 ```
 
-Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependências. Não declare o trabalho concluído com falhas, e não enfraqueça uma verificação para fazê-la passar.
+Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependências. O `--full` só constrói a imagem arm64 quando muda algo que a afeta e ainda não foi enviado (`deploy/Dockerfile`, `.dockerignore`, `*.csproj`, `Directory.*.props`, `global.json`, `package*.json` do frontend); `--image` força a construção. Não declare o trabalho concluído com falhas, e não enfraqueça uma verificação para fazê-la passar.
 
 ## Idioma
 

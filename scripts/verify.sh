@@ -1,19 +1,32 @@
 #!/usr/bin/env bash
 # Verificação local do repositório. Não há CI: este script é a única barreira.
 #   scripts/verify.sh          rápido, sem Docker
-#   scripts/verify.sh --full   também testes de integração e imagem arm64
+#   scripts/verify.sh --full   também testes de integração e, se algo que a afeta mudou, imagem arm64
+#   scripts/verify.sh --image  como --full, mas sempre constrói a imagem arm64
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 full=false
+image=false
 case "${1:-}" in
   "") ;;
   --full) full=true ;;
-  *) echo "Uso: scripts/verify.sh [--full]" >&2; exit 2 ;;
+  --image) full=true; image=true ;;
+  *) echo "Uso: scripts/verify.sh [--full | --image]" >&2; exit 2 ;;
 esac
 
 step() { printf '\n==> %s\n' "$1"; }
+
+# A publicação Native AOT é lenta. Ela só roda quando muda algo que o build comum não cobre:
+# a receita da imagem, as dependências ou as versões das ferramentas. Compara com o que ainda
+# não foi enviado (commits locais, alterações e arquivos novos); sem upstream, constrói sempre.
+image_inputs_changed() {
+  local base
+  base=$(git rev-parse --verify --quiet '@{upstream}') || return 0
+  { git diff --name-only "$base"; git ls-files --others --exclude-standard; } |
+    grep -qE '^(deploy/Dockerfile|\.dockerignore|global\.json|Directory\.(Build|Packages)\.props|.*\.csproj|Wrexercise/webapp/package(-lock)?\.json)$'
+}
 
 step "Backend: formatação"
 dotnet format Wrexercise.slnx --verify-no-changes
@@ -40,8 +53,8 @@ step "Frontend: build"
 (cd Wrexercise/webapp && npm run --silent build)
 
 if [ "$full" = true ]; then
-  step "Banco de desenvolvimento"
-  scripts/dev-db.sh
+  step "Banco de testes"
+  scripts/test-db.sh
 
   step "Backend: testes de integração"
   dotnet test --project Wrexercise.IntegrationTests -c Release --no-build
@@ -51,8 +64,12 @@ if [ "$full" = true ]; then
     docker compose -f deploy/compose.yaml -f deploy/compose.tunnel.yaml config -q
   sh -n deploy/remote-termux.sh
 
-  step "Imagem linux/arm64 (publicação Native AOT real)"
-  docker buildx build --platform linux/arm64 -f deploy/Dockerfile -t wrexercise:verify-arm64 --load .
+  if [ "$image" = true ] || image_inputs_changed; then
+    step "Imagem linux/arm64 (publicação Native AOT real)"
+    docker buildx build --platform linux/arm64 -f deploy/Dockerfile -t wrexercise:verify-arm64 --load .
+  else
+    step "Imagem linux/arm64: pulada (nada que a afete mudou; use --image para forçar)"
+  fi
 fi
 
 printf '\nTudo certo.\n'

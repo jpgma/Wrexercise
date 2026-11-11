@@ -395,7 +395,8 @@ wrexercise/
 │
 ├── scripts/
 │   ├── verify.sh
-│   └── dev-db.sh
+│   ├── dev-db.sh
+│   └── test-db.sh
 │
 ├── docs/
 │   ├── arquitetura.md

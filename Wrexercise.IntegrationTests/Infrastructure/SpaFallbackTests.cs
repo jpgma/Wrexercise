@@ -87,6 +87,7 @@ public sealed class SpaFallbackTests : IDisposable
     private WebApplicationFactory<Program> CreateFactory() =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            builder.UseTestDefaults();
             builder.UseSetting(WebHostDefaults.WebRootKey, _webRoot.FullName);
             builder.UseSetting("ConnectionStrings:Database", "Host=127.0.0.1;Port=1;Database=x;Username=x;Password=x");
         });
