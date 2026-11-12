@@ -33,6 +33,7 @@ Para testar localmente o mesmo que vai para produção (Native AOT, PostgreSQL e
 ```powershell
 .\run.bat         # constrói, migra e sobe em http://localhost
 .\run.bat --tunnel  # igual, e publica em https://wx-dev.jpgmaraujo.com.br
+.\run.bat --tunnel-maquina  # igual, num túnel só desta máquina: https://wx-<nome da máquina>.jpgmaraujo.com.br
 .\run.bat logs    # acompanha os logs da aplicação
 .\run.bat backup  # grava um backup do banco e das evidências
 .\run.bat restore 20261105-030000  # restaura um backup, com o app parado
@@ -52,6 +53,8 @@ Para testar o aplicativo inteiro sem montar dados à mão, com a pilha no ar:
 Contas: `ana@seed.test`, `bruno@seed.test`, `carla@seed.test` e `diego@seed.test`, todas com a senha `wrexercise`. O que cada uma tem está em [`scripts/seed/README.md`](scripts/seed/README.md).
 
 `--tunnel` publica esta máquina na internet por um túnel da Cloudflare, até `run.bat stop`. Na primeira vez, pede o login na Cloudflare pelo navegador e substitui o registro DNS de `wx-dev.jpgmaraujo.com.br`. O cadastro sem convite fica fechado: crie a primeira conta com `.\run.bat` antes de publicar. As credenciais do túnel ficam em `%LOCALAPPDATA%\Wrexercise\cloudflared`.
+
+Se outra máquina também roda `--tunnel`, as duas viram conectores do mesmo túnel `wx-dev`, e a Cloudflare divide as requisições entre elas: metade cai num banco diferente. Use `--tunnel-maquina` numa delas. Ele cria o túnel `wx-<nome da máquina>` (o `%COMPUTERNAME%` em minúsculas) e o registro DNS do mesmo nome, sem mexer em `wx-dev`.
 
 ## Verificação
 

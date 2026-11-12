@@ -9,6 +9,9 @@ rem   run.bat --tunnel     igual ao padrão, mas publica em https://wx-dev.jpgma
 rem                          da Cloudflare. Pode ser combinado com --rebuild. Na primeira vez, pede o
 rem                          login na Cloudflare pelo navegador. Com o banco vazio, quem abrir o link
 rem                          primeiro cria a primeira conta: abra-o logo após subir.
+rem   run.bat --tunnel-maquina  igual a --tunnel, mas com um túnel só desta máquina, em
+rem                          https://wx-<nome da máquina>.jpgmaraujo.com.br. Use quando outra máquina
+rem                          já publica em wx-dev: dois conectores no mesmo túnel dividem o tráfego.
 rem   run.bat --ssh        em vez de subir aqui, implanta o app no celular Android (Termux, sem root) por SSH.
 rem                          O app roda nativo; PostgreSQL e túnel da Cloudflare são do repositório
 rem                          Environment, que precisa estar implantado antes. Usa o perfil SSH compartilhado
@@ -83,6 +86,16 @@ if /i "%~1"=="--tunnel" (
   shift
   goto :parse
 )
+if /i "%~1"=="--tunnel-maquina" (
+  set "TUNNEL=1"
+  rem Um rótulo só (wx-nome, não wx-dev.nome): o certificado gratuito da Cloudflare cobre um nível.
+  for /f %%n in ('powershell -NoProfile -Command "$env:COMPUTERNAME.ToLower() -replace '[^a-z0-9-]','-'"') do (
+    set "TUNNEL_NAME=wx-%%n"
+    set "TUNNEL_HOST=wx-%%n.jpgmaraujo.com.br"
+  )
+  shift
+  goto :parse
+)
 if /i "%~1"=="--ssh" (
   set "SSH_MODE=1"
   shift
@@ -99,7 +112,7 @@ if /i "%~1"=="ssh-backup" goto :ssh_backup
 if /i "%~1"=="restore" goto :restore
 if /i "%~1"=="stop" goto :stop
 if /i "%~1"=="reset" goto :reset
-echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
+echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--tunnel-maquina^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
 exit /b 2
 
 :start
