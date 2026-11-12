@@ -72,6 +72,7 @@ ENFEITES = [
 PARADO_EMBAIXO = {
     "sequencia8": 10,  # o vaso
     "sequencia12": 13,  # o vaso e o tronco
+    "noturno": 22,  # o poste, abaixo da lanterna
 }
 
 # Enfeites cujo único movimento é um brilho que passa: os quadros saem da base, por código, e não de uma

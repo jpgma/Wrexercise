@@ -2,7 +2,7 @@
 
 > Prompts para gerar no ChatGPT (geração de imagem) os 19 Enfeites (`docs/gamificacao.md` §9.1), apoiados no chão da praça e animados (`docs/decisoes/0050-enfeites-no-chao.md`). As imagens geradas são só a **fonte**: elas vão para `fonte/`, e o `build.py` recorta cada objeto, o reduz à escala do mestre da praça, o ajusta à paleta `wrexercise` e monta o atlas `saida/enfeites.png` (4 quadros × 19 linhas de 40×40), copiado para `webapp/public/`. Nunca copie uma imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** a folha-base está em `fonte/base.png` e já está no atlas; as tiras ainda não foram geradas, então os Enfeites ficam parados. Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
+> **Estado:** completo. A folha-base está em `fonte/base.png`; as tiras 01–03, 09–14 e 16–19 estão em `fonte/`; os Enfeites 04–08 e 15 brilham por código (`BRILHO`). Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
 
 ## Como usar
 
