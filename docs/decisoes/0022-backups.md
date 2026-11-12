@@ -28,7 +28,11 @@ Q002 pedia backup diário do banco e das evidências, retenção, cópia externa
   - no `run.bat`, vale `%LOCALAPPDATA%\Wrexercise\backups`, fora da pasta que `run.bat reset` apaga;
   - para ter cópia externa, aponte-o para uma pasta sincronizada (OneDrive, Google Drive) ou copie os arquivos para fora da máquina regularmente.
 - O agendamento fica com o sistema: `cron` no Linux e o Agendador de Tarefas no Windows. Os comandos estão no README.
-- O teste de restauração é manual e periódico, conforme o roteiro do README.
+- O teste de restauração é periódico, uma vez por mês e depois de mudar o backup: `run.bat testar-restauracao` (README, "Teste de restauração").
+  - Restaura o backup do Drive num projeto Docker separado e vazio.
+  - Aplica as migrações do código atual.
+  - Confere cada evidência (SHA-256) e cada avatar citados pelo banco.
+  - Não mexe no celular.
 
 ## Impacto
 
@@ -36,3 +40,15 @@ Q002 pedia backup diário do banco e das evidências, retenção, cópia externa
 - **Compromisso aceito:** a cópia externa não é automática se `BACKUP_DIR` não estiver numa pasta sincronizada. Um backup só na mesma máquina não protege contra perda do disco.
 - **Compromisso aceito:** as evidências são copiadas por inteiro todos os dias. Com 10 pessoas e imagens comprimidas no navegador, o volume é pequeno. Se crescer, troca-se por cópia incremental.
 - Os backups contêm todas as evidências e os hashes de senha: a pasta de destino precisa ser privada.
+
+## Último teste de restauração
+
+Atualize a cada `run.bat testar-restauracao`: data, backup usado, contagens e resultado.
+
+- **2026-11-12, backup real do Drive: não concluído. O teste achou uma falha no backup.**
+  - Nenhum envio ao Drive deu certo depois de 2026-11-12 03:18 UTC, nem do celular nem do PC.
+  - O Google recusava a renovação do token com `401 unauthorized_client`: o token tinha sido emitido para outro client OAuth que não o `client_id` da configuração. Ele valeu até expirar, 1 h depois dos primeiros backups.
+  - Correção: novo login no PC com o client próprio (`rclone config reconnect gdrive:`, conta dos backups). A chave do crypt é a mesma no PC e no celular.
+  - Com o `drive.file`, o client não vê a pasta `wrexercise` enviada com o token anterior (1,9 MB). O próximo envio do celular cria uma pasta nova e reenvia tudo. A pasta antiga pode ser apagada pelo Drive na web.
+  - Pendente: enviar a configuração ao celular, reenviar e rodar `run.bat testar-restauracao` de novo.
+- **2026-11-12, Drive simulado** (alias do rclone para uma pasta, `WX_REMOTO`), com o banco da pilha local: 14 usuários, 2 grupos, 458 atividades, 1 evidência com miniatura, 4 avatares. Sem problemas. A miniatura só existia em `evidencias-removidas/` com data posterior e voltou. Uma evidência alterada de propósito fez o teste falhar com "SHA-256 DIFERENTE".

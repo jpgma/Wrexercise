@@ -31,6 +31,12 @@ rem                          perguntas: rclone (download oficial e pkg), login n
 rem                          configuração para o celular, tarefa de backup, teste e cópia extra agendada.
 rem                          Também aceita --configurar-backup. Pode rodar de novo. Ver decisão 0046.
 rem   run.bat restore D    restaura o backup da data D (AAAAMMDD-HHMMSS), com o app parado
+rem   run.bat testar-restauracao [D]  testa o backup do Google Drive sem tocar na produção: baixa o
+rem                          arquivo diário (o mais recente, ou o da data D) e as evidências, restaura tudo
+rem                          num projeto Docker separado e vazio, aplica as migrações do código atual e
+rem                          confere cada evidência (SHA-256) e avatar citados pelo banco. Os dados
+rem                          decifrados são apagados no fim; se falhar, ficam para inspeção até
+rem                          run.bat testar-restauracao limpar. Pode rodar com a pilha local no ar.
 rem   run.bat stop         para os serviços e mantém os dados
 rem   run.bat reset        para os serviços e APAGA os dados locais
 chcp 65001 >nul
@@ -61,6 +67,15 @@ set "TUNNEL_ROOT=%LOCALAPPDATA%\Wrexercise\cloudflared"
 set "TUNNEL_DIR=%TUNNEL_ROOT:\=/%"
 set "TUNNEL_IMAGE=cloudflare/cloudflared:2026.10.3"
 set "CLOUDFLARED=docker run --rm -v "%TUNNEL_DIR%:/home/nonroot/.cloudflared" %TUNNEL_IMAGE% tunnel"
+
+rem Backup no Google Drive (decisão 0046): rclone e configuração deste PC, criados por configurar-backup.
+set "RCLONE_DIR=%LOCALAPPDATA%\Wrexercise\rclone"
+set "RCLONE_CONF=%RCLONE_DIR%\rclone.conf"
+set "RCLONE_BIN=%RCLONE_DIR%\bin"
+rem WX_REMOTO troca o remoto, como em nuvem.sh (por exemplo, um alias do rclone para uma pasta local).
+set "REMOTO=wx-cripto"
+if defined WX_REMOTO set "REMOTO=%WX_REMOTO%"
+set "DRIVE=gdrive"
 
 rem Projeto próprio: não se mistura com o banco de desenvolvimento (wrexercise-dev).
 set "COMPOSE=docker compose -p wrexercise-local -f deploy/compose.yaml"
@@ -117,9 +132,10 @@ if /i "%~1"=="ssh-backup" goto :ssh_backup
 if /i "%~1"=="configurar-backup" goto :configurar_backup
 if /i "%~1"=="--configurar-backup" goto :configurar_backup
 if /i "%~1"=="restore" goto :restore
+if /i "%~1"=="testar-restauracao" goto :testar_restauracao
 if /i "%~1"=="stop" goto :stop
 if /i "%~1"=="reset" goto :reset
-echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--tunnel-maquina^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| configurar-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
+echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--tunnel-maquina^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| configurar-backup ^| restore AAAAMMDD-HHMMSS ^| testar-restauracao [AAAAMMDD-HHMMSS^|limpar] ^| stop ^| reset
 exit /b 2
 
 :start
@@ -243,6 +259,116 @@ if errorlevel 1 goto :fail
 if exist "%DATA_ROOT%" rmdir /s /q "%DATA_ROOT%"
 if exist "%DATA_ROOT%" goto :fail
 echo Dados locais apagados.
+exit /b 0
+
+:testar_restauracao
+rem Teste de restauração do backup do Google Drive (decisões 0022 e 0046), sem tocar no celular: projeto
+rem Docker próprio, pasta de dados vazia e só os serviços db e app (o Caddy fica de fora: as portas 80 e
+rem 443 continuam livres para a pilha local). Os dados decifrados ficam em RESTAURACAO_ROOT.
+set "RESTAURACAO_ROOT=%LOCALAPPDATA%\Wrexercise\restauracao"
+set "DATA_DIR=%RESTAURACAO_ROOT:\=/%/dados"
+set "BACKUP_DIR=%RESTAURACAO_ROOT:\=/%/download"
+set "COMPOSE=docker compose -p wrexercise-restauracao -f deploy/compose.yaml"
+if /i "%~2"=="limpar" goto :tr_limpar
+set "TR_DATA=%~2"
+call :achar_rclone
+if not defined RCLONE (
+  echo O rclone não está neste PC. Rode run.bat configurar-backup.
+  exit /b 2
+)
+if not exist "%RCLONE_CONF%" (
+  echo %RCLONE_CONF% não existe. Rode run.bat configurar-backup ou copie-o do gerenciador de senhas.
+  exit /b 2
+)
+set "RC="%RCLONE%" --config "%RCLONE_CONF%""
+call :tr_apagar
+if errorlevel 1 goto :tr_falhou
+mkdir "%RESTAURACAO_ROOT%\download" "%RESTAURACAO_ROOT%\dados\evidencias" "%RESTAURACAO_ROOT%\dados\avatares"
+if errorlevel 1 goto :tr_falhou
+
+echo.
+echo ==^> 1/6 Escolhendo o backup no Drive
+%RC% lsf --files-only --include "wrexercise-%TR_DATA%*.tar.gz" %REMOTO%:diarios >"%RESTAURACAO_ROOT%\diarios.txt"
+if errorlevel 1 goto :tr_falhou
+sort "%RESTAURACAO_ROOT%\diarios.txt" /o "%RESTAURACAO_ROOT%\diarios.txt"
+set "TR_NOME="
+for /f "usebackq delims=" %%f in ("%RESTAURACAO_ROOT%\diarios.txt") do set "TR_NOME=%%f"
+if not defined TR_NOME (
+  echo Nenhum backup %TR_DATA% em %REMOTO%:diarios.
+  goto :tr_falhou
+)
+rem wrexercise-AAAAMMDD-HHMMSS[-implantacao].tar.gz: a data começa no 12º caractere.
+set "TR_STAMP=%TR_NOME:~11,15%"
+echo %TR_NOME%
+
+echo.
+echo ==^> 2/6 Baixando o arquivo diário e as evidências
+%RC% copy %REMOTO%:diarios/%TR_NOME% "%RESTAURACAO_ROOT%\download"
+if errorlevel 1 goto :tr_falhou
+%RC% copy %REMOTO%:evidencias "%RESTAURACAO_ROOT%\dados\evidencias"
+if errorlevel 1 goto :tr_falhou
+rem Como em nuvem.sh restore: um backup antigo pode citar evidências removidas depois dele.
+%RC% lsf --dirs-only %REMOTO%:evidencias-removidas >"%RESTAURACAO_ROOT%\removidas.txt" 2>nul
+for /f "usebackq delims=/" %%d in ("%RESTAURACAO_ROOT%\removidas.txt") do if "%%d" GTR "%TR_STAMP%" (
+  %RC% copy --ignore-existing %REMOTO%:evidencias-removidas/%%d "%RESTAURACAO_ROOT%\dados\evidencias"
+  if errorlevel 1 goto :tr_falhou
+)
+
+echo.
+echo ==^> 3/6 Construindo %WREXERCISE_IMAGE% com o código atual
+docker buildx build -f deploy/Dockerfile -t %WREXERCISE_IMAGE% --load .
+if errorlevel 1 goto :tr_falhou
+
+echo.
+echo ==^> 4/6 Restaurando o banco e os avatares num PostgreSQL vazio
+%COMPOSE% up -d --wait db
+if errorlevel 1 goto :tr_falhou
+%COMPOSE% run --rm backup restore-diario %TR_NOME%
+if errorlevel 1 goto :tr_falhou
+
+echo.
+echo ==^> 5/6 Aplicando as migrações do código atual e subindo o app
+%COMPOSE% run --rm app migrate
+if errorlevel 1 goto :tr_falhou
+%COMPOSE% up -d --wait app
+if errorlevel 1 goto :tr_falhou
+
+echo.
+echo ==^> 6/6 Conferindo
+%COMPOSE% run --rm backup verificar
+if errorlevel 1 goto :tr_falhou
+
+call :tr_apagar
+echo.
+echo Teste de restauração de %TR_NOME% concluído sem problemas. Os dados decifrados foram apagados.
+echo Registre o resultado em "Último teste de restauração" de docs/decisoes/0022-backups.md.
+exit /b 0
+
+:tr_falhou
+echo.
+echo Teste de restauração FALHOU na etapa acima.
+echo Os dados reais do grupo ficaram em %RESTAURACAO_ROOT% para inspeção. Para apagar:
+echo   run.bat testar-restauracao limpar
+exit /b 1
+
+:tr_limpar
+call :tr_apagar
+if errorlevel 1 goto :fail
+echo Dados do teste de restauração apagados.
+exit /b 0
+
+:tr_apagar
+%COMPOSE% down -v --remove-orphans >nul 2>&1
+if exist "%RESTAURACAO_ROOT%" rmdir /s /q "%RESTAURACAO_ROOT%"
+if exist "%RESTAURACAO_ROOT%" exit /b 1
+exit /b 0
+
+:achar_rclone
+rem Define RCLONE: o baixado por configurar-backup, o do PATH ou o do winget. Vazio se não houver.
+set "RCLONE="
+if exist "%RCLONE_BIN%\rclone.exe" set "RCLONE=%RCLONE_BIN%\rclone.exe"
+if not defined RCLONE for /f "delims=" %%r in ('where rclone 2^>nul') do if not defined RCLONE set "RCLONE=%%r"
+if not defined RCLONE if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
 exit /b 0
 
 :fail
@@ -406,10 +532,6 @@ rem Configura o backup no Google Drive de ponta a ponta (decisão 0046), com per
 rem rclone neste PC e no celular, login no Google, remoto cifrado, cópia da configuração para o
 rem celular, tarefa de backup, backup de teste e, se quiser, a cópia extra agendada neste PC.
 rem Pode rodar de novo: reaproveita a configuração que já existir aqui ou no celular.
-set "RCLONE_DIR=%LOCALAPPDATA%\Wrexercise\rclone"
-set "RCLONE_CONF=%RCLONE_DIR%\rclone.conf"
-set "REMOTO=wx-cripto"
-set "DRIVE=gdrive"
 set "NOVA_CHAVE="
 echo.
 echo ==^> Configuração do backup no Google Drive ^(docs/decisoes/0046-backup-no-google-drive.md^)
@@ -438,12 +560,8 @@ if errorlevel 1 goto :fail
 
 echo.
 echo ==^> 2/7 rclone neste PC
-set "RCLONE_BIN=%RCLONE_DIR%\bin"
 if not exist "%RCLONE_DIR%" mkdir "%RCLONE_DIR%"
-set "RCLONE="
-if exist "%RCLONE_BIN%\rclone.exe" set "RCLONE=%RCLONE_BIN%\rclone.exe"
-if not defined RCLONE for /f "delims=" %%r in ('where rclone 2^>nul') do if not defined RCLONE set "RCLONE=%%r"
-if not defined RCLONE if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
+call :achar_rclone
 if defined RCLONE goto :cb_rclone_pc_ok
 rem Sem winget (nem sempre existe): baixa o zip oficial com o curl.exe e o tar.exe do Windows, sem
 rem administrador, e confere o SHA-256 contra o SHA256SUMS publicado para a versão.

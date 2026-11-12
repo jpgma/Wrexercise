@@ -37,6 +37,7 @@ Para testar localmente o mesmo que vai para produção (Native AOT, PostgreSQL e
 .\run.bat logs    # acompanha os logs da aplicação
 .\run.bat backup  # grava um backup do banco e das evidências
 .\run.bat restore 20261105-030000  # restaura um backup, com o app parado
+.\run.bat testar-restauracao  # testa o backup do Google Drive num projeto Docker separado
 .\run.bat stop    # para os serviços e mantém os dados
 .\run.bat reset   # para os serviços e apaga os dados locais
 ```
@@ -163,7 +164,15 @@ Cópia extra dos arquivos diários (sem as evidências) para `BACKUP_DIR` no Win
 
 #### Teste de restauração
 
-De tempos em tempos, sem mexer na produção: no Windows, com uma cópia do `rclone.conf`, baixe o mais recente (`rclone copy wx-cripto:diarios/<arquivo> .` e `rclone copy wx-cripto:evidencias <pasta>`), suba a pilha local com `.\run.bat`, restaure o `wrexercise.dump` com `pg_restore --clean --if-exists --no-owner` no contêiner `db`, copie avatares e evidências para `%LOCALAPPDATA%\Wrexercise\local` e confira as atividades e as imagens em http://localhost.
+Uma vez por mês, e depois de mudar o backup, sem mexer no celular:
+
+```powershell
+.\run.bat testar-restauracao                    # o backup mais recente do Drive
+.\run.bat testar-restauracao 20261105-030000    # ou um específico
+.\run.bat testar-restauracao limpar             # apaga os dados decifrados, se o teste falhou
+```
+
+Usa o `rclone.conf` deste PC (`run.bat configurar-backup`). Baixa o arquivo diário e as evidências e restaura tudo num projeto Docker separado e vazio (`wrexercise-restauracao`, só `db` e `app`: pode rodar com a pilha local no ar). Depois aplica as migrações do código atual e confere se o app responde e se toda evidência, miniatura e avatar citado pelo banco está no disco, com o SHA-256 de cada evidência igual ao gravado no envio. No fim apaga os dados decifrados. Registre o resultado em "Último teste de restauração" da decisão 0022.
 
 Na pilha local de Docker, o backup continua em `BACKUP_DIR`: `.\run.bat backup`, `.\run.bat reset`, `.\run.bat` e `.\run.bat restore <data>`.
 
