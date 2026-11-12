@@ -66,8 +66,8 @@ type Caixa = { x0: number; y0: number; x1: number; y1: number };
 
 /** A praça é mostrada em 2×. */
 const escala = 2;
-/** Distância entre os pés do dono e a base do Enfeite. */
-const Afastamento = 26 * escala;
+/** Distância entre os pés do dono e a base do Enfeite (de lado, mais meia largura do objeto). */
+const Afastamento = 14 * escala;
 /**
  * Os ângulos que cada vaga tenta, a partir da direção do dono: as duas primeiras em diagonal, a
  * terceira bem atrás. Sem chão livre, a vaga tenta o outro lado e ângulos mais abertos.
@@ -78,7 +78,7 @@ const AngulosDasVagas = [
   [0, 75, -75, 40, -40],
 ].map((angulos) => angulos.map((g) => (g * Math.PI) / 180));
 /** Tentativas de cada vaga quando a primeira posição está ocupada: mais longe, depois mais perto. */
-const Recuos = [0, 14, 28, -10];
+const Recuos = [0, 10, 20, -6];
 /** Altura da faixa de chão que um Enfeite ocupa: dois Enfeites nunca dividem o mesmo chão. */
 const FaixaDeChao = 10 * escala;
 /**
@@ -91,6 +91,12 @@ const corpo = {
   cintura: 14 * escala,
 };
 const MargemLateral = 18;
+/**
+ * O miolo da elipse dos avatares é o palco das encenações: nenhum Enfeite fica nele. Fração da elipse
+ * que passa pelos avatares; os raios mínimos são os da praça (CenaGrupo.tsx).
+ */
+const Miolo = 0.8;
+const raioMinimo = { x: 60, y: 48 };
 /** O caminho de quem sai pela porta na entrada do dia fica livre. */
 const caminhoDaPorta: Caixa = {
   x0: vaoDaPorta.x - 32,
@@ -185,6 +191,20 @@ export function posicionarEnfeites({
     .sort((a, b) => b.posicao.y - a.posicao.y);
   const chaos: Caixa[] = [];
   const colocados: EnfeiteColocado[] = [];
+  const raio = {
+    x: Math.max(
+      raioMinimo.x,
+      ...pessoas.map((p) => Math.abs(p.posicao.x - centro.x)),
+    ),
+    y: Math.max(
+      raioMinimo.y,
+      ...pessoas.map((p) => Math.abs(p.posicao.y - centro.y)),
+    ),
+  };
+  const noMiolo = (x: number, y: number) =>
+    pessoas.length > 1 &&
+    ((x - centro.x) / raio.x) ** 2 + ((y - centro.y) / raio.y) ** 2 <
+      Miolo ** 2;
 
   const colocar = (
     usuarioId: string,
@@ -228,6 +248,7 @@ export function posicionarEnfeites({
         };
         const inteiro: Caixa = { ...chao, y0: y - alto };
         const livre =
+          !noMiolo(x, y) &&
           !obstaculos.some((o) => cruza(chao, o)) &&
           !chaos.some((c) => cruza(chao, c)) &&
           // Na frente de alguém (base mais abaixo que os pés), não cobre a cabeça nem o tronco.
