@@ -87,6 +87,12 @@ BRILHO = {
 }
 GIZ, GIZ_SOMBRA = "#f5f1e8", "#d6d0c0"
 
+# A ordem dos quadros da tira (0 a 3), quando o quadro 1 do ChatGPT não combina com os outros: o
+# tapete veio com o quadro 1 desenhado de outro jeito, então o ciclo usa 2, 3, 4, 3.
+ORDEM_DA_TIRA = {
+    "zen": [1, 2, 3, 2],
+}
+
 (AQUI / "saida").mkdir(exist_ok=True)
 (AQUI / "preview").mkdir(exist_ok=True)
 
@@ -135,6 +141,8 @@ def main():
         elif BASE.exists() and tira.exists():
             altura = base.getbbox()[3] - base.getbbox()[1]
             quadros = recortar_grade(tira, 2, 2, QUADROS, LADO, cores, altura_do_primeiro=altura)
+            if conquista in ORDEM_DA_TIRA:
+                quadros = [quadros[i] for i in ORDEM_DA_TIRA[conquista]]
             # O quadro 1 da tira fica onde o objeto está na base: a tira só acrescenta o movimento.
             dx = base.getbbox()[0] - quadros[0].getbbox()[0]
             dy = base.getbbox()[3] - quadros[0].getbbox()[3]

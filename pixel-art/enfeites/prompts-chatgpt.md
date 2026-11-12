@@ -127,7 +127,7 @@ pixels) and loops smoothly from frame 4 back to frame 1.
 | 11 | a parked bicycle | the front wheel turns slowly: the spokes rotate a little each frame (1, 2, 3, 4), and the frame and the rear wheel stay still. |
 | 12 | a kiddie pool with a floating buoy | the water shimmers and the buoy bobs: the light ripples on the water move each frame, and the buoy is 1 px lower in frames 2 and 3. |
 | 13 | a mini football goal with a ball | the ball rocks and the net ripples: 1 rest, 2 ball rolls 1 px left, 3 rest, 4 ball rolls 1 px right; the net bulges 1 px in frames 2 and 4. |
-| 14 | a half-unrolled yoga mat | the rolled end breathes: 1 rest, 2 the roll is 1 px taller, 3 rest, 4 the flat end's corner lifts 1 px. |
+| 14 | a half-unrolled yoga mat | the mat rolls up and unrolls slightly, like a breath: 1 rest; 2 the roll moves 1 px toward the flat end, which gets 1 px shorter, and the roll turns a little (the spiral at its end rotates); 3 the roll moves 2 px toward the flat end, the flat part 2 px shorter; 4 back to 1 px, as in frame 2. The roll keeps its size; only the flat part gets shorter and longer. |
 | 15 | a pair of parallettes | a glint runs along the bars: 1 none, 2 left bar, 3 right bar, 4 none. |
 | 16 | a standing rooster | the head bobs: 1 neutral, 2 head forward 1 px and down 1 px, 3 neutral, 4 head up with the beak open and the tail feathers fluffed. |
 | 17 | a street lamp post | frame 1 lamp OFF exactly as attached; frames 2, 3 and 4 the glass is lit yellow #ffd34e with a chalk core, and the brightness flickers slightly (2 full, 3 one row dimmer #d9a02b, 4 full). The pole never changes. |
@@ -145,6 +145,7 @@ pixels) and loops smoothly from frame 4 back to frame 1.
 
 1. Folha-base: separa as manchas que não são magenta e junta as que quase se encostam (o bloco de largada e os tênis) num objeto. Lê os objetos em ordem de leitura (linhas pela altura, da esquerda para a direita), e não pela grade: o ChatGPT às vezes põe 6 objetos numa linha. Se não achar exatamente 19, para com erro. Reduz **todas com a mesma escala**, pela cor mais comum de cada bloco, para que a maior ocupe os 40 px; assim os objetos mantêm as proporções reais. Cada objeto fica centrado e apoiado na base da célula.
 2. Tira: divide em 2×2 e reduz os 4 quadros com a escala que deixa o quadro 1 com a altura do objeto na base. Cada quadro mantém a posição relativa ao quadro 1 (um rabo que balança não arrasta o corpo), e o quadro 1 é alinhado ao objeto da base.
+   Se o quadro 1 da tira não combinar com os outros, ponha o Enfeite em `ORDEM_DA_TIRA` com a ordem dos quadros a usar (o tapete usa 2, 3, 4, 3).
    Se a parte que devia ficar parada (um vaso, uma base) tremer entre os quadros, ponha o Enfeite em `PARADO_EMBAIXO` no `build.py`: as linhas de baixo de todos os quadros passam a ser as do quadro 1.
 3. Troca cada cor pela mais próxima da paleta `wrexercise` (e das cores do script); o magenta vira transparente.
 4. Grava `saida/enfeites.png`, copia para `webapp/public/enfeites.png` e grava `preview/folha-4x.png` e `preview/animado.gif`.
