@@ -112,16 +112,18 @@ internal static class RevisarAtividade
                 (await historico.ExecuteScalarAsync(cancellationToken))!);
         }
 
-        await NotificacoesAtividade.NotificarSituacaoAsync(
-            connection,
-            transaction,
-            atividadeId,
-            decisao,
-            cancellationToken);
-
         if (decisao == SituacaoVerificacao.Verificada)
         {
             await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
+        }
+        else
+        {
+            await NotificacoesAtividade.NotificarSituacaoAsync(
+                connection,
+                transaction,
+                atividadeId,
+                decisao,
+                cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);

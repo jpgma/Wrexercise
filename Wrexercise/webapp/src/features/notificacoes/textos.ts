@@ -38,7 +38,6 @@ export function getTextoNotificacao({
     case "Disputa":
       return `O treino de ${primeiroNome(atorNome)} precisa de uma decisão`;
     case "SituacaoAlterada":
-      if (situacao === "Verificada") return "Seu treino foi verificado";
       if (situacao === "Rejeitada") return "Seu treino foi rejeitado";
       return "Seu treino entrou em revisão";
     case "CartaRecebida":
@@ -48,9 +47,7 @@ export function getTextoNotificacao({
     case "CartaRecusada":
       return `${primeiroNome(atorNome)} recusou a sua carta. Ela voltou para a sua Mão`;
     case "JogadaConcluida":
-      return atorNome
-        ? `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`
-        : "Você cumpriu uma carta. Energia para os dois!";
+      return `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`;
     case "RivalEscolhido":
       return `${primeiroNome(atorNome)} escolheu você como Rival da semana. Quem cumpre a meta primeiro?`;
   }

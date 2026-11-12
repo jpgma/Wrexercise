@@ -237,7 +237,7 @@ The user cannot change the e-mail.
   | `Expirada` | No answer before the deadline, or accepted with no activity that counts before the deadline. |
 
 - An activity counts if it is not `Rejeitada`, belongs to the recipient and to the group of the play, starts between the play and the deadline, and meets the goal of the card. For `Mais10Min` and `Mais20Min`, the activities that count on one day add up. The play is `Concluida` when the total of the `Verificada` activities of one day is equal to or more than the target duration. The verification can occur after the deadline. One activity can complete more than one play.
-- When a play becomes `Concluida`, the sender and the recipient get the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
+- When a play becomes `Concluida`, the sender gets the notification `JogadaConcluida`, and the card is spent. A card of a play that is `Recusada` or `Expirada` goes back to the hand of the sender.
 - `GET /api/grupos/{id}/jogadas` returns the plays of the current user in the group: open plays, plays with news and plays that ended in the last 3 days. Each play has `recebida` (the user is the recipient), `nova` (the user did not see the new card or the answer yet), `objetivo` (the goal now), `cartaResposta` (the answer card that the recipient used, or `null`), `desafioDuplo` (`DesafioDuplo` created the play) and `objetivosEquivalentes` (the goals that `MudancaDePlanos` can select; only for a received play that is `Enviada`, and without `Mais10Min` and `Mais20Min` if the group has no active challenge).
 - `POST /api/grupos/{id}/jogadas/vistas` with `{ "ids": ["…"] }` marks the plays as seen (at most 50 identifiers).
 - The shop page (`/jogo/loja`) shows the balance, the number of cards in the hand and the cards for sale, in two sections: "Provocações" and "Respostas". Each card has the effect and the button "Comprar por N EN". The button is disabled when the balance is too low (the page shows the missing Energy) or when the hand is full.
@@ -593,14 +593,15 @@ The system makes a notification for these events:
 | A member records an activity. | The reviewers. | `NovaAtividade` |
 | A reviewer gives his or her first reaction to an activity. A changed reaction does not make a new notification. | The author. | `Reacao` |
 | A member writes a comment. | The author and the persons who wrote comments, but not the writer. | `Comentario` |
-| The activity becomes `Verificada`, `Rejeitada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
+| The activity becomes `Rejeitada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
 | The activity becomes `EmRevisao`. | The administrators, but not the author. | `Disputa` |
 | A member plays a card to the user. | The recipient. | `CartaRecebida` |
 | The recipient accepts the card. | The sender. | `CartaAceita` |
 | The recipient refuses the card. | The sender. | `CartaRecusada` |
-| An activity completes a play. | The sender and the recipient. | `JogadaConcluida` |
+| An activity completes a play. | The sender. | `JogadaConcluida` |
 | A member chooses the user as weekly rival. | The rival. | `RivalEscolhido` |
 
+- When an activity becomes `Verificada`, the author does not get a notification.
 - The system joins unread reactions and comments of one activity into one notification with a total.
 - A card or rival notification opens the home screen of the group.
 - The bell on the home page and on the profile page shows the number of unread notifications.

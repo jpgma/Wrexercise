@@ -1,6 +1,6 @@
 # 0020 — Notificações dentro do aplicativo
 
-**Status:** DECIDIDA
+**Status:** DECIDIDA. Eventos enxugados por `0048-enxugamento-das-notificacoes.md`.
 
 ## Contexto
 
@@ -25,7 +25,7 @@ O novo mockup (decisão 0014) tem um sino na tela Início e, nas Configurações
   - treino novo: os revisores (`NovaAtividade`);
   - primeira reação de cada pessoa: o autor (`Reacao`). Trocar de reação não avisa de novo;
   - comentário: o autor e quem já comentou, menos quem escreveu (`Comentario`; os administradores saíram pela decisão 0042);
-  - a atividade ficou `Verificada`, `Rejeitada` ou `EmRevisao`: o autor (`SituacaoAlterada`);
+  - a atividade ficou `Rejeitada` ou `EmRevisao`: o autor (`SituacaoAlterada`). `Verificada` deixou de avisar (decisão 0048);
   - entrou em `EmRevisao`: os administradores, menos o autor (`Disputa`).
 - Enquanto não forem lidas, reações e comentários de uma atividade viram uma linha só, com um total.
 - Toda leitura cruza com o vínculo ativo: quem saiu de um grupo não vê mais nada dele.

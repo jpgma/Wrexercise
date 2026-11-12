@@ -76,8 +76,8 @@ internal static class VerificacaoAtividade
         update.Parameters.AddWithValue(nova);
         await update.ExecuteNonQueryAsync(cancellationToken);
 
-        // Voltar a aguardar feedback não pede nenhuma ação de ninguém.
-        if (nova != SituacaoVerificacao.AguardandoFeedback)
+        // Voltar a aguardar feedback e ser verificada são o caminho esperado: não avisam (decisão 0048).
+        if (nova is SituacaoVerificacao.Rejeitada or SituacaoVerificacao.EmRevisao)
         {
             await NotificacoesAtividade.NotificarSituacaoAsync(connection, transaction, atividadeId, nova, cancellationToken);
         }

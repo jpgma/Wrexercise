@@ -185,7 +185,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
         Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
-        Assert.Equal(1, await ContarNotificacoesAsync(bia, "JogadaConcluida"));
+        Assert.Equal(0, await ContarNotificacoesAsync(bia, "JogadaConcluida"));
     }
 
     [Fact]

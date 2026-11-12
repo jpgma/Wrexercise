@@ -105,7 +105,7 @@ public sealed class NotificacoesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Encerramento_AvisaQueFoiVerificada()
+    public async Task Encerramento_NaoAvisaQueFoiVerificada()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -116,7 +116,10 @@ public sealed class NotificacoesRoutesTests : IAsyncLifetime
 
         await VerificacaoAtividade.EncerrarJanelasExpiradasAsync(_host.DataSource, Token);
 
-        Assert.Contains(await ListarAsync(ana), n => n.Tipo == "SituacaoAlterada" && n.Situacao == "Verificada");
+        Assert.Equal(
+            "Verificada",
+            await _host.ScalarAsync<string>($"SELECT situacao_verificacao FROM atividades WHERE id = '{atividadeId}'"));
+        Assert.DoesNotContain(await ListarAsync(ana), n => n.Tipo == "SituacaoAlterada");
     }
 
     [Fact]

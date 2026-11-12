@@ -75,11 +75,9 @@ internal static class JogadasConcluidas
                 continue;
             }
 
+            // Só o remetente: quem cumpriu já sabe que treinou (decisão 0048).
             await NotificacoesJogada.NotificarAsync(
                 connection, transaction, jogadaId, jogada.Remetente, jogada.Destinatario,
-                TipoNotificacaoJogada.JogadaConcluida, cancellationToken);
-            await NotificacoesJogada.NotificarAsync(
-                connection, transaction, jogadaId, jogada.Destinatario, null,
                 TipoNotificacaoJogada.JogadaConcluida, cancellationToken);
         }
     }
