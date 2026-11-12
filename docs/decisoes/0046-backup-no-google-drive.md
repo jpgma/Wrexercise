@@ -83,7 +83,7 @@ Com o arquivo diário mais o espelho das evidências (decisão abaixo), 20 pesso
 ## Impacto
 
 - **Credencial nova, só no telefone:** `~/.config/rclone/rclone.conf`, com modo 600, contém o token do Drive e as senhas do crypt. Guarde uma cópia do `rclone.conf` no gerenciador de senhas: sem as senhas do crypt, o backup não pode ser lido.
-- **OAuth:** use o client ID padrão do rclone ou um client próprio publicado como "In production". Um client em "Testing" emite tokens que expiram em 7 dias, e o backup passa a falhar em silêncio.
+- **OAuth:** o backup usa um client OAuth próprio, num projeto gratuito do Google Cloud da conta dos backups. O client_id compartilhado do rclone será desativado pelo Google em 2026. `run.bat configurar-backup` guia a criação do client e troca o client de uma configuração antiga (`config update`, que refaz o login). O client precisa estar publicado ("In production"): em "Testing", o login expira em 7 dias e o backup para em silêncio. O escopo `drive.file` não é sensível, por isso publicar não exige verificação do Google. Com o `drive.file`, cada client só vê os arquivos que ele criou: backups enviados com outro client ficam invisíveis depois da troca.
 - **Conta:** é melhor usar uma conta Google gratuita só para backups. Ela tem 15 GB próprios, separados do Gmail e do Fotos da conta pessoal.
 - **Revisão:** ao passar de cerca de 12 GB, acrescente o Backblaze B2 como segundo destino ou reveja a retenção.
 - **Dependência:** o rclone é um pacote do Termux (`pkg install rclone`), não uma dependência do app. Não entra em `PackageAllowlistTests`.

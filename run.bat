@@ -512,19 +512,24 @@ goto :cb_testar_pc
 rem Um login no Google de uma tentativa anterior (sem o remoto cifrado ainda) pode ser reaproveitado.
 %RC% listremotes 2>nul | findstr /b /c:"%DRIVE%:" >nul
 if errorlevel 1 goto :cb_login
+rem Um login feito com o client_id compartilhado do rclone (que será desativado) não vale a pena manter.
+call :cb_client_proprio
+if errorlevel 1 goto :cb_login
 set "R="
 set /p "R=Este PC já tem o login no Google de uma tentativa anterior. Reaproveitar? [S/n]: "
 if /i not "%R%"=="n" goto :cb_login_ok
 :cb_login
+call :cb_client
+if errorlevel 1 goto :fail
 echo.
 echo Login no Google:
-echo   - Use de preferência uma conta Google só para backups ^(15 GB gratuitos, longe do Gmail e do Fotos^).
-echo   - O navegador vai abrir. Entre com essa conta e autorize o rclone.
-echo   - O acesso fica limitado aos arquivos que o próprio rclone criar ^(escopo drive.file^).
+echo   - Use a mesma conta Google do client ^(de preferência uma conta só para backups^).
+echo   - O navegador vai abrir. Entre com essa conta e autorize o app.
+echo   - O acesso fica limitado aos arquivos que o próprio app criar ^(escopo drive.file^).
 pause
 if exist "%RCLONE_CONF%" del "%RCLONE_CONF%"
 rem Sem stdout: o rclone imprime a configuração criada, com o token do Google. Os avisos vão pelo stderr.
-%RC% config create %DRIVE% drive scope=drive.file >nul
+%RC% config create %DRIVE% drive scope=drive.file client_id=%CID% client_secret=%CSECRET% >nul
 if errorlevel 1 goto :fail
 :cb_login_ok
 rem /b em vez de /x: o findstr não casa /x em linhas que terminam só com LF, como as do rclone.
@@ -561,6 +566,18 @@ if errorlevel 1 goto :fail
 set "NOVA_CHAVE=1"
 
 :cb_testar_pc
+rem Configuração antiga (deste PC ou trazida do celular) com o client_id compartilhado: troca pelo próprio.
+rem O config update refaz o login no navegador e mantém a chave do crypt.
+call :cb_client_proprio
+if not errorlevel 1 goto :cb_client_ok
+echo.
+echo Esta configuração usa o client_id compartilhado do rclone, que o Google vai desativar em 2026.
+call :cb_client
+if errorlevel 1 goto :fail
+echo O navegador vai abrir para refazer o login com o client próprio.
+%RC% config update %DRIVE% client_id=%CID% client_secret=%CSECRET% >nul
+if errorlevel 1 goto :fail
+:cb_client_ok
 echo.
 echo ==^> 4/7 Testando o Drive a partir deste PC
 %RC% mkdir %REMOTO%:diarios
@@ -627,4 +644,57 @@ echo   password  = %P1%
 echo   password2 = %P2%
 :cb_fim
 echo - Para ver os backups deste PC: "%RCLONE%" --config "%RCLONE_CONF%" lsl %REMOTO%:diarios
+exit /b 0
+
+:cb_client_proprio
+rem Sai com 0 se o remoto do Drive já usa um client_id próprio.
+%RC% config show %DRIVE% 2>nul | findstr /r /b /c:"client_id = ." >nul
+exit /b %errorlevel%
+
+:cb_client
+rem O client_id compartilhado do rclone será desativado em 2026: o backup usa um client OAuth próprio,
+rem gratuito, criado uma vez no Google Cloud. Define CID e CSECRET.
+echo.
+echo O backup precisa de um client OAuth próprio no Google Cloud ^(gratuito, uma vez só^).
+echo Com o navegador logado na conta Google dos backups:
+echo   1. Crie um projeto, por exemplo wrexercise-backup:
+echo        https://console.cloud.google.com/projectcreate
+echo   2. Ative a Google Drive API no projeto:
+echo        https://console.cloud.google.com/apis/library/drive.googleapis.com
+echo   3. Google Auth Platform ^> Branding: nome do app e e-mail de suporte; público Externo ^(External^).
+echo        https://console.cloud.google.com/auth/branding
+echo   4. Data access ^> Add or remove scopes: marque .../auth/drive.file.
+echo        https://console.cloud.google.com/auth/scopes
+echo   5. Audience ^> Publish app ^(In production^). IMPORTANTE: em Testing, o login expira em 7 dias e
+echo      o backup para. O drive.file não é escopo sensível: publicar não exige verificação do Google.
+echo        https://console.cloud.google.com/auth/audience
+echo   6. Clients ^> Create client ^> Desktop app. Copie o Client ID e o Client secret.
+echo        https://console.cloud.google.com/auth/clients
+set "R="
+set /p "R=Abrir essas páginas no navegador agora? [S/n]: "
+if /i "%R%"=="n" goto :cb_client_ler
+start "" "https://console.cloud.google.com/projectcreate"
+start "" "https://console.cloud.google.com/apis/library/drive.googleapis.com"
+start "" "https://console.cloud.google.com/auth/branding"
+start "" "https://console.cloud.google.com/auth/scopes"
+start "" "https://console.cloud.google.com/auth/audience"
+start "" "https://console.cloud.google.com/auth/clients"
+:cb_client_ler
+echo.
+set "CID="
+set "CSECRET="
+set /p "CID=Client ID (vazio cancela): "
+if not defined CID exit /b 1
+set "CID=%CID: =%"
+echo %CID%| findstr /e /c:".apps.googleusercontent.com" >nul
+if errorlevel 1 (
+  echo O Client ID termina em .apps.googleusercontent.com. Confira e cole de novo.
+  goto :cb_client_ler
+)
+set /p "CSECRET=Client secret: "
+if not defined CSECRET (
+  echo Informe o Client secret.
+  goto :cb_client_ler
+)
+set "CSECRET=%CSECRET: =%"
 exit /b 0

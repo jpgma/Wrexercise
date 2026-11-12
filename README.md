@@ -110,39 +110,39 @@ Use de preferência uma conta Google só para backups (15 GB gratuitos, separado
 O comando faz, nesta ordem:
 
 1. Atualiza os scripts e instala o rclone no celular (`pkg`) e neste PC (download oficial de downloads.rclone.org, com o SHA-256 conferido, em `%LOCALAPPDATA%\Wrexercise\rclone\bin`).
-2. Abre o navegador para o login no Google e cria os remotos `gdrive` e `wx-cripto`, com senhas aleatórias, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`.
-3. Copia os remotos para o `rclone.conf` do celular, sem mexer nos outros remotos de lá.
-4. Sobe a tarefa de backup.
-5. Oferece um backup de teste e a cópia extra agendada neste PC.
+2. Guia a criação de um **client OAuth próprio** no Google Cloud (gratuito, uma vez só) e pede o Client ID e o Client secret. O client_id compartilhado do rclone será desativado pelo Google em 2026.
+3. Abre o navegador para o login no Google e cria os remotos `gdrive` e `wx-cripto`, com senhas aleatórias, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`.
+4. Copia os remotos para o `rclone.conf` do celular, sem mexer nos outros remotos de lá.
+5. Sobe a tarefa de backup.
+6. Oferece um backup de teste e a cópia extra agendada neste PC.
 
 Pode rodar de novo:
 
 - reaproveita a configuração deste PC;
 - se só o celular tiver a configuração, traz a dele;
+- se a configuração usa o client compartilhado do rclone, troca pelo client próprio;
 - se o token do Google tiver expirado, refaz só o login;
 - nunca troca a chave do crypt sem confirmação, porque uma chave nova não lê os backups antigos.
 
 **Guarde o `rclone.conf` no gerenciador de senhas:** sem as senhas do crypt, ninguém lê os backups, nem você.
 
+O client OAuth precisa estar publicado ("Audience > Publish app", "In production"). Em "Testing", o Google faz o login expirar em 7 dias e o backup para de enviar. O escopo `drive.file` não é sensível: publicar não exige verificação do Google.
+
 Passo a passo manual, equivalente:
 
-1. No Termux: `pkg install rclone`.
-2. No Windows: instale o rclone (zip oficial de downloads.rclone.org ou `winget install Rclone.Rclone`) e, com o navegador logado na conta dos backups:
+1. Crie o client OAuth no Google Cloud, com a conta dos backups: projeto novo, Google Drive API ativada, Google Auth Platform com público Externo, escopo `drive.file`, app publicado ("In production") e um client do tipo "Desktop app". Anote o Client ID e o Client secret.
+2. Instale o rclone: `pkg install rclone` no Termux e o zip oficial de downloads.rclone.org no Windows.
+3. No Windows, com o navegador logado na conta dos backups, crie os remotos num arquivo próprio:
 
    ```powershell
-   rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"   # {"scope":"drive.file"}: o rclone só vê o que ele criou
+   $conf = "$env:LOCALAPPDATA\Wrexercise\rclone\rclone.conf"
+   rclone --config $conf config create gdrive drive scope=drive.file client_id=<Client ID> client_secret=<Client secret>
+   rclone --config $conf config create wx-cripto crypt remote=gdrive:wrexercise filename_encryption=standard directory_name_encryption=true password=<senha 1> password2=<senha 2> --obscure
    ```
 
-   Copie o token JSON que ele imprime.
-3. No Termux, `rclone config`:
-   - remoto `gdrive`: tipo `drive`, client ID e secret vazios (o padrão do rclone), escopo `drive.file`, sem configuração automática (`n`), e cole o token;
-   - remoto `wx-cripto`: tipo `crypt`, `remote = gdrive:wrexercise`, cifrar nomes (`standard`), deixe o rclone gerar as duas senhas.
-
-   Depois: `chmod 600 ~/.config/rclone/rclone.conf`.
-4. **Guarde o `rclone.conf` no gerenciador de senhas.** Sem as senhas do crypt, ninguém lê o backup, nem você.
-5. Teste: `sh ~/wrexercise/deploy/remote-termux.sh backup` e `rclone lsl wx-cripto:diarios`.
-
-Com um client OAuth próprio, publique-o como "In production": em "Testing", o token expira em 7 dias e o backup para de enviar.
+4. Envie as duas seções para o celular: `type $conf | ssh -p 8022 <usuário>@127.0.0.1 "sh wrexercise/deploy/nuvem.sh importar-config"`.
+5. **Guarde o `rclone.conf` no gerenciador de senhas.**
+6. Teste: `sh ~/wrexercise/deploy/remote-termux.sh backup` e `rclone lsl wx-cripto:diarios`.
 
 #### Comandos
 

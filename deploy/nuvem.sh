@@ -373,7 +373,11 @@ status() {
   echo "No telefone: $(ls -1 "$backups"/wrexercise-*.tar.gz 2>/dev/null | wc -l | tr -d ' ') arquivos diários, $(du -sh "$backups" 2>/dev/null | cut -f1) em dados/backups"
   if command -v rclone >/dev/null 2>&1; then
     v=$(rclone version 2>/dev/null | head -n 1)
-    if configurado; then echo "rclone: $v, remoto '$remoto' configurado"; else echo "rclone: $v, SEM o remoto '$remoto' (README, seção Backups)"; fi
+    if configurado; then echo "rclone: $v, remoto '$remoto' configurado"; else echo "rclone: $v, SEM o remoto '$remoto' (run.bat configurar-backup)"; fi
+    # O client_id compartilhado do rclone será desativado pelo Google em 2026 (decisão 0046).
+    if configurado && ! rclone config show "$drive" 2>/dev/null | grep -q '^client_id = .'; then
+      echo "AVISO: o remoto '$drive' usa o client_id compartilhado do rclone, que será desativado. Rode: run.bat configurar-backup"
+    fi
   else
     echo "rclone: não instalado (pkg install rclone); o backup fica só no telefone"
   fi
