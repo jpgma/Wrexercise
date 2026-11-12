@@ -8,12 +8,6 @@ export {
   tiposAtividade,
 } from "./labels";
 export { prepararEvidencia } from "./comprimirImagem";
-export {
-  descartarRascunho,
-  guardarRascunho,
-  lerRascunho,
-  type RascunhoAtividade,
-} from "./rascunho";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";

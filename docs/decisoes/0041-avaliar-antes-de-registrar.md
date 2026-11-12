@@ -1,6 +1,6 @@
 # 0041 — Avaliar antes de registrar
 
-**Status:** DECIDIDA. Complementa `0012-verificacao-comunitaria.md` e `0015-reacoes-em-revisao.md`.
+**Status:** DECIDIDA. Complementa `0012-verificacao-comunitaria.md` e `0015-reacoes-em-revisao.md`. O item 4 e o retorno automático ao registro do item 5 foram substituídos por `0047-fila-antes-do-formulario.md`.
 
 ## Contexto
 

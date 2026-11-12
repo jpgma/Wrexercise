@@ -1,5 +1,5 @@
-import { CheckCircle2, CloudOff } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CheckCircle2, CloudOff, Lock, LockOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -124,6 +124,77 @@ function AvancoAutomatico({
   );
 }
 
+/** Onde a pessoa está na fila que separa a tela de registro do formulário. */
+function EtapaAvaliacao({
+  posicao,
+  feitas,
+  total,
+}: {
+  posicao: number;
+  feitas: number;
+  total: number;
+}) {
+  return (
+    <div className="card mb-4 p-4">
+      <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+        <b>
+          Avaliação {posicao} de {total}
+        </b>
+        <span className="flex items-center gap-1 text-xs text-muted">
+          <Lock aria-hidden="true" className="size-3.5" /> Depois: seu treino
+        </span>
+      </div>
+      <Segments label="Avaliações feitas" valor={feitas} max={total} />
+    </div>
+  );
+}
+
+/** Fim da fila vindo do registro: o formulário está liberado. */
+function Liberado({ grupoId }: { grupoId: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // O cartão aparece abaixo das reações; no celular, ele costuma ficar fora da tela.
+    const reduzir = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    ref.current?.scrollIntoView({
+      behavior: reduzir ? "auto" : "smooth",
+      block: "center",
+    });
+    if ("vibrate" in navigator) navigator.vibrate([30, 60, 30]);
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      role="status"
+      className="card mt-5 flex animate-slide-up flex-col items-center p-6 text-center"
+    >
+      <div className="relative grid size-20 place-items-center">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 animate-burst bg-reward burst"
+        />
+        <div className="relative grid size-16 animate-pop place-items-center rounded-xl border-2 border-outline bg-progress text-on-progress shadow-sticker">
+          <LockOpen aria-hidden="true" className="size-8" />
+        </div>
+      </div>
+      <h2 className="mt-4 text-3xl uppercase">Liberado!</h2>
+      <p className="mt-1 text-sm text-muted">
+        Valeu por avaliar a galera. Agora é a sua vez.
+      </p>
+      <Link
+        to={`/grupos/${grupoId}/atividades/nova`}
+        replace
+        className="btn-primary mt-5 w-full"
+      >
+        Registrar meu treino
+      </Link>
+    </div>
+  );
+}
+
 export function RevisarPage() {
   const { id: grupoId = "", atividadeId = "" } = useParams();
   const atividade = useAtividade(atividadeId);
@@ -132,7 +203,11 @@ export function RevisarPage() {
   // Veio do registro: avaliar a fila é o que libera o formulário.
   const [busca] = useSearchParams();
   const depoisRegistrar = busca.get("depois") === "registrar";
-  const sufixo = depoisRegistrar ? "?depois=registrar" : "";
+  // Tamanho da fila quando a pessoa começou, para mostrar "Avaliação X de N".
+  const totalInicial = Number(busca.get("total")) || 0;
+  const sufixo = depoisRegistrar
+    ? `?depois=registrar&total=${totalInicial}`
+    : "";
   // Só avança sozinho depois de uma reação feita nesta tela, não ao abrir uma já avaliada.
   const [reagidaAqui, setReagidaAqui] = useState<string | null>(null);
   const avancar = reagidaAqui === atividadeId;
@@ -140,6 +215,9 @@ export function RevisarPage() {
   const naFila = fila.data ?? [];
   const avaliada = !naFila.some(({ id }) => id === atividadeId);
   const proxima = naFila.find(({ id }) => id !== atividadeId);
+  // A fila pode crescer no meio do caminho: o total nunca fica menor que o que ainda falta.
+  const total = Math.max(totalInicial, naFila.length + (avaliada ? 1 : 0));
+  const feitas = total - naFila.length;
   // Carrega a próxima durante a contagem: a troca de tela fica sem tela de carregamento.
   useAtividade(proxima?.id ?? "", avancar && proxima !== undefined);
 
@@ -178,8 +256,15 @@ export function RevisarPage() {
       <PageHeader
         title="Avaliar atividade"
         back={`/grupos/${grupoId}/inicio`}
-        subtitle={`${naFila.length} na fila`}
+        subtitle={depoisRegistrar ? undefined : `${naFila.length} na fila`}
       />
+      {depoisRegistrar && fila.isSuccess && (
+        <EtapaAvaliacao
+          posicao={avaliada ? feitas : feitas + 1}
+          feitas={feitas}
+          total={total}
+        />
+      )}
       <p className="mb-4 text-sm text-muted">
         Confira o registro com calma. Na dúvida, prefira “Suspeito” e explique
         nos comentários em vez de rejeitar.
@@ -246,39 +331,18 @@ export function RevisarPage() {
               Próxima avaliação
             </Link>
           )
-        ) : depoisRegistrar && avancar ? (
-          <AvancoAutomatico
-            para={`/grupos/${grupoId}/atividades/nova`}
-            texto="Tudo avaliado! Voltando ao seu registro…"
-            acao="Registrar atividade"
-          />
+        ) : depoisRegistrar ? (
+          <Liberado grupoId={grupoId} />
         ) : (
           <div className="card mt-5">
             <EmptyState
               icon={CheckCircle2}
               title="Tudo em dia"
-              description={
-                depoisRegistrar
-                  ? "Valeu por fazer a sua parte! Agora é a sua vez de registrar."
-                  : "Ninguém espera sua avaliação agora. Valeu por fazer a sua parte!"
-              }
+              description="Ninguém espera sua avaliação agora. Valeu por fazer a sua parte!"
               action={
-                depoisRegistrar ? (
-                  <Link
-                    to={`/grupos/${grupoId}/atividades/nova`}
-                    replace
-                    className="btn-primary"
-                  >
-                    Registrar atividade
-                  </Link>
-                ) : (
-                  <Link
-                    to={`/grupos/${grupoId}/inicio`}
-                    className="btn-primary"
-                  >
-                    Voltar ao início
-                  </Link>
-                )
+                <Link to={`/grupos/${grupoId}/inicio`} className="btn-primary">
+                  Voltar ao início
+                </Link>
               }
             />
           </div>

@@ -411,7 +411,7 @@ Nobody can edit or delete an activity.
 
 A member with activities in his or her review queue (see 8.6) cannot record an activity in that group. The API returns `409 AVALIACOES_PENDENTES`. Any reaction (`Kudos`, `Suspeito` or `Rejeitar`) removes an activity from the queue.
 
-When the queue is not empty, the form page shows the notice "N atividades esperam sua avaliação" above the form, with the button "Começar avaliação". The submit button shows "Avaliar e enviar". Both buttons open the queue. The application keeps the form data in memory (not after a page reload). When the queue is empty, the application goes back to the form with the same data. After "Avaliar e enviar", the application sends the activity automatically.
+When the queue is not empty, the form page does not show the form. It shows only the notice "N treinos esperam sua avaliação", for all entry points. The notice shows the avatars of the authors in the queue (a maximum of 5, then "+N"). The avatars come in one after the other. The notice also shows two steps: "1 Avaliar N" and "Seu treino" with a lock. The button "Começar avaliação" opens the first activity in the queue. If the API returns `409 AVALIACOES_PENDENTES` while the form is open, the application updates the queue and shows the notice. The form data is lost.
 
 ### 7.2. Evidence
 
@@ -504,7 +504,7 @@ After each reaction, the system calculates the status again:
 - The group pages show a message when the user has activities to examine.
 - The review page ("Avaliar atividade") shows one activity. After the reaction, it shows a link to the next activity in the queue.
 - After the user reacts on the review page, a bar fills in 3 seconds. Then the application opens the next activity in the queue. The user can stop this with "Ficar aqui". The application also stops it when the user starts to write a comment. If the user opens an activity that he or she already examined, the application does not go to the next activity automatically.
-- The queue must be empty before the user records an activity in the group (see 7.1). When the user starts from the form page, the application goes back to the form 3 seconds after the last reaction.
+- The queue must be empty before the user records an activity in the group (see 7.1). When the user starts from the form page, each review page shows "Avaliação X de N", a segmented bar and "Depois: seu treino". After the last reaction, the page shows "Liberado!" with an animation, a short vibration (on devices that support it) and the button "Registrar meu treino". The application does not open the form automatically. The back button goes to "Início".
 - The queue has only activities in the 48-hour window. Thus, the queue cannot block a user for more than 48 hours. An activity recorded before the user entered the group does not block the user, because the user is not a reviewer.
 
 ## 9. Progress and competition
