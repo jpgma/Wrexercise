@@ -42,6 +42,15 @@ Para testar localmente o mesmo que vai para produção (Native AOT, PostgreSQL e
 
 Exige as portas 80 e 443 livres. Usa HTTP em `localhost`, sem aviso de certificado, em vez do HTTPS da produção. Os dados ficam em `%LOCALAPPDATA%\Wrexercise\local`.
 
+Para testar o aplicativo inteiro sem montar dados à mão, com a pilha no ar:
+
+```powershell
+.\seed.bat          # recria o grupo "Seed de testes": 4 contas com histórico, Energia, conquistas e Enfeites
+.\seed.bat --reset  # apaga as Jogadas do grupo do seed; as Cartas voltam para a Mão
+```
+
+Contas: `ana@seed.test`, `bruno@seed.test`, `carla@seed.test` e `diego@seed.test`, todas com a senha `wrexercise`. O que cada uma tem está em [`scripts/seed/README.md`](scripts/seed/README.md).
+
 `--tunnel` publica esta máquina na internet por um túnel da Cloudflare, até `run.bat stop`. Na primeira vez, pede o login na Cloudflare pelo navegador e substitui o registro DNS de `wx-dev.jpgmaraujo.com.br`. O cadastro sem convite fica fechado: crie a primeira conta com `.\run.bat` antes de publicar. As credenciais do túnel ficam em `%LOCALAPPDATA%\Wrexercise\cloudflared`.
 
 ## Verificação
