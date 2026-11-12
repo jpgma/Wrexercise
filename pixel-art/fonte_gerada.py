@@ -1,4 +1,4 @@
-"""Recorte de folhas geradas por IA (Gemini), usado pelos build.py de enfeites/ e cartas/.
+"""Recorte de folhas geradas por IA (Gemini, ChatGPT), usado pelos build.py de enfeites/ e cartas/.
 
 A folha tem objetos numa grade de células iguais, sobre magenta chapado (#FF00FF), desenhados em
 pixel art ampliada. Cada objeto é reduzido por moda de cor (não por média), com a mesma escala para
@@ -25,10 +25,13 @@ def cores_do_script(constantes, paleta_sprite):
     return sorted(cores)
 
 
-def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: int, lado: int, cores, na_base=True):
+def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: int, lado: int, cores, na_base=True,
+                   altura_do_primeiro=None):
     """Devolve `quantidade` imagens lado×lado, lidas da esquerda para a direita e de cima para baixo.
 
     Cada objeto fica centrado na horizontal e, se `na_base`, apoiado na base; senão, centrado.
+    Com `altura_do_primeiro`, a escala é a que deixa o primeiro objeto com essa altura em px (os quadros
+    de uma tira de animação seguem a escala do objeto na folha-base); sem ela, o maior ocupa o lado.
     """
     tabela = Image.new("P", (1, 1))
     # O resto da tabela repete a primeira cor: com zeros, um preto puro da fonte cairia num índice
@@ -106,7 +109,10 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
         caixas[celula] = juntar(caixas[celula], caixa)
 
     # A mesma escala para todos: o maior objeto ocupa o lado inteiro, e os outros mantêm a proporção.
-    bloco = max(max(x1 - x0, y1 - y0) for x0, y0, x1, y1 in caixas) / lado
+    if altura_do_primeiro:
+        bloco = (caixas[0][3] - caixas[0][1]) / altura_do_primeiro
+    else:
+        bloco = max(max(x1 - x0, y1 - y0) for x0, y0, x1, y1 in caixas) / lado
     saidas = []
     for celula, (x0, y0, x1, y1) in enumerate(caixas):
         w = min(lado, max(1, round((x1 - x0) / bloco)))
@@ -114,6 +120,15 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
         sx, sy = (x1 - x0) / w, (y1 - y0) / h
         out = Image.new("RGBA", (lado, lado))
         ox, oy = (lado - w) // 2, (lado - h if na_base else (lado - h) // 2)
+        if altura_do_primeiro and celula > 0:
+            # Quadros de uma tira: a posição dentro da célula é a do quadro 1, e não o centro da caixa de
+            # cada um. Assim um rabo que balança não arrasta o corpo para o lado.
+            cx, cy = celula % colunas * cw, celula // colunas * ch
+            px0, py1 = caixas[0][0], caixas[0][3]
+            ox = ox_primeiro + round(((x0 - cx) - px0) / bloco)
+            oy = oy_primeiro + round(((y1 - cy) - py1) / bloco) - (h - h_primeiro)
+        elif celula == 0:
+            ox_primeiro, oy_primeiro, h_primeiro = ox, oy, h
         for ty in range(h):
             ya = round(y0 + ty * sy)
             yb = max(round(y0 + (ty + 1) * sy), ya + 1)
@@ -122,7 +137,7 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
                 xb = max(round(x0 + (tx + 1) * sx), xa + 1)
                 votos = Counter(px[x, y] if dono[y][x] == celula else fundo for y in range(ya, yb) for x in range(xa, xb))
                 indice = votos.most_common(1)[0][0]
-                if indice != fundo:
+                if indice != fundo and 0 <= ox + tx < lado and 0 <= oy + ty < lado:
                     out.putpixel((ox + tx, oy + ty), (*cores[indice], 255))
         saidas.append(out)
     return saidas

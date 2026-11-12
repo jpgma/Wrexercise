@@ -1,6 +1,6 @@
 Arte do Jogo do Wrexercise: folhas de avatar (avatar-*.png), a praça (praca.png) com os seus objetos
 soltos e a porta (praca-objetos.png),
-sprites de ambiente da praça (ambiente.png), molduras e ícones das cartas (carta-*.png) e Enfeites (enfeite-*.png).
+sprites de ambiente da praça (ambiente.png), molduras e ícones das cartas (carta-*.png) e Enfeites (enfeites.png).
 
 Dedicada ao domínio público sob CC0 1.0 Universal:
 https://creativecommons.org/publicdomain/zero/1.0/
@@ -13,5 +13,5 @@ A folha de avatar (avatar-base-masculino.png) foi gerada pelo autor com o PixelL
 e o Gemini e montada por código. A praça e os seus objetos foram gerados pelo autor com o
 Gemini e reduzidos à paleta do jogo por código. Os sprites de ambiente (pombo e luminárias)
 foram gerados pelo autor com o Gemini e reduzidos por código; a bola é desenhada por
-código. As cartas e os Enfeites são gerados
-por código, sem arte de terceiros. As fontes ficam em pixel-art/.
+código. As cartas são geradas por código, sem arte de terceiros. Os Enfeites foram gerados pelo
+autor com o Gemini e o ChatGPT e reduzidos à paleta do jogo por código. As fontes ficam em pixel-art/.

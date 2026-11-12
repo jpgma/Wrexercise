@@ -10,7 +10,7 @@ public sealed class EnfeitesTests
     {
         var liberados = Enfeites.Liberados(["Sequencia4", "Sequencia8", "Treinos10", "Madrugador"]);
 
-        Assert.Equal(["planta", "medalha", "despertador"], liberados.Select(e => e.Codigo));
+        Assert.Equal(["planta", "kettlebell", "galo"], liberados.Select(e => e.Codigo));
         Assert.Equal("Sequencia8", liberados[0].Conquista);
         Assert.Equal("Treinos10", liberados[1].Conquista);
     }
@@ -35,8 +35,8 @@ public sealed class EnfeitesTests
 
         var bloqueados = Enfeites.Bloqueados(progresso);
 
-        Assert.Equal(["medalha", "despertador"], bloqueados.Select(e => e.Codigo));
-        Assert.Equal(new EnfeiteBloqueado("medalha", "Treinos10", "Medalha de bronze", "10 treinos", 7, 10), bloqueados[0]);
+        Assert.Equal(["kettlebell", "galo"], bloqueados.Select(e => e.Codigo));
+        Assert.Equal(new EnfeiteBloqueado("kettlebell", "Treinos10", "Kettlebell de bronze", "10 treinos", 7, 10), bloqueados[0]);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public sealed class EnfeitesTests
 
         var (vitrine, novos) = Enfeites.Resolver(liberados, [], []);
 
-        Assert.Equal(["medalha", "cronometro", "tapete"], vitrine);
-        Assert.Equal(["medalha", "cronometro", "tapete", "poste"], novos);
+        Assert.Equal(["kettlebell", "largada", "tapete"], vitrine);
+        Assert.Equal(["kettlebell", "largada", "tapete", "poste"], novos);
     }
 
     [Fact]
@@ -55,9 +55,9 @@ public sealed class EnfeitesTests
     {
         var liberados = Enfeites.Liberados(["Treinos50", "Corredor"]);
 
-        var (vitrine, novos) = Enfeites.Resolver(liberados, ["cronometro", "medalha"], ["medalha", "cronometro"]);
+        var (vitrine, novos) = Enfeites.Resolver(liberados, ["largada", "kettlebell"], ["kettlebell", "largada"]);
 
-        Assert.Equal(["cronometro", "medalha"], vitrine);
+        Assert.Equal(["largada", "kettlebell"], vitrine);
         Assert.Empty(novos);
     }
 
@@ -66,9 +66,9 @@ public sealed class EnfeitesTests
     {
         var liberados = Enfeites.Liberados(["Treinos10", "Corredor"]);
 
-        var (vitrine, novos) = Enfeites.Resolver(liberados, ["medalha"], ["medalha", "cronometro"]);
+        var (vitrine, novos) = Enfeites.Resolver(liberados, ["kettlebell"], ["kettlebell", "largada"]);
 
-        Assert.Equal(["medalha"], vitrine);
+        Assert.Equal(["kettlebell"], vitrine);
         Assert.Empty(novos);
     }
 
@@ -77,9 +77,9 @@ public sealed class EnfeitesTests
     {
         var liberados = Enfeites.Liberados(["Treinos10"]);
 
-        var (vitrine, _) = Enfeites.Resolver(liberados, ["inexistente", "medalha", "medalha", "bola"], ["medalha"]);
+        var (vitrine, _) = Enfeites.Resolver(liberados, ["inexistente", "kettlebell", "kettlebell", "golzinho"], ["kettlebell"]);
 
-        Assert.Equal(["medalha"], vitrine);
+        Assert.Equal(["kettlebell"], vitrine);
     }
 
     [Fact]
@@ -88,9 +88,9 @@ public sealed class EnfeitesTests
         var liberados = Enfeites.Liberados(["Treinos10", "Corredor", "Zen", "Noturno"]);
 
         Assert.True(Enfeites.IsVitrineValida(liberados, []));
-        Assert.True(Enfeites.IsVitrineValida(liberados, ["poste", "medalha"]));
+        Assert.True(Enfeites.IsVitrineValida(liberados, ["poste", "kettlebell"]));
         Assert.False(Enfeites.IsVitrineValida(liberados, ["poste", "poste"]));
-        Assert.False(Enfeites.IsVitrineValida(liberados, ["bola"]));
-        Assert.False(Enfeites.IsVitrineValida(liberados, ["medalha", "cronometro", "tapete", "poste"]));
+        Assert.False(Enfeites.IsVitrineValida(liberados, ["golzinho"]));
+        Assert.False(Enfeites.IsVitrineValida(liberados, ["kettlebell", "largada", "tapete", "poste"]));
     }
 }

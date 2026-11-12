@@ -1,18 +1,27 @@
-"""Enfeites do modo Jogo (docs/gamificacao.md §9): 19 objetos de 32×32, um por conquista.
+"""Enfeites do modo Jogo (docs/gamificacao.md §9): 19 objetos apoiados no chão da praça, animados.
 
-O arquivo de cada um tem o código da conquista em minúsculas: saida/enfeite-<conquista>.png.
-A planta e a medalha evoluem (três níveis cada), então a vitrine mostra o nível mais alto.
+Gera um atlas de 4 quadros × 19 linhas, em células de 40×40 (escala do mestre da praça, mostrada em 2×),
+com cada objeto apoiado na base da célula: saida/enfeites.png, copiado para webapp/public/. A ordem das
+linhas é a de ENFEITES. O quadro 1 também é o ícone da vitrine.
 
-Se existir fonte/folha.png (uma folha gerada no Gemini, ver prompts-gemini.md), cada Enfeite sai
-dela: a célula da grade de 5×4 é reduzida para 32×32 por moda de cor, com a mesma escala para
-todos, e as cores vão para a paleta. Sem a fonte, o desenho de 16×16 deste script é ampliado 2×.
+Fontes (geradas no ChatGPT, ver prompts-chatgpt.md):
+- fonte/base.png: os 19 objetos parados, numa grade de 5×4. Uma escala só para a folha toda, então os
+  objetos mantêm as proporções reais entre si (a árvore e o poste do tamanho de um avatar).
+- fonte/tira-NN-<conquista>.png: os 4 quadros de um objeto, numa grade de 2×2, reduzidos com a escala do
+  objeto na base. Sem a tira, o quadro da base se repete e o objeto fica parado.
+Sem fonte/base.png, os ícones antigos de 32×32 (fonte/folha.png, da folha do Gemini) entram parados no
+lugar, para o aplicativo funcionar até a arte nova chegar.
 
-Uso: python build.py   (gera saida/*.png e preview/folha-4x.png)
+Uso: python build.py              (gera o atlas, os previews e a lista para enfeitesNaPraca.ts)
+     python build.py --recortes   (também grava preview/recorte-NN-<conquista>.png, para anexar ao prompt
+                                   de cada tira)
 """
 
-import math
 import pathlib
+import shutil
 import sys
+
+from PIL import Image
 
 AQUI = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/scripts"))
@@ -20,317 +29,132 @@ sys.path.insert(0, str(AQUI.parent))
 from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
 
-FONTE = AQUI / "fonte" / "folha.png"
-LADO = 32  # tamanho final de cada Enfeite
-COLUNAS, LINHAS = 5, 4  # grade da fonte, lida da esquerda para a direita e de cima para baixo
+BASE = AQUI / "fonte" / "base.png"
+ANTIGA = AQUI / "fonte" / "folha.png"
+PUBLICO = AQUI.parents[1] / "Wrexercise/webapp/public/enfeites.png"
+LADO = 40  # célula do atlas: o maior Enfeite tem a altura de um avatar
+QUADROS = 4
+COLUNAS, LINHAS = 5, 4  # grade da folha-base, lida da esquerda para a direita e de cima para baixo
+ASFALTO = "#222633"
 
-TINTA = "#14161f"
-GIZ, GIZ_SOMBRA = "#f5f1e8", "#d6d0c0"
-CORAL, CORAL_ESCURO, CORAL_CLARO = "#ff684a", "#c4432c", "#ff9c80"
-VIOLETA, VIOLETA_ESCURO, VIOLETA_CLARO = "#7957e8", "#4b35a6", "#a58cf4"
-AMARELO, AMARELO_ESCURO = "#ffd34e", "#d9a02b"
-LIMA, LIMA_ESCURO = "#a8d978", "#67a24b"
-CINZA, CINZA_CLARO, CINZA_ESCURO = "#5f6783", "#8b92ab", "#363c52"
+# Cores que o ChatGPT recebe no prompt e que a paleta wrexercise não tem.
+PRATA = "#d4d8e4"
+AGUA = "#4aa8ff"
 BRONZE, BRONZE_ESCURO = "#c98a5a", "#8d5a36"
-PRATA, PRATA_ESCURO = "#d4d8e4", "#8b92ab"
-AZUL = "#4aa8ff"
 MARROM, MARROM_ESCURO = "#a8693f", "#6e4125"
+
+# (conquista em minúsculas, ms por quadro), na ordem da folha-base e das linhas do atlas.
+ENFEITES = [
+    ("sequencia4", 320),  # muda num vaso
+    ("sequencia8", 320),  # planta com flor
+    ("sequencia12", 320),  # árvore em vaso
+    ("treinos10", 160),  # kettlebell de bronze
+    ("treinos50", 160),  # kettlebell de prata
+    ("treinos100", 160),  # kettlebell de ouro
+    ("desafiocompleto", 180),  # troféu no pedestal
+    ("ratodeacademia", 180),  # suporte de halteres
+    ("corredor", 220),  # bloco de largada
+    ("andarilho", 200),  # cachorro
+    ("ciclista", 160),  # bicicleta
+    ("peixe", 260),  # piscininha com boia
+    ("boleiro", 240),  # golzinho
+    ("zen", 360),  # tapete de ioga
+    ("pesodocorpo", 180),  # paralelas
+    ("madrugador", 240),  # galo
+    ("noturno", 140),  # poste: quadro 1 apagado, 2 a 4 aceso
+    ("fimdesemana", 150),  # caixa de som
+    ("ecletico", 200),  # bolsa de academia
+]
 
 (AQUI / "saida").mkdir(exist_ok=True)
 (AQUI / "preview").mkdir(exist_ok=True)
 
 
-def novo():
-    return Sprite(16, 16, palette="wrexercise")
+def na_celula(imagem):
+    """Um ícone menor que a célula, centrado e apoiado na base."""
+    celula = Image.new("RGBA", (LADO, LADO))
+    celula.alpha_composite(imagem, ((LADO - imagem.width) // 2, LADO - imagem.height))
+    return celula
 
 
-def vaso(s, y0=11):
-    s.rect(4, y0, 11, y0 + 4, CORAL)
-    s.rect(4, y0, 11, y0, CORAL_CLARO)
-    s.rect(4, y0 + 3, 11, y0 + 3, CORAL_ESCURO)
-    s.rect(5, y0 + 4, 10, y0 + 4, CORAL_ESCURO)
+def caixa(quadros):
+    """A caixa que cobre o objeto em todos os quadros."""
+    caixas = [q.getbbox() for q in quadros if q.getbbox()]
+    return (min(c[0] for c in caixas), min(c[1] for c in caixas),
+            max(c[2] for c in caixas), max(c[3] for c in caixas))
 
 
-def muda():
-    s = novo()
-    vaso(s)
-    s.rect(7, 7, 8, 10, LIMA_ESCURO)
-    s.rect(4, 5, 7, 7, LIMA)
-    s.rect(8, 4, 11, 6, LIMA)
-    s.px(4, 5, LIMA_ESCURO)
-    s.px(11, 6, LIMA_ESCURO)
-    s.outline(TINTA)
-    return s
+def recorte_para_prompt(quadro, destino):
+    """O objeto ampliado 6× sobre magenta, com margem: a imagem que se anexa ao prompt da tira."""
+    x0, y0, x1, y1 = quadro.getbbox()
+    margem = 6
+    objeto = quadro.crop((x0, y0, x1, y1))
+    fundo = Image.new("RGBA", (objeto.width + 2 * margem, objeto.height + 2 * margem), (255, 0, 255, 255))
+    fundo.alpha_composite(objeto, (margem, margem))
+    fundo.resize((fundo.width * 6, fundo.height * 6), Image.NEAREST).convert("RGB").save(destino)
 
 
-def planta():
-    s = novo()
-    vaso(s)
-    s.rect(7, 5, 8, 10, LIMA_ESCURO)
-    s.rect(4, 8, 6, 9, LIMA)
-    s.rect(9, 7, 11, 8, LIMA)
-    for cx, cy in [(5, 3), (10, 4), (8, 2)]:
-        s.rect(cx - 1, cy, cx + 1, cy, CORAL_CLARO)
-        s.rect(cx, cy - 1, cx, cy + 1, CORAL_CLARO)
-        s.px(cx, cy, AMARELO)
-    s.outline(TINTA)
-    return s
+def main():
+    cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
+    if BASE.exists():
+        bases = recortar_grade(BASE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores)
+        print("fonte:", BASE.name)
+    elif ANTIGA.exists():
+        bases = [na_celula(i) for i in recortar_grade(ANTIGA, COLUNAS, LINHAS, len(ENFEITES), 32, cores)]
+        print("fonte:", ANTIGA.name, "(ícones antigos, parados: falta fonte/base.png)")
+    else:
+        sys.exit("falta fonte/base.png: gere a folha-base com prompts-chatgpt.md")
+
+    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * len(ENFEITES)))
+    linhas_ts = []
+    for linha, ((conquista, ms), base) in enumerate(zip(ENFEITES, bases)):
+        tira = AQUI / "fonte" / f"tira-{linha + 1:02d}-{conquista}.png"
+        if BASE.exists() and tira.exists():
+            altura = base.getbbox()[3] - base.getbbox()[1]
+            quadros = recortar_grade(tira, 2, 2, QUADROS, LADO, cores, altura_do_primeiro=altura)
+            # O quadro 1 da tira fica onde o objeto está na base: a tira só acrescenta o movimento.
+            dx = base.getbbox()[0] - quadros[0].getbbox()[0]
+            dy = base.getbbox()[3] - quadros[0].getbbox()[3]
+            quadros = [_deslocar(q, dx, dy) for q in quadros]
+        else:
+            quadros = [base] * QUADROS
+        for coluna, quadro in enumerate(quadros):
+            atlas.alpha_composite(quadro, (coluna * LADO, linha * LADO))
+        x0, y0, x1, y1 = caixa(quadros)
+        linhas_ts.append(
+            f'  {conquista}: {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
+            f'altura: {y1 - y0}, ms: {ms} }},')
+        if "--recortes" in sys.argv:
+            recorte_para_prompt(base, AQUI / "preview" / f"recorte-{linha + 1:02d}-{conquista}.png")
+
+    atlas.save(AQUI / "saida" / "enfeites.png", optimize=True)
+    shutil.copyfile(AQUI / "saida" / "enfeites.png", PUBLICO)
+
+    fundo = Image.new("RGBA", atlas.size, ASFALTO)
+    fundo.alpha_composite(atlas)
+    fundo.resize((atlas.width * 4, atlas.height * 4), Image.NEAREST).save(AQUI / "preview" / "folha-4x.png")
+
+    # Os 19 animados lado a lado, numa grade de 5×4, sobre o asfalto.
+    gif = []
+    for coluna in range(QUADROS):
+        quadro = Image.new("RGBA", (LADO * COLUNAS, LADO * LINHAS), ASFALTO)
+        for i in range(len(ENFEITES)):
+            celula = atlas.crop((coluna * LADO, i * LADO, (coluna + 1) * LADO, (i + 1) * LADO))
+            quadro.alpha_composite(celula, (i % COLUNAS * LADO, i // COLUNAS * LADO))
+        gif.append(quadro.resize((quadro.width * 4, quadro.height * 4), Image.NEAREST).convert("RGB"))
+    gif[0].save(AQUI / "preview" / "animado.gif", save_all=True, append_images=gif[1:], duration=200, loop=0)
+
+    print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
+    print("\n".join(linhas_ts))
+    print(f"\nsaida/enfeites.png {atlas.size}, {len(ENFEITES)} enfeites")
 
 
-def arvore():
-    s = novo()
-    vaso(s, 12)
-    s.rect(7, 7, 8, 11, MARROM)
-    s.px(8, 8, MARROM_ESCURO)
-    s.px(8, 10, MARROM_ESCURO)
-    s.ellipse(2, 0, 13, 8, LIMA)
-    s.px(10, 3, CORAL)
-    s.px(5, 5, CORAL)
-    s.px(9, 6, CORAL)
-    s.px(5, 2, LIMA_ESCURO)
-    s.px(11, 5, LIMA_ESCURO)
-    s.outline(TINTA)
-    return s
+def _deslocar(quadro, dx, dy):
+    novo = Image.new("RGBA", quadro.size)
+    novo.alpha_composite(quadro.crop((max(0, -dx), max(0, -dy), quadro.width, quadro.height)),
+                         (max(0, dx), max(0, dy)))
+    return novo
 
-
-def medalha(corpo, sombra, fita, fita_escura):
-    s = novo()
-    s.rect(4, 0, 6, 5, fita)
-    s.rect(9, 0, 11, 5, fita_escura)
-    s.circle(7, 10, 5, corpo, fill=True)
-    s.circle(7, 10, 5, sombra)
-    s.circle(7, 10, 3, sombra)
-    s.rect(7, 9, 8, 11, sombra)
-    s.px(6, 8, GIZ)
-    s.px(5, 9, GIZ)
-    s.outline(TINTA)
-    return s
-
-
-def trofeu():
-    s = novo()
-    s.rect(4, 1, 11, 7, AMARELO)
-    s.rect(5, 8, 10, 8, AMARELO)
-    s.rect(6, 9, 9, 9, AMARELO_ESCURO)
-    s.rect(7, 10, 8, 11, AMARELO_ESCURO)
-    s.rect(4, 7, 11, 7, AMARELO_ESCURO)
-    s.rect(5, 2, 5, 5, GIZ)
-    for y in (2, 3, 4):
-        s.px(3, y, AMARELO_ESCURO)
-        s.px(12, y, AMARELO_ESCURO)
-    s.rect(5, 12, 10, 14, CINZA)
-    s.rect(5, 12, 10, 12, CINZA_CLARO)
-    s.outline(TINTA)
-    return s
-
-
-def haltere():
-    s = novo()
-    s.rect(1, 5, 3, 10, CINZA_ESCURO)
-    s.rect(4, 3, 5, 12, CINZA)
-    s.rect(10, 3, 11, 12, CINZA)
-    s.rect(12, 5, 14, 10, CINZA_ESCURO)
-    s.rect(6, 7, 9, 8, CINZA_CLARO)
-    s.rect(4, 3, 4, 12, CINZA_CLARO)
-    s.rect(10, 3, 10, 12, CINZA_CLARO)
-    s.outline(TINTA)
-    return s
-
-
-def cronometro():
-    s = novo()
-    cx, cy, r = 7.5, 9.0, 5.6
-    for y in range(16):
-        for x in range(16):
-            if math.hypot(x - cx, y - cy) <= r:
-                s.px(x, y, GIZ)
-    s.rect(6, 1, 9, 1, CINZA)
-    s.rect(7, 2, 8, 2, CINZA)
-    s.px(12, 3, CINZA)
-    s.px(7, 9, TINTA)
-    s.rect(8, 6, 8, 9, CORAL)
-    s.rect(9, 9, 10, 9, CORAL)
-    s.outline(TINTA)
-    return s
-
-
-def cachorro():
-    s = novo()
-    s.rect(4, 6, 12, 10, MARROM)
-    s.rect(11, 3, 14, 7, MARROM)
-    s.rect(13, 4, 14, 5, MARROM_ESCURO)
-    s.px(14, 6, TINTA)
-    s.rect(4, 11, 5, 14, MARROM_ESCURO)
-    s.rect(10, 11, 11, 14, MARROM_ESCURO)
-    s.rect(2, 5, 3, 7, MARROM_ESCURO)
-    s.rect(11, 7, 12, 7, CORAL)
-    s.line(11, 8, 8, 12, CORAL)
-    s.px(12, 4, TINTA)
-    s.outline(TINTA)
-    return s
-
-
-def bicicleta():
-    s = novo()
-    for cx in (3, 12):
-        s.circle(cx, 11, 3, CINZA_CLARO)
-        s.circle(cx, 11, 2, CINZA_CLARO)
-        s.px(cx, 11, TINTA)
-    s.line(3, 11, 7, 6, CORAL)
-    s.line(7, 6, 12, 11, CORAL)
-    s.line(3, 11, 8, 11, CORAL)
-    s.line(7, 6, 8, 11, CORAL_ESCURO)
-    s.rect(5, 4, 8, 4, TINTA)
-    s.rect(11, 5, 12, 5, TINTA)
-    s.outline(TINTA)
-    return s
-
-
-def boia():
-    s = novo()
-    s.circle(7, 8, 6, GIZ, fill=True)
-    s.circle(7, 8, 6, TINTA)
-    s.circle(7, 8, 2, AZUL, fill=True)
-    s.circle(7, 8, 2, TINTA)
-    for x, y in [(7, 3), (7, 13), (2, 8), (12, 8)]:
-        s.rect(x - 1, y - 1, x + 1, y + 1, CORAL)
-    s.outline(TINTA)
-    return s
-
-
-def bola():
-    s = novo()
-    s.circle(7, 8, 6, GIZ, fill=True)
-    s.circle(7, 8, 6, GIZ_SOMBRA)
-    s.rect(6, 6, 8, 8, TINTA)
-    s.line(7, 3, 7, 5, TINTA)
-    s.line(3, 7, 5, 7, TINTA)
-    s.line(9, 7, 11, 7, TINTA)
-    s.line(5, 9, 4, 12, TINTA)
-    s.line(9, 9, 10, 12, TINTA)
-    s.outline(TINTA)
-    return s
-
-
-def tapete():
-    s = novo()
-    s.rect(3, 5, 13, 12, VIOLETA)
-    s.circle(3, 8, 3, VIOLETA, fill=True)
-    s.circle(3, 8, 3, VIOLETA_ESCURO)
-    s.circle(3, 8, 1, VIOLETA_ESCURO)
-    s.rect(4, 5, 13, 5, VIOLETA_CLARO)
-    s.rect(4, 12, 13, 12, VIOLETA_ESCURO)
-    s.rect(11, 5, 11, 12, VIOLETA_ESCURO)
-    s.outline(TINTA)
-    return s
-
-
-def paralelas():
-    s = novo()
-    for x in (2, 12):
-        s.rect(x, 4, x + 1, 13, CINZA)
-        s.rect(x, 4, x, 13, CINZA_CLARO)
-    for x in (4, 10):
-        s.rect(x, 3, x + 1, 13, CINZA_ESCURO)
-    s.rect(2, 13, 13, 14, CINZA_ESCURO)
-    s.rect(2, 4, 5, 4, CINZA_CLARO)
-    s.rect(10, 3, 13, 3, CINZA_CLARO)
-    s.outline(TINTA)
-    return s
-
-
-def despertador():
-    s = novo()
-    s.circle(3, 3, 2, CORAL, fill=True)
-    s.circle(11, 3, 2, CORAL, fill=True)
-    s.circle(7, 9, 5, GIZ, fill=True)
-    s.circle(7, 9, 5, GIZ_SOMBRA)
-    s.rect(7, 6, 7, 9, TINTA)
-    s.rect(8, 9, 9, 9, TINTA)
-    s.px(5, 14, TINTA)
-    s.px(9, 14, TINTA)
-    s.outline(TINTA)
-    return s
-
-
-def poste():
-    s = novo()
-    s.rect(7, 4, 8, 14, CINZA)
-    s.rect(7, 4, 7, 14, CINZA_CLARO)
-    s.rect(5, 14, 10, 14, CINZA_ESCURO)
-    s.rect(4, 0, 11, 1, CINZA_ESCURO)
-    s.rect(5, 2, 10, 4, AMARELO)
-    s.rect(6, 3, 9, 3, GIZ)
-    s.px(3, 4, AMARELO_ESCURO)
-    s.px(12, 4, AMARELO_ESCURO)
-    s.outline(TINTA)
-    return s
-
-
-def caixa_de_som():
-    s = novo()
-    s.rect(3, 4, 12, 14, CINZA_ESCURO)
-    s.rect(3, 4, 12, 4, CINZA)
-    s.circle(7, 7, 2, CINZA_CLARO)
-    s.circle(7, 11, 2, CINZA_CLARO, fill=True)
-    s.px(7, 7, TINTA)
-    s.px(7, 11, TINTA)
-    s.rect(5, 1, 10, 3, TINTA)
-    s.rect(6, 2, 9, 2, CINZA)
-    s.px(11, 6, CORAL)
-    s.outline(TINTA)
-    return s
-
-
-def mochila():
-    s = novo()
-    s.rect(4, 4, 11, 14, VIOLETA)
-    s.rect(5, 2, 10, 3, VIOLETA_ESCURO)
-    s.rect(4, 4, 11, 4, VIOLETA_CLARO)
-    s.rect(5, 8, 10, 12, VIOLETA_ESCURO)
-    s.rect(6, 9, 9, 9, AMARELO)
-    s.rect(2, 7, 3, 12, CORAL)
-    s.rect(12, 7, 13, 12, CORAL)
-    s.rect(7, 0, 8, 1, TINTA)
-    s.outline(TINTA)
-    return s
-
-
-ENFEITES = {
-    "sequencia4": muda,
-    "sequencia8": planta,
-    "sequencia12": arvore,
-    "treinos10": lambda: medalha(BRONZE, BRONZE_ESCURO, CORAL, CORAL_ESCURO),
-    "treinos50": lambda: medalha(PRATA, PRATA_ESCURO, VIOLETA, VIOLETA_ESCURO),
-    "treinos100": lambda: medalha(AMARELO, AMARELO_ESCURO, CORAL, CORAL_ESCURO),
-    "desafiocompleto": trofeu,
-    "ratodeacademia": haltere,
-    "corredor": cronometro,
-    "andarilho": cachorro,
-    "ciclista": bicicleta,
-    "peixe": boia,
-    "boleiro": bola,
-    "zen": tapete,
-    "pesodocorpo": paralelas,
-    "madrugador": despertador,
-    "noturno": poste,
-    "fimdesemana": caixa_de_som,
-    "ecletico": mochila,
-}
 
 if __name__ == "__main__":
-    if FONTE.exists():
-        cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
-        imagens = recortar_grade(FONTE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores)
-        for nome, imagem in zip(ENFEITES, imagens):
-            imagem.save(AQUI / "saida" / f"enfeite-{nome}.png")
-        print("fonte:", FONTE.name)
-    else:
-        for nome, fabrica in ENFEITES.items():
-            fabrica().save_png(AQUI / "saida" / f"enfeite-{nome}.png", scale=LADO // 16)
-
-    folha = Sprite(LADO * 10, LADO * 2)
-    for i, nome in enumerate(ENFEITES):
-        folha.paste_png(AQUI / "saida" / f"enfeite-{nome}.png", (i % 10) * LADO, (i // 10) * LADO)
-    folha.save_png(AQUI / "preview" / "folha-4x.png", scale=4, bg="#2b3042")
-    print(len(ENFEITES), "enfeites")
+    main()

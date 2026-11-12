@@ -26,10 +26,10 @@ CREATE TEMP TABLE seed_pessoas (
 INSERT INTO seed_pessoas VALUES
     (1, '5eed0000-0000-4000-8000-000000000001', 'Ana', 'ana@seed.test', 'Proprietario',
      '{Corrida,Corrida,Corrida,Musculacao,Musculacao,Yoga,Yoga,Natacao,Caminhada,Ciclismo}',
-     '{5,6,6,6,7,12,18,19}', 0.55, '{despertador,trofeu,planta}', NULL),
+     '{5,6,6,6,7,12,18,19}', 0.55, '{galo,trofeu,planta}', NULL),
     (2, '5eed0000-0000-4000-8000-000000000002', 'Bruno', 'bruno@seed.test', 'Administrador',
      '{Musculacao,Musculacao,Musculacao,Musculacao,Calistenia,Calistenia,Esporte,Esporte,Corrida,Outro}',
-     '{20,21,21,22,18,19,7,12}', 0.60, '{poste,medalha,trofeu}', NULL),
+     '{20,21,21,22,18,19,7,12}', 0.60, '{poste,kettlebell,trofeu}', NULL),
     (3, '5eed0000-0000-4000-8000-000000000003', 'Carla', 'carla@seed.test', 'Membro',
      '{Ciclismo,Ciclismo,Ciclismo,Natacao,Natacao,Yoga,Yoga,Caminhada,Esporte,Outro}',
      '{6,9,10,17,18,20,11,7}', 0.45, '{mochila,planta,trofeu}', NULL),
@@ -39,7 +39,7 @@ INSERT INTO seed_pessoas VALUES
      '{19,20,6,12,17,18,21,13}', 0.50, '{}', '{}');
 
 -- Todos os Enfeites como já vistos (docs: Features/Jogo/Enfeites.cs).
-UPDATE seed_pessoas SET vistos = '{planta,medalha,trofeu,haltere,cronometro,cachorro,bicicleta,boia,bola,tapete,paralelas,despertador,poste,caixa-de-som,mochila}'
+UPDATE seed_pessoas SET vistos = '{planta,kettlebell,trofeu,haltere,largada,cachorro,bicicleta,piscina,golzinho,tapete,paralelas,galo,poste,caixa-de-som,mochila}'
 WHERE vistos IS NULL;
 
 -- ---------------------------------------------------------------------------------------------------------

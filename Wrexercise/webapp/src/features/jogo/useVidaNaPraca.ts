@@ -57,6 +57,7 @@ function sortear(min: number, max: number): number {
 export function useVidaNaPraca({
   membros,
   posicoes,
+  ocupados,
   largura,
   altura,
   pausada,
@@ -65,6 +66,8 @@ export function useVidaNaPraca({
 }: {
   membros: MembroCena[];
   posicoes: Map<string, Ponto>;
+  /** O chão dos Enfeites: o pombo não pousa em cima deles. */
+  ocupados: { x0: number; y0: number; x1: number; y1: number }[];
   largura: number;
   altura: number;
   /** Uma encenação ou a entrada está tocando: o pombo voa embora e o resto para. */
@@ -78,10 +81,10 @@ export function useVidaNaPraca({
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const temporizadores = useRef<number[]>([]);
   // A cena muda (poses, membros) sem reiniciar o agendamento.
-  const cena = useRef({ membros, posicoes, comPombos });
+  const cena = useRef({ membros, posicoes, ocupados, comPombos });
   useEffect(() => {
-    cena.current = { membros, posicoes, comPombos };
-  }, [membros, posicoes, comPombos]);
+    cena.current = { membros, posicoes, ocupados, comPombos };
+  }, [membros, posicoes, ocupados, comPombos]);
   const saida = useRef<number | undefined>(undefined);
 
   useEffect(() => {
@@ -129,10 +132,20 @@ export function useVidaNaPraca({
         return proxima;
       });
 
-    function pombear(fim: () => void) {
-      const pouso = pousos[Math.floor(Math.random() * pousos.length)]!;
-      const x = Math.round(sortear(...pouso.x));
-      const y = pouso.y;
+    function pombear(fim: () => void): boolean {
+      // Um ponto de pouso fora do chão dos Enfeites; com todos ocupados, o pombo não vem.
+      const livres = pousos.flatMap((pouso) => {
+        const x = Math.round(sortear(...pouso.x));
+        const y = pouso.y;
+        return cena.current.ocupados.some(
+          (o) => x > o.x0 - 12 && x < o.x1 + 12 && y > o.y0 - 8 && y < o.y1 + 8,
+        )
+          ? []
+          : [{ x, y }];
+      });
+      const pouso = livres[Math.floor(Math.random() * livres.length)];
+      if (!pouso) return false;
+      const { x, y } = pouso;
       const virado: 1 | -1 = x < largura / 2 ? 1 : -1;
       // Vem de fora da praça, do alto, pelo lado de trás.
       setPombo({
@@ -169,6 +182,7 @@ export function useVidaNaPraca({
         setPombo(null);
         fim();
       });
+      return true;
     }
 
     function conversar(fim: () => void): boolean {
@@ -293,8 +307,8 @@ export function useVidaNaPraca({
         }
         const proximo = () => agendar(sortear(12_000, 25_000));
         const sorteio = Math.random();
-        if (cena.current.comPombos && sorteio < 0.45) {
-          pombear(proximo);
+        if (cena.current.comPombos && sorteio < 0.45 && pombear(proximo)) {
+          // pombo em cena
         } else if (sorteio < 0.8 && conversar(proximo)) {
           // conversa em andamento
         } else if (!jogarBola(proximo) && !conversar(proximo)) {

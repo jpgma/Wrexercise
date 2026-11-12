@@ -1,6 +1,6 @@
 # 0037 — Avatar importado, Enfeites e vitrine
 
-**Status:** DECIDIDA. Complementa `0024-cartas-e-avatar-importado.md`. Detalhes em `../gamificacao.md` §4.3, §9 e §10 (G6).
+**Status:** DECIDIDA. Complementa `0024-cartas-e-avatar-importado.md`. Detalhes em `../gamificacao.md` §4.3, §9 e §10 (G6). Como a cena mostra os Enfeites (no chão, com orçamento pelo tamanho do grupo) e os objetos de hoje: `0050-enfeites-no-chao.md`.
 
 ## Contexto
 

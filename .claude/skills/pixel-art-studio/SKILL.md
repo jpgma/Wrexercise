@@ -156,7 +156,7 @@ These override the generic guidance above when working in this repository.
   timings are fixed by the table in `docs/avatar-formato.md` §3 — build the sheet by placing
   frames into those cells yourself (do **not** use the LPC layout from `references/lpc.md`).
   Use `s.save_spritesheet` only for previews; the shipped sheet must match the spec grid.
-- **Other pieces:** card frame 24×32, card icon 16×16, Enfeite 16×16 or 32×32, praça floor
+- **Other pieces:** card frame 24×32, card icon 16×16, Enfeite atlas of 40×40 cells (4 idle frames per row, object resting on the cell's bottom; `pixel-art/enfeites/build.py`), praça floor
   about 180×150 at 2× (see §4.4).
 - **No anti-aliasing at the edge against transparency.** The app scales by integer factors with
   `image-rendering: pixelated`; ship only 1x masters to the bundle.

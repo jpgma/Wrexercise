@@ -12,11 +12,12 @@ import {
   formatoFolha,
   hashFnv1a,
   useFolhaAvatar,
-  useVitrine,
+  useVitrines,
 } from "@/components/folhaAvatar";
 import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
-import { EnfeiteIcone } from "./EnfeiteIcone";
+import { EnfeiteNoChao } from "./EnfeiteNoChao";
+import { getChaoDosEnfeites, posicionarEnfeites } from "./enfeitesNaPraca";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
@@ -42,7 +43,7 @@ import { type EfeitoFoco, useFoco } from "./useFoco";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 import { useVidaNaPraca } from "./useVidaNaPraca";
 import { VitrineFoco } from "./VitrineFoco";
-import { usePeriodoDoDia } from "./periodoDoDia";
+import { isLuzAcesa, usePeriodoDoDia } from "./periodoDoDia";
 import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
 import {
   getRelacaoRival,
@@ -143,7 +144,6 @@ function AvatarCena({
   posicao,
   reduzido,
   atuacao,
-  brilho,
   nomeVisivel,
   posicaoClassificacao,
   apagado,
@@ -155,8 +155,6 @@ function AvatarCena({
   posicao: Posicao;
   reduzido: boolean;
   atuacao: Atuacao | undefined;
-  /** O Enfeite do avatar brilha: é o Enfeite novo de quem vê a cena. */
-  brilho: boolean;
   /** O nome só aparece durante as encenações. */
   nomeVisivel: boolean;
   /** 1, 2 ou 3 no desafio em destaque: a medalha aparece sempre, com ou sem o nome. */
@@ -170,7 +168,6 @@ function AvatarCena({
   onToque: () => void;
 }) {
   const folha = useFolhaAvatar(membro.usuarioId);
-  const enfeite = useVitrine(membro.usuarioId)[0];
   const [variacao, setVariacao] = useState<NomeAnimacao | null>(null);
   /** Conta os toques: cada um recomeça o pulinho. */
   const [pulos, setPulos] = useState(0);
@@ -297,20 +294,6 @@ function AvatarCena({
           />
         </span>
       </button>
-      {enfeite && (
-        <EnfeiteIcone
-          conquista={enfeite.conquista}
-          tamanho={16}
-          brilho={brilho}
-          className="pointer-events-none absolute block"
-          style={{
-            left: posicao.x + 9 * escala,
-            top: posicao.y - 16 - 2,
-            zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)) + 1,
-            ...deslocamento,
-          }}
-        />
-      )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
       {(nomeVisivel || medalha || rival) && (
         <span
@@ -561,9 +544,36 @@ function Praca({
     rivais: aguardar ? semRivais : rivaisEmCena,
     onRivaisVistos: marcarRivaisVistos,
   });
+  const vitrines = useVitrines();
+  const enfeitesNovos = meuAvatar.data?.novos ?? semNovos;
+  /** O Foco mostra os 3 Enfeites do alvo; a encenação do Enfeite novo mostra o novo de quem vê. */
+  const extras = useMemo(() => {
+    const mapa = new Map<string, "todos" | string[]>();
+    if (encenacao.brilho) mapa.set(usuarioId, enfeitesNovos);
+    if (foco.alvoId) mapa.set(foco.alvoId, "todos");
+    return mapa;
+  }, [encenacao.brilho, usuarioId, enfeitesNovos, foco.alvoId]);
+  const enfeites = useMemo(
+    () =>
+      posicionarEnfeites({
+        membros,
+        posicoes: porUsuario,
+        centro,
+        vitrines,
+        largura,
+        altura,
+        extras,
+      }),
+    [membros, porUsuario, vitrines, extras],
+  );
+  const chaoDosEnfeites = useMemo(
+    () => getChaoDosEnfeites(enfeites),
+    [enfeites],
+  );
   const vida = useVidaNaPraca({
     membros,
     posicoes: porUsuario,
+    ocupados: chaoDosEnfeites,
     largura,
     altura,
     pausada: entrada.ativa || encenacao.ativa || emFoco,
@@ -665,7 +675,6 @@ function Praca({
                   posicao={posicoes[i] ?? { x: centroX, y: altura / 2 }}
                   reduzido={reduzido}
                   atuacao={getAtuacao(membro.usuarioId)}
-                  brilho={encenacao.brilho && membro.usuarioId === usuarioId}
                   nomeVisivel={!emFoco && emEncenacao(membro.usuarioId)}
                   posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
                   apagado={emFoco && !atuaNoFoco(membro.usuarioId)}
@@ -682,6 +691,20 @@ function Praca({
                   onToque={() => {
                     if (!emAcao) foco.abrir(membro.usuarioId);
                   }}
+                />
+              ))}
+              {enfeites.map((item) => (
+                <EnfeiteNoChao
+                  key={item.chave}
+                  item={item}
+                  reduzido={reduzido}
+                  apagado={emFoco && !atuaNoFoco(item.usuarioId)}
+                  aceso={isLuzAcesa(periodo)}
+                  brilho={
+                    encenacao.brilho &&
+                    item.usuarioId === usuarioId &&
+                    enfeitesNovos.includes(item.enfeite.codigo)
+                  }
                 />
               ))}
               <ObjetosPraca portaAberta={entrada.portaAberta} />

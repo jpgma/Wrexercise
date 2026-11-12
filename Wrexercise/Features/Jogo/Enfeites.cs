@@ -18,7 +18,7 @@ internal readonly record struct EnfeiteBloqueado(
 
 /// <summary>
 /// Os Enfeites liberados pelas conquistas e a vitrine (docs/gamificacao.md §9). A vitrine guarda o código do
-/// Enfeite, e não o da conquista: quando a planta ou a medalha evolui, ela continua no mesmo lugar.
+/// Enfeite, e não o da conquista: quando a planta ou o kettlebell evolui, ela continua no mesmo lugar.
 /// </summary>
 internal static class Enfeites
 {
@@ -28,20 +28,20 @@ internal static class Enfeites
     private static readonly (string Codigo, (string Conquista, string Nome)[] Niveis)[] Catalogo =
     [
         ("planta", [("Sequencia4", "Muda num vaso"), ("Sequencia8", "Planta com flor"), ("Sequencia12", "Árvore em vaso")]),
-        ("medalha", [("Treinos10", "Medalha de bronze"), ("Treinos50", "Medalha de prata"), ("Treinos100", "Medalha de ouro")]),
-        ("trofeu", [("DesafioCompleto", "Troféu")]),
-        ("haltere", [("RatoDeAcademia", "Haltere")]),
-        ("cronometro", [("Corredor", "Cronômetro")]),
-        ("cachorro", [("Andarilho", "Cachorro na coleira")]),
+        ("kettlebell", [("Treinos10", "Kettlebell de bronze"), ("Treinos50", "Kettlebell de prata"), ("Treinos100", "Kettlebell de ouro")]),
+        ("trofeu", [("DesafioCompleto", "Troféu no pedestal")]),
+        ("haltere", [("RatoDeAcademia", "Suporte de halteres")]),
+        ("largada", [("Corredor", "Bloco de largada")]),
+        ("cachorro", [("Andarilho", "Cachorro")]),
         ("bicicleta", [("Ciclista", "Bicicleta")]),
-        ("boia", [("Peixe", "Boia")]),
-        ("bola", [("Boleiro", "Bola")]),
+        ("piscina", [("Peixe", "Piscininha com boia")]),
+        ("golzinho", [("Boleiro", "Golzinho")]),
         ("tapete", [("Zen", "Tapete de ioga")]),
         ("paralelas", [("PesoDoCorpo", "Paralelas")]),
-        ("despertador", [("Madrugador", "Despertador")]),
+        ("galo", [("Madrugador", "Galo")]),
         ("poste", [("Noturno", "Poste de luz da praça")]),
-        ("caixa-de-som", [("FimDeSemana", "Caixa de som portátil")]),
-        ("mochila", [("Ecletico", "Mochila de academia")]),
+        ("caixa-de-som", [("FimDeSemana", "Caixa de som")]),
+        ("mochila", [("Ecletico", "Bolsa de academia")]),
     ];
 
     /// <summary>Os Enfeites que as conquistas liberam, na ordem do catálogo.</summary>

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useSessao } from "@/features/autenticacao";
 import { getJson } from "@/services/api";
 
@@ -36,7 +37,7 @@ export function folhaPadrao(): string {
 
 export const avataresKey = ["jogo", "avatares"] as const;
 
-/** Um Enfeite: `conquista` é a do nível que define o desenho (`/enfeite-<conquista em minúsculas>.png`). */
+/** Um Enfeite: `conquista` é a do nível que define o desenho (a linha do atlas `/enfeites.png`). */
 export type Enfeite = { codigo: string; conquista: string; nome: string };
 
 type AvataresResponse = {
@@ -48,6 +49,7 @@ function paraMapa(resposta: AvataresResponse) {
 }
 
 const semEnfeites: Enfeite[] = [];
+const semVitrines = new Map<string, Enfeite[]>();
 
 /**
  * O mapa de avatares (folha importada e vitrine de cada pessoa) de quem divide um grupo com quem vê.
@@ -79,4 +81,14 @@ export function useFolhaAvatar(usuarioId?: string): string {
 export function useVitrine(usuarioId: string): Enfeite[] {
   const { data } = useMapaAvatares();
   return data?.get(usuarioId)?.vitrine ?? semEnfeites;
+}
+
+/** As vitrines de todos que dividem um grupo com quem vê, por usuário: a praça põe os Enfeites no chão. */
+export function useVitrines(): Map<string, Enfeite[]> {
+  const { data } = useMapaAvatares();
+  return useMemo(
+    () =>
+      data ? new Map([...data].map(([id, a]) => [id, a.vitrine])) : semVitrines,
+    [data],
+  );
 }

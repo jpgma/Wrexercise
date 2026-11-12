@@ -25,7 +25,7 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
             AppJsonContext.Default.SalvarVitrineRequest,
             Token);
 
-    private async Task<(TestUsuario Ana, Guid GrupoId)> CriarAnaComMedalhaAsync()
+    private async Task<(TestUsuario Ana, Guid GrupoId)> CriarAnaComKettlebellAsync()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -46,15 +46,15 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task MeuAvatar_EnfeiteNovoEntraNaVitrine_EContaComoNovo()
     {
-        var (ana, _) = await CriarAnaComMedalhaAsync();
+        var (ana, _) = await CriarAnaComKettlebellAsync();
 
         var meu = await GetMeuAsync(ana);
 
-        Assert.Equal(["medalha"], meu.Vitrine.Select(e => e.Codigo));
+        Assert.Equal(["kettlebell"], meu.Vitrine.Select(e => e.Codigo));
         Assert.Equal("Treinos10", meu.Vitrine[0].Conquista);
-        Assert.Equal(["medalha"], meu.Liberados.Select(e => e.Codigo));
-        Assert.Equal(["medalha"], meu.Novos);
-        Assert.DoesNotContain(meu.Bloqueados, e => e.Codigo == "medalha");
+        Assert.Equal(["kettlebell"], meu.Liberados.Select(e => e.Codigo));
+        Assert.Equal(["kettlebell"], meu.Novos);
+        Assert.DoesNotContain(meu.Bloqueados, e => e.Codigo == "kettlebell");
         var planta = Assert.Single(meu.Bloqueados, e => e.Codigo == "planta");
         Assert.Equal(("Sequencia4", 0, 4), (planta.Conquista, planta.Atual, planta.Alvo));
     }
@@ -62,11 +62,11 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task Vitrine_ComEnfeiteBloqueado_EInvalida()
     {
-        var (ana, _) = await CriarAnaComMedalhaAsync();
+        var (ana, _) = await CriarAnaComKettlebellAsync();
         Assert.Contains((await GetMeuAsync(ana)).Bloqueados, e => e.Codigo == "trofeu");
 
         await ApiTestHost.AssertProblemAsync(
-            await PutVitrineAsync(ana, "medalha", "trofeu"),
+            await PutVitrineAsync(ana, "kettlebell", "trofeu"),
             HttpStatusCode.BadRequest,
             "VITRINE_INVALIDA");
     }
@@ -74,19 +74,19 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task Vistos_GuardaAVitrineEOEnfeiteDeixaDeSerNovo()
     {
-        var (ana, _) = await CriarAnaComMedalhaAsync();
+        var (ana, _) = await CriarAnaComKettlebellAsync();
 
         Assert.Equal(HttpStatusCode.NoContent, (await ana.Client.PostAsync("/api/jogo/enfeites/vistos", null, Token)).StatusCode);
 
         var meu = await GetMeuAsync(ana);
-        Assert.Equal(["medalha"], meu.Vitrine.Select(e => e.Codigo));
+        Assert.Equal(["kettlebell"], meu.Vitrine.Select(e => e.Codigo));
         Assert.Empty(meu.Novos);
     }
 
     [Fact]
     public async Task Vitrine_EsvaziarEPermitido_EOEnfeiteNaoVolta()
     {
-        var (ana, _) = await CriarAnaComMedalhaAsync();
+        var (ana, _) = await CriarAnaComKettlebellAsync();
 
         Assert.Equal(HttpStatusCode.NoContent, (await PutVitrineAsync(ana)).StatusCode);
 
@@ -97,12 +97,12 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("bola")]
-    [InlineData("medalha", "medalha")]
+    [InlineData("golzinho")]
+    [InlineData("kettlebell", "kettlebell")]
     [InlineData("inexistente")]
     public async Task Vitrine_Invalida_Recebe400(params string[] enfeites)
     {
-        var (ana, _) = await CriarAnaComMedalhaAsync();
+        var (ana, _) = await CriarAnaComKettlebellAsync();
 
         var response = await PutVitrineAsync(ana, enfeites);
 
@@ -112,7 +112,7 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task Mapa_MostraAVitrineSoDeQuemEstaNoModoJogo()
     {
-        var (ana, grupoId) = await CriarAnaComMedalhaAsync();
+        var (ana, grupoId) = await CriarAnaComKettlebellAsync();
         var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
         await JogoTestes.AtivarJogoAsync(_host, bia);
         await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 10);
@@ -120,7 +120,7 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
         var mapa = (await bia.Client.GetFromJsonAsync(
             "/api/jogo/avatares", AppJsonContext.Default.AvataresResponse, Token))!.Avatares
             .ToDictionary(a => a.UsuarioId);
-        Assert.Equal(["medalha"], mapa[ana.Id].Vitrine.Select(e => e.Codigo));
+        Assert.Equal(["kettlebell"], mapa[ana.Id].Vitrine.Select(e => e.Codigo));
 
         await _host.ExecuteAsync($"UPDATE usuarios SET modo_inicio = 'App' WHERE id = '{ana.Id}'");
 

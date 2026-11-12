@@ -75,7 +75,7 @@ A tela não tem um botão próprio de "Registrar atividade": o registro já est�
 - A ordem de desenho segue o y dos pés: quem está mais abaixo na tela fica na frente. Os objetos soltos no chão (barra, caixotes, floreiras) são camadas à parte, ordenadas pela base da mesma forma: quem passa atrás de um objeto some por trás dele.
 - Escala inteira, com `image-rendering: pixelated`. O quadro de 32 px aparece em 2× (64 px). A praça tem 360×400 px e encolhe por inteiro em telas mais estreitas. Com 10 membros, a elipse tem raios de 148 px e 76 px; com menos, ela encolhe na mesma proporção, para que os vizinhos fiquem à mesma distância, até um mínimo de 60 px e 48 px. O raio vertical mínimo deixa quem fica atrás visível acima de quem fica na frente. A escala é sempre 2×, qualquer que seja o tamanho do grupo.
 - O nome de cada avatar só aparece durante as encenações, para quem atua nelas; no Foco, o nome fica no painel. Os 3 primeiros da Classificacao do desafio em destaque têm sempre uma medalha embaixo do avatar (🥇, 🥈, 🥉), antes do nome quando ele aparece; só com o desafio em curso ou encerrado, e só para quem já tem atividade verificada no desafio.
-- O primeiro Enfeite da vitrine (§9.2) aparece ao lado de cada avatar.
+- Os Enfeites da vitrine (§9.2) ficam **no chão**, no cantinho de cada dono, fora da elipse: atrás de quem está na metade de trás, ao lado de quem está na metade da frente. Quantos aparecem depende do tamanho do grupo: até 3 membros, 3 por pessoa; 4 ou 5, 2; 6 ou mais, 1. Eles são ordenados pela base, como os avatares e os objetos. Um Enfeite na frente de alguém nunca cobre a cabeça nem o tronco; atrás, ao menos metade dele aparece; dois Enfeites nunca dividem o mesmo chão; o caminho da porta, a barra, os caixotes e as floreiras ficam livres. Sem chão livre, o Enfeite não aparece: as vagas são preenchidas por ordem (a primeira de todos, depois a segunda), de quem está na frente para quem está atrás. A conta fica em `enfeitesNaPraca.ts`; ver `decisoes/0050-enfeites-no-chao.md`.
 - Tocar num avatar, o próprio ou o de um colega, abre o Foco (§3.5).
 
 ### 3.2. Poses
@@ -104,7 +104,7 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 | Jogada expirada | A carta some com o carimbo EXPIRADA. Nenhum avatar reage. |
 | Rivais da semana | Quem escolhe vê na hora, e o Rival na primeira visita: os dois avançam um passo e fazem `provocar`. Quando o resultado é final, quem escolheu vê o vencedor fazer `comemorando`. |
 | Missão concluída | `comemorando` com um brilho em CSS. |
-| Enfeite novo (vista só pelo dono) | `comemorando`, e o Enfeite aparece ao lado com o mesmo brilho (§9.2). |
+| Enfeite novo (vista só pelo dono) | `comemorando`, e o Enfeite cai no chão com o mesmo brilho (§9.2), mesmo que o tamanho do grupo o esconda fora da encenação. |
 
 - O movimento vertical usa o mesmo `andar` de lado, com um balanço de 1 a 2 px. O deslizamento na vertical é aceito como estilo.
 - No máximo uma encenação de cada vez, e no máximo 3 em sequência por visita. As demais aparecem só como estado final.
@@ -133,7 +133,7 @@ Entre as encenações, a praça tem luz e movimento próprios. Nada disso é enc
 
 Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria praça, e é dali que se joga uma carta ou se escolhe o Rival. Tocar no próprio avatar abre o mesmo Foco, com a Vitrine no lugar da Mão. O alvo fica na URL (`?foco=`), então o botão voltar fecha o Foco. A lógica está em `useFoco.ts`; o painel, em `PainelFoco.tsx`; a Mão, em `MaoJogo.tsx`; a Mesa, em `MesaJogadas.tsx`.
 
-- **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares ficam apagados; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até o alto da praça, com a Mão logo abaixo.
+- **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares e os Enfeites deles ficam apagados, e os Enfeites do alvo que não estavam no chão caem em volta dele; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até o alto da praça, com a Mão logo abaixo.
 - **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. As Jogadas entre os dois ficam na Mesa.
 - **Mão:** uma só, logo abaixo da praça, dentro e fora do Foco. Ao abrir o Foco, ela sobe até ficar sob o painel e as cartas são distribuídas uma a uma, em leque. As cartas em Jogadas abertas ficam na Mesa e deixam na Mão uma vaga reservada, tracejada. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto. Durante o arrasto, um anel de mira pulsa sob os pés do alvo. Antes do arremesso, a Mão confere os limites de §6.3 que as Jogadas do grupo mostram (Jogada aberta entre os dois, carta para a mesma pessoa em 24 horas, 2 enviadas em aberto): as cartas ficam apagadas e o texto diz o motivo. O servidor confere tudo de novo.
 - **Carta primeiro:** fora do Foco, escolher uma Provocação faz um anel pulsar sob os colegas que podem recebê-la agora. Tocar num deles abre o Foco com a carta já escolhida. Um toque no chão ou de novo na carta desfaz a escolha.
@@ -141,7 +141,7 @@ Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria 
 - **Altura:** numa tela de 390×844, a praça e a Mão inteira cabem sem rolar, no início e no Foco. Por isso a Mão não tem texto de ajuda: a primeira linha mostra "Sua Mão 3/5" e o saldo de Energia, e um texto curto toma o lugar do título só quando há o que dizer (o efeito da carta escolhida, as regras do "VS", quem não recebe cartas ou o limite de envio). A carta escolhida sobe por cima dessa linha, sem altura reservada. Tocar numa abre uma janela com o objetivo, o prazo e, se for o caso, Aceitar, Recusar e Aceitar com uma Resposta.
 - **Arremesso:** o painel desce e a Mão some sem mudar de altura; a câmera vai até quem joga, que gira para o alvo e faz `arremessar`. O envio corre junto, e o braço espera no quadro da soltura até o servidor responder. Deu certo: a carta voa girando, a câmera a acompanha, o alvo faz `receber`, a câmera treme, o nome da carta estoura sobre o alvo e o aparelho vibra. Deu errado: a carta cai, quem jogou faz `recusar` e a mensagem do erro aparece.
 - **Rival:** a carta "VS" abre a Mão quando o colega pode ser escolhido. A câmera enquadra os dois, que dão um passo para o centro e se encaram; o "VS" bate na tela e os dois fazem `provocar`. Como a escolha toca no Foco, ela não se repete como encenação para quem escolheu; o Rival a vê na próxima visita (§3.3).
-- **Próprio Foco:** tocar no próprio avatar abre o Foco nele, com a mesma câmera, giro, painel e formas de fechar. O painel não tem Rival nem aviso de cartas, e o link diz "Ver a minha página". No lugar da Mão (e da Mesa) fica a **Vitrine** (`VitrineFoco.tsx`): "Sua Vitrine 2/3", o link "Trocar avatar" (`/perfil/avatar`), as 3 vagas em ordem, os Enfeites liberados e todos os bloqueados, dos mais perto de liberar aos mais longe. Tocar num liberado o põe na próxima vaga; tocar de novo, ou na vaga, o tira. Cada toque salva na hora (os envios seguem em fila), e o primeiro Enfeite troca ao lado do avatar na praça. Se o envio falhar, a vitrine volta ao que era e o erro aparece. A ordem muda tirando e pondo de novo. Com a vitrine e os bloqueados, a página pode rolar.
+- **Próprio Foco:** tocar no próprio avatar abre o Foco nele, com a mesma câmera, giro, painel e formas de fechar. O painel não tem Rival nem aviso de cartas, e o link diz "Ver a minha página". No lugar da Mão (e da Mesa) fica a **Vitrine** (`VitrineFoco.tsx`): "Sua Vitrine 2/3", o link "Trocar avatar" (`/perfil/avatar`), as 3 vagas em ordem, os Enfeites liberados e todos os bloqueados, dos mais perto de liberar aos mais longe. Tocar num liberado o põe na próxima vaga; tocar de novo, ou na vaga, o tira. Cada toque salva na hora (os envios seguem em fila), e os Enfeites trocam no chão da praça. Se o envio falhar, a vitrine volta ao que era e o erro aparece. A ordem muda tirando e pondo de novo. Com a vitrine e os bloqueados, a página pode rolar.
 - **Fechar:** "✕", Esc, o botão voltar ou um toque no chão. Tocar noutro avatar, inclusive o próprio, muda o Foco para ele.
 - **Movimento reduzido:** a câmera e o giro vão direto ao fim, a carta não voa e o impacto vira um quadro fixo de `receber`; o "VS" aparece sem animação. O arrasto continua valendo, porque é entrada, não enfeite.
 
@@ -209,7 +209,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Objetos soltos da praça (barra de calistenia, caixotes, floreiras) e porta aberta | folha `praca-objetos.png`, recortes de tamanhos variados | 6 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 32×32 | 9 |
-| Enfeite | 32×32 | 19 (§9.1) |
+| Enfeite (atlas `enfeites.png`: 4 quadros por linha, objeto apoiado na base da célula; o quadro 1 é o ícone) | 40×40 por quadro, mostrado em 2× | 19 linhas (§9.1) |
 
 ## 5. Energia
 
@@ -385,7 +385,7 @@ Decidido em `decisoes/0038-rival-da-semana.md`.
 
 ## 9. Enfeites
 
-Cada Conquista libera um **Enfeite**: um objeto que conta, só de olhar, o que a pessoa conquistou. Quem pedala muito ganha a bicicleta; quem treina cedo ganha o despertador. Os Enfeites são calculados como as conquistas, sem tabela e sem compra.
+Cada Conquista libera um **Enfeite**: um objeto que conta, só de olhar, o que a pessoa conquistou. Quem pedala muito ganha a bicicleta; quem treina cedo ganha o galo. Os Enfeites são calculados como as conquistas, sem tabela e sem compra.
 
 ### 9.1. Conquistas e Enfeites
 
@@ -398,49 +398,50 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `Sequencia4` | Sequência de 4 semanas | Muda num vaso |
 | `Sequencia8` | Sequência de 8 semanas | Planta com flor (substitui a muda) |
 | `Sequencia12` | Sequência de 12 semanas | Árvore pequena em vaso (substitui a planta) |
-| `Treinos10` | 10 dias com treino | Medalha de bronze |
-| `Treinos50` | 50 dias com treino | Medalha de prata (substitui a de bronze) |
-| `Treinos100` | 100 dias com treino | Medalha de ouro (substitui a de prata) |
-| `DesafioCompleto` (nova) | Um desafio `Encerrado` com todas as semanas que contavam cumpridas (a mesma regra do desafio concluído, §5.1) | Troféu |
+| `Treinos10` | 10 dias com treino | Kettlebell de bronze |
+| `Treinos50` | 50 dias com treino | Kettlebell de prata (substitui o de bronze) |
+| `Treinos100` | 100 dias com treino | Kettlebell de ouro (substitui o de prata) |
+| `DesafioCompleto` (nova) | Um desafio `Encerrado` com todas as semanas que contavam cumpridas (a mesma regra do desafio concluído, §5.1) | Troféu no pedestal |
 
 **Tipo de atividade**, uma por tipo, com **10 atividades** daquele tipo. `Outro` não tem conquista.
 
 | Conquista | Tipo | Enfeite |
 |---|---|---|
-| `RatoDeAcademia` (nova) | `Musculacao` | Haltere |
-| `Corredor` (nova) | `Corrida` | Cronômetro |
-| `Andarilho` (nova) | `Caminhada` | Cachorro na coleira |
+| `RatoDeAcademia` (nova) | `Musculacao` | Suporte de halteres |
+| `Corredor` (nova) | `Corrida` | Bloco de largada com tênis |
+| `Andarilho` (nova) | `Caminhada` | Cachorro sentado, de coleira |
 | `Ciclista` (nova) | `Ciclismo` | Bicicleta |
-| `Peixe` (nova) | `Natacao` | Boia |
-| `Boleiro` (nova) | `Esporte` | Bola |
-| `Zen` (nova) | `Yoga` | Tapete de ioga enrolado |
+| `Peixe` (nova) | `Natacao` | Piscininha com boia |
+| `Boleiro` (nova) | `Esporte` | Golzinho com bola |
+| `Zen` (nova) | `Yoga` | Tapete de ioga meio desenrolado |
 | `PesoDoCorpo` (nova) | `Calistenia` | Paralelas (as barrinhas de chão) |
 
 **Hábito**, para jeitos diferentes de manter a rotina:
 
 | Conquista | Condição | Enfeite |
 |---|---|---|
-| `Madrugador` | 10 atividades iniciadas antes das 07:00 (já existe) | Despertador |
-| `Noturno` (nova) | 10 atividades iniciadas a partir das 20:00 | Poste de luz da praça |
-| `FimDeSemana` (nova) | 10 atividades no sábado ou no domingo | Caixa de som portátil |
-| `Ecletico` (nova) | Atividades verificadas de 5 tipos diferentes, sem contar `Outro` | Mochila de academia |
+| `Madrugador` | 10 atividades iniciadas antes das 07:00 (já existe) | Galo |
+| `Noturno` (nova) | 10 atividades iniciadas a partir das 20:00 | Poste de luz da praça (apagado de dia, aceso no entardecer e à noite) |
+| `FimDeSemana` (nova) | 10 atividades no sábado ou no domingo | Caixa de som de festa |
+| `Ecletico` (nova) | Atividades verificadas de 5 tipos diferentes, sem contar `Outro` | Bolsa de academia |
 
-- São 19 conquistas e 19 desenhos de Enfeite. A planta e a medalha evoluem, então a cena mostra no máximo 15 objetos diferentes.
+- São 19 conquistas e 19 desenhos de Enfeite. A planta e o kettlebell evoluem, então a cena mostra no máximo 15 objetos diferentes.
+- Todo Enfeite é um objeto que faz sentido no chão de uma praça (nada de medalha pendurada ou guia solta no ar), com o tamanho real: os maiores (árvore, poste, troféu no pedestal) têm a altura de um avatar. Cada um tem um ciclo parado de 4 quadros, fora de sincronia com os outros; com movimento reduzido, fica no quadro 1.
 - Nenhuma conquista usa distância, ritmo ou carga: só contagem de atividades, horário e semanas cumpridas. Uma pessoa que faz 20 caminhadas tem a mesma chance de um Enfeite que uma pessoa que faz 20 corridas.
 - Os nomes e os limites (10 por tipo, 10 por hábito) ficam em constantes, como os demais marcos.
 - `Madrugador` e `Noturno` cobrem as duas pontas do dia, para que treinar cedo não seja o único horário premiado (ver §12, item 3).
 
 ### 9.2. Vitrine
 
-- A pessoa tem uma **vitrine** com até **3 Enfeites**. A cena mostra o primeiro ao lado do avatar.
+- A pessoa tem uma **vitrine** com até **3 Enfeites**. A cena os põe no chão, na ordem da vitrine, até o limite do tamanho do grupo (§3.1).
 - Tocar no avatar abre o Foco, cujo painel mostra a vitrine inteira, junto do acesso à página do membro e às cartas.
 - Um Enfeite novo entra sozinho na vitrine se houver espaço. A pessoa reorganiza ou tira Enfeites no próprio Foco (§3.5) ou em `/perfil/avatar`.
 - Um Enfeite que evolui troca de nível no mesmo lugar da vitrine.
 - Em `/perfil/avatar`, os Enfeites que ainda faltam aparecem cinza, com cadeado, a conquista que os libera e o progresso. Eles não podem entrar na vitrine.
 - Só aparecem Enfeites de quem está no modo Jogo. Quem está no modo App não expõe nada.
-- **Enfeite novo:** na próxima visita à cena, o avatar faz `comemorando` e o Enfeite aparece com o mesmo brilho em CSS da missão (§3.3). Os colegas veem o Enfeite já no lugar, sem encenação.
+- **Enfeite novo:** na próxima visita à cena, o avatar faz `comemorando` e o Enfeite cai no chão com o mesmo brilho em CSS da missão (§3.3). Os colegas veem o Enfeite já no lugar, sem encenação.
 
-A vitrine é uma lista de **códigos de Enfeite** (a família: `planta`, `medalha`…), e não de conquista, guardada na tabela `avatares`. Assim a evolução mantém o lugar. Um código que não vale mais é ignorado na leitura, e os Enfeites já vistos (`enfeites_vistos`) que a pessoa tirou não voltam sozinhos.
+A vitrine é uma lista de **códigos de Enfeite** (a família: `planta`, `kettlebell`…), e não de conquista, guardada na tabela `avatares`. Assim a evolução mantém o lugar. Um código que não vale mais é ignorado na leitura, e os Enfeites já vistos (`enfeites_vistos`) que a pessoa tirou não voltam sozinhos.
 
 **Privacidade.** Hoje as conquistas aparecem só no próprio Perfil (`decisoes/0018-perfil-e-pagina-do-membro.md`). A vitrine mostra aos colegas apenas o que está nela, só para quem escolheu o modo Jogo, e a pessoa pode esvaziá-la. Decidido em `decisoes/0037-avatar-importado-e-enfeites.md`.
 

@@ -843,10 +843,56 @@
     }
   }
 
+  /* Enfeite no chão (docs/gamificacao.md §3.1): o poste aceso pisca nos quadros 2 a 4 do atlas. */
+  .enfeite-aceso {
+    animation: enfeite-aceso calc(3 * var(--ms)) steps(3) infinite;
+  }
+
+  @keyframes enfeite-aceso {
+    from {
+      background-position-x: calc(var(--celula) * -1);
+    }
+    to {
+      background-position-x: calc(var(--celula) * -4);
+    }
+  }
+
+  /* O Enfeite que aparece agora (Foco do dono, Enfeite novo) cai no chão, achata e volta. */
+  .enfeite-surgir {
+    transform-origin: 50% 100%;
+    animation: enfeite-surgir 400ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+  }
+
+  @keyframes enfeite-surgir {
+    0% {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.6);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(0) scale(1.15, 0.85);
+    }
+    100% {
+      transform: none;
+    }
+  }
+
+  .enfeite-surgir.enfeite-brilho {
+    animation:
+      enfeite-surgir 400ms cubic-bezier(0.3, 1.4, 0.5, 1) both,
+      enfeite-brilho 700ms ease-in-out infinite alternate;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .enfeite-brilho {
+    .enfeite-brilho,
+    .enfeite-surgir.enfeite-brilho {
       animation: none;
       filter: drop-shadow(0 0 4px var(--color-reward, #ffd34e));
+    }
+
+    .enfeite-surgir,
+    .enfeite-aceso {
+      animation: none;
     }
   }
 }

@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
  * mestre 1×: `sx` é a coluna na folha, e `x`/`y` o canto do recorte na praça. Se a praça mudar,
  * rode o build.py e cole a lista nova.
  */
-const objetos = [
+export const objetosPraca = [
   { nome: "floreira-esquerda", sx: 0, x: 0, y: 183, largura: 22, altura: 17 },
   { nome: "caixotes", sx: 22, x: 12, y: 60, largura: 20, altura: 25 },
   // A barra de calistenia (docs/gamificacao.md §9.3) é um objeto à parte para que, no futuro,
@@ -77,7 +77,7 @@ export function ObjetosPraca({
 }) {
   return (
     <>
-      {objetos.map((o) => (
+      {objetosPraca.map((o) => (
         <Recorte key={o.nome} recorte={o} zIndex={(o.y + o.altura) * escala} />
       ))}
       {aberta && <Recorte recorte={portaAberta} zIndex={peDaMureta} />}
