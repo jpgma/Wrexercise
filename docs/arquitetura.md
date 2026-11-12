@@ -1199,7 +1199,7 @@ Um backup mantido somente na mesma VM não é suficiente contra perda do volume 
 
 A restauração deve ser documentada e testada.
 
-Implementação em `decisoes/0022-backups.md`: `deploy/backup.sh`, com destino em `BACKUP_DIR` na pilha local e em `~/wrexercise/dados/backups` no telefone. `run.bat ssh-backup` copia os backups do telefone para o Windows (`decisoes/0032-a14-como-producao.md`).
+Implementação em `decisoes/0022-backups.md`: `deploy/backup.sh`, com destino em `BACKUP_DIR` na pilha local e em `~/wrexercise/dados/backups` no telefone. No telefone, `deploy/nuvem.sh` faz o backup todo dia e em cada implantação, e o envia cifrado ao Google Drive, com 31 dias de retenção (`decisoes/0046-backup-no-google-drive.md`). `run.bat ssh-backup` também copia os arquivos diários para o Windows.
 
 ---
 

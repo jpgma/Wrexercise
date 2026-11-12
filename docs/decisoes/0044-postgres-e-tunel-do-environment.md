@@ -1,6 +1,6 @@
 # 0044 — PostgreSQL e túnel compartilhados do Environment
 
-**Status:** DECIDIDA
+**Status:** DECIDIDA · Backups do Wrexercise atualizados pela 0046 (o dump do banco também vai para o Google Drive).
 
 ## Contexto
 

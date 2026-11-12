@@ -90,34 +90,59 @@ Usa o perfil compartilhado `%LOCALAPPDATA%\jpgma\a14.env`; se faltar ou o telefo
 
 ### Backups
 
-No telefone, o banco e os arquivos têm backups separados, com 7 dias de retenção, conferidos e com datas em UTC (ver `docs/decisoes/0022-backups.md`, `0032` e `0044`):
+O telefone envia o backup cifrado ao Google Drive sozinho, uma vez por dia e antes das migrações de cada `run.bat --ssh` (ver `docs/decisoes/0046-backup-no-google-drive.md`). Datas em UTC.
 
-- **Banco:** o `Environment` grava `~/ambiente/backups/wrexercise-*.dump`, junto com os dos outros apps. Cópia para o Windows: `run.bat ssh-backup` no `Environment` (agendado com `run.bat agendar-backup` de lá).
-- **Evidências e avatares:** `deploy/backup.sh` grava em `~/wrexercise/dados/backups`.
+- **Arquivo diário** `diarios/wrexercise-AAAAMMDD-HHMMSS[-implantacao].tar.gz`: dump do banco, avatares, logs e `versao.txt`. O Drive guarda 31 dias, e sempre os 7 mais novos; o telefone, os 3 mais novos.
+- **Evidências:** espelho em `evidencias/`, que só envia as novas. O que sai do telefone fica 31 dias em `evidencias-removidas/<data>/`.
+- **Logs:** cada backup leva `log/app.log` e o esvazia; no telefone ficam só os logs desde o último backup.
+- O `Environment` continua gravando o dump local de todos os bancos em `~/ambiente/backups` (7 dias).
 
-Para gravar o backup dos arquivos no telefone e copiá-lo para o Windows:
+Situação: `remote-termux.sh status` ou `.\stats.bat` (avisam se o último envio tem mais de 26 h).
+
+#### Configuração (uma vez)
+
+Use de preferência uma conta Google só para backups (15 GB gratuitos, separados do Gmail e do Fotos).
+
+1. No Termux: `pkg install rclone`.
+2. No Windows: `winget install Rclone.Rclone` e, com o navegador logado na conta dos backups:
+
+   ```powershell
+   rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"   # {"scope":"drive.file"}: o rclone só vê o que ele criou
+   ```
+
+   Copie o token JSON que ele imprime.
+3. No Termux, `rclone config`:
+   - remoto `gdrive`: tipo `drive`, client ID e secret vazios (o padrão do rclone), escopo `drive.file`, sem configuração automática (`n`), e cole o token;
+   - remoto `wx-cripto`: tipo `crypt`, `remote = gdrive:wrexercise`, cifrar nomes (`standard`), deixe o rclone gerar as duas senhas.
+
+   Depois: `chmod 600 ~/.config/rclone/rclone.conf`.
+4. **Guarde o `rclone.conf` no gerenciador de senhas.** Sem as senhas do crypt, ninguém lê o backup, nem você.
+5. Teste: `sh ~/wrexercise/deploy/remote-termux.sh backup` e `rclone lsl wx-cripto:diarios`.
+
+Com um client OAuth próprio, publique-o como "In production": em "Testing", o token expira em 7 dias e o backup para de enviar.
+
+#### Comandos
+
+```bash
+sh ~/wrexercise/deploy/remote-termux.sh backup                    # backup agora
+sh ~/wrexercise/deploy/remote-termux.sh restore                   # para o app e restaura o mais recente do Drive
+sh ~/wrexercise/deploy/remote-termux.sh restore 20261105-030000   # ou um backup específico
+sh ~/wrexercise/deploy/remote-termux.sh iniciar                   # depois de conferir
+```
+
+Restaurar o mais recente traz todas as evidências, de qualquer idade. Um backup mais antigo traz de volta também as evidências removidas depois dele.
+
+Cópia extra dos arquivos diários (sem as evidências) para `BACKUP_DIR` no Windows, opcional:
 
 ```powershell
 .\run.bat ssh-backup
 ```
 
-Agende uma execução diária (o telefone precisa estar acessível por SSH):
+#### Teste de restauração
 
-```powershell
-schtasks /create /sc daily /st 03:00 /tn WrexerciseBackup /tr "\"D:\Repos\jpgma\Wrexercise\run.bat\" ssh-backup"
-```
+De tempos em tempos, sem mexer na produção: no Windows, com uma cópia do `rclone.conf`, baixe o mais recente (`rclone copy wx-cripto:diarios/<arquivo> .` e `rclone copy wx-cripto:evidencias <pasta>`), suba a pilha local com `.\run.bat`, restaure o `wrexercise.dump` com `pg_restore --clean --if-exists --no-owner` no contêiner `db`, copie avatares e evidências para `%LOCALAPPDATA%\Wrexercise\local` e confira as atividades e as imagens em http://localhost.
 
-Um backup que só existe no telefone não protege contra a perda do aparelho. Aponte `BACKUP_DIR` para uma pasta sincronizada (OneDrive, Google Drive); o padrão é `%LOCALAPPDATA%\Wrexercise\backups`. O `ssh-backup` não apaga cópias antigas no Windows. Os backups contêm as evidências e os hashes das senhas: mantenha a pasta privada.
-
-Para restaurar no telefone, com o dump em `~/ambiente/backups` e os arquivos em `~/wrexercise/dados/backups`:
-
-```bash
-sh ~/wrexercise/deploy/remote-termux.sh restore 20261105-030000      # para o app e restaura os arquivos
-sh ~/ambiente/deploy/ambiente.sh restore wrexercise 20261105-030500  # data do dump do banco
-sh ~/wrexercise/deploy/remote-termux.sh iniciar
-```
-
-Teste a restauração de tempos em tempos, com a pilha local: `.\run.bat backup`, `.\run.bat reset`, `.\run.bat` e `.\run.bat restore <data>`. Depois, confira se as atividades e as imagens voltaram.
+Na pilha local de Docker, o backup continua em `BACKUP_DIR`: `.\run.bat backup`, `.\run.bat reset`, `.\run.bat` e `.\run.bat restore <data>`.
 
 ### Senha esquecida
 

@@ -62,7 +62,7 @@ if [ "$full" = true ]; then
   step "Compose: pilha com túnel"
   DOMAIN=http://localhost DB_PASSWORD=x DB_CONNECTION=x TUNNEL_IMAGE=x TUNNEL_NAME=x TUNNEL_DIR=/tmp \
     docker compose -f deploy/compose.yaml -f deploy/compose.tunnel.yaml config -q
-  sh -n deploy/remote-termux.sh
+  for f in deploy/remote-termux.sh deploy/nuvem.sh deploy/backup.sh; do sh -n "$f"; done
 
   if [ "$image" = true ] || image_inputs_changed; then
     step "Imagem linux/arm64 (publicação Native AOT real)"

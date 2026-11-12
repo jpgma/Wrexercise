@@ -1,6 +1,6 @@
 # 0022 — Backups
 
-**Status:** DECIDIDA
+**Status:** DECIDIDA · Cópia externa no telefone atualizada pela 0046 (Google Drive, automática).
 
 ## Contexto
 

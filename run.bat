@@ -16,15 +16,16 @@ rem   run.bat --ssh        em vez de subir aqui, implanta o app no celular Andro
 rem                          O app roda nativo; PostgreSQL e túnel da Cloudflare são do repositório
 rem                          Environment, que precisa estar implantado antes. Usa o perfil SSH compartilhado
 rem                          %LOCALAPPDATA%\jpgma\a14.env (pergunta o que faltar). Exige chave SSH (sem senha)
-rem                          e o sshd ligado no Termux. Pode ser combinado com --rebuild. Ver
+rem                          e o sshd ligado no Termux. Pode ser combinado com --rebuild. Antes das
+rem                          migrações, grava um backup e o envia ao Google Drive (decisão 0046). Ver
 rem                          docs/decisoes/0029-implantacao-nativa-no-termux.md e 0044.
 rem   run.bat --ssh --scripts  envia só deploy/*.sh e reinicia o app que já está no celular, sem build
 rem   run.bat logs         acompanha os logs da aplicação
 rem   run.bat backup       grava um backup do banco e das evidências em BACKUP_DIR
-rem   run.bat ssh-backup   roda o backup das evidências e avatares no celular e copia a pasta de backups
-rem                          dele para BACKUP_DIR. O banco é copiado pelo run.bat ssh-backup do Environment.
-rem                          Aponte BACKUP_DIR para uma pasta sincronizada. Não apaga cópias antigas daqui.
-rem                          Ver docs/decisoes/0032-a14-como-producao.md e 0044.
+rem   run.bat ssh-backup   roda o backup no celular (banco, avatares e logs; envia ao Google Drive com as
+rem                          evidências) e copia os últimos arquivos dele para BACKUP_DIR. O celular já faz
+rem                          o backup sozinho todo dia: este comando é uma cópia extra, sem as evidências.
+rem                          Não apaga cópias antigas daqui. Ver docs/decisoes/0046-backup-no-google-drive.md.
 rem   run.bat restore D    restaura o backup da data D (AAAAMMDD-HHMMSS), com o app parado
 rem   run.bat stop         para os serviços e mantém os dados
 rem   run.bat reset        para os serviços e APAGA os dados locais
@@ -334,7 +335,7 @@ if not exist "%PUBLISH_DIR%\Wrexercise" (
 )
 echo.
 echo ==^> Enviando o app para o Termux
-"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo"
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo && echo %SSH_IMAGE% > wrexercise/app.novo/versao.txt"
 if errorlevel 1 goto :fail
 tar --format ustar -cf - -C "%PUBLISH_DIR%" . | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise/app.novo"
 if errorlevel 1 goto :fail
@@ -345,7 +346,7 @@ echo.
 echo ==^> Enviando os scripts de deploy
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy"
 if errorlevel 1 goto :fail
-tar --format ustar -cf - deploy/backup.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
+tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
 if errorlevel 1 goto :fail
 
 echo.
@@ -363,7 +364,7 @@ exit /b 0
 
 :ssh_backup
 rem Usa o perfil compartilhado. O backup roda no celular; depois a pasta de backups vem por tar em pipe.
-rem Sem perguntas, para rodar pelo Agendador de Tarefas. O banco vem pelo ssh-backup do Environment.
+rem Sem perguntas, para rodar pelo Agendador de Tarefas. Leva os arquivos diários (banco, avatares e logs).
 set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
 set "SSH_FILE=%LOCALAPPDATA%\jpgma\a14.env"
 if not exist "%SSH_FILE%" (
@@ -376,12 +377,12 @@ set "SSH_OPTS=-p %S_PORT% -o StrictHostKeyChecking=accept-new -o ConnectTimeout=
 if defined S_KEY set "SSH_OPTS=%SSH_OPTS% -i "%S_KEY%" -o IdentitiesOnly=yes"
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 echo.
-echo ==^> Gravando o backup das evidências e avatares no celular
+echo ==^> Gravando o backup no celular e enviando ao Google Drive
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh backup"
 if errorlevel 1 goto :fail
 echo.
 echo ==^> Copiando para %BACKUP_DIR%
-"%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -cf - -C wrexercise/dados/backups ." | tar -xf - -C "%BACKUP_DIR%"
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "cd wrexercise/dados/backups && tar -cf - wrexercise-*.tar.gz" | tar -xf - -C "%BACKUP_DIR%"
 if errorlevel 1 goto :fail
 echo Backups do celular copiados para %BACKUP_DIR%
 exit /b 0

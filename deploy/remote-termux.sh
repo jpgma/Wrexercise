@@ -5,10 +5,11 @@
 # Ver docs/decisoes/0029-implantacao-nativa-no-termux.md e 0044-postgres-e-tunel-do-environment.md.
 #
 #   remote-termux.sh implantar                troca o app (se veio app.novo), migra e (re)inicia
-#   remote-termux.sh iniciar                  sobe o app se não estiver rodando (Termux:Boot usa este)
+#   remote-termux.sh iniciar                  sobe o app e a tarefa de backup se não estiverem rodando
+#                                             (Termux:Boot usa este)
 #   remote-termux.sh parar
-#   remote-termux.sh backup                   evidências e avatares (o banco fica com o Environment)
-#   remote-termux.sh restore AAAAMMDD-HHMMSS  evidências e avatares; o banco: ambiente.sh restore wrexercise
+#   remote-termux.sh backup                   banco, avatares e logs num arquivo, mais as evidências, no Google Drive
+#   remote-termux.sh restore [AAAAMMDD-HHMMSS]   para o app e restaura tudo do Drive; sem data, o mais recente
 #   remote-termux.sh reset-senha <email>      gera o link de redefinição de senha
 #   remote-termux.sh status
 #   remote-termux.sh stats                    CPU, memória, banco, disco e backups (stats.bat usa este)
@@ -100,11 +101,15 @@ iniciar() {
   preparar_banco
   ambiente_app
   iniciar_tarefa app grun "$base/app/Wrexercise"
+  # Backup diário no Google Drive: confere a cada hora se o último tem 24 h (deploy/nuvem.sh, decisão 0046).
+  iniciar_tarefa backup sh -c 'sh "$0" agendado; sleep 3600' "$base/deploy/nuvem.sh"
 }
 
 parar() {
   parar_tarefa app
   pkill -f "$base/app/Wrexercise" 2>/dev/null || true
+  parar_tarefa backup
+  pkill -f "$base/deploy/nuvem.sh agendado" 2>/dev/null || true
 }
 
 implantar() {
@@ -112,6 +117,12 @@ implantar() {
   mkdir -p run log "$dados"
   ler_env
   parar
+  # Backup antes das migrações, com o app parado: protege contra uma migração ruim. Falha ao gravar
+  # interrompe a implantação; falha no envio ao Drive só avisa. Na primeira implantação não há o que copiar.
+  if [ -x app/Wrexercise ]; then
+    preparar_banco
+    sh "$base/deploy/nuvem.sh" backup implantacao
+  fi
   # run.bat envia o app novo em app.novo; o anterior fica em app.antigo para reverter.
   # Sem app.novo (run.bat --ssh --scripts), só os scripts mudaram e o app atual continua.
   if [ -d app.novo ]; then
@@ -138,6 +149,8 @@ status() {
   curl -fs --max-time 5 http://127.0.0.1:8080/health || echo "app sem resposta"
   echo
   if tarefa_rodando app; then echo "app: rodando"; else echo "app: parado"; fi
+  if tarefa_rodando backup; then echo "backup: tarefa rodando"; else echo "backup: tarefa parada"; fi
+  sh "$base/deploy/nuvem.sh" status
   if pg_isready -q -h 127.0.0.1 -p 5432 2>/dev/null; then echo "PostgreSQL (Environment): aceita conexões"; else echo "PostgreSQL (Environment): sem resposta"; fi
   free -m | head -2
 }
@@ -266,26 +279,13 @@ SQL
   echo "Logs: $(du -sh log 2>/dev/null | cut -f1)"
 
   titulo "Backups"
+  if tarefa_rodando backup; then echo "Tarefa de backup: rodando"; else echo "Tarefa de backup: PARADA"; fi
+  sh "$base/deploy/nuvem.sh" status
   ultimo=$(ls -1t "$HOME/ambiente/backups"/wrexercise-*.dump 2>/dev/null | head -n 1)
   if [ -n "$ultimo" ]; then
     idade=$(( ($(date +%s) - $(stat -c %Y "$ultimo")) / 3600 ))
-    echo "Banco (Environment): $(basename "$ultimo") (há ${idade} h)"
-  else
-    echo "Banco: nenhum dump em ~/ambiente/backups. No Environment: run.bat ssh-backup"
+    echo "Dump local do Environment: $(basename "$ultimo") (há ${idade} h)"
   fi
-  ultimo=$(ls -1t "$dados/backups"/evidencias-*.tar.gz 2>/dev/null | head -n 1)
-  if [ -n "$ultimo" ]; then
-    idade=$(( ($(date +%s) - $(stat -c %Y "$ultimo")) / 3600 ))
-    echo "Evidências: $(basename "$ultimo") (há ${idade} h, $(du -h "$ultimo" | cut -f1))"
-  else
-    echo "Evidências: nenhum backup no telefone. Rode: run.bat ssh-backup"
-  fi
-}
-
-# O banco é copiado pelo Environment; aqui só os arquivos do app.
-backup_sh() {
-  BACKUP_BANCO=0 BACKUP_DESTINO=$dados/backups EVIDENCIAS_DIR=$dados/evidencias AVATARES_DIR=$dados/avatares \
-    sh "$base/deploy/backup.sh" "$@"
 }
 
 case ${1:-} in
@@ -294,13 +294,17 @@ case ${1:-} in
   parar) parar ;;
   status) status ;;
   stats) stats ;;
-  backup) backup_sh "$@" ;;
+  backup)
+    ler_env
+    preparar_banco
+    sh "$base/deploy/nuvem.sh" backup ;;
   restore)
-    # A restauração exige o app parado.
+    # A restauração exige o app parado (a tarefa de backup também para).
     parar
-    backup_sh "$@"
-    echo "Para o banco: sh ~/ambiente/deploy/ambiente.sh restore wrexercise <AAAAMMDD-HHMMSS>"
-    echo "Depois, rode 'remote-termux.sh iniciar' para subir o app de novo." ;;
+    ler_env
+    preparar_banco
+    sh "$base/deploy/nuvem.sh" restore "${2:-}"
+    echo "Depois de conferir, rode 'remote-termux.sh iniciar' para subir o app e a tarefa de backup." ;;
   reset-senha)
     ler_env
     ambiente_app
