@@ -21,7 +21,7 @@ const atlas = {
   ciclista: { linha: 10, esquerda: 0, largura: 40, altura: 25, ms: 160 },
   peixe: { linha: 11, esquerda: 4, largura: 31, altura: 20, ms: 260 },
   boleiro: { linha: 12, esquerda: 3, largura: 34, altura: 23, ms: 240 },
-  zen: { linha: 13, esquerda: 3, largura: 34, altura: 18, ms: 360 },
+  zen: { linha: 13, esquerda: 3, largura: 34, altura: 19, ms: 360 },
   pesodocorpo: { linha: 14, esquerda: 3, largura: 34, altura: 20, ms: 260 },
   madrugador: { linha: 15, esquerda: 7, largura: 25, altura: 25, ms: 240 },
   noturno: { linha: 16, esquerda: 15, largura: 10, altura: 33, ms: 140 },
