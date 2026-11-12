@@ -25,7 +25,11 @@ internal sealed class ApiTestHost : IAsyncDisposable
     /// <summary>Os serviços do servidor de teste (sobe o servidor, se ainda não subiu).</summary>
     internal IServiceProvider Services => _factory.Services;
 
-    private ApiTestHost(TestDatabase database, string evidenciasDiretorio, string avataresDiretorio)
+    private ApiTestHost(
+        TestDatabase database,
+        string evidenciasDiretorio,
+        string avataresDiretorio,
+        Action<IWebHostBuilder>? configurar)
     {
         _database = database;
         AvataresDiretorio = avataresDiretorio;
@@ -36,6 +40,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
             builder.UseSetting("ConnectionStrings:Database", database.ConnectionString);
             builder.UseSetting("Evidencias:Diretorio", evidenciasDiretorio);
             builder.UseSetting("Avatares:Diretorio", avataresDiretorio);
+            configurar?.Invoke(builder);
         });
     }
 
@@ -44,14 +49,15 @@ internal sealed class ApiTestHost : IAsyncDisposable
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
-    public static async Task<ApiTestHost> CreateAsync()
+    /// <param name="configurar">Configuração extra do servidor de teste, aplicada depois da padrão.</param>
+    public static async Task<ApiTestHost> CreateAsync(Action<IWebHostBuilder>? configurar = null)
     {
         var database = await TestDatabase.CreateMigratedAsync();
         var evidenciasDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-evidencias", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(evidenciasDiretorio);
         var avataresDiretorio = Path.Combine(Path.GetTempPath(), "wrexercise-test-avatares", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(avataresDiretorio);
-        return new ApiTestHost(database, evidenciasDiretorio, avataresDiretorio);
+        return new ApiTestHost(database, evidenciasDiretorio, avataresDiretorio, configurar);
     }
 
     public HttpClient CreateAnonimo()

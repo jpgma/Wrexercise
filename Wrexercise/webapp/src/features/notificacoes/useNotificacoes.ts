@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getJson, postEmpty } from "@/services/api";
+import { atualizarBadge } from "@/services/push";
 
 export type Notificacao = {
   id: string;
@@ -50,6 +51,7 @@ export function useTotalNaoLidas() {
         "/api/notificacoes/nao-lidas",
         signal,
       );
+      atualizarBadge(total);
       return total;
     },
   });

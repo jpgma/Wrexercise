@@ -1,5 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Bell,
+  BellOff,
   Download,
   KeyRound,
   LogOut,
@@ -27,6 +29,13 @@ import {
   instalar,
   subscribeInstalacao,
 } from "@/services/instalacao";
+import {
+  ativarPush,
+  desativarPush,
+  getEstadoPush,
+  subscribePush,
+  type EstadoPush,
+} from "@/services/push";
 
 const nomeSchema = z.object({
   nomeExibicao: z
@@ -272,6 +281,65 @@ function Instalacao() {
   );
 }
 
+const textosPush: Record<Exclude<EstadoPush, "carregando">, string> = {
+  ativo:
+    "Ativadas. Este aparelho avisa sobre treinos para avaliar, reações, comentários, disputas, cartas e o Rival.",
+  inativo:
+    "Receba neste aparelho os treinos para avaliar, as reações, os comentários, as cartas e o Rival.",
+  negado:
+    "As notificações estão bloqueadas. Libere-as nas configurações do navegador ou do celular para este site.",
+  instalar:
+    "No iPhone ou iPad, as notificações só funcionam no app instalado. Toque em Compartilhar e depois em Adicionar à Tela de Início.",
+  indisponivel:
+    "Este navegador não recebe notificações do Wrexercise. O sino do app continua mostrando tudo.",
+};
+
+function NotificacoesAparelho() {
+  const estado = useSyncExternalStore(subscribePush, getEstadoPush);
+  const { showToast } = useToast();
+  const [pendente, setPendente] = useState(false);
+
+  if (estado === "carregando") return null;
+
+  const alternar = () => {
+    setPendente(true);
+    const acao = estado === "ativo" ? desativarPush() : ativarPush();
+    void acao
+      .catch(() =>
+        showToast("Não foi possível alterar as notificações. Tente de novo."),
+      )
+      .finally(() => setPendente(false));
+  };
+
+  return (
+    <>
+      <SectionTitle>Notificações neste aparelho</SectionTitle>
+      <div className="card space-y-3 p-5">
+        <div className="flex gap-3 text-sm text-muted">
+          {estado === "ativo" ? (
+            <Bell aria-hidden="true" className="size-5 shrink-0 text-link" />
+          ) : (
+            <BellOff aria-hidden="true" className="size-5 shrink-0 text-link" />
+          )}
+          <p role="status">{textosPush[estado]}</p>
+        </div>
+        {(estado === "ativo" || estado === "inativo") && (
+          <button
+            type="button"
+            className="btn-secondary w-full"
+            disabled={pendente}
+            onClick={alternar}
+          >
+            {estado === "ativo"
+              ? "Desativar notificações"
+              : "Ativar notificações"}
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
 export function ConfiguracoesPage() {
   const { data: usuario } = useSessao();
   const sair = useSair();
@@ -289,6 +357,8 @@ export function ConfiguracoesPage() {
 
       <SectionTitle>Senha</SectionTitle>
       <SenhaForm />
+
+      <NotificacoesAparelho />
 
       <Instalacao />
 

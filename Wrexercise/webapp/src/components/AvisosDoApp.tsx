@@ -1,5 +1,12 @@
-import { Download, RefreshCw, Smartphone, WifiOff, X } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import {
+  BellRing,
+  Download,
+  RefreshCw,
+  Smartphone,
+  WifiOff,
+  X,
+} from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useConectado } from "@/components/useConectado";
 import { useSessao } from "@/features/autenticacao";
 import {
@@ -8,6 +15,14 @@ import {
   instalar,
   subscribeInstalacao,
 } from "@/services/instalacao";
+import {
+  ativarPush,
+  dispensarConvitePush,
+  getEstadoPush,
+  iniciarPush,
+  isConviteAtivarPush,
+  subscribePush,
+} from "@/services/push";
 import {
   aplicarAtualizacao,
   hasAtualizacao,
@@ -20,7 +35,7 @@ const classesAviso =
 const classesBotaoPrimario =
   "h-11 shrink-0 rounded-lg border-2 border-outline bg-primary px-4 text-sm font-bold text-on-primary press hover:bg-primary-hover";
 
-/** Avisos de todo o app: falta de conexão, versão nova e convite para instalar o PWA. */
+/** Avisos de todo o app: falta de conexão, versão nova e convites para instalar o PWA e ativar o push. */
 export function AvisosDoApp() {
   const conectado = useConectado();
   const atualizacao = useSyncExternalStore(
@@ -32,12 +47,25 @@ export function AvisosDoApp() {
     getModoAvisoInstalacao,
   );
   const { data: usuario } = useSessao();
+  const [ativando, setAtivando] = useState(false);
+  useSyncExternalStore(subscribePush, getEstadoPush);
 
-  // Um aviso por vez: a instalação só aparece para quem já entrou, com rede e sem versão nova.
+  // Ao entrar na conta, descobre o estado do push e reenvia a inscrição deste aparelho.
+  useEffect(() => {
+    if (usuario && conectado) void iniciarPush();
+  }, [usuario, conectado]);
+
+  // Um aviso por vez: os convites só aparecem para quem já entrou, com rede e sem versão nova.
   const instalacao =
     conectado && !atualizacao && usuario ? modoInstalacao : null;
+  const convitePush =
+    conectado &&
+    !atualizacao &&
+    usuario &&
+    !instalacao &&
+    isConviteAtivarPush();
 
-  if (conectado && !atualizacao && !instalacao) return null;
+  if (conectado && !atualizacao && !instalacao && !convitePush) return null;
 
   return (
     <div
@@ -94,6 +122,35 @@ export function AvisosDoApp() {
             aria-label="Dispensar aviso de instalação"
             className="-mr-2 grid size-11 shrink-0 place-items-center rounded-lg text-muted tap hover:text-foreground"
             onClick={dispensarAvisoInstalacao}
+          >
+            <X aria-hidden="true" className="size-5" />
+          </button>
+        </div>
+      )}
+      {convitePush && (
+        <div role="status" aria-atomic="true" className={classesAviso}>
+          <BellRing aria-hidden="true" className="size-5 shrink-0 text-link" />
+          <p className="flex-1">
+            Receba no celular os treinos para avaliar, as reações e as cartas.
+          </p>
+          <button
+            type="button"
+            className={classesBotaoPrimario}
+            disabled={ativando}
+            onClick={() => {
+              setAtivando(true);
+              void ativarPush()
+                .catch(() => undefined)
+                .finally(() => setAtivando(false));
+            }}
+          >
+            Ativar
+          </button>
+          <button
+            type="button"
+            aria-label="Dispensar convite para ativar as notificações"
+            className="-mr-2 grid size-11 shrink-0 place-items-center rounded-lg text-muted tap hover:text-foreground"
+            onClick={dispensarConvitePush}
           >
             <X aria-hidden="true" className="size-5" />
           </button>

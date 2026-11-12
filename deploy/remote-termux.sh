@@ -82,8 +82,21 @@ preparar_banco() {
   printf '%s\n' "$DB_PASSWORD" | $ambiente provisionar wrexercise >/dev/null
 }
 
+# Chaves do Web Push (decisão 0049): o próprio app as gera uma vez, e elas ficam no .env, como a senha do
+# banco. Trocá-las desfaz as inscrições; o app de cada pessoa se inscreve de novo ao abrir.
+garantir_vapid() {
+  if ! grep -q '^VAPID_PRIVATE_KEY=' .env && [ -x "$base/app/Wrexercise" ]; then
+    grun "$base/app/Wrexercise" gerar-vapid >> .env
+  fi
+  VAPID_PUBLIC_KEY=$(sed -n 's/^VAPID_PUBLIC_KEY=//p' .env)
+  VAPID_PRIVATE_KEY=$(sed -n 's/^VAPID_PRIVATE_KEY=//p' .env)
+}
+
 # O app lê a configuração do ambiente, como nos contêineres de compose.yaml.
 ambiente_app() {
+  garantir_vapid
+  export Vapid__PublicKey="$VAPID_PUBLIC_KEY"
+  export Vapid__PrivateKey="$VAPID_PRIVATE_KEY"
   export ConnectionStrings__Database="Host=127.0.0.1;Port=5432;Database=wrexercise;Username=wrexercise;Password=$DB_PASSWORD;Maximum Pool Size=10"
   export Evidencias__Diretorio=$dados/evidencias
   export Avatares__Diretorio=$dados/avatares

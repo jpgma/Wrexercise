@@ -9,6 +9,9 @@ services:
     restart: unless-stopped
     environment:
       ConnectionStrings__Database: ${DB_CONNECTION:?defina DB_CONNECTION no .env}
+      # Opcionais: sem elas, o push fica desligado. Gere com: docker compose ... run --rm app gerar-vapid
+      Vapid__PublicKey: ${VAPID_PUBLIC_KEY:-}
+      Vapid__PrivateKey: ${VAPID_PRIVATE_KEY:-}
     depends_on:
       db:
         condition: service_healthy

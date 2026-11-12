@@ -11,5 +11,8 @@ internal static class NotificacoesRoutes
         group.MapGet("/nao-lidas", ListarNotificacoes.ContarNaoLidasAsync);
         group.MapPost("/lidas", MarcarLidas.MarcarTodasAsync);
         group.MapPost("/{id:guid}/lida", MarcarLidas.MarcarUmaAsync);
+        group.MapGet("/push", InscricoesPush.ObterConfiguracao);
+        group.MapPut("/push", InscricoesPush.SalvarAsync);
+        group.MapDelete("/push", InscricoesPush.RemoverAsync);
     }
 }

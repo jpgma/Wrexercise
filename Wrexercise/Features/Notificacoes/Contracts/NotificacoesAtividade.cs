@@ -41,7 +41,8 @@ internal static class NotificacoesAtividade
             FROM atividades a
             WHERE a.id = $1
             ON CONFLICT (usuario_id, atividade_id, tipo) WHERE read_at IS NULL AND tipo IN ('Reacao', 'Comentario')
-            DO UPDATE SET total = notificacoes.total + 1, ator_id = EXCLUDED.ator_id, updated_at = now()
+            DO UPDATE SET total = notificacoes.total + 1, ator_id = EXCLUDED.ator_id, updated_at = now(),
+                push_enviado_em = NULL
             """, connection, transaction);
         command.Parameters.AddWithValue(atividadeId);
         command.Parameters.AddWithValue(atorId);
@@ -68,7 +69,8 @@ internal static class NotificacoesAtividade
                        SELECT 1 FROM comentarios c
                        WHERE c.atividade_id = a.id AND c.usuario_id = m.usuario_id))
             ON CONFLICT (usuario_id, atividade_id, tipo) WHERE read_at IS NULL AND tipo IN ('Reacao', 'Comentario')
-            DO UPDATE SET total = notificacoes.total + 1, ator_id = EXCLUDED.ator_id, updated_at = now()
+            DO UPDATE SET total = notificacoes.total + 1, ator_id = EXCLUDED.ator_id, updated_at = now(),
+                push_enviado_em = NULL
             """, connection, transaction);
         command.Parameters.AddWithValue(atividadeId);
         command.Parameters.AddWithValue(atorId);

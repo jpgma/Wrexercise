@@ -1,6 +1,6 @@
 # 0020 — Notificações dentro do aplicativo
 
-**Status:** DECIDIDA. Eventos enxugados por `0048-enxugamento-das-notificacoes.md`.
+**Status:** DECIDIDA. Eventos enxugados por `0048-enxugamento-das-notificacoes.md`; push acrescentado por `0049-notificacoes-push.md`.
 
 ## Contexto
 

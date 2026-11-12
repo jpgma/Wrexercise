@@ -1023,9 +1023,12 @@ GET  /api/notificacoes
 GET  /api/notificacoes/nao-lidas
 POST /api/notificacoes/lidas
 POST /api/notificacoes/{id}/lida
+GET    /api/notificacoes/push
+PUT    /api/notificacoes/push
+DELETE /api/notificacoes/push?endpoint=…
 ```
 
-Regras em `docs/decisoes/0020-notificacoes-no-aplicativo.md`.
+Regras em `docs/decisoes/0020-notificacoes-no-aplicativo.md`, `0048-enxugamento-das-notificacoes.md` e `0049-notificacoes-push.md`.
 
 ### 10.5. Reações
 
@@ -1418,7 +1421,7 @@ Não implementar no MVP:
 - Planos de treinamento.
 - Inteligência artificial para validar imagens.
 - Pontuação baseada em intensidade.
-- Notificações push e lembretes agendados. A lista dentro do aplicativo existe: ver `decisoes/0020-notificacoes-no-aplicativo.md`.
+- Lembretes agendados. A lista dentro do aplicativo e as notificações push existem: ver `decisoes/0020-notificacoes-no-aplicativo.md` e `decisoes/0049-notificacoes-push.md`.
 - Processamento assíncrono distribuído.
 
 Essas funcionalidades poderão ser consideradas posteriormente, caso exista necessidade real.

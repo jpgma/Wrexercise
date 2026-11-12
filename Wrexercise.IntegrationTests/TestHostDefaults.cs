@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Wrexercise.Features.Jogo;
+using Wrexercise.Features.Notificacoes;
 using Wrexercise.Features.Reacoes;
 
 namespace Wrexercise.IntegrationTests;
@@ -19,7 +20,8 @@ internal static class TestHostDefaults
                 var periodicos = services
                     .Where(service =>
                         service.ImplementationType == typeof(EncerramentoRevisoesBackgroundService)
-                        || service.ImplementationType == typeof(LimpezaAvataresBackgroundService))
+                        || service.ImplementationType == typeof(LimpezaAvataresBackgroundService)
+                        || service.ImplementationType == typeof(EnvioPushBackgroundService))
                     .ToList();
                 foreach (var service in periodicos)
                 {

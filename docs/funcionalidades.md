@@ -87,6 +87,7 @@ The Settings page ("Configurações") has these functions:
 
 - Change the display name.
 - Change the password. The user must type the current password. The system then closes all the other login sessions of the user.
+- Turn on or turn off the notifications on this device (see 11.1).
 - Install the application (see 13.1).
 - Log out.
 
@@ -609,7 +610,26 @@ The system makes a notification for these events:
 - The bell and the list update when the window becomes active again. The application does not poll the server.
 - The user does not see notifications from groups that he or she left.
 - The system deletes notifications 90 days after the last change.
-- There are no push notifications, no e-mails, no reminders and no notification settings.
+- There are no e-mails, no reminders and no settings for each type of notification.
+
+### 11.1. Push notifications
+
+- The phone or the computer can show a notification from the system, also when the application is closed. This is a push notification.
+- These types make a push notification: `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada`, `Disputa`, `CartaRecebida` and `RivalEscolhido`. The types `CartaAceita`, `CartaRecusada` and `JogadaConcluida` show only in the list of the application.
+- The title is the name of the group. The text is the same as in the list.
+- A background task sends new notifications each 30 seconds. It sends a notification only if it is not read, it changed less than 1 hour before, the user is still a member of the group and the user turned on push on one or more devices.
+- When a new reaction or comment adds to an unread notification, the device gets the notification again. The new notification replaces the old one on the screen and does not make a sound again.
+- A tap on the push notification marks it as read and opens the same page as the list.
+- On the installed application, the icon shows the number of unread notifications, if the system supports this.
+- The Settings page has the section "Notificações neste aparelho" with the button "Ativar notificações" or "Desativar notificações". "Ativar notificações" asks the browser for permission.
+- If the user blocked the notifications in the browser, the section tells the user to allow them in the settings of the browser.
+- On iPhone and iPad, push notifications work only in the installed application (iOS 16.4 or later). In Safari, the section tells the user to install the application.
+- In the installed application, a notice at the top of all pages asks the user to turn on the notifications, with the button "Ativar". The "X" button closes it for 1 year. A cookie keeps this choice.
+- The setting is for each device. One account can have a maximum of 10 devices. A device belongs to the last account that turned on push on it.
+- When the user logs out, the device stops push notifications for that account.
+- The server sends push notifications only to the push services of Google, Apple, Mozilla and Microsoft. Errors: `PUSH_INVALIDO` (400), `PUSH_DESLIGADO` (409, the server has no VAPID keys).
+- `GET /api/notificacoes/push` returns `{ "chavePublica": "…" }`, or `null` when push is off on the server. `PUT /api/notificacoes/push` with `{ "endpoint": "…", "p256dh": "…", "auth": "…" }` saves the device. `DELETE /api/notificacoes/push?endpoint=…` removes it.
+- The operator sets the VAPID keys with `Vapid__PublicKey` and `Vapid__PrivateKey`. `Wrexercise gerar-vapid` makes a new pair. On the phone, the deploy script makes the keys at the first deploy and keeps them in `.env`.
 
 ## 12. Pages and navigation
 
@@ -719,6 +739,6 @@ These features are not in the application. Some are out of scope in `docs/arquit
 - More than one challenge at a time in one group. Different goals for different members.
 - Points based on intensity, calories, GPS, steps, heart rate, wearables, Strava.
 - Public groups, user search, private messages.
-- Push notifications, e-mail, scheduled reminders.
+- E-mail, scheduled reminders.
 - Automatic validation of images.
 - Write operations without a connection.

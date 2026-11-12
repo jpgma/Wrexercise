@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Wrexercise.Features.Atividades;
 using Wrexercise.Features.Autenticacao;
@@ -19,7 +20,13 @@ using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Errors;
 using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
+using Wrexercise.Infrastructure.Push;
 using Wrexercise.Infrastructure.StaticFiles;
+
+if (args is ["gerar-vapid"])
+{
+    return GerarVapidCommand.Run();
+}
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -38,6 +45,10 @@ builder.Services.Configure<EvidenciasOptions>(builder.Configuration.GetSection(E
 builder.Services.AddSingleton<ArmazenamentoEvidencias>();
 builder.Services.Configure<AvataresOptions>(builder.Configuration.GetSection(AvataresOptions.Section));
 builder.Services.AddSingleton<ArmazenamentoAvatares>();
+builder.Services.Configure<VapidOptions>(builder.Configuration.GetSection(VapidOptions.Section));
+builder.Services.AddSingleton(services => new WebPushClient(
+    services.GetRequiredService<IOptions<VapidOptions>>(),
+    new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10) }));
 
 // JSON malformado responde 400 em qualquer ambiente, em vez de virar exceção em Development.
 builder.Services.Configure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = false);
@@ -55,6 +66,7 @@ builder.Services.AddReacoesRateLimiter();
 builder.Services.AddJogoRateLimiter();
 builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 builder.Services.AddHostedService<LimpezaAvataresBackgroundService>();
+builder.Services.AddHostedService<EnvioPushBackgroundService>();
 
 var app = builder.Build();
 

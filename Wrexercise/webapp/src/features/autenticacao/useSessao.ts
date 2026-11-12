@@ -7,6 +7,7 @@ import {
   postJsonEmpty,
   putJson,
 } from "@/services/api";
+import { desativarPush, reiniciarPush } from "@/services/push";
 
 export type ModoInicio = "App" | "Jogo";
 
@@ -119,8 +120,13 @@ export function useRegistrar() {
 export function useSair() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postEmpty(`${basePath}/sair`),
+    mutationFn: async () => {
+      // Antes de a sessão acabar: o servidor só apaga a inscrição de quem está na conta.
+      await desativarPush().catch(() => undefined);
+      await postEmpty(`${basePath}/sair`);
+    },
     onSuccess: () => {
+      reiniciarPush();
       queryClient.setQueryData(sessaoKey, null);
       // Nada da conta anterior pode continuar disponível para a próxima.
       queryClient.removeQueries({

@@ -94,3 +94,51 @@ async function doCacheOuRede(request, guardar) {
   if (guardar && resposta.ok) void cache.put(request, resposta.clone());
   return resposta;
 }
+
+// Notificações push. Ver docs/decisoes/0049-notificacoes-push.md.
+// O servidor envia { id, titulo, corpo, url, naoLidas }. A tag é o id da notificação: uma reação ou um
+// comentário somado à mesma notificação troca o aviso que já está na tela, sem tocar de novo.
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  const aviso = event.data.json();
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(aviso.titulo, {
+        body: aviso.corpo,
+        tag: aviso.id,
+        icon: "/icon-192.png",
+        data: { id: aviso.id, url: aviso.url },
+      }),
+      self.navigator.setAppBadge?.(aviso.naoLidas).catch(() => undefined),
+    ]),
+  );
+});
+
+// Tocar no aviso marca a notificação como lida e abre o mesmo destino da lista do app.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const { id, url } = event.notification.data ?? {};
+  event.waitUntil(
+    Promise.all([
+      id
+        ? fetch(`/api/notificacoes/${id}/lida`, { method: "POST" }).catch(
+            () => undefined,
+          )
+        : undefined,
+      abrir(url ?? "/"),
+    ]),
+  );
+});
+
+async function abrir(url) {
+  const janelas = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  const janela = janelas.find((cliente) => "focus" in cliente);
+  if (janela) {
+    await janela.focus();
+    return janela.navigate(url).catch(() => undefined);
+  }
+  return self.clients.openWindow(url);
+}
