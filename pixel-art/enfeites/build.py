@@ -71,6 +71,7 @@ ENFEITES = [
 # vezes redesenha a parte parada com 1 px de diferença, e o vaso tremeria junto com a planta.
 PARADO_EMBAIXO = {
     "sequencia8": 10,  # o vaso
+    "sequencia12": 13,  # o vaso e o tronco
 }
 
 (AQUI / "saida").mkdir(exist_ok=True)
