@@ -11,6 +11,8 @@
 3. Para cada objeto, abra **um chat novo**, anexe o recorte e use o prompt 2 com a linha da tabela. Salve em `fonte/tira-NN-<conquista>.png` (o `NN` e a conquista são os do nome do recorte).
 4. Rode `python build.py` de novo e cole a lista impressa em `webapp/src/features/jogo/enfeitesNaPraca.ts`. Confira `preview/animado.gif`.
 
+**Sem tira:** 04, 05, 06 (kettlebells), 07 (troféu), 08 (suporte de halteres) e 15 (paralelas). O único movimento deles é um brilho, e o `build.py` o desenha por código a partir da base (`BRILHO`): num objeto de 13 px, o brilho do ChatGPT some na redução.
+
 Uma tira que falta não quebra nada: o objeto fica parado no quadro da base. Ao trocar a folha-base, gere de novo os recortes e as tiras: a escala de cada tira vem do objeto na base.
 
 - **Fundo:** magenta chapado `#FF00FF`. O ChatGPT não garante transparência, e o magenta não existe na paleta, então o `build.py` o remove sem ambiguidade.

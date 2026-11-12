@@ -49,18 +49,18 @@ ENFEITES = [
     ("sequencia4", 320),  # muda num vaso
     ("sequencia8", 320),  # planta com flor
     ("sequencia12", 320),  # árvore em vaso
-    ("treinos10", 160),  # kettlebell de bronze
-    ("treinos50", 160),  # kettlebell de prata
-    ("treinos100", 160),  # kettlebell de ouro
-    ("desafiocompleto", 180),  # troféu no pedestal
-    ("ratodeacademia", 180),  # suporte de halteres
+    ("treinos10", 260),  # kettlebell de bronze
+    ("treinos50", 260),  # kettlebell de prata
+    ("treinos100", 260),  # kettlebell de ouro
+    ("desafiocompleto", 260),  # troféu no pedestal
+    ("ratodeacademia", 260),  # suporte de halteres
     ("corredor", 220),  # bloco de largada
     ("andarilho", 200),  # cachorro
     ("ciclista", 160),  # bicicleta
     ("peixe", 260),  # piscininha com boia
     ("boleiro", 240),  # golzinho
     ("zen", 360),  # tapete de ioga
-    ("pesodocorpo", 180),  # paralelas
+    ("pesodocorpo", 260),  # paralelas
     ("madrugador", 240),  # galo
     ("noturno", 140),  # poste: quadro 1 apagado, 2 a 4 aceso
     ("fimdesemana", 150),  # caixa de som
@@ -73,6 +73,19 @@ PARADO_EMBAIXO = {
     "sequencia8": 10,  # o vaso
     "sequencia12": 13,  # o vaso e o tronco
 }
+
+# Enfeites cujo único movimento é um brilho que passa: os quadros saem da base, por código, e não de uma
+# tira. Num objeto de 13 px, o brilho do ChatGPT some na redução. O valor é a faixa da altura do objeto
+# (0 no topo, 1 na base) por onde o brilho passa: no troféu, só a taça.
+BRILHO = {
+    "treinos10": (0, 1),
+    "treinos50": (0, 1),
+    "treinos100": (0, 1),
+    "desafiocompleto": (0, 0.6),
+    "ratodeacademia": (0, 1),
+    "pesodocorpo": (0, 1),
+}
+GIZ, GIZ_SOMBRA = "#f5f1e8", "#d6d0c0"
 
 (AQUI / "saida").mkdir(exist_ok=True)
 (AQUI / "preview").mkdir(exist_ok=True)
@@ -117,7 +130,9 @@ def main():
     linhas_ts = []
     for linha, ((conquista, ms), base) in enumerate(zip(ENFEITES, bases)):
         tira = AQUI / "fonte" / f"tira-{linha + 1:02d}-{conquista}.png"
-        if BASE.exists() and tira.exists():
+        if BASE.exists() and conquista in BRILHO:
+            quadros = _brilhar(base, *BRILHO[conquista])
+        elif BASE.exists() and tira.exists():
             altura = base.getbbox()[3] - base.getbbox()[1]
             quadros = recortar_grade(tira, 2, 2, QUADROS, LADO, cores, altura_do_primeiro=altura)
             # O quadro 1 da tira fica onde o objeto está na base: a tira só acrescenta o movimento.
@@ -157,6 +172,29 @@ def main():
     print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
     print("\n".join(linhas_ts))
     print(f"\nsaida/enfeites.png {atlas.size}, {len(ENFEITES)} enfeites")
+
+
+def _brilhar(base, de, ate):
+    """Quadro 1 parado; nos quadros 2 a 4, um risco de giz na diagonal (/) passa da esquerda para a
+    direita, só sobre o objeto (nunca no contorno nem fora dele), e esmaece no último."""
+    x0, y0, x1, y1 = base.getbbox()
+    ya, yb = y0 + round((y1 - y0) * de), y0 + round((y1 - y0) * ate)
+    px = base.load()
+
+    def no_objeto(x, y):
+        r, g, b, a = px[x, y]
+        return a and r + g + b > 150  # o contorno é quase preto
+
+    quadros = [base]
+    for fracao, cor in ((0.3, GIZ), (0.5, GIZ), (0.7, GIZ_SOMBRA)):
+        k = round(x0 + ya + (x1 - x0 + yb - ya) * fracao)
+        risco = [(x, k - x) for x in range(x0, x1) if ya <= k - x < yb and no_objeto(x, k - x)]
+        meio = len(risco) // 2
+        quadro = base.copy()
+        for x, y in risco[max(0, meio - 2):meio + 2]:  # no máximo 4 px
+            quadro.putpixel((x, y), tuple(int(cor[i:i + 2], 16) for i in (1, 3, 5)) + (255,))
+        quadros.append(quadro)
+    return quadros
 
 
 def _fixar_embaixo(quadros, linhas):
