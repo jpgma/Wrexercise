@@ -15,6 +15,7 @@ Uma tira que falta não quebra nada: o objeto fica parado no quadro da base. Ao 
 
 - **Fundo:** magenta chapado `#FF00FF`. O ChatGPT não garante transparência, e o magenta não existe na paleta, então o `build.py` o remove sem ambiguidade.
 - **Tamanhos:** a base é paisagem (1536×1024); as tiras são quadradas (1024×1024).
+- **Referência de estilo:** para refazer a folha num chat novo sem perder o estilo, anexe a folha anterior e comece o prompt com "Use the attached sheet only as the style reference."
 - **Iteração:** corrija na mesma conversa ("keep everything else identical, only redraw cell 10, the dog"). Gerar do zero muda todos os objetos.
 - **Licença:** não anexe arte de terceiros: os Enfeites são CC0.
 
@@ -41,7 +42,9 @@ Background: solid flat magenta #FF00FF everywhere outside the objects.
 ```text
 Create a 1536×1024 landscape sprite sheet of 19 pixel-art objects that stand on the floor of a
 small urban square, arranged in a grid of 5 columns and 4 rows of equal cells (each cell about
-307×256 px), read left to right, top to bottom. The last cell (row 4, column 5) stays empty magenta.
+307×256 px), read left to right, top to bottom. There are EXACTLY 19 objects: 5 in each of
+rows 1, 2 and 3, and 4 in row 4. The last cell (row 4, column 5) stays empty magenta. Do not
+skip, merge or reorder any object.
 Each object is centered horizontally in its cell, with its base resting on an invisible line near
 the bottom of the cell, and a wide magenta margin so no two objects touch.
 
@@ -56,27 +59,27 @@ Row 1:
    a few coral fruits.
 4. (16×18) A bronze kettlebell sitting on the floor.
 5. (19×21) The SAME kettlebell shape, slightly bigger, in silver.
-6. (22×25) The SAME kettlebell shape, bigger again, in gold with a small chalk highlight.
 
 Row 2:
+6. (22×25) The SAME kettlebell shape, bigger again, in gold with a small chalk highlight.
 7. (20×38) A gold trophy cup with two handles standing on a short square grey concrete pedestal.
 8. (28×20) A low grey floor rack holding two pairs of dumbbells.
 9. (32×14) Athletics starting blocks on the floor, with a pair of coral running shoes beside them.
 10. (22×22) A small brown dog sitting, facing 3/4 toward the viewer, with a coral collar.
     No leash.
-11. (36×24) A bicycle in side view parked on its kickstand: grey wheels, coral frame, dark seat.
 
 Row 3:
+11. (36×24) A bicycle in side view parked on its kickstand: grey wheels, coral frame, dark seat.
 12. (36×18) A small round inflatable kiddie pool (coral and chalk stripes) filled with blue
     water, with a chalk-and-coral ring buoy floating in it.
 13. (34×26) A small street football goal (mini goal) with a chalk net and grey posts, and a
     chalk-and-dark football resting at its foot.
 14. (32×12) A violet yoga mat half unrolled flat on the floor, the rolled part at one end.
 15. (28×14) A pair of low grey parallettes (calisthenics bars) side by side.
-16. (20×24) A rooster standing: chalk-white body, coral comb and wattle, yellow beak and legs,
-    dark violet tail feathers.
 
 Row 4:
+16. (20×24) A rooster standing: chalk-white body, coral comb and wattle, yellow beak and legs,
+    dark violet tail feathers.
 17. (14×40) A city street lamp post: dark grey pole on a base, lamp head with the glass OFF
     (light grey, not lit).
 18. (18×26) A portable party speaker standing upright on two small wheels, dark grey body,
@@ -131,7 +134,7 @@ pixels) and loops smoothly from frame 4 back to frame 1.
 
 ## Conferência antes de salvar em `fonte/`
 
-- Base: 19 objetos na ordem acima, a última célula vazia, só magenta em volta, sem texto e sem chão desenhado. Os três vasos e os três kettlebells têm a mesma forma.
+- Base: 19 objetos na ordem acima, 5 por linha nas três primeiras e 4 na última (os três kettlebells são as células 4, 5 e 6, esta já na linha 2), a última célula vazia, só magenta em volta, sem texto e sem chão desenhado. Os três vasos e os três kettlebells têm a mesma forma.
 - Proporções: o poste e a árvore são os mais altos; a muda e o kettlebell de bronze, os menores.
 - Tira: o quadro 1 é igual ao recorte anexado, a base fica na mesma linha nos 4 quadros e só a parte descrita se mexe.
 - Se uma tira sair desalinhada, peça no mesmo chat: "keep frame 1 identical to the attachment and redraw frames 2–4 with the object's base on exactly the same line".
