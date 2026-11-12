@@ -101,7 +101,30 @@ Situação: `.\stats.bat` (seção "Backups") ou `remote-termux.sh status`. Most
 
 #### Configuração (uma vez)
 
-Use de preferência uma conta Google só para backups (15 GB gratuitos, separados do Gmail e do Fotos).
+Use de preferência uma conta Google só para backups (15 GB gratuitos, separados do Gmail e do Fotos). Com o app já implantado e o celular acessível por SSH, um comando faz tudo, com perguntas:
+
+```powershell
+.\run.bat configurar-backup
+```
+
+O comando faz, nesta ordem:
+
+1. Atualiza os scripts e instala o rclone no celular (`pkg`) e neste PC (`winget`).
+2. Abre o navegador para o login no Google e cria os remotos `gdrive` e `wx-cripto`, com senhas aleatórias, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`.
+3. Copia os remotos para o `rclone.conf` do celular, sem mexer nos outros remotos de lá.
+4. Sobe a tarefa de backup.
+5. Oferece um backup de teste e a cópia extra agendada neste PC.
+
+Pode rodar de novo:
+
+- reaproveita a configuração deste PC;
+- se só o celular tiver a configuração, traz a dele;
+- se o token do Google tiver expirado, refaz só o login;
+- nunca troca a chave do crypt sem confirmação, porque uma chave nova não lê os backups antigos.
+
+**Guarde o `rclone.conf` no gerenciador de senhas:** sem as senhas do crypt, ninguém lê os backups, nem você.
+
+Passo a passo manual, equivalente:
 
 1. No Termux: `pkg install rclone`.
 2. No Windows: `winget install Rclone.Rclone` e, com o navegador logado na conta dos backups:

@@ -7,6 +7,7 @@
 #   nuvem.sh enviar                 envia ao Drive o que está em dados/backups e espelha as evidências
 #   nuvem.sh restore [AAAAMMDD-HHMMSS]   com o app parado; sem data, o mais recente
 #   nuvem.sh status
+#   nuvem.sh configurado | importar-config | exportar-config   usados por run.bat configurar-backup
 #
 # No Drive, pelo remoto cifrado $remoto (rclone crypt sobre $drive:wrexercise):
 #   diarios/wrexercise-AAAAMMDD-HHMMSS[-implantacao].tar.gz   31 dias, nunca menos que os 7 mais novos
@@ -393,11 +394,53 @@ status() {
   fi
 }
 
+# Caminho do rclone.conf (o rclone informa mesmo se o arquivo ainda não existir).
+arquivo_config() {
+  c=$(rclone config file 2>/dev/null | tail -n 1)
+  echo "${c:-$HOME/.config/rclone/rclone.conf}"
+}
+
+# Usados por run.bat configurar-backup. Só mexem nas seções [$drive] e [$remoto]: outros remotos ficam.
+importar_config() {
+  command -v rclone >/dev/null 2>&1 || { echo "ERRO: rclone não instalado (pkg install rclone)." >&2; exit 1; }
+  conf=$(arquivo_config)
+  mkdir -p "$(dirname "$conf")"
+  umask 077
+  tr -d '\r' > "$conf.novo"
+  if ! grep -qx "\[$remoto\]" "$conf.novo" || ! grep -qx "\[$drive\]" "$conf.novo"; then
+    rm -f "$conf.novo"
+    echo "ERRO: a configuração recebida não tem os remotos [$drive] e [$remoto]." >&2
+    exit 1
+  fi
+  if [ -f "$conf" ]; then
+    awk -v a="[$drive]" -v b="[$remoto]" '/^\[/ { pular = ($0 == a || $0 == b) } !pular' "$conf" > "$conf.tmp"
+  else
+    : > "$conf.tmp"
+  fi
+  if [ -s "$conf.tmp" ]; then echo >> "$conf.tmp"; fi
+  cat "$conf.novo" >> "$conf.tmp"
+  rm -f "$conf.novo"
+  mv "$conf.tmp" "$conf"
+  chmod 600 "$conf"
+  rclone lsf $rclone_opts "$remoto:" >/dev/null || { echo "ERRO: o rclone do celular não acessa o Drive." >&2; exit 1; }
+  echo "Configuração gravada em $conf (modo 600). O celular acessa o Drive."
+}
+
+exportar_config() {
+  conf=$(arquivo_config)
+  [ -f "$conf" ] || { echo "ERRO: $conf não existe." >&2; exit 1; }
+  awk -v a="[$drive]" -v b="[$remoto]" '/^\[/ { manter = ($0 == a || $0 == b) } manter' "$conf"
+}
+
 case ${1:-} in
+  configurado) configurado ;;
+  importar-config) importar_config ;;
+  exportar-config) exportar_config ;;
   backup) backup "${2:-}" ;;
   agendado) agendado ;;
   enviar) travar; enviar ;;
   restore) restore "${2:-}" ;;
   status) status ;;
-  *) echo "Uso: nuvem.sh backup [implantacao] | agendado | enviar | restore [AAAAMMDD-HHMMSS] | status" >&2; exit 2 ;;
+  *) echo "Uso: nuvem.sh backup [implantacao] | agendado | enviar | restore [AAAAMMDD-HHMMSS] | status" >&2
+     echo "       nuvem.sh configurado | importar-config (stdin) | exportar-config" >&2; exit 2 ;;
 esac

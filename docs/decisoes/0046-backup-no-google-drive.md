@@ -68,6 +68,15 @@ Com o arquivo diário mais o espelho das evidências (decisão abaixo), 20 pesso
   6. copia de volta as evidências de `evidencias-removidas/` com data posterior à do backup.
 
   Restaurar o backup mais recente traz todas as evidências, de qualquer idade. Sem o rclone, a restauração usa um arquivo local e não mexe nas evidências.
+- **`run.bat configurar-backup`** faz toda a configuração, neste PC e no celular, com perguntas:
+  - instala o rclone (`winget` e `pkg`);
+  - faz o login no Google pelo navegador do PC;
+  - cria o remoto cifrado com senhas aleatórias de 256 bits, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`;
+  - copia as seções `[gdrive]` e `[wx-cripto]` para o `rclone.conf` do celular (`nuvem.sh importar-config`);
+  - sobe a tarefa de backup;
+  - oferece um backup de teste e a cópia extra agendada.
+
+  Pode rodar de novo. Se o celular já tiver a configuração, traz a dele (`exportar-config`). Se o token do Google expirou, faz `config reconnect`. Se a pasta do Drive já tiver backups, só cria uma chave nova depois de confirmar que vai apagá-los: uma chave nova não lê os backups antigos.
 - **Sem rclone configurado,** o backup fica só no telefone, com um aviso, e a implantação continua. O rclone não é obrigatório em `exigir`.
 - **`deploy/backup.sh`** passa a ser só da pilha local de Docker, sem a chave `BACKUP_BANCO`.
 

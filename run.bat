@@ -26,6 +26,10 @@ rem   run.bat ssh-backup   roda o backup no celular (banco, avatares e logs; env
 rem                          evidências) e copia os últimos arquivos dele para BACKUP_DIR. O celular já faz
 rem                          o backup sozinho todo dia: este comando é uma cópia extra, sem as evidências.
 rem                          Não apaga cópias antigas daqui. Ver docs/decisoes/0046-backup-no-google-drive.md.
+rem   run.bat configurar-backup  configura tudo do backup no Google Drive, neste PC e no celular, com
+rem                          perguntas: rclone (winget e pkg), login no Google, remoto cifrado, cópia da
+rem                          configuração para o celular, tarefa de backup, teste e cópia extra agendada.
+rem                          Também aceita --configurar-backup. Pode rodar de novo. Ver decisão 0046.
 rem   run.bat restore D    restaura o backup da data D (AAAAMMDD-HHMMSS), com o app parado
 rem   run.bat stop         para os serviços e mantém os dados
 rem   run.bat reset        para os serviços e APAGA os dados locais
@@ -110,10 +114,12 @@ if /i "%~1"=="--scripts" (
 if /i "%~1"=="logs" goto :logs
 if /i "%~1"=="backup" goto :backup
 if /i "%~1"=="ssh-backup" goto :ssh_backup
+if /i "%~1"=="configurar-backup" goto :configurar_backup
+if /i "%~1"=="--configurar-backup" goto :configurar_backup
 if /i "%~1"=="restore" goto :restore
 if /i "%~1"=="stop" goto :stop
 if /i "%~1"=="reset" goto :reset
-echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--tunnel-maquina^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
+echo Uso: run.bat [--rebuild^|rebuild] [--tunnel^|--tunnel-maquina^|--ssh [--scripts]] ^| logs ^| backup ^| ssh-backup ^| configurar-backup ^| restore AAAAMMDD-HHMMSS ^| stop ^| reset
 exit /b 2
 
 :start
@@ -246,38 +252,10 @@ exit /b 1
 
 :ssh
 rem Implanta no celular por SSH. Perfil compartilhado com o Environment e os outros apps.
-set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
-set "SSH_DIR=%LOCALAPPDATA%\jpgma"
-if not exist "%SSH_DIR%" mkdir "%SSH_DIR%"
-set "SSH_FILE=%SSH_DIR%\a14.env"
-rem 127.0.0.1 com "adb forward tcp:8022 tcp:8022" (decisão 0029); com IP do Wi-Fi, digite-o.
-set "S_HOST=127.0.0.1"
-set "S_PORT=8022"
-set "S_USER="
-set "S_KEY="
 set "S_ARCH=arm64"
 set "TUNNEL_HOST=wx.jpgmaraujo.com.br"
-if exist "%SSH_FILE%" call :ssh_load
-if defined S_USER goto :ssh_alvo
-
-echo.
-set /p "S_HOST=Host ou IP do celular [%S_HOST%]: "
-set /p "S_PORT=Porta SSH do Termux [%S_PORT%]: "
-set /p "S_USER=Usuário do Termux (resultado de whoami): "
-set /p "S_KEY=Arquivo da chave SSH (vazio = ssh-agent ou padrão) [%S_KEY%]: "
-if not defined S_USER (
-  echo Informe o usuário do Termux.
-  exit /b 2
-)
->"%SSH_FILE%" echo S_HOST=%S_HOST%
->>"%SSH_FILE%" echo S_PORT=%S_PORT%
->>"%SSH_FILE%" echo S_USER=%S_USER%
->>"%SSH_FILE%" echo S_KEY=%S_KEY%
-
-:ssh_alvo
-set "TARGET=%S_USER%@%S_HOST%"
-set "SSH_OPTS=-p %S_PORT% -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
-if defined S_KEY set "SSH_OPTS=%SSH_OPTS% -i "%S_KEY%" -o IdentitiesOnly=yes"
+call :ssh_perfil
+if errorlevel 1 exit /b 2
 set "TUNNEL_LOG_HINT=ssh -p %S_PORT% %TARGET% sh wrexercise/deploy/remote-termux.sh status"
 
 echo.
@@ -389,4 +367,222 @@ exit /b 0
 
 :ssh_load
 for /f "usebackq tokens=1* delims==" %%a in ("%SSH_FILE%") do set "%%a=%%b"
+exit /b 0
+
+:ssh_perfil
+rem Lê o perfil SSH compartilhado (pergunta e salva o que faltar) e define SSH_EXE, TARGET e SSH_OPTS.
+set "SSH_EXE=%SystemRoot%\System32\OpenSSH\ssh.exe"
+set "SSH_DIR=%LOCALAPPDATA%\jpgma"
+if not exist "%SSH_DIR%" mkdir "%SSH_DIR%"
+set "SSH_FILE=%SSH_DIR%\a14.env"
+rem 127.0.0.1 com "adb forward tcp:8022 tcp:8022" (decisão 0029); com IP do Wi-Fi, digite-o.
+set "S_HOST=127.0.0.1"
+set "S_PORT=8022"
+set "S_USER="
+set "S_KEY="
+if exist "%SSH_FILE%" call :ssh_load
+if defined S_USER goto :ssh_perfil_alvo
+echo.
+set /p "S_HOST=Host ou IP do celular [%S_HOST%]: "
+set /p "S_PORT=Porta SSH do Termux [%S_PORT%]: "
+set /p "S_USER=Usuário do Termux (resultado de whoami): "
+set /p "S_KEY=Arquivo da chave SSH (vazio = ssh-agent ou padrão) [%S_KEY%]: "
+if not defined S_USER (
+  echo Informe o usuário do Termux.
+  exit /b 2
+)
+>"%SSH_FILE%" echo S_HOST=%S_HOST%
+>>"%SSH_FILE%" echo S_PORT=%S_PORT%
+>>"%SSH_FILE%" echo S_USER=%S_USER%
+>>"%SSH_FILE%" echo S_KEY=%S_KEY%
+:ssh_perfil_alvo
+set "TARGET=%S_USER%@%S_HOST%"
+set "SSH_OPTS=-p %S_PORT% -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
+if defined S_KEY set "SSH_OPTS=%SSH_OPTS% -i "%S_KEY%" -o IdentitiesOnly=yes"
+exit /b 0
+
+:configurar_backup
+rem Configura o backup no Google Drive de ponta a ponta (decisão 0046), com perguntas:
+rem rclone neste PC e no celular, login no Google, remoto cifrado, cópia da configuração para o
+rem celular, tarefa de backup, backup de teste e, se quiser, a cópia extra agendada neste PC.
+rem Pode rodar de novo: reaproveita a configuração que já existir aqui ou no celular.
+set "RCLONE_DIR=%LOCALAPPDATA%\Wrexercise\rclone"
+set "RCLONE_CONF=%RCLONE_DIR%\rclone.conf"
+set "REMOTO=wx-cripto"
+set "DRIVE=gdrive"
+set "NOVA_CHAVE="
+echo.
+echo ==^> Configuração do backup no Google Drive ^(docs/decisoes/0046-backup-no-google-drive.md^)
+
+echo.
+echo ==^> 1/7 Celular
+call :ssh_perfil
+if errorlevel 1 exit /b 2
+"%SSH_EXE%" %SSH_OPTS% -o BatchMode=yes %TARGET% "test -f wrexercise/deploy/remote-termux.sh"
+if errorlevel 1 (
+  echo Sem acesso ao celular em %TARGET%:%S_PORT%, ou o Wrexercise ainda não está nele.
+  echo Confira o sshd no Termux e o adb forward tcp:8022 tcp:8022. Se nunca implantou: run.bat --ssh
+  goto :fail
+)
+rem Os scripts novos vão antes: o celular pode ter uma versão sem o nuvem.sh.
+tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
+if errorlevel 1 goto :fail
+echo Scripts de deploy atualizados no celular.
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "command -v rclone >/dev/null"
+if not errorlevel 1 goto :cb_rclone_cel_ok
+echo O rclone não está no celular. Instalando com pkg...
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "pkg install -y rclone"
+if errorlevel 1 goto :fail
+:cb_rclone_cel_ok
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "rclone version | head -n 1"
+
+echo.
+echo ==^> 2/7 rclone neste PC
+set "RCLONE="
+for /f "delims=" %%r in ('where rclone 2^>nul') do if not defined RCLONE set "RCLONE=%%r"
+if not defined RCLONE if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
+if defined RCLONE goto :cb_rclone_pc_ok
+set "R="
+set /p "R=O rclone não está neste PC. Instalar com o winget agora? [S/n]: "
+if /i "%R%"=="n" goto :fail
+winget install -e --id Rclone.Rclone --accept-source-agreements --accept-package-agreements
+if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
+if defined RCLONE goto :cb_rclone_pc_ok
+echo O winget terminou, mas o rclone.exe não foi encontrado. Abra um terminal novo e rode de novo: run.bat configurar-backup
+goto :fail
+:cb_rclone_pc_ok
+"%RCLONE%" version | findstr /b /c:"rclone v"
+echo Executável: %RCLONE%
+if not exist "%RCLONE_DIR%" mkdir "%RCLONE_DIR%"
+set "RC="%RCLONE%" --config "%RCLONE_CONF%""
+
+echo.
+echo ==^> 3/7 Configuração do rclone ^(%RCLONE_CONF%^)
+%RC% listremotes 2>nul | findstr /x /c:"%REMOTO%:" >nul
+if errorlevel 1 goto :cb_sem_config_pc
+set "R="
+set /p "R=Já existe uma configuração neste PC. Reaproveitar? [S/n]: "
+if /i not "%R%"=="n" goto :cb_testar_pc
+goto :cb_criar
+:cb_sem_config_pc
+rem Se o celular já tem os remotos (configurados à mão antes), traz de lá: a chave é a dos backups existentes.
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/nuvem.sh configurado"
+if errorlevel 1 goto :cb_criar
+set "R="
+set /p "R=O celular já tem o remoto %REMOTO%. Copiar a configuração dele para este PC? [S/n]: "
+if /i "%R%"=="n" goto :cb_criar
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/nuvem.sh exportar-config" >"%RCLONE_CONF%"
+if errorlevel 1 goto :fail
+goto :cb_testar_pc
+
+:cb_criar
+echo.
+echo Login no Google:
+echo   - Use de preferência uma conta Google só para backups ^(15 GB gratuitos, longe do Gmail e do Fotos^).
+echo   - O navegador vai abrir. Entre com essa conta e autorize o rclone.
+echo   - O acesso fica limitado aos arquivos que o próprio rclone criar ^(escopo drive.file^).
+echo   - Se o rclone perguntar sobre Shared Drive ^(Team Drive^), responda n.
+pause
+if exist "%RCLONE_CONF%" del "%RCLONE_CONF%"
+%RC% config create %DRIVE% drive scope=drive.file
+if errorlevel 1 goto :fail
+%RC% listremotes | findstr /x /c:"%DRIVE%:" >nul
+if errorlevel 1 (
+  echo O login no Google não foi concluído.
+  goto :fail
+)
+rem Uma chave nova não lê backups cifrados com outra: não mistura os dois na mesma pasta.
+set "EXISTENTE="
+rem Aspas externas: o for /f roda o comando por cmd /c, que tira o primeiro e o último caractere de aspas.
+for /f "delims=" %%f in ('"%RC% lsf %DRIVE%:wrexercise 2>nul"') do set "EXISTENTE=1"
+if not defined EXISTENTE goto :cb_chave
+echo.
+echo ATENÇÃO: esta conta já tem backups em wrexercise/, cifrados com outra chave. Uma chave nova não os lê.
+echo Recupere o rclone.conf antigo ^(gerenciador de senhas^), copie-o para %RCLONE_CONF% e rode de novo.
+set "R="
+set /p "R=Para apagar esses backups antigos e começar do zero, digite APAGAR: "
+if not "%R%"=="APAGAR" goto :fail
+%RC% purge %DRIVE%:wrexercise --drive-use-trash=false
+if errorlevel 1 goto :fail
+:cb_chave
+rem Duas senhas aleatórias de 256 bits para o rclone crypt (conteúdo e nomes cifrados).
+set "P1="
+set "P2="
+for /f %%p in ('powershell -NoProfile -Command "$b=New-Object byte[] 32; (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($b); [BitConverter]::ToString($b).Replace('-','')"') do set "P1=%%p"
+for /f %%p in ('powershell -NoProfile -Command "$b=New-Object byte[] 32; (New-Object Security.Cryptography.RNGCryptoServiceProvider).GetBytes($b); [BitConverter]::ToString($b).Replace('-','')"') do set "P2=%%p"
+if not defined P2 (
+  echo Não foi possível gerar as senhas do crypt.
+  goto :fail
+)
+%RC% config create %REMOTO% crypt remote=%DRIVE%:wrexercise filename_encryption=standard directory_name_encryption=true password=%P1% password2=%P2% --obscure >nul
+if errorlevel 1 goto :fail
+set "NOVA_CHAVE=1"
+
+:cb_testar_pc
+echo.
+echo ==^> 4/7 Testando o Drive a partir deste PC
+%RC% mkdir %REMOTO%:diarios
+if not errorlevel 1 goto :cb_drive_ok
+echo O rclone deste PC não acessa o Drive ^(token expirado ou revogado, ou sem rede^).
+set "R="
+set /p "R=Refazer só o login no Google, mantendo a chave do crypt? [S/n]: "
+if /i "%R%"=="n" goto :fail
+%RC% config reconnect %DRIVE%:
+if errorlevel 1 goto :fail
+%RC% mkdir %REMOTO%:diarios
+if errorlevel 1 goto :fail
+:cb_drive_ok
+%RC% about %DRIVE%:
+
+echo.
+echo ==^> 5/7 Enviando a configuração para o celular
+type "%RCLONE_CONF%" | "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/nuvem.sh importar-config"
+if errorlevel 1 goto :fail
+
+echo.
+echo ==^> 6/7 Tarefa de backup e teste
+rem iniciar sobe só o que não estiver rodando: o app no ar continua; a tarefa de backup passa a existir.
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh iniciar"
+if errorlevel 1 goto :fail
+set "R="
+set /p "R=Fazer um backup de teste agora (grava e envia ao Drive)? [S/n]: "
+if /i "%R%"=="n" goto :cb_agendar
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh backup"
+if errorlevel 1 goto :fail
+echo.
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/nuvem.sh status"
+echo.
+echo Arquivos diários no Drive, vistos deste PC:
+%RC% lsl %REMOTO%:diarios
+
+:cb_agendar
+echo.
+echo ==^> 7/7 Cópia extra neste PC ^(opcional^)
+echo O celular já envia tudo ao Drive. Este PC pode também copiar os arquivos diários ^(sem as evidências^)
+echo todo dia às 03:30, pelo Agendador de Tarefas. Exige o celular acessível por SSH nesse horário.
+set "R="
+set /p "R=Agendar a cópia extra? [s/N]: "
+if /i not "%R%"=="s" goto :cb_resumo
+set "PASTA=%BACKUP_DIR:/=\%"
+set /p "PASTA=Pasta da cópia (de preferência sincronizada, como o OneDrive) [%PASTA%]: "
+if /i not "%PASTA%"=="%BACKUP_DIR:/=\%" setx BACKUP_DIR "%PASTA%" >nul
+schtasks /create /f /sc daily /st 03:30 /tn WrexerciseBackup /tr "\"%~f0\" ssh-backup"
+if errorlevel 1 goto :fail
+echo Tarefa WrexerciseBackup agendada; cópias em %PASTA%.
+
+:cb_resumo
+echo.
+echo ==^> Backup configurado
+echo - O celular grava e envia o backup todo dia e em cada run.bat --ssh. Situação: stats.bat
+echo - Configuração do rclone neste PC: %RCLONE_CONF%
+echo - GUARDE ESSE ARQUIVO NO GERENCIADOR DE SENHAS. Sem as senhas do crypt, ninguém lê os backups.
+if not defined NOVA_CHAVE goto :cb_fim
+set "R="
+set /p "R=Mostrar as senhas do crypt agora, para anotar no gerenciador? [s/N]: "
+if /i not "%R%"=="s" goto :cb_fim
+echo   remoto %REMOTO%, remote = %DRIVE%:wrexercise, filename_encryption = standard
+echo   password  = %P1%
+echo   password2 = %P2%
+:cb_fim
+echo - Para ver os backups deste PC: "%RCLONE%" --config "%RCLONE_CONF%" lsl %REMOTO%:diarios
 exit /b 0
