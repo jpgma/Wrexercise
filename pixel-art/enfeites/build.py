@@ -87,11 +87,9 @@ BRILHO = {
 }
 GIZ, GIZ_SOMBRA = "#f5f1e8", "#d6d0c0"
 
-# A ordem dos quadros da tira (0 a 3), quando o quadro 1 do ChatGPT não combina com os outros: o
-# tapete veio com o quadro 1 desenhado de outro jeito, então o ciclo usa 2, 3, 4, 3.
-ORDEM_DA_TIRA = {
-    "zen": [1, 2, 3, 2],
-}
+# A ordem dos quadros da tira (0 a 3), quando o quadro 1 do ChatGPT não combina com os outros: por
+# exemplo, [1, 2, 3, 2] para usar os quadros 2, 3, 4, 3.
+ORDEM_DA_TIRA: dict[str, list[int]] = {}
 
 (AQUI / "saida").mkdir(exist_ok=True)
 (AQUI / "preview").mkdir(exist_ok=True)
