@@ -2,7 +2,7 @@
 
 > Prompts para gerar no ChatGPT (geração de imagem) os 19 Enfeites (`docs/gamificacao.md` §9.1), apoiados no chão da praça e animados (`docs/decisoes/0050-enfeites-no-chao.md`). As imagens geradas são só a **fonte**: elas vão para `fonte/`, e o `build.py` recorta cada objeto, o reduz à escala do mestre da praça, o ajusta à paleta `wrexercise` e monta o atlas `saida/enfeites.png` (4 quadros × 19 linhas de 40×40), copiado para `webapp/public/`. Nunca copie uma imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** a folha-base e as tiras ainda não foram geradas. Sem `fonte/base.png`, o `build.py` monta o atlas com os ícones antigos de `fonte/folha.png` (do Gemini), parados.
+> **Estado:** a folha-base está em `fonte/base.png` e já está no atlas; as tiras ainda não foram geradas, então os Enfeites ficam parados. Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
 
 ## Como usar
 
@@ -141,7 +141,7 @@ pixels) and loops smoothly from frame 4 back to frame 1.
 
 ## O que o `build.py` faz com as fontes
 
-1. Folha-base: divide a imagem na grade de 5×4 e junta as manchas que não são magenta a cada célula (como em `../fonte_gerada.py`). Reduz **todas com a mesma escala**, pela cor mais comum de cada bloco, para que a maior ocupe os 40 px; assim os objetos mantêm as proporções reais. Cada objeto fica centrado e apoiado na base da célula.
+1. Folha-base: separa as manchas que não são magenta e junta as que quase se encostam (o bloco de largada e os tênis) num objeto. Lê os objetos em ordem de leitura (linhas pela altura, da esquerda para a direita), e não pela grade: o ChatGPT às vezes põe 6 objetos numa linha. Se não achar exatamente 19, para com erro. Reduz **todas com a mesma escala**, pela cor mais comum de cada bloco, para que a maior ocupe os 40 px; assim os objetos mantêm as proporções reais. Cada objeto fica centrado e apoiado na base da célula.
 2. Tira: divide em 2×2 e reduz os 4 quadros com a escala que deixa o quadro 1 com a altura do objeto na base. Cada quadro mantém a posição relativa ao quadro 1 (um rabo que balança não arrasta o corpo), e o quadro 1 é alinhado ao objeto da base.
 3. Troca cada cor pela mais próxima da paleta `wrexercise` (e das cores do script); o magenta vira transparente.
 4. Grava `saida/enfeites.png`, copia para `webapp/public/enfeites.png` e grava `preview/folha-4x.png` e `preview/animado.gif`.

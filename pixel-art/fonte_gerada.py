@@ -26,12 +26,14 @@ def cores_do_script(constantes, paleta_sprite):
 
 
 def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: int, lado: int, cores, na_base=True,
-                   altura_do_primeiro=None):
+                   altura_do_primeiro=None, em_leitura=False):
     """Devolve `quantidade` imagens lado×lado, lidas da esquerda para a direita e de cima para baixo.
 
     Cada objeto fica centrado na horizontal e, se `na_base`, apoiado na base; senão, centrado.
     Com `altura_do_primeiro`, a escala é a que deixa o primeiro objeto com essa altura em px (os quadros
     de uma tira de animação seguem a escala do objeto na folha-base); sem ela, o maior ocupa o lado.
+    Com `em_leitura`, a grade é ignorada: os objetos são lidos em ordem de leitura (linhas pela altura, e
+    da esquerda para a direita), porque o gerador nem sempre respeita a quantidade de colunas pedida.
     """
     tabela = Image.new("P", (1, 1))
     # O resto da tabela repete a primeira cor: com zeros, um preto puro da fonte cairia num índice
@@ -76,28 +78,55 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
     def juntar(a, b):
         return b if a is None else (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
 
-    cw, ch = largura / colunas, altura / linhas
-    maior = max(len(m) for m, _ in manchas)
-    caixas = [None] * quantidade
-    pequenas = []
-    for mancha, caixa in manchas:
-        if len(mancha) < maior / 10:
-            pequenas.append((mancha, caixa))
-            continue
-        col = min(int((caixa[0] + caixa[2]) / 2 / cw), colunas - 1)
-        lin = min(int((caixa[1] + caixa[3]) / 2 / ch), linhas - 1)
-        if lin * colunas + col < quantidade:
-            caixas[lin * colunas + col] = juntar(caixas[lin * colunas + col], caixa)
-            for x, y in mancha:
-                dono[y][x] = lin * colunas + col
-    for i, caixa in enumerate(caixas):
-        if caixa is None:
-            sys.exit(f"célula {i + 1} de {fonte.name} está vazia")
-
     def distancia(a, b):
         dx = max(a[0] - b[2], b[0] - a[2], 0)
         dy = max(a[1] - b[3], b[1] - a[3], 0)
         return dx * dx + dy * dy
+
+    cw, ch = largura / colunas, altura / linhas
+    maior = max(len(m) for m, _ in manchas)
+    caixas = [None] * quantidade
+    pequenas = [(m, c) for m, c in manchas if len(m) < maior / 10]
+    grandes = [(m, c) for m, c in manchas if len(m) >= maior / 10]
+    if em_leitura:
+        # Manchas grandes quase encostadas são o mesmo objeto (o bloco de largada e os tênis).
+        limiar = (largura / 60) ** 2
+        grupos = []
+        for mancha, caixa in grandes:
+            perto_de = [g for g in grupos if distancia(caixa, g[1]) < limiar]
+            novo = ([mancha], caixa)
+            for g in perto_de:
+                grupos.remove(g)
+                novo = (novo[0] + g[0], juntar(novo[1], g[1]))
+            grupos.append(novo)
+        if len(grupos) != quantidade:
+            sys.exit(f"{fonte.name} tem {len(grupos)} objetos, e não {quantidade}")
+        # Uma linha nova começa quando o objeto fica todo abaixo do centro da linha atual.
+        grupos.sort(key=lambda g: (g[1][1] + g[1][3]) / 2)
+        linhas_lidas = []
+        for g in grupos:
+            atual = linhas_lidas[-1] if linhas_lidas else None
+            if atual and g[1][1] < sum((o[1][1] + o[1][3]) / 2 for o in atual) / len(atual):
+                atual.append(g)
+            else:
+                linhas_lidas.append([g])
+        ordenados = [g for linha in linhas_lidas for g in sorted(linha, key=lambda g: g[1][0])]
+        for i, (partes, caixa) in enumerate(ordenados):
+            caixas[i] = caixa
+            for mancha in partes:
+                for x, y in mancha:
+                    dono[y][x] = i
+    else:
+        for mancha, caixa in grandes:
+            col = min(int((caixa[0] + caixa[2]) / 2 / cw), colunas - 1)
+            lin = min(int((caixa[1] + caixa[3]) / 2 / ch), linhas - 1)
+            if lin * colunas + col < quantidade:
+                caixas[lin * colunas + col] = juntar(caixas[lin * colunas + col], caixa)
+                for x, y in mancha:
+                    dono[y][x] = lin * colunas + col
+    for i, caixa in enumerate(caixas):
+        if caixa is None:
+            sys.exit(f"célula {i + 1} de {fonte.name} está vazia")
 
     perto = []
     for mancha, caixa in pequenas:

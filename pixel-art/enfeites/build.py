@@ -5,7 +5,8 @@ com cada objeto apoiado na base da célula: saida/enfeites.png, copiado para web
 linhas é a de ENFEITES. O quadro 1 também é o ícone da vitrine.
 
 Fontes (geradas no ChatGPT, ver prompts-chatgpt.md):
-- fonte/base.png: os 19 objetos parados, numa grade de 5×4. Uma escala só para a folha toda, então os
+- fonte/base.png: os 19 objetos parados, pedidos numa grade de 5×4 e lidos em ordem de leitura (o ChatGPT
+  nem sempre respeita as colunas). Uma escala só para a folha toda, então os
   objetos mantêm as proporções reais entre si (a árvore e o poste do tamanho de um avatar).
 - fonte/tira-NN-<conquista>.png: os 4 quadros de um objeto, numa grade de 2×2, reduzidos com a escala do
   objeto na base. Sem a tira, o quadro da base se repete e o objeto fica parado.
@@ -97,7 +98,7 @@ def recorte_para_prompt(quadro, destino):
 def main():
     cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
     if BASE.exists():
-        bases = recortar_grade(BASE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores)
+        bases = recortar_grade(BASE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores, em_leitura=True)
         print("fonte:", BASE.name)
     elif ANTIGA.exists():
         bases = [na_celula(i) for i in recortar_grade(ANTIGA, COLUNAS, LINHAS, len(ENFEITES), 32, cores)]
