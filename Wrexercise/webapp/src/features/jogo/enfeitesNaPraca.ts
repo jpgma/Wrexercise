@@ -8,7 +8,7 @@ import type { Ponto } from "./useEncenacoes";
  * caixa do objeto na célula, em px do mestre 1×. Se a arte mudar, rode o build.py e cole a lista nova.
  */
 const atlas = {
-  sequencia4: { linha: 0, esquerda: 14, largura: 11, altura: 15, ms: 320 },
+  sequencia4: { linha: 0, esquerda: 13, largura: 13, altura: 15, ms: 320 },
   sequencia8: { linha: 1, esquerda: 11, largura: 17, altura: 26, ms: 320 },
   sequencia12: { linha: 2, esquerda: 7, largura: 25, altura: 32, ms: 320 },
   treinos10: { linha: 3, esquerda: 13, largura: 13, altura: 16, ms: 160 },
