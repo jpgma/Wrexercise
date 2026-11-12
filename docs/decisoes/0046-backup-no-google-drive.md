@@ -79,5 +79,10 @@ Com o arquivo diário mais o espelho das evidências (decisão abaixo), 20 pesso
 - **Revisão:** ao passar de cerca de 12 GB, acrescente o Backblaze B2 como segundo destino ou reveja a retenção.
 - **Dependência:** o rclone é um pacote do Termux (`pkg install rclone`), não uma dependência do app. Não entra em `PackageAllowlistTests`.
 - **Duas camadas locais:** o `Environment` continua com o dump local de todos os bancos, por 7 dias, como segunda camada.
-- **Fora desta decisão:** um aviso externo quando um dia falha, como o healthchecks.io, exigiria decisão própria (observabilidade dedicada). Por enquanto, `remote-termux.sh status` e `stats.bat` avisam quando o último envio tem mais de 26 h.
+- **Situação local:** cada backup grava em `dados/backups` os arquivos `ultimo-resultado` (origem, tamanhos, durações e resultado do envio), `ultimo-erro` (etapa da última falha) e `drive` (uso no Drive, medido depois de cada envio bem-sucedido). `nuvem.sh status`, chamado por `remote-termux.sh status` e `stats.bat`, só lê esses arquivos e não acessa o Drive, porque `stats.bat --watch` repete a cada 3 s. Esse relatório avisa:
+  - quando nenhum envio deu certo em 26 h;
+  - quando há envio pendente;
+  - quando há um erro mais novo que o último envio;
+  - quando a cota passa de 80%.
+- **Fora desta decisão:** um aviso externo quando um dia falha, como o healthchecks.io, exigiria decisão própria (observabilidade dedicada).
 - Relacionadas: 0022, 0029, 0032, 0044.

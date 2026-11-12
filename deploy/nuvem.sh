@@ -30,12 +30,42 @@ log_resto=$((5 * 1024 * 1024))
 rclone_opts="--drive-use-trash=false --stats=0"
 cd "$base"
 
+# Arquivos de situação em dados/backups, lidos por "status" (e por stats.bat) sem acessar o Drive:
+#   ultimo-backup      quando o último arquivo foi gravado
+#   ultimo-envio       quando o último envio ao Drive terminou bem
+#   ultimo-resultado   origem, arquivo, tamanhos, durações e resultado do envio do último backup
+#   ultimo-erro        a última falha, com a etapa
+#   drive              uso no Drive, medido depois de cada envio bem-sucedido
+#   pendente           o último envio falhou; a tarefa tenta de novo a cada hora
+registrar_erro() {
+  erro_registrado=1
+  mkdir -p "$backups"
+  printf '%s | %s\n' "$(date -u '+%Y-%m-%d %H:%M:%S UTC')" "$1" > "$backups/ultimo-erro" 2>/dev/null || true
+}
+
 falhar() {
   echo "ERRO: $1" >&2
+  registrar_erro "$1"
   exit 1
 }
 
 agora() { date -u +%Y%m%d-%H%M%S; }
+
+bytes_de() { wc -c <"$1" 2>/dev/null | tr -d ' ' || echo 0; }
+
+# 1536 → "1.5 KB". Vazio vira "?".
+humano() {
+  [ -n "${1:-}" ] || { echo "?"; return; }
+  awk -v b="$1" 'BEGIN { split("B KB MB GB TB", u); i = 1
+    while (b >= 1024 && i < 5) { b /= 1024; i++ }
+    if (i == 1) printf "%d %s", b, u[i]; else printf "%.1f %s", b, u[i] }'
+}
+
+# Valor de "chave=valor" num arquivo de situação.
+valor() { sed -n "s/^$1=//p" "$2" 2>/dev/null | head -n 1; }
+
+# Número de um campo de um JSON simples do rclone ({"count":1,"bytes":2}).
+json_num() { printf '%s' "$2" | sed -n "s/.*\"$1\":\([0-9]*\).*/\1/p"; }
 
 configurado() {
   command -v rclone >/dev/null 2>&1 && rclone listremotes 2>/dev/null | grep -qx "$remoto:"
@@ -58,7 +88,8 @@ travar() {
     [ "$tentativas" -lt 60 ] || falhar "outro backup está em andamento ($trava)."
     sleep 2
   done
-  trap 'rmdir "$trava" 2>/dev/null' EXIT
+  # Uma saída com erro que não passou por falhar (set -e) também fica registrada.
+  trap 'st=$?; rmdir "$trava" 2>/dev/null; [ "$st" = 0 ] || [ -n "${erro_registrado:-}" ] || registrar_erro "saiu com o código $st; veja log/backup.log"' EXIT
   trap 'exit 1' INT TERM
 }
 
@@ -86,7 +117,7 @@ criar_arquivo() {
   $ambiente aguardar
   # O papel wrexercise é dono do banco: não precisa de superusuário. Grava em .tmp e confere antes.
   PGPASSWORD=$(senha_banco) pg_dump -h 127.0.0.1 -p 5432 -U wrexercise -d wrexercise \
-    --format=custom --file="$tmp/wrexercise.dump"
+    --format=custom --file="$tmp/wrexercise.dump" || falhar "pg_dump falhou (banco fora do ar ou senha errada)."
   pg_restore --list "$tmp/wrexercise.dump" >/dev/null || falhar "o dump gerado não pode ser lido."
 
   cp "$base/app/versao.txt" "$tmp/versao.txt" 2>/dev/null || echo "desconhecida" > "$tmp/versao.txt"
@@ -97,6 +128,10 @@ criar_arquivo() {
   tar -czf "$backups/$nome.tmp" -C "$tmp" . -C "$dados" avatares
   gzip -t "$backups/$nome.tmp" || falhar "o arquivo gerado está corrompido."
   mv "$backups/$nome.tmp" "$backups/$nome"
+  dump_bytes=$(bytes_de "$tmp/wrexercise.dump")
+  logs_bytes=$(cat "$tmp"/log/*.log 2>/dev/null | wc -c | tr -d ' ')
+  avatares_bytes=$(( $(du -sk "$dados/avatares" | cut -f1) * 1024 ))
+  arquivo_bytes=$(bytes_de "$backups/$nome")
   rm -rf "$tmp"
 
   esvaziar "$base/log/app.log"
@@ -150,24 +185,68 @@ enviar() {
   echo "Espelhando as evidências no Drive"
   # --max-delete: uma pasta de evidências vazia por engano não esvazia o espelho.
   rclone sync $rclone_opts --max-delete 100 "$dados/evidencias" "$remoto:evidencias" \
-    --backup-dir "$remoto:evidencias-removidas/$data" || return 1
+    --backup-dir "$remoto:evidencias-removidas/$data" ||
+    { registrar_erro "envio: espelho das evidências (rede, token do Drive ou mais de 100 remoções)"; return 1; }
   echo "Enviando os arquivos diários"
   # copy só envia o que ainda não está lá: um envio que falhou é refeito na próxima vez.
-  rclone copy $rclone_opts "$backups" "$remoto:diarios" --include 'wrexercise-*.tar.gz' || return 1
-  podar || echo "AVISO: a remoção dos backups antigos do Drive falhou; tenta de novo no próximo envio." >&2
+  rclone copy $rclone_opts "$backups" "$remoto:diarios" --include 'wrexercise-*.tar.gz' ||
+    { registrar_erro "envio: arquivos diários (rede, token do Drive ou cota cheia)"; return 1; }
+  podar || registrar_erro "envio: remoção dos backups antigos do Drive (tenta de novo no próximo envio)"
   date -u '+%Y-%m-%d %H:%M:%S UTC' > "$backups/ultimo-envio"
   rm -f "$backups/pendente"
+  medir_drive || echo "AVISO: não foi possível medir o uso do Drive." >&2
   echo "Envio ao Drive concluído."
+}
+
+# Uso no Drive, guardado para status e stats.bat lerem sem acessar a rede (stats --watch repete a cada 3 s).
+medir_drive() {
+  {
+    echo "medido=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+    for d in diarios evidencias evidencias-removidas; do
+      j=$(rclone size $rclone_opts --json "$remoto:$d" 2>/dev/null) || j=
+      echo "$d.arquivos=$(json_num count "$j")"
+      echo "$d.bytes=$(json_num bytes "$j")"
+    done
+    lista=$(rclone lsf $rclone_opts --files-only "$remoto:diarios" 2>/dev/null | grep '^wrexercise-' | sort)
+    echo "diarios.mais_antigo=$(echo "$lista" | head -n 1)"
+    echo "diarios.mais_novo=$(echo "$lista" | tail -n 1)"
+    j=$(rclone about $rclone_opts --json "$drive:" 2>/dev/null) || j=
+    for k in total used trashed free; do echo "cota.$k=$(json_num "$k" "$j")"; done
+  } > "$backups/drive.tmp"
+  mv "$backups/drive.tmp" "$backups/drive"
 }
 
 # Falha ao criar o arquivo é erro (a implantação para). Falha no envio só avisa e fica pendente.
 backup() {
   travar
+  t0=$(date +%s)
   criar_arquivo "${1:-}"
-  if ! (enviar); then
+  t1=$(date +%s)
+  if ! configurado; then
+    aviso_sem_rclone
+    envio="não configurado"
     touch "$backups/pendente"
-    echo "AVISO: o envio ao Drive falhou ou não está configurado; o arquivo ficou no telefone e será reenviado." >&2
+  elif (enviar); then
+    envio=ok
+  else
+    envio=falhou
+    touch "$backups/pendente"
+    echo "AVISO: o envio ao Drive falhou; o arquivo ficou no telefone e a tarefa tenta de novo a cada hora." >&2
   fi
+  t2=$(date +%s)
+  {
+    echo "inicio=$(date -u -d "@$t0" '+%Y-%m-%d %H:%M:%S UTC')"
+    echo "origem=${origem:-${1:-manual}}"
+    echo "arquivo=$nome"
+    echo "arquivo.bytes=$arquivo_bytes"
+    echo "dump.bytes=$dump_bytes"
+    echo "avatares.bytes=$avatares_bytes"
+    echo "logs.bytes=$logs_bytes"
+    echo "evidencias.arquivos=$(find "$dados/evidencias" -type f 2>/dev/null | wc -l | tr -d ' ')"
+    echo "duracao.gravacao=$((t1 - t0))"
+    echo "duracao.envio=$((t2 - t1))"
+    echo "envio=$envio"
+  } > "$backups/ultimo-resultado"
 }
 
 recente() { [ -n "$(find "$1" -mmin -"$2" 2>/dev/null)" ]; }
@@ -181,11 +260,13 @@ agendado() {
   fi
   if ! recente "$backups/ultimo-backup" 1440; then
     echo "== Backup agendado em $(agora)"
+    origem=agendado
     backup
   elif [ -f "$backups/pendente" ] && configurado; then
     echo "== Reenvio pendente em $(agora)"
     travar
     enviar
+    sed -i 's/^envio=.*/envio=ok (reenviado em '"$(date -u '+%Y-%m-%d %H:%M UTC')"')/' "$backups/ultimo-resultado" 2>/dev/null || true
   fi
 }
 
@@ -251,19 +332,64 @@ idade() {
   fi
 }
 
+mtime() { stat -c %Y "$1" 2>/dev/null || echo 0; }
+
+# Só lê arquivos locais (rápido, funciona sem rede). O uso do Drive é o medido no último envio.
 status() {
-  echo "Último backup no telefone: $(idade "$backups/ultimo-backup")"
-  echo "Último envio ao Drive: $(idade "$backups/ultimo-envio")"
-  if [ -f "$backups/ultimo-envio" ] && ! recente "$backups/ultimo-envio" 1560; then
-    echo "AVISO: o último envio ao Drive tem mais de 26 h."
+  r=$backups/ultimo-resultado
+  dv=$backups/drive
+
+  echo "Último backup: $(idade "$backups/ultimo-backup")"
+  if [ -f "$r" ]; then
+    g=$(valor duracao.gravacao "$r"); e=$(valor duracao.envio "$r")
+    echo "  origem $(valor origem "$r") | $(valor arquivo "$r") ($(humano "$(valor arquivo.bytes "$r")"))"
+    echo "  conteúdo: dump $(humano "$(valor dump.bytes "$r")") | avatares $(humano "$(valor avatares.bytes "$r")") | logs $(humano "$(valor logs.bytes "$r")")"
+    echo "  duração: gravação ${g:-?} s + envio ${e:-?} s = $(( ${g:-0} + ${e:-0} )) s | envio: $(valor envio "$r")"
   fi
-  [ -f "$backups/pendente" ] && echo "AVISO: há envio pendente (a tarefa tenta de novo a cada hora)."
-  echo "Arquivos no telefone: $(ls -1 "$backups"/wrexercise-*.tar.gz 2>/dev/null | wc -l) ($(du -sh "$backups" 2>/dev/null | cut -f1))"
-  if configurado; then
-    echo "Arquivos diários no Drive: $(rclone lsf $rclone_opts --files-only "$remoto:diarios" 2>/dev/null | wc -l)"
-    rclone about "$drive:" 2>/dev/null | sed 's/^/Drive: /' || echo "Drive: cota indisponível"
+  if [ -f "$backups/ultimo-backup" ]; then
+    echo "Próximo backup agendado: a partir de $(date -d "@$(( $(mtime "$backups/ultimo-backup") + 86400 ))" '+%Y-%m-%d %H:%M %Z') (a tarefa confere a cada hora)"
+  fi
+  if [ -d "$base/run/nuvem.lock" ]; then
+    echo "Backup em andamento há $(( ($(date +%s) - $(mtime "$base/run/nuvem.lock")) / 60 )) min."
+  fi
+
+  echo "Último envio ao Drive: $(idade "$backups/ultimo-envio")"
+  if [ -f "$backups/ultimo-backup" ] && ! recente "$backups/ultimo-envio" 1560; then
+    echo "AVISO: nenhum envio ao Drive nas últimas 26 h."
+  fi
+  if [ -f "$backups/pendente" ]; then
+    echo "AVISO: há envio pendente (a tarefa tenta de novo a cada hora)."
+  fi
+  # Um erro mais novo que o último envio bem-sucedido ainda vale.
+  if [ -f "$backups/ultimo-erro" ] && [ "$(mtime "$backups/ultimo-erro")" -ge "$(mtime "$backups/ultimo-envio")" ]; then
+    echo "ÚLTIMO ERRO: $(cat "$backups/ultimo-erro")"
+    if [ -s "$base/log/backup.log" ]; then
+      echo "  fim de log/backup.log:"
+      tail -n 5 "$base/log/backup.log" | cut -c1-160 | sed 's/^/    /'
+    fi
+  fi
+
+  echo "No telefone: $(ls -1 "$backups"/wrexercise-*.tar.gz 2>/dev/null | wc -l | tr -d ' ') arquivos diários, $(du -sh "$backups" 2>/dev/null | cut -f1) em dados/backups"
+  if command -v rclone >/dev/null 2>&1; then
+    v=$(rclone version 2>/dev/null | head -n 1)
+    if configurado; then echo "rclone: $v, remoto '$remoto' configurado"; else echo "rclone: $v, SEM o remoto '$remoto' (README, seção Backups)"; fi
   else
-    echo "Drive: rclone ou o remoto '$remoto' não está configurado."
+    echo "rclone: não instalado (pkg install rclone); o backup fica só no telefone"
+  fi
+
+  if [ -f "$dv" ]; then
+    db=$(valor diarios.bytes "$dv"); eb=$(valor evidencias.bytes "$dv"); rb=$(valor evidencias-removidas.bytes "$dv")
+    echo "No Drive (medido em $(valor medido "$dv")): $(humano "$(( ${db:-0} + ${eb:-0} + ${rb:-0} ))") no total"
+    echo "  diários: $(valor diarios.arquivos "$dv") arquivos, $(humano "$db"), de $(valor diarios.mais_antigo "$dv" | cut -c12-26) a $(valor diarios.mais_novo "$dv" | cut -c12-26)"
+    em=$(valor evidencias.arquivos "$dv")
+    el=$(find "$dados/evidencias" -type f 2>/dev/null | wc -l | tr -d ' ')
+    echo "  evidências: $em arquivos, $(humano "$eb") (no telefone agora: $el)"
+    echo "  evidências removidas (31 dias): $(valor evidencias-removidas.arquivos "$dv") arquivos, $(humano "$rb")"
+    t=$(valor cota.total "$dv"); u=$(valor cota.used "$dv")
+    if [ -n "$t" ] && [ -n "$u" ] && [ "$t" -gt 0 ]; then
+      echo "  cota da conta: $(humano "$u") de $(humano "$t") ($((u * 100 / t))%), livres $(humano "$(valor cota.free "$dv")"), lixeira $(humano "$(valor cota.trashed "$dv")")"
+      if [ $((u * 100 / t)) -ge 80 ]; then echo "AVISO: a cota do Drive passou de 80%. Ver docs/decisoes/0046 (Impacto)."; fi
+    fi
   fi
 }
 

@@ -2,6 +2,9 @@
 chcp 65001 >nul
 rem Mostra o uso do Wrexercise no celular (Termux) por SSH: CPU e memória do app, do PostgreSQL e do
 rem túnel, carga e memória do aparelho, bateria e temperatura, saúde da aplicação, banco, disco e backups.
+rem Backups: último backup (origem, tamanhos, duração da gravação e do envio), próximo agendado, último envio
+rem ao Drive, último erro com o fim de log/backup.log, uso no telefone e no Drive (diários, evidências,
+rem removidas e cota da conta). O uso do Drive é o medido no último envio: o relatório não acessa o Drive.
 rem   stats.bat                 uma leitura (leva cerca de 2 s, que é a amostra de CPU)
 rem   stats.bat --watch         repete a cada poucos segundos, até Ctrl+C
 rem   stats.bat NOME            usa o perfil NOME em vez de a14

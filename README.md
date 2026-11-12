@@ -97,7 +97,7 @@ O telefone envia o backup cifrado ao Google Drive sozinho, uma vez por dia e ant
 - **Logs:** cada backup leva `log/app.log` e o esvazia; no telefone ficam só os logs desde o último backup.
 - O `Environment` continua gravando o dump local de todos os bancos em `~/ambiente/backups` (7 dias).
 
-Situação: `remote-termux.sh status` ou `.\stats.bat` (avisam se o último envio tem mais de 26 h).
+Situação: `.\stats.bat` (seção "Backups") ou `remote-termux.sh status`. Mostram o último backup (origem, tamanhos, duração da gravação e do envio), o próximo agendado, o último envio, o último erro com o fim de `log/backup.log` e o uso no telefone e no Drive. Avisam quando passam 26 h sem envio ou quando a cota passa de 80%.
 
 #### Configuração (uma vez)
 
