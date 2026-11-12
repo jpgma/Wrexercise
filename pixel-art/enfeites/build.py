@@ -67,6 +67,12 @@ ENFEITES = [
     ("ecletico", 200),  # bolsa de academia
 ]
 
+# Linhas de baixo (px da célula) que não se mexem: em todos os quadros, são as do quadro 1. O ChatGPT às
+# vezes redesenha a parte parada com 1 px de diferença, e o vaso tremeria junto com a planta.
+PARADO_EMBAIXO = {
+    "sequencia8": 10,  # o vaso
+}
+
 (AQUI / "saida").mkdir(exist_ok=True)
 (AQUI / "preview").mkdir(exist_ok=True)
 
@@ -117,6 +123,8 @@ def main():
             dx = base.getbbox()[0] - quadros[0].getbbox()[0]
             dy = base.getbbox()[3] - quadros[0].getbbox()[3]
             quadros = [_deslocar(q, dx, dy) for q in quadros]
+            if conquista in PARADO_EMBAIXO:
+                quadros = _fixar_embaixo(quadros, PARADO_EMBAIXO[conquista])
         else:
             quadros = [base] * QUADROS
         for coluna, quadro in enumerate(quadros):
@@ -148,6 +156,18 @@ def main():
     print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
     print("\n".join(linhas_ts))
     print(f"\nsaida/enfeites.png {atlas.size}, {len(ENFEITES)} enfeites")
+
+
+def _fixar_embaixo(quadros, linhas):
+    """Troca as `linhas` de baixo de cada quadro pelas do quadro 1."""
+    faixa = (0, LADO - linhas, LADO, LADO)
+    fixa = quadros[0].crop(faixa)
+    saida = [quadros[0]]
+    for quadro in quadros[1:]:
+        novo = quadro.copy()
+        novo.paste(fixa, faixa[:2])
+        saida.append(novo)
+    return saida
 
 
 def _deslocar(quadro, dx, dy):
