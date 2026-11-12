@@ -491,7 +491,7 @@ set "RC="%RCLONE%" --config "%RCLONE_CONF%""
 
 echo.
 echo ==^> 3/7 Configuração do rclone ^(%RCLONE_CONF%^)
-%RC% listremotes 2>nul | findstr /x /c:"%REMOTO%:" >nul
+%RC% listremotes 2>nul | findstr /b /c:"%REMOTO%:" >nul
 if errorlevel 1 goto :cb_sem_config_pc
 set "R="
 set /p "R=Já existe uma configuração neste PC. Reaproveitar? [S/n]: "
@@ -509,17 +509,26 @@ if errorlevel 1 goto :fail
 goto :cb_testar_pc
 
 :cb_criar
+rem Um login no Google de uma tentativa anterior (sem o remoto cifrado ainda) pode ser reaproveitado.
+%RC% listremotes 2>nul | findstr /b /c:"%DRIVE%:" >nul
+if errorlevel 1 goto :cb_login
+set "R="
+set /p "R=Este PC já tem o login no Google de uma tentativa anterior. Reaproveitar? [S/n]: "
+if /i not "%R%"=="n" goto :cb_login_ok
+:cb_login
 echo.
 echo Login no Google:
 echo   - Use de preferência uma conta Google só para backups ^(15 GB gratuitos, longe do Gmail e do Fotos^).
 echo   - O navegador vai abrir. Entre com essa conta e autorize o rclone.
 echo   - O acesso fica limitado aos arquivos que o próprio rclone criar ^(escopo drive.file^).
-echo   - Se o rclone perguntar sobre Shared Drive ^(Team Drive^), responda n.
 pause
 if exist "%RCLONE_CONF%" del "%RCLONE_CONF%"
-%RC% config create %DRIVE% drive scope=drive.file
+rem Sem stdout: o rclone imprime a configuração criada, com o token do Google. Os avisos vão pelo stderr.
+%RC% config create %DRIVE% drive scope=drive.file >nul
 if errorlevel 1 goto :fail
-%RC% listremotes | findstr /x /c:"%DRIVE%:" >nul
+:cb_login_ok
+rem /b em vez de /x: o findstr não casa /x em linhas que terminam só com LF, como as do rclone.
+%RC% listremotes | findstr /b /c:"%DRIVE%:" >nul
 if errorlevel 1 (
   echo O login no Google não foi concluído.
   goto :fail
