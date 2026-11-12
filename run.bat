@@ -27,7 +27,7 @@ rem                          evidências) e copia os últimos arquivos dele para
 rem                          o backup sozinho todo dia: este comando é uma cópia extra, sem as evidências.
 rem                          Não apaga cópias antigas daqui. Ver docs/decisoes/0046-backup-no-google-drive.md.
 rem   run.bat configurar-backup  configura tudo do backup no Google Drive, neste PC e no celular, com
-rem                          perguntas: rclone (winget e pkg), login no Google, remoto cifrado, cópia da
+rem                          perguntas: rclone (download oficial e pkg), login no Google, remoto cifrado, cópia da
 rem                          configuração para o celular, tarefa de backup, teste e cópia extra agendada.
 rem                          Também aceita --configurar-backup. Pode rodar de novo. Ver decisão 0046.
 rem   run.bat restore D    restaura o backup da data D (AAAAMMDD-HHMMSS), com o app parado
@@ -438,22 +438,55 @@ if errorlevel 1 goto :fail
 
 echo.
 echo ==^> 2/7 rclone neste PC
+set "RCLONE_BIN=%RCLONE_DIR%\bin"
+if not exist "%RCLONE_DIR%" mkdir "%RCLONE_DIR%"
 set "RCLONE="
-for /f "delims=" %%r in ('where rclone 2^>nul') do if not defined RCLONE set "RCLONE=%%r"
+if exist "%RCLONE_BIN%\rclone.exe" set "RCLONE=%RCLONE_BIN%\rclone.exe"
+if not defined RCLONE for /f "delims=" %%r in ('where rclone 2^>nul') do if not defined RCLONE set "RCLONE=%%r"
 if not defined RCLONE if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
 if defined RCLONE goto :cb_rclone_pc_ok
+rem Sem winget (nem sempre existe): baixa o zip oficial com o curl.exe e o tar.exe do Windows, sem
+rem administrador, e confere o SHA-256 contra o SHA256SUMS publicado para a versão.
+set "ARQ_PC=amd64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "ARQ_PC=arm64"
+set "RV="
+for /f "tokens=2" %%v in ('curl.exe -fsSL https://downloads.rclone.org/version.txt') do set "RV=%%v"
+if not defined RV (
+  echo Não foi possível consultar a versão atual em downloads.rclone.org. Confira a internet.
+  goto :fail
+)
+set "ZIP=rclone-%RV%-windows-%ARQ_PC%"
 set "R="
-set /p "R=O rclone não está neste PC. Instalar com o winget agora? [S/n]: "
+set /p "R=O rclone não está neste PC. Baixar o %RV% oficial para %RCLONE_BIN%? [S/n]: "
 if /i "%R%"=="n" goto :fail
-winget install -e --id Rclone.Rclone --accept-source-agreements --accept-package-agreements
-if exist "%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe" set "RCLONE=%LOCALAPPDATA%\Microsoft\WinGet\Links\rclone.exe"
-if defined RCLONE goto :cb_rclone_pc_ok
-echo O winget terminou, mas o rclone.exe não foi encontrado. Abra um terminal novo e rode de novo: run.bat configurar-backup
+curl.exe -fL --progress-bar -o "%TEMP%\%ZIP%.zip" https://downloads.rclone.org/%RV%/%ZIP%.zip
+if errorlevel 1 goto :fail
+curl.exe -fsSL -o "%TEMP%\rclone-SHA256SUMS" https://downloads.rclone.org/%RV%/SHA256SUMS
+if errorlevel 1 goto :fail
+set "ESPERADO="
+set "OBTIDO="
+for /f "tokens=1" %%h in ('findstr /c:"%ZIP%.zip" "%TEMP%\rclone-SHA256SUMS"') do if not defined ESPERADO set "ESPERADO=%%h"
+for /f "delims=" %%h in ('certutil -hashfile "%TEMP%\%ZIP%.zip" SHA256 ^| findstr /v ":"') do if not defined OBTIDO set "OBTIDO=%%h"
+if defined OBTIDO set "OBTIDO=%OBTIDO: =%"
+if not defined ESPERADO goto :cb_hash_ruim
+if /i not "%OBTIDO%"=="%ESPERADO%" goto :cb_hash_ruim
+"%SystemRoot%\System32\tar.exe" -xf "%TEMP%\%ZIP%.zip" -C "%TEMP%"
+if errorlevel 1 goto :fail
+if not exist "%RCLONE_BIN%" mkdir "%RCLONE_BIN%"
+copy /y "%TEMP%\%ZIP%\rclone.exe" "%RCLONE_BIN%\rclone.exe" >nul
+if errorlevel 1 goto :fail
+rmdir /s /q "%TEMP%\%ZIP%"
+del "%TEMP%\%ZIP%.zip" "%TEMP%\rclone-SHA256SUMS"
+set "RCLONE=%RCLONE_BIN%\rclone.exe"
+echo SHA-256 conferido. rclone instalado em %RCLONE_BIN%.
+goto :cb_rclone_pc_ok
+:cb_hash_ruim
+echo O SHA-256 do download não confere com o SHA256SUMS da versão %RV%. Nada foi instalado.
+del "%TEMP%\%ZIP%.zip" 2>nul
 goto :fail
 :cb_rclone_pc_ok
 "%RCLONE%" version | findstr /b /c:"rclone v"
 echo Executável: %RCLONE%
-if not exist "%RCLONE_DIR%" mkdir "%RCLONE_DIR%"
 set "RC="%RCLONE%" --config "%RCLONE_CONF%""
 
 echo.

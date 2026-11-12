@@ -109,7 +109,7 @@ Use de preferência uma conta Google só para backups (15 GB gratuitos, separado
 
 O comando faz, nesta ordem:
 
-1. Atualiza os scripts e instala o rclone no celular (`pkg`) e neste PC (`winget`).
+1. Atualiza os scripts e instala o rclone no celular (`pkg`) e neste PC (download oficial de downloads.rclone.org, com o SHA-256 conferido, em `%LOCALAPPDATA%\Wrexercise\rclone\bin`).
 2. Abre o navegador para o login no Google e cria os remotos `gdrive` e `wx-cripto`, com senhas aleatórias, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`.
 3. Copia os remotos para o `rclone.conf` do celular, sem mexer nos outros remotos de lá.
 4. Sobe a tarefa de backup.
@@ -127,7 +127,7 @@ Pode rodar de novo:
 Passo a passo manual, equivalente:
 
 1. No Termux: `pkg install rclone`.
-2. No Windows: `winget install Rclone.Rclone` e, com o navegador logado na conta dos backups:
+2. No Windows: instale o rclone (zip oficial de downloads.rclone.org ou `winget install Rclone.Rclone`) e, com o navegador logado na conta dos backups:
 
    ```powershell
    rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"   # {"scope":"drive.file"}: o rclone só vê o que ele criou

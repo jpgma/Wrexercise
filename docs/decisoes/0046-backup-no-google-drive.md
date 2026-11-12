@@ -69,7 +69,7 @@ Com o arquivo diário mais o espelho das evidências (decisão abaixo), 20 pesso
 
   Restaurar o backup mais recente traz todas as evidências, de qualquer idade. Sem o rclone, a restauração usa um arquivo local e não mexe nas evidências.
 - **`run.bat configurar-backup`** faz toda a configuração, neste PC e no celular, com perguntas:
-  - instala o rclone (`winget` e `pkg`);
+  - instala o rclone: `pkg` no celular; no PC, o zip oficial de downloads.rclone.org, conferido pelo SHA256SUMS da versão, sem administrador (o winget nem sempre existe);
   - faz o login no Google pelo navegador do PC;
   - cria o remoto cifrado com senhas aleatórias de 256 bits, em `%LOCALAPPDATA%\Wrexercise\rclone\rclone.conf`;
   - copia as seções `[gdrive]` e `[wx-cripto]` para o `rclone.conf` do celular (`nuvem.sh importar-config`);

@@ -685,7 +685,7 @@ These functions are for the operator. They are not in the interface.
 - `run.bat` starts the application on Windows. `run.bat --tunnel` makes the application available on the internet at `wx-dev.jpgmaraujo.com.br` through the Cloudflare tunnel `wx-dev`. This is for tests only. `run.bat --tunnel-maquina` does the same through a tunnel for this computer only, at `wx-<computer name>.jpgmaraujo.com.br`. Use it when a different computer also uses `wx-dev`: two connectors on one tunnel divide the requests between the two computers.
 - `run.bat --ssh` puts the application on an Android phone through SSH. It asks for the host, the port (8022 by default), the Termux user name from `whoami` and the SSH key. It saves the answers in `%LOCALAPPDATA%\Wrexercise\ssh`. The phone runs the database, the application and its own Cloudflare tunnel as native Termux processes, with no `proxy`, no Docker and no virtual machine. Open sign-up stays off. The phone starts the processes again after a restart. The operator needs an SSH key without a password and `sshd` running in Termux. Termux is the only target. The Galaxy A14 is the production environment. It serves `https://wx.jpgmaraujo.com.br` through the Cloudflare tunnel `wx`.
 - `run.bat configurar-backup` (or `--configurar-backup`) sets up all of the backup to Google Drive. It asks questions and then:
-  - installs `rclone` on the phone (`pkg`) and on the computer (`winget`);
+  - installs `rclone` on the phone (`pkg`) and on the computer (it downloads the official file from downloads.rclone.org and checks its SHA-256);
   - opens the browser for the Google login;
   - makes the encrypted remote `wx-cripto` with random passwords;
   - copies the configuration to the phone and keeps the other remotes of the phone;
