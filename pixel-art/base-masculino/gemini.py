@@ -36,11 +36,13 @@ SAIDA = AQUI / "saida" / "gemini"
 QUADROS = {
     "parado": 4, "andar": 8, "correr": 8, "treinando": 6, "alongar": 4, "olhar": 4,
     "arremessar": 6, "receber": 6, "aceitar": 4, "recusar": 3, "provocar": 4, "comemorar": 8,
-    "dormindo": 4, "adormecer": 8, "acordar": 6,
+    "dormindo": 4, "adormecer": 8, "acordar": 6, "levantar": 8,
 }
 # Quadros que ficam no chão do 1º, mesmo que o Gemini os desenhe 1 ou 2 px acima: as poses
 # sentadas de dormir (prompts-gemini.md §4, "Dormir"). O 3º de `acordar` é o susto, no ar.
-NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 5)}
+NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 5), "levantar": range(8)}
+# Quadro de pé, cópia da referência, de onde saem a escala e o chão, quando não é o 1º.
+CALIBRACAO = {"levantar": 7}
 # Colunas e linhas da grade por quantidade de quadros (prompts-gemini.md §4).
 GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2)}
 
@@ -220,7 +222,8 @@ def processar(arq: pathlib.Path) -> None:
         xs = [x for x, _ in m]
         ys = [y for _, y in m]
         celulas.append((x0, y0, m, min(xs), min(ys), max(xs) + 1, max(ys) + 1))
-    _, _, _, x1min, y1min, x1max, y1max = celulas[0]
+    k = CALIBRACAO.get(animacao, 0)
+    _, _, _, x1min, y1min, x1max, y1max = celulas[k]
     escala = (y1max - y1min) / alt_ref
 
     def centro_pernas(m, ymax) -> float:
@@ -234,8 +237,9 @@ def processar(arq: pathlib.Path) -> None:
     tira = Image.new("RGBA", (QUADRO * n, QUADRO), (0, 0, 0, 0))
     largura1 = round((x1max - x1min) / escala)
     ox1 = round(CENTRO_X - largura1 / 2 + 0.01)
-    pernas1 = ox1 + (centro_pernas(celulas[0][2], y1max) - x1min) / escala
-    for i, (x0, y0, m, xmin, ymin, xmax, ymax) in enumerate(celulas):
+    pernas1 = ox1 + (centro_pernas(celulas[k][2], y1max) - x1min) / escala
+    for i in sorted(range(n), key=lambda i: i != k):  # o de calibração primeiro
+        x0, y0, m, xmin, ymin, xmax, ymax = celulas[i]
         tw = round((xmax - xmin) / escala)
         th = round((ymax - ymin) / escala)
         grade = separar_gola(limpar(reduzir(px, x0, y0, m, xmin, ymin, tw, th, escala, cor)))
@@ -244,7 +248,7 @@ def processar(arq: pathlib.Path) -> None:
         # Com os pés no chão, o ajuste fino vem dos tênis: o deslocamento (até AJUSTE px) que
         # mais sobrepõe as linhas de baixo às do 1º quadro, com o pé de apoio no mesmo lugar.
         chao = {(ox + tx, th - ty) for tx, ty in grade if ty >= th - 2}
-        if i == 0:
+        if i == k:
             chao1 = chao
         elif dy == 0:
             ox += max(
