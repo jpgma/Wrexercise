@@ -136,7 +136,7 @@ Arquivo compartilhado (`Respostas.cs`, `Sessoes.cs`): mesmo namespace da fatia; 
 
 - Arquivos em `Infrastructure/Database/Migrations/`, no formato `NNN-kebab-case.sql`, com numeração sequencial.
 - Só avançam: nunca edite uma migração já aplicada, crie outra. O executor recusa arquivos alterados.
-- Nunca rodam na inicialização. Aplique com `dotnet run --project Wrexercise -- migrate` ou `docker compose run --rm app migrate`.
+- Nunca rodam na inicialização. Em desenvolvimento, aplique com `dotnet run --project Wrexercise -- migrate`. A implantação já as aplica: em produção (A14), `run.bat --ssh` roda `app/Wrexercise migrate` no celular depois do backup; na pilha local em Docker, `run.bat` roda `docker compose ... run --rm app migrate`. Não há passo manual (ver `docs/decisoes/0001-migracoes-sql.md`).
 
 ## Erros
 

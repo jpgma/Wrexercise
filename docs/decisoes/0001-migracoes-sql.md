@@ -20,11 +20,16 @@ Executor próprio, exposto como o subcomando `migrate` do binário da aplicaçã
 - Apenas para frente: não há scripts de reversão. Corrige-se com uma nova migração, ou restaurando o backup.
 - Cada migração roda em sua própria transação, e um lock consultivo do PostgreSQL impede execuções simultâneas.
 - A tabela `schema_migrations` guarda versão, nome, checksum SHA-256 e data. O executor se recusa a continuar se um arquivo aplicado mudou ou sumiu.
-- Nunca roda na inicialização da aplicação. Aplica-se durante o deploy:
+- Nunca roda na inicialização da aplicação. Cada ambiente o chama antes de subir o app:
 
-```bash
-docker compose --env-file .env -f deploy/compose.yaml run --rm app migrate
-```
+| Ambiente | Quem roda `migrate` |
+|---|---|
+| Produção (A14, Termux, 0032) | `run.bat --ssh`. No celular, `remote-termux.sh implantar` para o app, faz o backup, troca o binário, roda `app/Wrexercise migrate` e só então inicia o app. |
+| Pilha local em Docker | `run.bat`, com `docker compose ... run --rm app migrate` antes de subir os serviços. Na mão: `docker compose --env-file .env -f deploy/compose.yaml run --rm app migrate`. |
+| Desenvolvimento | `dotnet run --project Wrexercise -- migrate`. |
+| Testes de integração | `TestDatabase.CreateMigratedAsync()`. |
+
+*Atualizado em 2026-11-13:* a versão original citava só o comando do Docker Compose, do plano de produção numa VM com Compose (0005), que nunca foi criada. Desde 0032, a produção é o A14 no Termux, sem Docker.
 
 ## Impacto
 
