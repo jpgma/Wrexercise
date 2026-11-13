@@ -23,6 +23,11 @@ internal static class CriarAtividade
             return OperacaoAtividade.InvalidData();
         }
 
+        if (!ValidacaoAtividade.IsStartedAtDentroDoLimite(request.StartedAt!.Value))
+        {
+            return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.AtividadeMuitoAntiga);
+        }
+
         var usuarioId = context.GetSessaoAtual().UsuarioId;
         var (status, atividadeId) = await ExecutarAsync(
             dataSource,
@@ -74,7 +79,7 @@ internal static class CriarAtividade
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, descricao, tipo_comprovacao)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id
+            RETURNING id, submitted_at
             """, connection, transaction);
         insert.Parameters.AddWithValue(grupoId);
         insert.Parameters.AddWithValue(usuarioId);
@@ -87,7 +92,20 @@ internal static class CriarAtividade
         });
         insert.Parameters.AddWithValue(request.TipoComprovacao!);
 
-        var id = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
+        Guid id;
+        DateTimeOffset submittedAt;
+        await using (var reader = await insert.ExecuteReaderAsync(cancellationToken))
+        {
+            await reader.ReadAsync(cancellationToken);
+            id = reader.GetGuid(0);
+            submittedAt = reader.GetFieldValue<DateTimeOffset>(1);
+        }
+
+        if (AvisosEvidencia.IsRegistroTardio(request.StartedAt.Value, request.DuracaoSegundos.Value, submittedAt))
+        {
+            await ConsultasAtividade.InserirAvisoAsync(
+                connection, transaction, id, TipoAviso.RegistroTardio, null, null, cancellationToken);
+        }
 
         await using (var revisores = new NpgsqlCommand("""
             INSERT INTO revisores_atividade (atividade_id, usuario_id)

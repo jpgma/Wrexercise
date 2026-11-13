@@ -7,7 +7,13 @@ export {
   tipoComprovacaoLabels,
   tiposAtividade,
 } from "./labels";
-export { prepararEvidencia } from "./comprimirImagem";
+export {
+  FotoNaoProcessadaError,
+  prepararEvidencia,
+  type EvidenciaPreparada,
+} from "./comprimirImagem";
+export { AvisosAtividade, AvisosAtividadeResumo } from "./AvisosAtividade";
+export { calcularAvisoDataFoto, maximoNoPassadoMs } from "./janelaEvidencia";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";
@@ -23,6 +29,8 @@ export {
 } from "./useAtividades";
 export type {
   Atividade,
+  Aviso,
+  TipoAviso,
   AtividadeResumo,
   CriarAtividadeData,
   FiltroAtividades,

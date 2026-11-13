@@ -458,7 +458,7 @@ Após o início da revisão, não permitir substituição silenciosa. Qualquer a
 
 ## Q020 — Como evitar atividades duplicadas?
 
-**Status:** ABERTA
+**Status:** PARCIALMENTE DECIDIDA (0052). A foto repetida é recusada pelo SHA-256 do arquivo enviado e do original, e a foto parecida gera um aviso. A chave de idempotência na criação continua aberta.
 
 Investigar:
 
@@ -652,7 +652,7 @@ A exclusão de dados deve considerar as relações históricas e as necessidades
 
 ## Q030 — Como tratar dados pessoais em imagens?
 
-**Status:** ABERTA
+**Status:** PARCIALMENTE DECIDIDA (0052). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data e a localização do EXIF ficam em colunas à parte, sem aparecer na API. Mostrar a localização e a retenção (Q029) continuam abertas.
 
 Investigar:
 

@@ -7,13 +7,14 @@
 2. Gaps people will hit in the first week
 
 - Nobody can edit or delete an activity (funcionalidades.md §… "Nobody can edit or delete an activity", "Nobody can replace or delete evidence"). The wrong type, a typo in the duration, or a double submit stays forever, and the only fix is getting the group to reject it. I expect this to be the first complaint. A short owner/admin "void" action, or a few minutes where the author can delete their own entry, would help.
-- Duplicate submissions (Q020, still open). The create endpoints have no idempotency key, so a retry on a flaky connection can post the activity twice. Evidence sha256 is stored but nothing reads it.
-- Location data can leak (Q030). comprimirImagem.ts removes EXIF only when re-encoding through the canvas works. If it fails (unsupported format, decode error), the original file is uploaded with its EXIF/GPS intact, and the server doesn't strip it. That's a real privacy hole for photos taken at home.
+- Duplicate submissions (Q020, partly decided in 0052). Repeated photos are now refused by SHA-256, but the create endpoints still have no idempotency key, so a retry on a flaky connection can post the activity twice.
+- Photo location is now stored (0052) but not shown. Decide whether to show it, and tell participants it is kept (a line on the record form). Deleting it belongs with Q029.
 - The review queue blocks new entries. 409 AVALIACOES_PENDENTES stops anyone with pending reviews from recording an activity (0041). That's a strong push; check whether it feels annoying or helpful once real people use it.
 
 3. Rules to adjust with real data
 
 These were decided before anyone used the app, and several ADRs say to look again once real use starts:
+- Avisos (0052): count each type after the first month. Check `FotoParecida` false positives (gym mirror selfies; the 6-bit limit), how many flagged activities end in EmRevisao waiting for an admin, and whether the 48 h backdating limit blocks honest late logging.
 - The consensus formula and the 48 h review window (0012, 0015). Is anything ever rejected, or does everything sit in EmRevisao?
 - Daily and proportional goals (0040, 0043, 0045). 0045 notes the rule changed after only two days with no real use.
 - Jogo: the early-morning bonus may encourage training at dawn instead of consistency (gamificacao §12.3). The Enfeite clutter with 10 people on a 360 px screen still needs checking (§12.4). Achievement limits of 10 per type should be revisited with real data (§12.5).
@@ -33,4 +34,4 @@ Q001's text still talks about the Oracle VM. Marking these decided, with links t
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: turn on the uptime monitor, the EXIF fallback fix, then activity correction/void. I can start on any of them, or update questoes-abertas.md first.
+My suggested order: turn on the uptime monitor, then activity correction/void (the EXIF fallback fix shipped with 0052). I can start on any of them, or update questoes-abertas.md first.

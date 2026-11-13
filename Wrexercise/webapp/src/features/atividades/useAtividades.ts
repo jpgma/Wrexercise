@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { gruposKey, shouldRetry } from "@/features/grupos";
 import { ApiError, getJson, postFormData, postJson } from "@/services/api";
+import type { EvidenciaPreparada } from "./comprimirImagem";
 import type {
   Atividade,
   AtividadeResumo,
@@ -130,12 +131,23 @@ export function useCriarAtividade(grupoId: string) {
 /** Fora de um hook: a atividade só existe depois de criada, no meio do envio do formulário. */
 export function anexarEvidencia(
   atividadeId: string,
-  arquivo: File,
-  miniatura: Blob | null,
+  { arquivo, miniatura, sinais }: EvidenciaPreparada,
 ) {
   const form = new FormData();
   form.append("arquivo", arquivo);
   if (miniatura) form.append("miniatura", miniatura, "miniatura.jpg");
+  // Sinais da foto original (ADR 0052). A localização é guardada, mas a API não a devolve.
+  if (sinais.capturadaEm && sinais.origem) {
+    form.append("capturadaEm", sinais.capturadaEm.toISOString());
+    form.append("origemDataCaptura", sinais.origem);
+  }
+  if (sinais.sha256Original)
+    form.append("sha256Original", sinais.sha256Original);
+  form.append("dhash", sinais.dhash);
+  if (sinais.latitude !== null && sinais.longitude !== null) {
+    form.append("latitude", String(sinais.latitude));
+    form.append("longitude", String(sinais.longitude));
+  }
   return postFormData<Evidencia>(
     `/api/atividades/${atividadeId}/evidencias`,
     form,

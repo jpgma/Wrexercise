@@ -136,10 +136,12 @@ export function ReacoesAtividade({
     (situacaoVerificacao === "AguardandoFeedback" ||
       situacaoVerificacao === "EmRevisao");
 
+  // Ninguém decide a própria disputa (ADR 0052): outro administrador decide.
   const mostrarRevisaoAdmin =
     grupo.data !== undefined &&
     canRevisarAtividade(grupo.data.papel) &&
-    situacaoVerificacao === "EmRevisao";
+    situacaoVerificacao === "EmRevisao" &&
+    !voce;
 
   return (
     <div className="space-y-5">

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Segments } from "@/components/Segments";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
+  AvisosAtividade,
   EvidenciasAtividade,
   formatarDataRelativa,
   formatarDuracao,
@@ -250,6 +251,7 @@ export function RevisarPage() {
     situacaoVerificacao,
     voce,
     evidencias,
+    avisos,
   } = atividade.data;
   return (
     <div key={atividadeId} className="mx-auto max-w-xl animate-fade-in">
@@ -290,6 +292,11 @@ export function RevisarPage() {
           </div>
           {descricao && (
             <p className="mt-3 text-sm break-words">“{descricao}”</p>
+          )}
+          {avisos.length > 0 && (
+            <div className="mt-4">
+              <AvisosAtividade avisos={avisos} />
+            </div>
           )}
         </div>
       </div>

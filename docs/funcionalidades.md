@@ -400,7 +400,7 @@ The group pages and the home page show one challenge. It is the active challenge
 An active member records an activity with these data:
 
 - Type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Esporte`, `Yoga`, `Calistenia` or `Outro`.
-- Start date and time. It cannot be more than 1 hour in the future.
+- Start date and time. It cannot be more than 1 hour in the future. It cannot be more than 48 hours in the past: the API returns `400 ATIVIDADE_MUITO_ANTIGA`.
 - Duration: 1 minute to 24 hours.
 - Description: optional, maximum 500 characters.
 - Evidence: 0 to 3 images.
@@ -422,7 +422,14 @@ When the queue is not empty, the form page does not show the form. It shows only
 ### 7.2. Evidence
 
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
-- The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location.
+- The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location, from the file that it sends.
+- The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original file.
+- Before it removes the metadata, the browser reads these data from the original file and sends them in separate fields (see 7.5):
+  - The date and time when the photo was taken (EXIF `DateTimeOriginal`). If there is no EXIF date, the browser sends the date of the file, with the origin `Arquivo`.
+  - The SHA-256 of the original file.
+  - A 64-bit perceptual hash (`dhash`).
+  - The latitude and the longitude (EXIF GPS), if they exist. The server keeps them. No API response shows them.
+- The server refuses an image if the same file (SHA-256 of the sent file or of the original file) is already evidence in any group of the user, also in the same activity. The API returns `409 EVIDENCIA_DUPLICADA`. The confirmation page shows "Esta foto já foi usada em outra atividade."
 - The server accepts JPEG, PNG and WebP files. The maximum size is 5 MB for each file and 100 KB for each thumbnail. The server examines the real content of the file.
 - Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
 - Nobody can replace or delete evidence.
@@ -441,7 +448,23 @@ The week of an activity is the week of its start date and time, in the time zone
 - Group feed ("Atividades"): all the activities of the group, the most recent first. Filters: "Todas", "Minhas", "Pendentes", "Verificadas".
 - The member page shows the activities of one member.
 - The feed loads 20 activities at a time. "Carregar mais" loads the next 20.
-- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions. If the activity has comments, the item also shows 💬 and the number of comments.
+- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions. If the activity has comments, the item also shows 💬 and the number of comments. If the activity has warnings (see 7.5), the item shows one short label for each type.
+
+### 7.5. Warnings (`Aviso`)
+
+The system adds warnings to an activity. All members of the group see them, also the author. The feed shows short labels. The activity page and the review page show a sentence for each warning and the text "Avisos automáticos, que podem errar."
+
+| `Aviso` | When | Label |
+|---|---|---|
+| `FotoForaDoPeriodo` | The EXIF date is before the start − 2 hours, after the end + 12 hours, or in the future. Or the file date is before the start − 2 hours. | "Foto de outro horário" |
+| `FotoSemData` | The photo has no EXIF date. A file date in or after the window does not change this. | "Foto sem data" |
+| `FotoParecida` | The `dhash` has a maximum difference of 6 bits from a photo of a different activity, in any group of the user. | "Foto parecida" |
+| `RegistroTardio` | The user records the activity more than 12 hours after its end. | "Registrada depois" |
+
+- `FotoParecida` shows the link "Ver a outra" only when the user can see the other activity.
+- `FotoSemData` only gives information. The other warnings stop the automatic verification (see 8.3).
+- When the user selects a photo, the form shows the warning that the photo will cause: "Foto N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Foto N: Sem data na foto. O grupo verá que não deu para conferir." The form calculates the warning again when the user changes the start or the duration.
+- The browser gives these data. A user can change them. The warnings help the reviewers. They are not proof.
 
 ## 8. Community verification
 
@@ -485,13 +508,14 @@ After each reaction, the system calculates the status again:
 
 - `Verificada` and `Rejeitada` are final. After these statuses, the system does not accept reactions.
 - When a reviewer changes the only negative reaction to `Kudos`, the activity leaves `EmRevisao`.
-- A background task runs approximately each 10 minutes. When the window closes, an activity in `AguardandoFeedback` becomes `Verificada`.
+- A background task runs approximately each 10 minutes. When the window closes, an activity in `AguardandoFeedback` becomes `Verificada`. If the activity has a `FotoForaDoPeriodo`, `FotoParecida` or `RegistroTardio` warning (see 7.5), it becomes `EmRevisao` and an administrator must decide. When all reviewers give `Kudos`, the activity becomes `Verificada` also with a warning.
 - When the window closes, an activity in `EmRevisao` stays in `EmRevisao`. Only an administrative review can change it.
 - The code has the status `Contestada`. The application does not use it.
 
 ### 8.4. Administrative review
 
 - The owner and the administrators can decide an activity in `EmRevisao` at any time, also while the window is open.
+- Nobody can decide his or her own activity. The API returns `403 REVISAO_PROPRIA_NAO_PERMITIDA`, and the activity page does not show the decision form to the author. The activity stays in `EmRevisao` until a different administrator decides.
 - The decision is `Verificada` or `Rejeitada`. A justification is necessary (maximum 500 characters).
 - The system keeps a record of the person, the date and the justification. Nobody can change the decision.
 - The group page shows a list "Disputas para decidir" to the owner and the administrators.

@@ -17,7 +17,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
   anexarEvidencia,
+  calcularAvisoDataFoto,
+  formatarDataHora,
+  maximoNoPassadoMs,
   prepararEvidencia,
+  type EvidenciaPreparada,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   tiposAtividade,
@@ -35,7 +39,7 @@ import {
 } from "@/features/desafios";
 import { useGrupo } from "@/features/grupos";
 import { useResumoGrupo } from "@/features/progresso";
-import { getErrorMessage } from "@/services/api";
+import { ApiError, getErrorMessage } from "@/services/api";
 
 const schema = z.object({
   tipo: z.enum(tiposAtividade as [TipoAtividade, ...TipoAtividade[]], {
@@ -52,7 +56,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-type Anexo = { arquivo: File; url: string };
+/** Preparada na escolha: assim o autor vê o aviso da data antes de enviar (ADR 0052). */
+type Anexo = { preparada: EvidenciaPreparada; url: string };
 
 const maximoDeEvidencias = 3;
 const passoEmMinutos = 5;
@@ -69,6 +74,8 @@ type Registrada = {
   faltaNoDia: string | null;
   enviadas: number;
   anexadas: number;
+  /** Motivos das imagens recusadas, sem repetição (ex.: foto já usada). */
+  motivos: string[];
 };
 
 function TreinoRegistrado({
@@ -103,6 +110,7 @@ function TreinoRegistrado({
           {faltaram === 1
             ? "Uma imagem não pôde ser enviada."
             : `${faltaram} imagens não puderam ser enviadas.`}
+          {registrada.motivos.map((motivo) => ` ${motivo}`)}
         </p>
       )}
       <div className="mt-8 w-full space-y-2">
@@ -212,6 +220,12 @@ export function RegistrarAtividadePage() {
   const criar = useCriarAtividade(grupoId);
   const seletor = useRef<HTMLInputElement>(null);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [preparando, setPreparando] = useState(false);
+  // O servidor aceita atividades das últimas 48 horas (ADR 0052).
+  const [inicioMinimo] = useState(() =>
+    toLocalInputValue(new Date(Date.now() - maximoNoPassadoMs)),
+  );
+  const [erroAnexo, setErroAnexo] = useState<string | null>(null);
   const [enviando, setEnviando] = useState<string | null>(null);
   const [registrada, setRegistrada] = useState<Registrada | null>(null);
 
@@ -270,18 +284,17 @@ export function RegistrarAtividadePage() {
 
     // A atividade já existe: uma imagem que falhe não pode fazer a pessoa registrar de novo.
     let enviadas = 0;
-    for (const [indice, { arquivo }] of anexos.entries()) {
+    const motivos = new Set<string>();
+    for (const [indice, { preparada }] of anexos.entries()) {
       setEnviando(`Enviando ${indice + 1} de ${anexos.length}…`);
       try {
-        const preparada = await prepararEvidencia(arquivo);
-        await anexarEvidencia(
-          atividade.id,
-          preparada.arquivo,
-          preparada.miniatura,
-        );
+        await anexarEvidencia(atividade.id, preparada);
         enviadas += 1;
-      } catch {
-        // O resumo final mostra quantas faltaram.
+      } catch (error) {
+        // O resumo final mostra quantas faltaram; a foto já usada tem motivo próprio.
+        if (error instanceof ApiError && error.code === "EVIDENCIA_DUPLICADA") {
+          motivos.add(getErrorMessage(error));
+        }
       }
     }
     setEnviando(null);
@@ -291,6 +304,7 @@ export function RegistrarAtividadePage() {
       faltaNoDia,
       enviadas,
       anexadas: anexos.length,
+      motivos: [...motivos],
     });
   };
 
@@ -329,12 +343,54 @@ export function RegistrarAtividadePage() {
     );
   }
 
-  const adicionarAnexos = (lista: FileList | null) => {
+  // Prepara na escolha: a foto que o navegador não processa não entra, e nunca vai o original com EXIF (Q030).
+  const adicionarAnexos = async (lista: FileList | null) => {
     if (!lista) return;
-    const novos = Array.from(lista)
-      .slice(0, maximoDeEvidencias - anexos.length)
-      .map((arquivo) => ({ arquivo, url: URL.createObjectURL(arquivo) }));
-    setAnexos([...anexos, ...novos]);
+    const escolhidos = Array.from(lista).slice(
+      0,
+      maximoDeEvidencias - anexos.length,
+    );
+    setErroAnexo(null);
+    setPreparando(true);
+    const resultados = await Promise.allSettled(
+      escolhidos.map(prepararEvidencia),
+    );
+    setPreparando(false);
+
+    const novos: Anexo[] = [];
+    escolhidos.forEach((arquivo, indice) => {
+      const resultado = resultados[indice];
+      if (resultado?.status === "fulfilled") {
+        novos.push({
+          preparada: resultado.value,
+          url: URL.createObjectURL(arquivo),
+        });
+      }
+    });
+    if (novos.length < escolhidos.length) {
+      setErroAnexo(
+        "Não foi possível processar uma das fotos. Tente outra imagem.",
+      );
+    }
+    setAnexos((atuais) => [...atuais, ...novos]);
+  };
+
+  const inicioEscolhido = startedAt ? new Date(startedAt) : null;
+  const avisoDaFoto = ({ preparada }: Anexo) => {
+    if (!inicioEscolhido || Number.isNaN(inicioEscolhido.getTime()))
+      return null;
+    const aviso = calcularAvisoDataFoto(
+      inicioEscolhido,
+      (duracaoMinutos || 0) * 60,
+      preparada.sinais,
+    );
+    if (aviso === "FotoForaDoPeriodo" && preparada.sinais.capturadaEm) {
+      return `Foto de ${formatarDataHora(preparada.sinais.capturadaEm.toISOString())}, fora do horário do treino. O grupo verá um aviso.`;
+    }
+    if (aviso === "FotoSemData") {
+      return "Sem data na foto. O grupo verá que não deu para conferir.";
+    }
+    return null;
   };
 
   const removerAnexo = ({ url }: Anexo) => {
@@ -445,6 +501,7 @@ export function RegistrarAtividadePage() {
           </span>
           <input
             type="datetime-local"
+            min={inicioMinimo}
             max={toLocalInputValue(new Date())}
             className={`input-field ${errors.startedAt ? "border-danger" : ""}`}
             {...register("startedAt")}
@@ -464,8 +521,10 @@ export function RegistrarAtividadePage() {
           multiple
           className="hidden"
           onChange={(event) => {
-            adicionarAnexos(event.target.files);
-            event.target.value = "";
+            const arquivos = event.target.files;
+            void adicionarAnexos(arquivos).finally(() => {
+              event.target.value = "";
+            });
           }}
         />
         {anexos.length > 0 && (
@@ -492,9 +551,38 @@ export function RegistrarAtividadePage() {
             ))}
           </ul>
         )}
+        {anexos.map(avisoDaFoto).some(Boolean) && (
+          <ul className="mb-2 space-y-1" aria-live="polite">
+            {anexos.map((anexo, indice) => {
+              const aviso = avisoDaFoto(anexo);
+              return (
+                aviso && (
+                  <li
+                    key={anexo.url}
+                    className="flex gap-1.5 text-xs text-muted"
+                  >
+                    <Info
+                      aria-hidden="true"
+                      className="mt-0.5 size-3.5 shrink-0"
+                    />
+                    <span>
+                      Foto {indice + 1}: {aviso}
+                    </span>
+                  </li>
+                )
+              );
+            })}
+          </ul>
+        )}
+        {erroAnexo && (
+          <p role="alert" className="input-error mb-2">
+            {erroAnexo}
+          </p>
+        )}
         {anexos.length < maximoDeEvidencias && (
           <button
             type="button"
+            disabled={preparando}
             className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border-strong bg-surface py-8 text-sm text-muted tap hover:border-outline"
             onClick={() => seletor.current?.click()}
           >

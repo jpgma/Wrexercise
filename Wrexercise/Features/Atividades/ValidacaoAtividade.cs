@@ -50,7 +50,11 @@ internal static class ValidacaoAtividade
         string.IsNullOrWhiteSpace(descricao) ? null : descricao.Trim();
 
     public static bool IsValidStartedAt(DateTimeOffset? startedAt) =>
-        startedAt is { } instante && instante <= DateTimeOffset.UtcNow.AddHours(1);
+        startedAt is { } instante && instante <= DateTimeOffset.UtcNow + AvisosEvidencia.ToleranciaFuturo;
+
+    /// <summary>Até 48 horas no passado (ADR 0052): o mesmo prazo da janela de avaliação.</summary>
+    public static bool IsStartedAtDentroDoLimite(DateTimeOffset startedAt) =>
+        AvisosEvidencia.IsDentroDoLimiteNoPassado(startedAt, DateTimeOffset.UtcNow);
 
     /// <summary>Traduz o filtro da lista para SQL fixo; $1 é sempre quem consulta.</summary>
     /// <returns><c>false</c> para um filtro desconhecido.</returns>

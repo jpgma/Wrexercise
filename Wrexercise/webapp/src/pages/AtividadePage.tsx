@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
+  AvisosAtividade,
   EvidenciasAtividade,
   formatarDataRelativa,
   formatarDuracao,
@@ -58,6 +59,7 @@ export function AtividadePage() {
     situacaoVerificacao,
     voce,
     evidencias,
+    avisos,
   } = atividade.data;
 
   return (
@@ -109,6 +111,11 @@ export function AtividadePage() {
               <p className="mt-4 text-[15px] leading-relaxed break-words">
                 {descricao}
               </p>
+            )}
+            {avisos.length > 0 && (
+              <div className="mt-4">
+                <AvisosAtividade avisos={avisos} />
+              </div>
             )}
           </div>
         </div>

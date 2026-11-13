@@ -24,6 +24,17 @@ export type Evidencia = {
   url: string;
 };
 
+/** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */
+export type TipoAviso =
+  "FotoForaDoPeriodo" | "FotoSemData" | "FotoParecida" | "RegistroTardio";
+
+export type Aviso = {
+  tipo: TipoAviso;
+  evidenciaId: string | null;
+  /** Só quando quem vê também pode ver a atividade da foto parecida. */
+  atividadeRelacionadaId: string | null;
+};
+
 export type AtividadeResumo = {
   id: string;
   grupoId: string;
@@ -43,6 +54,7 @@ export type AtividadeResumo = {
   rejeitar: number;
   miniaturaUrl: string | null;
   comentarios: number;
+  avisos: TipoAviso[];
 };
 
 export type FiltroAtividades =
@@ -56,9 +68,11 @@ export type Atividade = Omit<
   | "totalEvidencias"
   | "miniaturaUrl"
   | "comentarios"
+  | "avisos"
 > & {
   voce: boolean;
   evidencias: Evidencia[];
+  avisos: Aviso[];
 };
 
 export type CriarAtividadeData = {

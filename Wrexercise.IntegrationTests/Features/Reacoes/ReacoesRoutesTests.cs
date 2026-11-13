@@ -91,7 +91,14 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
         var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
         await PutReacaoAsync(bia, atividade!.Id, TipoReacao.Suspeito);
 
-        var response = await PostRevisaoAsync(ana, atividade.Id, Situacao.Verificada, "Evidência consistente.");
+        // Quem é autor não decide a própria disputa, mesmo sendo dono do grupo (ADR 0052).
+        await ApiTestHost.AssertProblemAsync(
+            await PostRevisaoAsync(ana, atividade.Id, Situacao.Verificada, "Fui eu mesma."),
+            HttpStatusCode.Forbidden,
+            "REVISAO_PROPRIA_NAO_PERMITIDA");
+
+        var duda = await _host.AddMembroAsync(grupoId, PapelMembro.Administrador, "Duda");
+        var response = await PostRevisaoAsync(duda, atividade.Id, Situacao.Verificada, "Evidência consistente.");
         response.EnsureSuccessStatusCode();
 
         var detalhe = await ana.Client.GetAsync($"/api/atividades/{atividade.Id}", Token);
@@ -163,9 +170,9 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task PutReacao_AposDecisaoAdmin_Recusada()
     {
-        var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(2);
+        var (_, atividadeId, revisores, admin) = await CriarComRevisoresEAdminAsync(2);
         (await PutReacaoAsync(revisores[0], atividadeId, TipoReacao.Suspeito)).EnsureSuccessStatusCode();
-        (await PostRevisaoAsync(ana, atividadeId, Situacao.Verificada, "Conferido.")).EnsureSuccessStatusCode();
+        (await PostRevisaoAsync(admin, atividadeId, Situacao.Verificada, "Conferido.")).EnsureSuccessStatusCode();
 
         var response = await PutReacaoAsync(revisores[1], atividadeId, TipoReacao.Rejeitar);
         await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.Conflict, "REACAO_ENCERRADA");
@@ -184,12 +191,12 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
     [Fact]
     public async Task Comentarios_AposDecisao_ContinuamAbertos()
     {
-        var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(2);
+        var (ana, atividadeId, revisores, admin) = await CriarComRevisoresEAdminAsync(2);
         (await PutReacaoAsync(revisores[0], atividadeId, TipoReacao.Suspeito)).EnsureSuccessStatusCode();
 
         var criado = await PostComentarioAsync(ana, atividadeId, "  Foi na esteira.  ");
         Assert.Equal(HttpStatusCode.Created, criado.StatusCode);
-        (await PostRevisaoAsync(ana, atividadeId, Situacao.Verificada, "Conferido.")).EnsureSuccessStatusCode();
+        (await PostRevisaoAsync(admin, atividadeId, Situacao.Verificada, "Conferido.")).EnsureSuccessStatusCode();
 
         var depois = await PostComentarioAsync(revisores[1], atividadeId, "Faz sentido.");
         Assert.Equal(HttpStatusCode.Created, depois.StatusCode);
@@ -276,6 +283,20 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
         var criada = await PostAtividadeAsync(dono, grupoId);
         var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
         return (dono, atividade!.Id, revisores);
+    }
+
+    /// <summary>
+    /// Como <see cref="CriarComRevisoresAsync"/>, mais um administrador que entra depois da atividade:
+    /// fica fora dos revisores e pode decidir a disputa, que o autor não decide.
+    /// </summary>
+    private async Task<(TestUsuario Dono, Guid AtividadeId, List<TestUsuario> Revisores, TestUsuario Admin)>
+        CriarComRevisoresEAdminAsync(int quantidade)
+    {
+        var (dono, atividadeId, revisores) = await CriarComRevisoresAsync(quantidade);
+        var grupoId = await _host.ScalarAsync<Guid>(
+            $"SELECT grupo_id FROM atividades WHERE id = '{atividadeId}'");
+        var admin = await _host.AddMembroAsync(grupoId, PapelMembro.Administrador, "Admin");
+        return (dono, atividadeId, revisores, admin);
     }
 
     private static async Task<string> SituacaoAsync(TestUsuario usuario, Guid atividadeId)

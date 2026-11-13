@@ -16,6 +16,8 @@ internal enum AtividadeOperacaoStatus
     EvidenciaInvalida,
     AtividadeEncerrada,
     AvaliacoesPendentes,
+    AtividadeMuitoAntiga,
+    EvidenciaDuplicada,
 }
 
 internal static class OperacaoAtividade
@@ -48,6 +50,14 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "AVALIACOES_PENDENTES",
             "Avalie as atividades do grupo antes de registrar a sua."),
+        AtividadeOperacaoStatus.AtividadeMuitoAntiga => ApiProblem.Create(
+            StatusCodes.Status400BadRequest,
+            "ATIVIDADE_MUITO_ANTIGA",
+            "Registre atividades das últimas 48 horas."),
+        AtividadeOperacaoStatus.EvidenciaDuplicada => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "EVIDENCIA_DUPLICADA",
+            "Esta foto já foi usada em outra atividade."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

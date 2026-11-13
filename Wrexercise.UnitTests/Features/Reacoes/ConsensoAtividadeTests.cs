@@ -127,6 +127,39 @@ public class ConsensoAtividadeTests
                 SituacaoVerificacao.EmRevisao));
 
     [Fact]
+    public void DeterminarSituacao_PrazoEncerradoComAvisoBloqueante_EmRevisao() =>
+        Assert.Equal(
+            SituacaoVerificacao.EmRevisao,
+            ConsensoAtividade.DeterminarSituacao(
+                3,
+                new ContagensReacao(1, 0, 0),
+                janelaEncerrada: true,
+                SituacaoVerificacao.AguardandoFeedback,
+                temAvisoBloqueante: true));
+
+    [Fact]
+    public void DeterminarSituacao_TodosReagiramComAvisoBloqueante_Verificada() =>
+        Assert.Equal(
+            SituacaoVerificacao.Verificada,
+            ConsensoAtividade.DeterminarSituacao(
+                2,
+                new ContagensReacao(2, 0, 0),
+                janelaEncerrada: true,
+                SituacaoVerificacao.AguardandoFeedback,
+                temAvisoBloqueante: true));
+
+    [Fact]
+    public void DeterminarSituacao_SemRevisoresComAvisoBloqueante_Verificada() =>
+        Assert.Equal(
+            SituacaoVerificacao.Verificada,
+            ConsensoAtividade.DeterminarSituacao(
+                0,
+                new ContagensReacao(0, 0, 0),
+                janelaEncerrada: true,
+                SituacaoVerificacao.AguardandoFeedback,
+                temAvisoBloqueante: true));
+
+    [Fact]
     public void JanelaAberta_Respeita48Horas()
     {
         var submitted = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);

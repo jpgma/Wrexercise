@@ -376,13 +376,197 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
 
         for (var i = 0; i < 3; i++)
         {
-            Assert.Equal(HttpStatusCode.Created, (await PostEvidenciaAsync(ana, id)).StatusCode);
+            Assert.Equal(HttpStatusCode.Created, (await PostEvidenciaAsync(ana, id, JpegVariante(i))).StatusCode);
         }
     }
 
-    private static async Task<Guid> CriarComFotoAsync(TestUsuario usuario, Guid grupoId)
+    [Fact]
+    public async Task Criar_InicioMaisDe48HorasAtras_Recusado()
     {
-        var response = await PostAtividadeAsync(usuario, grupoId, Valid());
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await PostAtividadeAsync(
+            ana,
+            grupoId,
+            Valid() with { StartedAt = DateTimeOffset.UtcNow.AddHours(-49) });
+
+        await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.BadRequest, "ATIVIDADE_MUITO_ANTIGA");
+    }
+
+    [Fact]
+    public async Task Criar_RegistradaMaisDe12HorasDepois_AvisoRegistroTardio()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await PostAtividadeAsync(
+            ana,
+            grupoId,
+            Valid() with { StartedAt = DateTimeOffset.UtcNow.AddHours(-20), TipoComprovacao = TipoComprovacao.RegistroManual });
+        var atividade = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+
+        Assert.Equal(TipoAviso.RegistroTardio, Assert.Single(atividade!.Avisos).Tipo);
+        Assert.Equal([TipoAviso.RegistroTardio], Assert.Single(await ListarAsync(ana, grupoId)).Avisos);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_MesmaFotoEmOutroGrupo_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoA = await _host.CreateGrupoAsync(ana, "A");
+        var grupoB = await _host.CreateGrupoAsync(ana, "B");
+        var primeira = await CriarComFotoAsync(ana, grupoA);
+        var segunda = await CriarComFotoAsync(ana, grupoB);
+        Assert.Equal(HttpStatusCode.Created, (await PostEvidenciaAsync(ana, primeira)).StatusCode);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostEvidenciaAsync(ana, segunda),
+            HttpStatusCode.Conflict,
+            "EVIDENCIA_DUPLICADA");
+        Assert.Equal(1L, await _host.CountAsync("SELECT count(*) FROM evidencias_atividade"));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_MesmoOriginalRecomprimido_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var original = new string('a', 64);
+        var primeira = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["sha256Original"] = original });
+
+        // A Bia não pode reaproveitar a foto da Ana, mesmo com outros bytes depois da compressão.
+        await ApiTestHost.AvaliarFilaAsync(bia, grupoId);
+        var daBia = await CriarComFotoAsync(bia, grupoId);
+        await ApiTestHost.AssertProblemAsync(
+            await PostEvidenciaAsync(bia, daBia, JpegVariante(2), new() { ["sha256Original"] = original.ToUpperInvariant() }),
+            HttpStatusCode.Conflict,
+            "EVIDENCIA_DUPLICADA");
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_FotoParecida_AvisoComAtividadeRelacionada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var primeira = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        var segunda = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "000000000000003f" });
+
+        var avisos = (await ObterAsync(ana, segunda)).Avisos;
+        var parecida = Assert.Single(avisos, a => a.Tipo == TipoAviso.FotoParecida);
+        Assert.Equal(primeira, parecida.AtividadeRelacionadaId);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_FotoParecidaDeOutroGrupo_NaoRevelaAAtividade()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoA = await _host.CreateGrupoAsync(ana, "A");
+        var grupoB = await _host.CreateGrupoAsync(ana, "B");
+        var bia = await _host.AddMembroAsync(grupoB, nome: "Bia");
+        var primeira = await CriarComFotoAsync(ana, grupoA);
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        var segunda = await CriarComFotoAsync(ana, grupoB);
+
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000000000ff" });
+
+        var vistoPelaBia = Assert.Single((await ObterAsync(bia, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
+        Assert.Null(vistoPelaBia.AtividadeRelacionadaId);
+        var vistoPelaAna = Assert.Single((await ObterAsync(ana, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
+        Assert.Equal(primeira, vistoPelaAna.AtividadeRelacionadaId);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_GuardaSinaisSemDevolverLocalizacao()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        var capturadaEm = DateTimeOffset.UtcNow.AddMinutes(-20);
+
+        var response = await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["capturadaEm"] = capturadaEm.ToString("O"),
+            ["origemDataCaptura"] = "Exif",
+            ["latitude"] = "-23.5505",
+            ["longitude"] = "-46.6333",
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Empty((await ObterAsync(ana, id)).Avisos);
+        Assert.Equal(1L, await _host.CountAsync("""
+            SELECT count(*) FROM evidencias_atividade
+            WHERE origem_data_captura = 'Exif' AND latitude = -23.5505 AND longitude = -46.6333
+            """));
+        var json = await (await ana.Client.GetAsync($"/api/atividades/{id}", Token)).Content.ReadAsStringAsync(Token);
+        Assert.DoesNotContain("latitude", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(-3 * 24 * 60, "Exif", TipoAviso.FotoForaDoPeriodo)]
+    [InlineData(-3 * 24 * 60, "Arquivo", TipoAviso.FotoForaDoPeriodo)]
+    [InlineData(null, null, TipoAviso.FotoSemData)]
+    public async Task AnexarEvidencia_DataDaFoto_GeraAviso(int? minutosAtras, string? origem, string esperado)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        var campos = new Dictionary<string, string>();
+        if (minutosAtras is { } minutos)
+        {
+            campos["capturadaEm"] = DateTimeOffset.UtcNow.AddMinutes(minutos).ToString("O");
+            campos["origemDataCaptura"] = origem!;
+        }
+
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), campos);
+
+        Assert.Equal(esperado, Assert.Single((await ObterAsync(ana, id)).Avisos).Tipo);
+    }
+
+    [Theory]
+    [InlineData(-20, "EmRevisao")]
+    [InlineData(-1, "Verificada")]
+    public async Task FimDaJanela_ComAvisoQueBloqueia_VaiParaRevisao(int horasAtras, string esperada)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var id = await CriarComFotoAsync(ana, grupoId, DateTimeOffset.UtcNow.AddHours(horasAtras));
+        // Sem data só informa: não impede a verificação ao fim da janela.
+        await PostEvidenciaAsync(ana, id);
+        await _host.ExecuteAsync($"UPDATE atividades SET submitted_at = now() - interval '49 hours' WHERE id = '{id}'");
+
+        await Wrexercise.Features.Reacoes.VerificacaoAtividade.EncerrarJanelasExpiradasAsync(_host.DataSource, Token);
+
+        Assert.Equal(esperada, (await ObterAsync(ana, id)).SituacaoVerificacao);
+    }
+
+    private static byte[] JpegVariante(int variante)
+    {
+        // Bytes depois do fim do JPEG mudam o SHA-256 sem mudar o formato detectado.
+        var bytes = new byte[JpegMinimo.Length + 1];
+        JpegMinimo.CopyTo(bytes, 0);
+        bytes[^1] = (byte)(variante + 1);
+        return bytes;
+    }
+
+    private static async Task<AtividadeResponse> ObterAsync(TestUsuario usuario, Guid atividadeId) =>
+        (await usuario.Client.GetFromJsonAsync(
+            $"/api/atividades/{atividadeId}",
+            AppJsonContext.Default.AtividadeResponse,
+            Token))!;
+
+    private static async Task<Guid> CriarComFotoAsync(TestUsuario usuario, Guid grupoId, DateTimeOffset? startedAt = null)
+    {
+        var response = await PostAtividadeAsync(
+            usuario,
+            grupoId,
+            Valid() with { StartedAt = startedAt ?? DateTimeOffset.UtcNow.AddMinutes(-30) });
         response.EnsureSuccessStatusCode();
         var atividade = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
         return atividade!.Id;
@@ -450,12 +634,21 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
             AppJsonContext.Default.CriarAtividadeRequest,
             Token);
 
-    private static Task<HttpResponseMessage> PostEvidenciaAsync(TestUsuario usuario, Guid atividadeId)
+    private static Task<HttpResponseMessage> PostEvidenciaAsync(
+        TestUsuario usuario,
+        Guid atividadeId,
+        byte[]? arquivo = null,
+        Dictionary<string, string>? campos = null)
     {
         var content = new MultipartFormDataContent();
-        var bytes = new ByteArrayContent(JpegMinimo);
+        var bytes = new ByteArrayContent(arquivo ?? JpegMinimo);
         bytes.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
         content.Add(bytes, "arquivo", "foto.jpg");
+        foreach (var (nome, valor) in campos ?? [])
+        {
+            content.Add(new StringContent(valor), nome);
+        }
+
         return usuario.Client.PostAsync($"/api/atividades/{atividadeId}/evidencias", content, Token);
     }
 }

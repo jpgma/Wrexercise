@@ -47,9 +47,10 @@ internal static class RevisarAtividade
 
         Guid grupoId;
         string situacao;
+        Guid autorId;
 
         await using (var load = new NpgsqlCommand("""
-            SELECT grupo_id, situacao_verificacao
+            SELECT grupo_id, situacao_verificacao, usuario_id
             FROM atividades
             WHERE id = $1
             FOR UPDATE
@@ -64,6 +65,7 @@ internal static class RevisarAtividade
 
             grupoId = reader.GetGuid(0);
             situacao = reader.GetString(1);
+            autorId = reader.GetGuid(2);
         }
 
         var papel = await GrupoAcesso.GetPapelAsync(connection, transaction, grupoId, usuarioId, cancellationToken);
@@ -75,6 +77,12 @@ internal static class RevisarAtividade
         if (papel is not (PapelMembro.Proprietario or PapelMembro.Administrador))
         {
             return (OperacaoReacao.ToResult(ReacaoOperacaoStatus.SemPermissaoRevisao), null);
+        }
+
+        // Ninguém decide a própria disputa (ADR 0052): a atividade espera outro administrador.
+        if (autorId == usuarioId)
+        {
+            return (OperacaoReacao.ToResult(ReacaoOperacaoStatus.RevisaoPropria), null);
         }
 
         if (situacao != SituacaoVerificacao.EmRevisao)

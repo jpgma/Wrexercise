@@ -14,7 +14,8 @@ internal static class ConsultasAtividade
             (SELECT count(*)::int FROM reacoes_atividade r WHERE r.atividade_id = a.id AND r.tipo = 'Rejeitar'),
             (SELECT e.id FROM evidencias_atividade e
              WHERE e.atividade_id = a.id AND e.ordem = 1 AND e.caminho_miniatura IS NOT NULL),
-            (SELECT count(*)::int FROM comentarios c WHERE c.atividade_id = a.id)
+            (SELECT count(*)::int FROM comentarios c WHERE c.atividade_id = a.id),
+            ARRAY(SELECT DISTINCT av.tipo FROM avisos_atividade av WHERE av.atividade_id = a.id ORDER BY av.tipo)
         FROM atividades a
         JOIN grupos g ON g.id = a.grupo_id
         JOIN usuarios u ON u.id = a.usuario_id
@@ -69,7 +70,28 @@ internal static class ConsultasAtividade
             reader.GetInt32(14),
             reader.GetInt32(15),
             reader.IsDBNull(16) ? null : BuildMiniaturaUrl(reader.GetGuid(0), reader.GetGuid(16)),
-            reader.GetInt32(17));
+            reader.GetInt32(17),
+            reader.GetFieldValue<string[]>(18));
+
+    public static async Task InserirAvisoAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid atividadeId,
+        string tipo,
+        Guid? evidenciaId,
+        Guid? atividadeRelacionadaId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            INSERT INTO avisos_atividade (atividade_id, tipo, evidencia_id, atividade_relacionada_id)
+            VALUES ($1, $2, $3, $4)
+            """, connection, transaction);
+        command.Parameters.AddWithValue(atividadeId);
+        command.Parameters.AddWithValue(tipo);
+        command.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Uuid, (object?)evidenciaId ?? DBNull.Value);
+        command.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Uuid, (object?)atividadeRelacionadaId ?? DBNull.Value);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 
     public static string BuildEvidenciaUrl(Guid atividadeId, Guid evidenciaId) =>
         $"/api/atividades/{atividadeId:D}/evidencias/{evidenciaId:D}";
@@ -149,6 +171,32 @@ internal static class ConsultasAtividade
             }
         }
 
+        // A atividade da foto parecida só aparece para quem também a pode ver.
+        var avisos = new List<AvisoResponse>();
+        await using (var lista = new NpgsqlCommand("""
+            SELECT av.tipo, av.evidencia_id,
+                CASE WHEN EXISTS (
+                    SELECT 1 FROM atividades r
+                    JOIN membros_grupo m ON m.grupo_id = r.grupo_id AND m.usuario_id = $2 AND m.removed_at IS NULL
+                    WHERE r.id = av.atividade_relacionada_id)
+                THEN av.atividade_relacionada_id END
+            FROM avisos_atividade av
+            WHERE av.atividade_id = $1
+            ORDER BY av.created_at, av.id
+            """, connection))
+        {
+            lista.Parameters.AddWithValue(atividadeId);
+            lista.Parameters.AddWithValue(usuarioId);
+            await using var reader = await lista.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                avisos.Add(new AvisoResponse(
+                    reader.GetString(0),
+                    reader.IsDBNull(1) ? null : reader.GetGuid(1),
+                    reader.IsDBNull(2) ? null : reader.GetGuid(2)));
+            }
+        }
+
         return new AtividadeResponse(
             id,
             grupoId,
@@ -163,6 +211,7 @@ internal static class ConsultasAtividade
             situacao,
             submittedAt,
             autorId == usuarioId,
-            evidencias);
+            evidencias,
+            avisos);
     }
 }

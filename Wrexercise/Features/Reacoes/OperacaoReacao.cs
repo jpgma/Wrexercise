@@ -14,6 +14,7 @@ internal enum ReacaoOperacaoStatus
     ReacaoEncerrada,
     SemPermissaoRevisao,
     RevisaoNaoPendente,
+    RevisaoPropria,
 }
 
 internal static class OperacaoReacao
@@ -47,6 +48,10 @@ internal static class OperacaoReacao
             StatusCodes.Status409Conflict,
             "REVISAO_NAO_PENDENTE",
             "Esta atividade não está aguardando revisão administrativa."),
+        ReacaoOperacaoStatus.RevisaoPropria => ApiProblem.Create(
+            StatusCodes.Status403Forbidden,
+            "REVISAO_PROPRIA_NAO_PERMITIDA",
+            "Outro administrador do grupo precisa decidir sobre a sua atividade."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

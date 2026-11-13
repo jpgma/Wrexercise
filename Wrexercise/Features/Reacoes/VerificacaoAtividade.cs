@@ -1,4 +1,5 @@
 using Npgsql;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Database;
@@ -52,11 +53,14 @@ internal static class VerificacaoAtividade
             atividadeId,
             cancellationToken);
         var janelaEncerrada = !ConsensoAtividade.JanelaAberta(submittedAt, DateTimeOffset.UtcNow);
+        var temAvisoBloqueante = janelaEncerrada
+            && await TemAvisoBloqueanteAsync(connection, transaction, atividadeId, cancellationToken);
         var nova = ConsensoAtividade.DeterminarSituacao(
             totalRevisores,
             contagens,
             janelaEncerrada,
-            situacaoAtual);
+            situacaoAtual,
+            temAvisoBloqueante);
 
         if (nova == situacaoAtual)
         {
@@ -91,6 +95,23 @@ internal static class VerificacaoAtividade
         {
             await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
         }
+    }
+
+    private static async Task<bool> TemAvisoBloqueanteAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid atividadeId,
+        CancellationToken cancellationToken)
+    {
+        // Os tipos são constantes do código, não entrada de usuário.
+        await using var command = new NpgsqlCommand($"""
+            SELECT EXISTS (
+                SELECT 1 FROM avisos_atividade
+                WHERE atividade_id = $1
+                  AND tipo IN ('{TipoAviso.FotoForaDoPeriodo}', '{TipoAviso.FotoParecida}', '{TipoAviso.RegistroTardio}'))
+            """, connection, transaction);
+        command.Parameters.AddWithValue(atividadeId);
+        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
     }
 
     public static async Task<int> EncerrarJanelasExpiradasAsync(

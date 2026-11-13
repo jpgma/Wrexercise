@@ -2,6 +2,7 @@ import { Camera, Clock, MessageCircle } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import {
+  AvisosAtividadeResumo,
   formatarDataRelativa,
   formatarDuracao,
   GaleriaEvidencias,
@@ -46,6 +47,7 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
     rejeitar,
     miniaturaUrl,
     comentarios,
+    avisos,
   } = atividade;
   const galeria = useGaleria(id);
   // As evidências completas só são buscadas quando a galeria é aberta.
@@ -74,6 +76,11 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
               <p className="mt-2 line-clamp-2 text-sm break-words">
                 {descricao}
               </p>
+            )}
+            {avisos.length > 0 && (
+              <div className="mt-2">
+                <AvisosAtividadeResumo avisos={avisos} />
+              </div>
             )}
             <div className="mt-3 flex items-center justify-between gap-2">
               <SituacaoBadge situacao={situacaoVerificacao} />

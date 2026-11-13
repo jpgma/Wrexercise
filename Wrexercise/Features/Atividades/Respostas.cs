@@ -27,7 +27,11 @@ internal sealed record AtividadeResumoResponse(
     int Suspeito,
     int Rejeitar,
     string? MiniaturaUrl,
-    int Comentarios);
+    int Comentarios,
+    IReadOnlyList<string> Avisos);
+
+/// <summary>Um <c>Aviso</c> sobre a atividade (ADR 0052). Todo o grupo vê, inclusive o autor.</summary>
+internal sealed record AvisoResponse(string Tipo, Guid? EvidenciaId, Guid? AtividadeRelacionadaId);
 
 internal sealed record AtividadesPaginadasResponse(
     IReadOnlyList<AtividadeResumoResponse> Atividades,
@@ -49,6 +53,7 @@ internal sealed record AtividadeResponse(
     string SituacaoVerificacao,
     DateTimeOffset SubmittedAt,
     bool Voce,
-    IReadOnlyList<EvidenciaResponse> Evidencias);
+    IReadOnlyList<EvidenciaResponse> Evidencias,
+    IReadOnlyList<AvisoResponse> Avisos);
 
 internal sealed record EvidenciaCriadaResponse(Guid Id, int Ordem, string Url);

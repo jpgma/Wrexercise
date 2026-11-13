@@ -43,13 +43,15 @@ internal static class ConsensoAtividade
     /// Calcula a situação após reações comunitárias ou encerramento da janela.
     /// <see cref="SituacaoVerificacao.Verificada"/> e <see cref="SituacaoVerificacao.Rejeitada"/>
     /// são finais. Com a janela encerrada, <see cref="SituacaoVerificacao.EmRevisao"/> só muda
-    /// por revisão administrativa.
+    /// por revisão administrativa. Com um aviso que bloqueia (ADR 0052), o silêncio do grupo não
+    /// verifica: ao fim da janela, a atividade vai para <see cref="SituacaoVerificacao.EmRevisao"/>.
     /// </summary>
     public static string DeterminarSituacao(
         int totalRevisores,
         ContagensReacao contagens,
         bool janelaEncerrada,
-        string situacaoAtual)
+        string situacaoAtual,
+        bool temAvisoBloqueante = false)
     {
         if (totalRevisores == 0)
         {
@@ -84,7 +86,7 @@ internal static class ConsensoAtividade
 
         if (janelaEncerrada)
         {
-            return SituacaoVerificacao.Verificada;
+            return temAvisoBloqueante ? SituacaoVerificacao.EmRevisao : SituacaoVerificacao.Verificada;
         }
 
         return SituacaoVerificacao.AguardandoFeedback;
