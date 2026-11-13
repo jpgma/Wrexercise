@@ -54,15 +54,17 @@ ANIMACOES = [
     ("comemorar", ("base-b", "Celebrates_a_goa"), 120),
     ("dormindo", "gemini", 350),
     ("adormecer", "gemini", 140),
+    ("acordar", "gemini", 110),
 ]
 
 # Quadros da tira do gemini.py que entram na tag, em ordem: um índice da própria tira ou
 # (animação, índice) de outra tira da mesma direção. O 1º quadro de `dormindo` é só a calibração
-# de pé; a respiração vai e volta (2, 3, 2, 4). O `adormecer` termina no quadro em que o
-# `dormindo` começa, para a troca não pular.
+# de pé; a respiração vai e volta (2, 3, 2, 4). O `adormecer` termina, e o `acordar` começa, no
+# quadro em que o `dormindo` começa, para a troca não pular; o 1º do `acordar` é a calibração.
 SEQUENCIA = {
     "dormindo": [1, 2, 1, 3],
     "adormecer": [0, 1, 2, 3, 4, 5, 6, ("dormindo", 1)],
+    "acordar": [("dormindo", 1), 2, 3, 4, 5],
 }
 
 
