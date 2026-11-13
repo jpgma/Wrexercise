@@ -1,10 +1,6 @@
 1. Running it on the phone (biggest risk)
-1. Running it on the phone (biggest risk)
 
-- Test a restore from the Drive backup now. The backups run (0046), and remote-termux.sh restore exists, but 0022 says the restore test is "manual and 
-- Test a restore from the Drive backup now. The backups run (0046), and remote-termux.sh restore exists, but 0022 says the restore test is "manual and 
-- Test a restore from the Drive backup now. The backups run (0046), and remote-termux.sh restore exists, but 0022 says the restore test is "manual and periodic." Nothing records that a full restore of database, evidence and avatars from Drive has been done on a clean setup. Do it once now, while losing data wouldn't hurt anyone.
-- Nothing tells you when it goes down. /health and /ready exist, but nothing checks them from outside. If Android kills Termux, the battery dies, or the tunnel drops, you'll find out from a friend. A free external uptime check on /health (or a phone notification) would cover it, and it adds nothing to the server.
+- Turn on the uptime monitor (decided in 0051). Create the free UptimeRobot account and the /ready monitor, then do the stop/start test (README, "Monitor externo"). Until then, nothing tells you when it goes down.
 - No real-load numbers yet (Q025). Memory, query speed and disk use on the A14 were only measured at startup (about 25 MB). Login timing was measured on x64, not ARM64 (0006). Watch stats.bat for the first couple of weeks, especially how fast the evidence folder grows against phone storage and the Drive quota estimate in 0046.
 - Reading errors. Logs only go to stdout in Termux. Make sure there's an easy way to see recent errors remotely, because "it gave me an error" will be the first bug report.
 
@@ -37,4 +33,4 @@ Q001's text still talks about the Oracle VM. Marking these decided, with links t
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: restore test, uptime check, the EXIF fallback fix, then activity correction/void. I can start on any of them, or update questoes-abertas.md first.
+My suggested order: turn on the uptime monitor, the EXIF fallback fix, then activity correction/void. I can start on any of them, or update questoes-abertas.md first.
