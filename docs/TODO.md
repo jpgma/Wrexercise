@@ -7,7 +7,6 @@
 2. Gaps people will hit in the first week
 
 - Nobody can edit or delete an activity (funcionalidades.md §… "Nobody can edit or delete an activity", "Nobody can replace or delete evidence"). The wrong type, a typo in the duration, or a double submit stays forever, and the only fix is getting the group to reject it. I expect this to be the first complaint. A short owner/admin "void" action, or a few minutes where the author can delete their own entry, would help.
-- Duplicate submissions (Q020, partly decided in 0052). Repeated photos are now refused by SHA-256, but the create endpoints still have no idempotency key, so a retry on a flaky connection can post the activity twice.
 - Photo location is now stored (0052) but not shown. Decide whether to show it, and tell participants it is kept (a line on the record form). Deleting it belongs with Q029.
 - The review queue blocks new entries. 409 AVALIACOES_PENDENTES stops anyone with pending reviews from recording an activity (0041). That's a strong push; check whether it feels annoying or helpful once real people use it.
 

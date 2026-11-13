@@ -458,7 +458,7 @@ Após o início da revisão, não permitir substituição silenciosa. Qualquer a
 
 ## Q020 — Como evitar atividades duplicadas?
 
-**Status:** PARCIALMENTE DECIDIDA (0052). A foto repetida é recusada pelo SHA-256 do arquivo enviado e do original, e a foto parecida gera um aviso. A chave de idempotência na criação continua aberta.
+**Status:** DECIDIDA (0052 e 0053). A foto repetida é recusada pelo SHA-256 do arquivo enviado e do original, e a foto parecida gera um aviso. O registro aceita o cabeçalho `Idempotency-Key`: a repetição devolve a atividade já criada.
 
 Investigar:
 

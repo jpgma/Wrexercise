@@ -546,6 +546,142 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         Assert.Equal(esperada, (await ObterAsync(ana, id)).SituacaoVerificacao);
     }
 
+    [Fact]
+    public async Task Criar_MesmaChave_DevolveAMesmaAtividade()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var chave = Guid.NewGuid();
+
+        var primeira = await PostAtividadeComChaveAsync(ana, grupoId, chave);
+        var repetida = await PostAtividadeComChaveAsync(ana, grupoId, chave);
+
+        Assert.Equal(HttpStatusCode.Created, primeira.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, repetida.StatusCode);
+        Assert.Equal(
+            (await primeira.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token))!.Id,
+            (await repetida.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token))!.Id);
+        Assert.Equal(1L, await _host.CountAsync("SELECT count(*) FROM atividades"));
+    }
+
+    [Fact]
+    public async Task Criar_ChavesDiferentes_CriamDuasAtividades()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        await PostAtividadeComChaveAsync(ana, grupoId, Guid.NewGuid());
+        await PostAtividadeComChaveAsync(ana, grupoId, Guid.NewGuid());
+
+        Assert.Equal(2L, await _host.CountAsync("SELECT count(*) FROM atividades"));
+    }
+
+    [Fact]
+    public async Task Criar_MesmaChaveDepoisDeChegarOutraAtividade_NaoCaiNaFila()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var chave = Guid.NewGuid();
+        await PostAtividadeComChaveAsync(ana, grupoId, chave);
+        await ApiTestHost.AvaliarFilaAsync(bia, grupoId);
+        await CriarManualAsync(bia, grupoId);
+
+        // A resposta da Ana se perdeu; a da Bia já está na fila dela, mas a repetição não é um registro novo.
+        var repetida = await PostAtividadeComChaveAsync(ana, grupoId, chave);
+
+        Assert.Equal(HttpStatusCode.OK, repetida.StatusCode);
+    }
+
+    [Fact]
+    public async Task Criar_MesmaChaveEmOutroGrupo_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoA = await _host.CreateGrupoAsync(ana, "A");
+        var grupoB = await _host.CreateGrupoAsync(ana, "B");
+        var chave = Guid.NewGuid();
+        await PostAtividadeComChaveAsync(ana, grupoA, chave);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostAtividadeComChaveAsync(ana, grupoB, chave),
+            HttpStatusCode.UnprocessableEntity,
+            "CHAVE_IDEMPOTENCIA_REUTILIZADA");
+    }
+
+    [Fact]
+    public async Task Criar_ChaveDeOutraPessoa_NaoDevolveAAtividadeDela()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var chave = Guid.NewGuid();
+        await PostAtividadeComChaveAsync(ana, grupoId, chave);
+        await ApiTestHost.AvaliarFilaAsync(bia, grupoId);
+
+        var daBia = await PostAtividadeComChaveAsync(bia, grupoId, chave);
+
+        Assert.Equal(HttpStatusCode.Created, daBia.StatusCode);
+        Assert.Equal(2L, await _host.CountAsync("SELECT count(*) FROM atividades"));
+    }
+
+    [Fact]
+    public async Task Criar_ChaveInvalida_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/grupos/{grupoId}/atividades")
+        {
+            Content = JsonContent.Create(Valid(), AppJsonContext.Default.CriarAtividadeRequest),
+        };
+        request.Headers.Add("Idempotency-Key", "nao-e-uuid");
+
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.SendAsync(request, Token),
+            HttpStatusCode.BadRequest,
+            "DADOS_INVALIDOS");
+    }
+
+    [Fact]
+    public async Task Criar_MesmaChaveAoMesmoTempo_CriaUmaSo()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var chave = Guid.NewGuid();
+
+        var respostas = await Task.WhenAll(
+            Enumerable.Range(0, 4).Select(_ => PostAtividadeComChaveAsync(ana, grupoId, chave)));
+
+        Assert.All(respostas, r => Assert.True(r.IsSuccessStatusCode, r.StatusCode.ToString()));
+        Assert.Equal(1L, await _host.CountAsync("SELECT count(*) FROM atividades"));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_RepeticaoNaMesmaAtividade_JaAnexadaMesmoNoLimite()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        for (var i = 0; i < 3; i++)
+        {
+            await PostEvidenciaAsync(ana, id, JpegVariante(i));
+        }
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostEvidenciaAsync(ana, id, JpegVariante(0)),
+            HttpStatusCode.Conflict,
+            "EVIDENCIA_JA_ANEXADA");
+    }
+
+    private static Task<HttpResponseMessage> PostAtividadeComChaveAsync(TestUsuario usuario, Guid grupoId, Guid chave)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/grupos/{grupoId}/atividades")
+        {
+            Content = JsonContent.Create(Valid(), AppJsonContext.Default.CriarAtividadeRequest),
+        };
+        request.Headers.Add("Idempotency-Key", chave.ToString());
+        return usuario.Client.SendAsync(request, Token);
+    }
+
     private static byte[] JpegVariante(int variante)
     {
         // Bytes depois do fim do JPEG mudam o SHA-256 sem mudar o formato detectado.

@@ -207,6 +207,18 @@ internal static class AnexarEvidencia
             }
         }
 
+        // Antes do limite: ao repetir o registro (ADR 0053), o navegador reenvia as fotos que já chegaram.
+        string[] hashes = sinais.Sha256Original is { } original ? [sha256, original] : [sha256];
+        if (await BuscarFotoIgualAsync(connection, transaction, usuarioId, atividadeId, hashes, cancellationToken)
+            is { } atividadeDaFoto)
+        {
+            return (
+                atividadeDaFoto == atividadeId
+                    ? AtividadeOperacaoStatus.EvidenciaJaAnexada
+                    : AtividadeOperacaoStatus.EvidenciaDuplicada,
+                null);
+        }
+
         int proximaOrdem;
         await using (var contagem = new NpgsqlCommand(
             "SELECT count(*)::int FROM evidencias_atividade WHERE atividade_id = $1",
@@ -221,12 +233,6 @@ internal static class AnexarEvidencia
             }
 
             proximaOrdem = total + 1;
-        }
-
-        string[] hashes = sinais.Sha256Original is { } original ? [sha256, original] : [sha256];
-        if (await ExisteFotoIgualAsync(connection, transaction, usuarioId, hashes, cancellationToken))
-        {
-            return (AtividadeOperacaoStatus.EvidenciaDuplicada, null);
         }
 
         var parecidaCom = sinais.Dhash is { } dhash
@@ -304,26 +310,30 @@ internal static class AnexarEvidencia
 
     /// <summary>
     /// Fotos já usadas em qualquer grupo de quem envia, inclusive na mesma atividade (ADR 0052).
-    /// Compara o arquivo comprimido e o original, que o navegador informa.
+    /// Compara o arquivo comprimido e o original, que o navegador informa. Devolve a atividade da foto,
+    /// preferindo a própria: aí é uma repetição do envio, não um reaproveitamento (ADR 0053).
     /// </summary>
-    private static async Task<bool> ExisteFotoIgualAsync(
+    private static async Task<Guid?> BuscarFotoIgualAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid usuarioId,
+        Guid atividadeId,
         string[] hashes,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT EXISTS (
-                SELECT 1
-                FROM evidencias_atividade e
-                JOIN atividades a ON a.id = e.atividade_id
-                JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $1 AND m.removed_at IS NULL
-                WHERE e.sha256 = ANY($2) OR e.sha256_original = ANY($2))
+            SELECT e.atividade_id
+            FROM evidencias_atividade e
+            JOIN atividades a ON a.id = e.atividade_id
+            JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $1 AND m.removed_at IS NULL
+            WHERE e.sha256 = ANY($2) OR e.sha256_original = ANY($2)
+            ORDER BY e.atividade_id = $3 DESC
+            LIMIT 1
             """, connection, transaction);
         command.Parameters.AddWithValue(usuarioId);
         command.Parameters.AddWithValue(NpgsqlDbType.Array | NpgsqlDbType.Text, hashes);
-        return (bool)(await command.ExecuteScalarAsync(cancellationToken))!;
+        command.Parameters.AddWithValue(atividadeId);
+        return await command.ExecuteScalarAsync(cancellationToken) is Guid id ? id : null;
     }
 
     /// <summary>A atividade com a foto mais parecida, nos grupos de quem envia, fora a própria atividade.</summary>

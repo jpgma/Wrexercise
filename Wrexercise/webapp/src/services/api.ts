@@ -39,16 +39,24 @@ export async function getJson<T>(
   return (await response.json()) as T;
 }
 
-function jsonRequest(method: string, body: unknown): RequestInit {
+function jsonRequest(
+  method: string,
+  body: unknown,
+  headers?: Record<string, string>,
+): RequestInit {
   return {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   };
 }
 
-export async function postJson<T>(path: string, body?: unknown): Promise<T> {
-  const response = await request(path, jsonRequest("POST", body));
+export async function postJson<T>(
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+): Promise<T> {
+  const response = await request(path, jsonRequest("POST", body, headers));
   return (await response.json()) as T;
 }
 

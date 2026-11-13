@@ -415,6 +415,8 @@ The form adds the duration to the other activities of the user on the same day i
 
 Nobody can edit or delete an activity.
 
+The form sends the header `Idempotency-Key` with a UUID. If the user submits the same data again, the form uses the same key. Different data gets a new key. When the key already exists for the user in the same group, the API does not create a new activity. It returns the existing activity with `200` instead of `201`, also when the review queue of the user is no longer empty. The same key in a different group returns `422 CHAVE_IDEMPOTENCIA_REUTILIZADA`. A key that is not a UUID returns `400 DADOS_INVALIDOS`. Without the header, the API always creates a new activity.
+
 A member with activities in his or her review queue (see 8.6) cannot record an activity in that group. The API returns `409 AVALIACOES_PENDENTES`. Any reaction (`Kudos`, `Suspeito` or `Rejeitar`) removes an activity from the queue.
 
 When the queue is not empty, the form page does not show the form. It shows only the notice "N treinos esperam sua avaliação", for all entry points. The notice shows the avatars of the authors in the queue (a maximum of 5, then "+N"). The avatars come in one after the other. The notice also shows two steps: "1 Avaliar N" and "Seu treino" with a lock. The button "Começar avaliação" opens the first activity in the queue. If the API returns `409 AVALIACOES_PENDENTES` while the form is open, the application updates the queue and shows the notice. The form data is lost.
@@ -430,6 +432,7 @@ When the queue is not empty, the form page does not show the form. It shows only
   - A 64-bit perceptual hash (`dhash`).
   - The latitude and the longitude (EXIF GPS), if they exist. The server keeps them. No API response shows them.
 - The server refuses an image if the same file (SHA-256 of the sent file or of the original file) is already evidence in any group of the user, also in the same activity. The API returns `409 EVIDENCIA_DUPLICADA`. The confirmation page shows "Esta foto já foi usada em outra atividade."
+- If the same file is already evidence of the same activity, the API returns `409 EVIDENCIA_JA_ANEXADA`, also when the activity has 3 images. This occurs when the form submits again after a lost response (see 7.1). The form counts the image as sent.
 - The server accepts JPEG, PNG and WebP files. The maximum size is 5 MB for each file and 100 KB for each thumbnail. The server examines the real content of the file.
 - Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
 - Nobody can replace or delete evidence.

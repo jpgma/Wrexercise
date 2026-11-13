@@ -18,6 +18,8 @@ internal enum AtividadeOperacaoStatus
     AvaliacoesPendentes,
     AtividadeMuitoAntiga,
     EvidenciaDuplicada,
+    EvidenciaJaAnexada,
+    ChaveIdempotenciaReutilizada,
 }
 
 internal static class OperacaoAtividade
@@ -58,6 +60,14 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "EVIDENCIA_DUPLICADA",
             "Esta foto já foi usada em outra atividade."),
+        AtividadeOperacaoStatus.EvidenciaJaAnexada => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "EVIDENCIA_JA_ANEXADA",
+            "Esta foto já está nesta atividade."),
+        AtividadeOperacaoStatus.ChaveIdempotenciaReutilizada => ApiProblem.Create(
+            StatusCodes.Status422UnprocessableEntity,
+            "CHAVE_IDEMPOTENCIA_REUTILIZADA",
+            "Este envio já foi usado em outro registro. Tente de novo."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

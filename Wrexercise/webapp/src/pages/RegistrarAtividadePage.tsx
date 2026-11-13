@@ -28,6 +28,7 @@ import {
   useCriarAtividade,
   useFilaAvaliacao,
   type AtividadeResumo,
+  type CriarAtividadeData,
   type TipoAtividade,
 } from "@/features/atividades";
 import {
@@ -221,6 +222,7 @@ export function RegistrarAtividadePage() {
   const seletor = useRef<HTMLInputElement>(null);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [preparando, setPreparando] = useState(false);
+  const envio = useRef<{ assinatura: string; chave: string } | null>(null);
   // O servidor aceita atividades das últimas 48 horas (ADR 0052).
   const [inicioMinimo] = useState(() =>
     toLocalInputValue(new Date(Date.now() - maximoNoPassadoMs)),
@@ -274,12 +276,22 @@ export function RegistrarAtividadePage() {
   const faltaNoDia = falta && !falta.conta ? formatarFaltaNoDia(falta) : null;
 
   const enviar = async (data: FormData) => {
-    const atividade = await criar.mutateAsync({
+    const dados: CriarAtividadeData = {
       tipo: data.tipo,
       duracaoSegundos: data.duracaoMinutos * 60,
       startedAt: new Date(data.startedAt).toISOString(),
       descricao: data.descricao,
       tipoComprovacao: anexos.length > 0 ? "Fotografia" : "RegistroManual",
+    };
+    // Uma nova tentativa com os mesmos dados repete a chave: se a primeira chegou ao servidor e a resposta
+    // se perdeu, ele devolve a atividade já criada (ADR 0053). Dados diferentes geram outra chave.
+    const assinatura = JSON.stringify(dados);
+    if (envio.current?.assinatura !== assinatura) {
+      envio.current = { assinatura, chave: crypto.randomUUID() };
+    }
+    const atividade = await criar.mutateAsync({
+      ...dados,
+      chave: envio.current.chave,
     });
 
     // A atividade já existe: uma imagem que falhe não pode fazer a pessoa registrar de novo.
@@ -291,6 +303,13 @@ export function RegistrarAtividadePage() {
         await anexarEvidencia(atividade.id, preparada);
         enviadas += 1;
       } catch (error) {
+        // Na repetição, a foto que já tinha chegado conta como enviada.
+        if (
+          error instanceof ApiError &&
+          error.code === "EVIDENCIA_JA_ANEXADA"
+        ) {
+          enviadas += 1;
+        }
         // O resumo final mostra quantas faltaram; a foto já usada tem motivo próprio.
         if (error instanceof ApiError && error.code === "EVIDENCIA_DUPLICADA") {
           motivos.add(getErrorMessage(error));

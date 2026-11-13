@@ -104,8 +104,11 @@ export function useAtividade(id: string, enabled = true) {
 export function useCriarAtividade(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CriarAtividadeData) =>
-      postJson<Atividade>(`/api/grupos/${grupoId}/atividades`, data),
+    // A mesma chave numa nova tentativa devolve a atividade já criada (ADR 0053).
+    mutationFn: ({ chave, ...data }: CriarAtividadeData & { chave: string }) =>
+      postJson<Atividade>(`/api/grupos/${grupoId}/atividades`, data, {
+        "Idempotency-Key": chave,
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: atividadesDoGrupoKey(grupoId),
