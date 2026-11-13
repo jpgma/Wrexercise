@@ -45,10 +45,14 @@ Q002 pedia backup diário do banco e das evidências, retenção, cópia externa
 
 Atualize a cada `run.bat testar-restauracao`: data, backup usado, contagens e resultado.
 
+- **2026-11-13, backup real do Drive: sem problemas.** Usou o `wrexercise-20261113-014144.tar.gz`, da imagem `b8afdbe-arm64`, num projeto Docker vazio.
+  - 4 usuários, 1 grupo, 2 desafios, 10 atividades, 27 reações. Atividade mais recente: 2026-11-12 21:54 UTC.
+  - 15 evidências íntegras (SHA-256), 15 miniaturas, 0 arquivos sem registro, 2 avatares.
+  - `/ready` respondeu.
 - **2026-11-12, backup real do Drive: não concluído. O teste achou uma falha no backup.**
   - Nenhum envio ao Drive deu certo depois de 2026-11-12 03:18 UTC, nem do celular nem do PC.
   - O Google recusava a renovação do token com `401 unauthorized_client`: o token tinha sido emitido para outro client OAuth que não o `client_id` da configuração. Ele valeu até expirar, 1 h depois dos primeiros backups.
   - Correção: novo login no PC com o client próprio (`rclone config reconnect gdrive:`, conta dos backups). A chave do crypt é a mesma no PC e no celular.
   - Com o `drive.file`, o client não vê a pasta `wrexercise` enviada com o token anterior (1,9 MB). O próximo envio do celular cria uma pasta nova e reenvia tudo. A pasta antiga pode ser apagada pelo Drive na web.
-  - Pendente: enviar a configuração ao celular, reenviar e rodar `run.bat testar-restauracao` de novo.
+  - Em 2026-11-13 01:42 UTC, `run.bat configurar-backup` enviou a configuração ao celular. O backup de teste reenviou os 3 arquivos diários do celular e as 30 evidências.
 - **2026-11-12, Drive simulado** (alias do rclone para uma pasta, `WX_REMOTO`), com o banco da pilha local: 14 usuários, 2 grupos, 458 atividades, 1 evidência com miniatura, 4 avatares. Sem problemas. A miniatura só existia em `evidencias-removidas/` com data posterior e voltou. Uma evidência alterada de propósito fez o teste falhar com "SHA-256 DIFERENTE".
