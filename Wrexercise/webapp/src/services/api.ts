@@ -1,16 +1,20 @@
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  /** Só no erro interno: o código que a pessoa repassa e que está no log do servidor. */
+  readonly referencia: string | undefined;
 
   constructor(
     status: number,
     code: string | undefined,
     title: string | undefined,
+    referencia?: string,
   ) {
     super(title ?? "Não foi possível concluir a operação.");
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.referencia = referencia;
   }
 }
 
@@ -24,8 +28,14 @@ async function request(path: string, init: RequestInit): Promise<Response> {
     const problem = (await response.json().catch(() => null)) as {
       code?: string;
       title?: string;
+      referencia?: string;
     } | null;
-    throw new ApiError(response.status, problem?.code, problem?.title);
+    throw new ApiError(
+      response.status,
+      problem?.code,
+      problem?.title,
+      problem?.referencia,
+    );
   }
 
   return response;
@@ -99,7 +109,10 @@ export async function deleteEmpty(path: string): Promise<void> {
 
 /** Mensagem para o usuário: a da API, ou uma genérica quando nem houve resposta. */
 export function getErrorMessage(error: unknown): string {
-  return error instanceof ApiError
-    ? error.message
-    : "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
+  if (error instanceof ApiError) {
+    return error.referencia
+      ? `${error.message} Código: ${error.referencia}`
+      : error.message;
+  }
+  return "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.";
 }

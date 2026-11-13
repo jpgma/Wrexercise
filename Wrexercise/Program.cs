@@ -31,9 +31,15 @@ if (args is ["gerar-vapid"])
 var builder = WebApplication.CreateSlimBuilder(args);
 
 builder.Logging.ClearProviders();
-// Mantém os acentos legíveis nos logs, que vão só para stdout.
+// Logs só para stdout, que o Termux grava em log/app.log (erros.bat lê de lá). Acentos legíveis e hora em UTC.
 builder.Logging.AddJsonConsole(options =>
-    options.JsonWriterOptions = new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+{
+    options.JsonWriterOptions = new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    options.TimestampFormat = "yyyy-MM-ddTHH:mm:ssZ";
+    options.UseUtcTimestamp = true;
+});
+// O erro interno é registrado uma vez só, com a referência devolvida ao cliente (ApiProblem).
+builder.Logging.AddFilter("Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware", LogLevel.None);
 
 // A API só recebe JSON pequeno. O upload de evidências abrirá sua própria exceção.
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 1024 * 1024);

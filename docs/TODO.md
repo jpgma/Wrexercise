@@ -1,8 +1,9 @@
 1. Running it on the phone (biggest risk)
 
-- Turn on the uptime monitor (decided in 0051). Create the free UptimeRobot account and the /ready monitor, then do the stop/start test (README, "Monitor externo"). Until then, nothing tells you when it goes down.
+- Uptime monitor is on (0051): UptimeRobot checks /ready every 5 min.
+- SSH from outside home. erros.bat (0056) reads recent errors, and an internal error now shows "Código: XXXXXX" that matches the log line. But SSH to the A14 only works over USB (adb forward) or the home Wi-Fi, so away from home you can't read the log. Add a Cloudflare SSH route on the existing a14 tunnel (Environment repo: an `ssh://127.0.0.1:8022` ingress rule behind Cloudflare Access, plus `cloudflared access ssh` as ProxyCommand on the PC). Until then, ask people for the code and read it when you're back.
 - No real-load numbers yet (Q025). Memory, query speed and disk use on the A14 were only measured at startup (about 25 MB). Login timing was measured on x64, not ARM64 (0006). Watch stats.bat for the first couple of weeks, especially how fast the evidence folder grows against phone storage and the Drive quota estimate in 0046.
-- Reading errors. Logs only go to stdout in Termux. Make sure there's an easy way to see recent errors remotely, because "it gave me an error" will be the first bug report.
+- app.log is trimmed to its last 1 MB only when the app restarts. Check its size in stats.bat after a few weeks; if it grows a lot, trim it in the daily backup task too.
 
 2. Gaps people will hit in the first week
 
@@ -27,4 +28,4 @@ questoes-abertas.md is up to date (0055). Q006, Q007, Q017, Q018, Q021, Q023 and
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: turn on the uptime monitor (manual step, needs the UptimeRobot account), then a remote way to read recent errors, then decide on showing the photo location (Q030).
+My suggested order: set up SSH from outside home through the Cloudflare tunnel, then decide on showing the photo location (Q030), then a first look at real-load numbers with stats.bat.

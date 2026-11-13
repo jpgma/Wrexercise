@@ -776,6 +776,7 @@ These functions are for the operator. They are not in the interface.
 - Invitation and password reset tokens are in the fragment of the URL (after `#`). The browser does not send the fragment to the server.
 - Write operations from a different origin fail.
 - The application does not load fonts, icons or code from external servers.
+- An error message never shows internal details. An internal error (`500 ERRO_INTERNO`) has `referencia`: 6 random letters and numbers. The application shows "Erro interno do servidor. Código: 7F3K2Q". The server log has the same code, and `erros.bat` finds it (see `docs/decisoes/0056-erros-recentes.md`).
 
 ## 16. Features that the application does not have
 

@@ -1,7 +1,10 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Wrexercise.Features.Health;
 using Wrexercise.Infrastructure.Errors;
 using Wrexercise.Infrastructure.Json;
@@ -75,6 +78,37 @@ public class HealthRoutesTests
         Assert.DoesNotContain("ConnectionStrings", body);
     }
 
+    [Fact]
+    public async Task UnhandledException_DevolveReferenciaQueEstaNoLog()
+    {
+        var logs = new LogsCapturados();
+        await using var factory = CreateFactory(connectionString: "").WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services => services.AddSingleton<ILoggerProvider>(logs)));
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/ready", Token);
+
+        var problem = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.ProblemResponse, Token);
+        Assert.Matches("^[2-9A-HJKMNP-Z]{6}$", problem!.Referencia);
+        // Uma linha só, com a exceção e a referência: o log do middleware fica desligado.
+        var erro = Assert.Single(logs.Entradas, e => e.Nivel >= LogLevel.Error);
+        Assert.Equal(ApiProblem.CategoriaErroInterno, erro.Categoria);
+        Assert.Contains(problem.Referencia!, erro.Mensagem);
+        Assert.Contains("GET /ready", erro.Mensagem);
+        Assert.NotNull(erro.Excecao);
+    }
+
+    [Fact]
+    public async Task ErroEsperado_NaoTemReferencia()
+    {
+        await using var factory = CreateFactory(UnreachableDatabase);
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/inexistente", Token);
+
+        Assert.DoesNotContain("referencia", await response.Content.ReadAsStringAsync(Token));
+    }
+
     private static WebApplicationFactory<Program> CreateFactory(string connectionString) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder.UseTestDefaults().UseSetting("ConnectionStrings:Database", connectionString));
@@ -86,5 +120,34 @@ public class HealthRoutesTests
 
         var problem = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.ProblemResponse, Token);
         Assert.Equal(code, problem?.Code);
+    }
+
+    private sealed record EntradaLog(string Categoria, LogLevel Nivel, string Mensagem, Exception? Excecao);
+
+    private sealed class LogsCapturados : ILoggerProvider
+    {
+        public ConcurrentQueue<EntradaLog> Entradas { get; } = new();
+
+        public ILogger CreateLogger(string categoryName) => new Logger(categoryName, Entradas);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class Logger(string categoria, ConcurrentQueue<EntradaLog> entradas) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state)
+                where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter) =>
+                entradas.Enqueue(new EntradaLog(categoria, logLevel, formatter(state, exception), exception));
+        }
     }
 }

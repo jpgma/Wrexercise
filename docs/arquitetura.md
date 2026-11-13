@@ -1178,6 +1178,8 @@ GET /ready
 
 Um monitor externo gratuito (UptimeRobot) consulta o `/ready` público a cada 5 min e avisa o mantenedor quando a produção cai. Ver `docs/decisoes/0051-monitor-externo.md`.
 
+O erro interno devolve uma referência curta, que também está na linha do log. `erros.bat` lê os erros recentes do log no telefone por SSH. Ver `docs/decisoes/0056-erros-recentes.md`.
+
 Nunca registrar senhas, cookies, tokens, conteúdo privado de evidências ou informações sensíveis.
 
 ---

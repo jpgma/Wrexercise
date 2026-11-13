@@ -89,6 +89,16 @@ Antes, abra o Termux no telefone e rode `sshd` (ele não sobe no boot). O perfil
 
 Usa o perfil compartilhado `%LOCALAPPDATA%\jpgma\a14.env`; se faltar ou o telefone não responder, pergunta host, porta, usuário e chave. O PostgreSQL e o túnel aparecem aqui, mas são compartilhados: detalhes com `run.bat stats` no `Environment`.
 
+### Erros
+
+```powershell
+.\erros.bat           # os 10 erros mais recentes do app, com o começo da exceção
+.\erros.bat 30        # os 30 mais recentes (até 200)
+.\erros.bat 7F3K2Q    # o erro da referência que o app mostrou ("Código: 7F3K2Q"), com a exceção inteira
+```
+
+Quando alguém disser "deu erro", peça o código que apareceu na tela. O horário é UTC, e o log guarda o último 1 MB a cada reinício do app. Usa o mesmo perfil SSH do `stats.bat`. Ver `docs/decisoes/0056-erros-recentes.md`.
+
 ### Backups
 
 O telefone envia o backup cifrado ao Google Drive sozinho, uma vez por dia e antes das migrações de cada `run.bat --ssh` (ver `docs/decisoes/0046-backup-no-google-drive.md`). Datas em UTC.

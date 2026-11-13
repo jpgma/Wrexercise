@@ -13,6 +13,7 @@
 #   remote-termux.sh reset-senha <email>      gera o link de redefinição de senha
 #   remote-termux.sh status
 #   remote-termux.sh stats                    CPU, memória, banco, disco e backups (stats.bat usa este)
+#   remote-termux.sh erros [N|CODIGO]         erros recentes de log/app.log, ou os da referência (erros.bat usa este)
 set -eu
 
 base=$HOME/wrexercise
@@ -265,7 +266,7 @@ stats() {
     curl -s -o /dev/null --max-time 5 -w "/$rota: HTTP %{http_code} em %{time_total}s\n" "http://127.0.0.1:8080/$rota" || echo "/$rota: sem resposta"
   done
   if [ -f log/app.log ]; then
-    echo "Linhas de erro nas últimas 500 do log: $(tail -n 500 log/app.log | grep -ciE 'fail|error|exception|crit')"
+    echo "Erros nas últimas 500 linhas do log: $(tail -n 500 log/app.log | grep -cE '"LogLevel":"(Error|Critical)"' || true) (detalhes: erros.bat)"
     echo "Última linha do log: $(tail -n 1 log/app.log | cut -c1-160)"
   fi
 
@@ -301,12 +302,79 @@ SQL
   fi
 }
 
+# Erros recentes do app, para erros.bat. Lê log/app.log (JSON, uma entrada por linha); só leitura.
+#   erros            os 10 erros mais recentes (Error e Critical)
+#   erros N          os N mais recentes, até 200
+#   erros CODIGO     as linhas com a referência que o app mostrou ("Código: 7F3K2Q"), com a exceção inteira
+erros() {
+  arquivo=$base/log/app.log
+  if [ ! -f "$arquivo" ]; then
+    echo "Sem log em $arquivo."
+    return 0
+  fi
+  filtro=${1:-10}
+  case $filtro in
+    *[!0-9]*|'')
+      case $filtro in
+        *[!A-Za-z0-9]*) echo "Use um número ou a referência que o app mostrou (letras e números)." >&2; return 2 ;;
+      esac
+      linhas=$(grep -iF -- "$filtro" "$arquivo" || true)
+      limite_excecao=0
+      [ -n "$linhas" ] || { echo "Nenhuma linha com \"$filtro\" no log (ele guarda só o último 1 MB a cada reinício)."; return 0; } ;;
+    *)
+      [ "$filtro" -gt 200 ] && filtro=200
+      [ "$filtro" -lt 1 ] && filtro=1
+      total=$(grep -cE '"LogLevel":"(Error|Critical)"' "$arquivo" || true)
+      desde=$(grep -m1 -o '"Timestamp":"[^"]*"' "$arquivo" | cut -d'"' -f4)
+      echo "Erros no log: ${total:-0}${desde:+, desde $desde (UTC)}. Mostrando até $filtro, do mais antigo ao mais recente."
+      linhas=$(grep -E '"LogLevel":"(Error|Critical)"' "$arquivo" | tail -n "$filtro" || true)
+      limite_excecao=8
+      [ -n "$linhas" ] || { echo "Nenhum erro."; return 0; } ;;
+  esac
+  printf '%s\n' "$linhas" | awk -v limite="$limite_excecao" '
+    # Valor de um campo texto de primeiro nível, com os escapes do JSON desfeitos.
+    function campo(linha, nome,    inicio, i, c, n, saida) {
+      inicio = index(linha, "\"" nome "\":\"")
+      if (!inicio) return ""
+      i = inicio + length(nome) + 4
+      saida = ""
+      while (i <= length(linha)) {
+        c = substr(linha, i, 1)
+        if (c == "\\") {
+          n = substr(linha, i + 1, 1)
+          if (n == "n") saida = saida "\n"
+          else if (n == "t") saida = saida "  "
+          else if (n == "u") { saida = saida "?"; i += 4 }
+          else if (n != "r") saida = saida n
+          i += 2
+          continue
+        }
+        if (c == "\"") break
+        saida = saida c
+        i++
+      }
+      return saida
+    }
+    {
+      hora = campo($0, "Timestamp"); if (hora == "") hora = "(sem hora)"
+      printf "\n%s  %s  %s\n", hora, campo($0, "LogLevel"), campo($0, "Category")
+      print "  " campo($0, "Message")
+      excecao = campo($0, "Exception")
+      if (excecao == "") next
+      n = split(excecao, partes, "\n")
+      mostrar = (limite > 0 && n > limite) ? limite : n
+      for (k = 1; k <= mostrar; k++) print "    " partes[k]
+      if (mostrar < n) printf "    ... mais %d linhas (erros.bat CODIGO mostra tudo)\n", n - mostrar
+    }'
+}
+
 case ${1:-} in
   implantar) implantar ;;
   iniciar) iniciar ;;
   parar) parar ;;
   status) status ;;
   stats) stats ;;
+  erros) erros "${2:-}" ;;
   backup)
     ler_env
     preparar_banco
@@ -322,5 +390,5 @@ case ${1:-} in
     ler_env
     ambiente_app
     grun "$base/app/Wrexercise" reset-senha "$2" ;;
-  *) echo "Uso: remote-termux.sh implantar|iniciar|parar|status|backup|restore|reset-senha|stats" >&2; exit 2 ;;
+  *) echo "Uso: remote-termux.sh implantar|iniciar|parar|status|backup|restore|reset-senha|stats|erros" >&2; exit 2 ;;
 esac
