@@ -52,11 +52,34 @@ ANIMACOES = [
     ("recusar", "gemini", 150),
     ("provocar", "gemini", 120),
     ("comemorar", ("base-b", "Celebrates_a_goa"), 120),
+    ("dormindo", "gemini", 350),
+    ("adormecer", "gemini", 140),
 ]
+
+# Quadros da tira do gemini.py que entram na tag, em ordem: um índice da própria tira ou
+# (animação, índice) de outra tira da mesma direção. O 1º quadro de `dormindo` é só a calibração
+# de pé; a respiração vai e volta (2, 3, 2, 4). O `adormecer` termina no quadro em que o
+# `dormindo` começa, para a troca não pular.
+SEQUENCIA = {
+    "dormindo": [1, 2, 1, 3],
+    "adormecer": [0, 1, 2, 3, 4, 5, 6, ("dormindo", 1)],
+}
 
 
 def fatiar(folha: Image.Image) -> list[Image.Image]:
     return [folha.crop((i * QUADRO, 0, (i + 1) * QUADRO, QUADRO)) for i in range(folha.width // QUADRO)]
+
+
+def sequencia(animacao: str, d: str, quadros: list[Image.Image]) -> list[Image.Image]:
+    """Os quadros da tag, na ordem de SEQUENCIA (sem entrada, a tira inteira)."""
+    out = []
+    for i in SEQUENCIA.get(animacao, range(len(quadros))):
+        if isinstance(i, tuple):
+            outra, i = i
+            out.append(fatiar(Image.open(GEMINI / f"{outra}-{d.replace('-', '')}.png").convert("RGBA"))[i])
+        else:
+            out.append(quadros[i])
+    return out
 
 
 def ler_aseprite(a: Aseprite, nome: str, tmp: pathlib.Path) -> dict[str, list[Image.Image]]:
@@ -75,7 +98,7 @@ def direcoes_da_fonte(animacao: str, fonte, aseprites: dict) -> dict[str, list[I
         for d in DIRECOES:
             png = GEMINI / f"{animacao}-{d.replace('-', '')}.png"
             if png.exists():
-                out[d] = fatiar(Image.open(png).convert("RGBA"))
+                out[d] = sequencia(animacao, d, fatiar(Image.open(png).convert("RGBA")))
     if fonte != "gemini":
         arquivo, prefixo = fonte
         tags = aseprites[arquivo]

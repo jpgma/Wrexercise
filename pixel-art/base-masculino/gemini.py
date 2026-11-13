@@ -36,8 +36,11 @@ SAIDA = AQUI / "saida" / "gemini"
 QUADROS = {
     "parado": 4, "andar": 8, "correr": 8, "treinando": 6, "alongar": 4, "olhar": 4,
     "arremessar": 6, "receber": 6, "aceitar": 4, "recusar": 3, "provocar": 4, "comemorar": 8,
-    "dormindo": 4,
+    "dormindo": 4, "adormecer": 8,
 }
+# Quadros que ficam no chão do 1º, mesmo que o Gemini os desenhe 1 ou 2 px acima: as poses
+# sentadas de dormir (prompts-gemini.md §4, "Dormir").
+NO_CHAO = {"dormindo": range(4), "adormecer": range(8)}
 # Colunas e linhas da grade por quantidade de quadros (prompts-gemini.md §4).
 GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2)}
 
@@ -236,7 +239,7 @@ def processar(arq: pathlib.Path) -> None:
         tw = round((xmax - xmin) / escala)
         th = round((ymax - ymin) / escala)
         grade = separar_gola(limpar(reduzir(px, x0, y0, m, xmin, ymin, tw, th, escala, cor)))
-        dy = round((ymax - y1max) / escala)
+        dy = 0 if i in NO_CHAO.get(animacao, ()) else round((ymax - y1max) / escala)
         ox = round(pernas1 - (centro_pernas(m, ymax) - xmin) / escala)
         # Com os pés no chão, o ajuste fino vem dos tênis: o deslocamento (até AJUSTE px) que
         # mais sobrepõe as linhas de baixo às do 1º quadro, com o pé de apoio no mesmo lugar.
@@ -254,6 +257,9 @@ def processar(arq: pathlib.Path) -> None:
             viz = ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1))
             borda = any(v not in grade for v in viz)
             q.putpixel((ox + tx, oy + ty), (CONTORNO if borda else c) + (255,))
+        if i in NO_CHAO.get(animacao, ()):
+            # A limpeza pode tirar a linha de baixo: desce pelo desenho final.
+            q = q.transform(q.size, Image.AFFINE, (1, 0, 0, 0, 1, q.getbbox()[3] - (PE_Y + 1)))
         tira.paste(q, (i * QUADRO, 0))
         print(f"{arq.name} quadro {i + 1}: {tw}×{th} px, caixa no quadro {q.getbbox()}")
 
