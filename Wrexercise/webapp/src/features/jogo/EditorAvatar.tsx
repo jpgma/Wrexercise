@@ -155,8 +155,11 @@ export function EditorAvatar() {
           <p className="text-xs text-muted">
             Exporte a folha, edite no seu editor de pixel art e importe de
             volta. Ela precisa ter {folhaImportada.largura}×
-            {folhaImportada.altura} px e até 1000 KB. O desenho é livre. O guia
-            mostra a grade, o nome de cada linha e o ponto entre os pés.
+            {folhaImportada.altura} px e até 1000 KB. Uma folha antiga, de{" "}
+            {folhaImportada.largura}×{folhaImportada.alturaSemDormir} px, também
+            vale: sem as animações de dormir, o avatar dorme parado. O desenho é
+            livre. O guia mostra a grade, o nome de cada linha e o ponto entre
+            os pés.
           </p>
         </div>
 

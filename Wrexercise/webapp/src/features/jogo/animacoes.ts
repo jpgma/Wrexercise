@@ -35,6 +35,11 @@ export const linhasFolha = {
   aceitar: { linha: 73, quadros: 4, ms: 120 },
   recusar: { linha: 81, quadros: 3, ms: 150 },
   provocar: { linha: 89, quadros: 4, ms: 120 },
+  // As 4 de dormir: só na folha de 129 linhas (formatoFolha.linhasSemDormir).
+  dormindo: { linha: 97, quadros: 4, ms: 350 },
+  adormecer: { linha: 105, quadros: 8, ms: 140 },
+  acordar: { linha: 113, quadros: 5, ms: 110 },
+  levantar: { linha: 121, quadros: 8, ms: 120 },
 } as const;
 
 export type Animacao = {
@@ -62,6 +67,10 @@ export const animacoes = {
   aceitar: { ...linhasFolha.aceitar, repete: false, quadroEstatico: 3 },
   recusar: { ...linhasFolha.recusar, repete: false, quadroEstatico: 2 },
   provocar: { ...linhasFolha.provocar, repete: false, quadroEstatico: 2 },
+  dormindo: { ...linhasFolha.dormindo, repete: true, quadroEstatico: 0 },
+  adormecer: { ...linhasFolha.adormecer, repete: false, quadroEstatico: 7 },
+  acordar: { ...linhasFolha.acordar, repete: false, quadroEstatico: 1 },
+  levantar: { ...linhasFolha.levantar, repete: false, quadroEstatico: 7 },
 } as const satisfies Record<string, Animacao>;
 
 export type NomeAnimacao = keyof typeof animacoes;
@@ -70,6 +79,8 @@ export type NomeAnimacao = keyof typeof animacoes;
 export const quadroSoltura = 3;
 /** A carta atinge o peito no terceiro quadro do `receber` (índice 2). */
 export const quadroImpacto = 2;
+/** Quem dorme e é atingido pula de susto no segundo quadro do `acordar` (índice 1). */
+export const quadroSusto = 1;
 
 /** Duração total de uma animação que toca uma vez. */
 export function getDuracao(animacao: NomeAnimacao): number {

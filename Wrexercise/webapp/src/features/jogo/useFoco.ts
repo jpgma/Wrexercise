@@ -9,6 +9,7 @@ import {
   type NomeAnimacao,
   quadroImpacto,
   quadroSoltura,
+  quadroSusto,
 } from "./animacoes";
 import type { CodigoCarta } from "./useCartas";
 import type { Atuacao, Ponto } from "./useEncenacoes";
@@ -55,6 +56,10 @@ const pose = (
  * olhar para quem vê a tela e, a partir dele, quem vê joga uma carta ou escolhe o Rival, com o
  * próprio avatar entrando em cena. O alvo pode ser o próprio avatar, que só gira e não tem ação.
  * O alvo fica na URL (`?foco=`): o botão voltar fecha o Foco.
+ *
+ * Quem dorme não gira: ao abrir o Foco, toma um susto (`acordar`) e volta a dormir. Atingido por uma
+ * carta, toma o mesmo susto no lugar de `receber`. Para andar ou arremessar, levanta antes
+ * (`levantar`) e volta a dormir (`adormecer`) no fim.
  */
 export function useFoco({
   posicoes,
@@ -63,6 +68,7 @@ export function useFoco({
   usuarioId,
   reduzido,
   pausado,
+  dormindo,
 }: {
   posicoes: Map<string, Ponto>;
   centro: Ponto;
@@ -72,6 +78,8 @@ export function useFoco({
   reduzido: boolean;
   /** Enquanto a entrada toca, o Foco espera. */
   pausado: boolean;
+  /** Quem está com a pose `dormindo`. */
+  dormindo: Set<string>;
 }) {
   const [params, setParams] = useSearchParams();
   const pedido = params.get(parametro);
@@ -91,10 +99,12 @@ export function useFoco({
   const empurrado = useRef(false);
   const posicoesRef = useRef(posicoes);
   const anterior = useRef<string | null>(null);
+  const dormindoRef = useRef(dormindo);
 
   useEffect(() => {
     posicoesRef.current = posicoes;
-  }, [posicoes]);
+    dormindoRef.current = dormindo;
+  }, [posicoes, dormindo]);
 
   const esperar = useCallback(
     (ms: number) =>
@@ -143,10 +153,20 @@ export function useFoco({
       return p ? getDirecao(p, centro) : "sul";
     };
 
+    const dorme = (id: string) => dormindoRef.current.has(id);
     const inicial = new Map<string, Atuacao>();
-    if (saiu) inicial.set(saiu, pose("parado", "sul"));
-    if (alvoId) inicial.set(alvoId, pose("parado", repouso(alvoId)));
+    if (saiu && !dorme(saiu)) inicial.set(saiu, pose("parado", "sul"));
+    if (alvoId && !dorme(alvoId))
+      inicial.set(alvoId, pose("parado", repouso(alvoId)));
+    // Quem dorme toma um susto com o toque e volta a dormir, sem girar.
+    if (alvoId && dorme(alvoId) && !reduzido)
+      inicial.set(alvoId, pose("acordar", repouso(alvoId)));
     setAtuacoes(inicial);
+    if (alvoId && dorme(alvoId) && !reduzido) {
+      void esperar(getDuracao("acordar")).then(
+        () => vivo() && atuar(alvoId, null),
+      );
+    }
 
     const girar = async (id: string, de: Direcao, para: Direcao) => {
       for (const direcao of reduzido ? [] : getGiro(de, para)) {
@@ -156,12 +176,12 @@ export function useFoco({
       }
       return true;
     };
-    if (saiu) {
+    if (saiu && !dorme(saiu)) {
       void girar(saiu, "sul", repouso(saiu)).then(
         (ok) => ok && atuar(saiu, null),
       );
     }
-    if (alvoId) {
+    if (alvoId && !dorme(alvoId)) {
       void girar(alvoId, repouso(alvoId), "sul").then(
         (ok) => ok && atuar(alvoId, pose("parado", "sul")),
       );
@@ -255,11 +275,26 @@ export function useFoco({
       cancelar();
       const minha = geracao.current;
       const vivo = () => geracao.current === minha;
-      const descanso = pose("parado", "sul");
+      const alvoDorme = dormindoRef.current.has(alvoId);
+      const euDurmo = dormindoRef.current.has(usuarioId);
+      // O susto da abertura do Foco some se a ação começar antes do fim dele.
+      if (alvoDorme) atuar(alvoId, null);
+      // Quem dorme volta à própria pose, sentado; quem não dorme fica olhando para quem vê.
+      const descanso = alvoDorme ? null : pose("parado", "sul");
+      const recebe = alvoDorme ? "acordar" : "receber";
+      const quadroRecebe = alvoDorme ? quadroSusto : quadroImpacto;
+      const repousoEu = getDirecao(eu, centro);
+      /** Quem joga e dorme volta a dormir no lugar, sem segurar o fim do arremesso. */
+      const voltarADormir = () => {
+        atuar(usuarioId, pose("adormecer", repousoEu));
+        void esperar(getDuracao("adormecer")).then(
+          () => vivo() && atuar(usuarioId, null),
+        );
+      };
 
       if (reduzido) {
         if (!(await resultado) || !vivo()) return;
-        atuar(alvoId, pose("receber", "sul", { quadro: quadroImpacto }));
+        atuar(alvoId, pose(recebe, "sul", { quadro: quadroRecebe }));
         await esperar(600);
         if (vivo()) atuar(alvoId, descanso);
         return;
@@ -269,8 +304,13 @@ export function useFoco({
       void resultado.then(() => (pronto = true));
       setFase("arremessando");
       setCameraAcao(mirar(eu, ZoomAcao, MiraAcao));
+      if (euDurmo) {
+        atuar(usuarioId, pose("levantar", repousoEu));
+        await esperar(getDuracao("levantar"));
+        if (!vivo()) return;
+      }
       const rumo = getDirecao(eu, alvo);
-      const giro = getGiro(getDirecao(eu, centro), rumo);
+      const giro = getGiro(repousoEu, rumo);
       for (const direcao of giro) {
         atuar(usuarioId, pose("parado", direcao));
         await esperar(PassoGiroMs);
@@ -294,7 +334,8 @@ export function useFoco({
         await esperar(900);
         if (!vivo()) return;
         setCarta(null);
-        atuar(usuarioId, null);
+        if (euDurmo) voltarADormir();
+        else atuar(usuarioId, null);
         setCameraAcao(null);
         setFase("aberto");
         return;
@@ -303,18 +344,19 @@ export function useFoco({
       // A câmera acompanha a carta até o alvo, que começa o `receber` antes do fim do voo.
       setCarta({ codigo, efeito: "voo", de: eu, para: alvo });
       setCameraAcao(mirar(alvo, ZoomAcao, MiraAcao, VooMs));
-      const impactoMs = quadroImpacto * animacoes.receber.ms;
+      const impactoMs = quadroRecebe * animacoes[recebe].ms;
       await esperar(VooMs - impactoMs);
       if (!vivo()) return;
-      atuar(alvoId, pose("receber", getDirecao(alvo, eu)));
+      atuar(alvoId, pose(recebe, getDirecao(alvo, eu)));
       await esperar(impactoMs);
       if (!vivo()) return;
       setCarta(null);
       setTremor(true);
       setEfeito({ tipo: "impacto", texto, ponto: alvo });
       if ("vibrate" in navigator) navigator.vibrate(30);
-      atuar(usuarioId, null);
-      await esperar(getDuracao("receber") - impactoMs + 500);
+      if (euDurmo) voltarADormir();
+      else atuar(usuarioId, null);
+      await esperar(getDuracao(recebe) - impactoMs + 500);
       if (!vivo()) return;
       setTremor(false);
       setEfeito(null);
@@ -357,6 +399,10 @@ export function useFoco({
         [usuarioId, eu, alvo],
         [alvoId, alvo, eu],
       ];
+      // Quem dorme, dos dois, se levanta antes do passo e volta a dormir no fim. O susto da
+      // abertura do Foco some se a escolha começar antes do fim dele.
+      const dormem = pares.filter(([id]) => dormindoRef.current.has(id));
+      if (dormindoRef.current.has(alvoId)) atuar(alvoId, null);
       const passo = (de: Ponto) => ({
         dx: Math.round((centro.x - de.x) * PassoRival),
         dy: Math.round((centro.y - de.y) * PassoRival),
@@ -374,6 +420,13 @@ export function useFoco({
 
       setFase("rivalizando");
       setCameraAcao(mirar(meio, zoom, MiraAcao));
+      if (dormem.length > 0) {
+        dormem.forEach(([id, de]) =>
+          atuar(id, pose("levantar", getDirecao(de, centro))),
+        );
+        await esperar(getDuracao("levantar"));
+        if (!vivo()) return;
+      }
       pares.forEach(([id, de]) =>
         atuar(
           id,
@@ -411,8 +464,18 @@ export function useFoco({
       );
       await esperar(PassoRivalMs);
       if (!vivo()) return;
+      if (dormem.length > 0) {
+        dormem.forEach(([id, de]) =>
+          atuar(id, pose("adormecer", getDirecao(de, centro))),
+        );
+        await esperar(getDuracao("adormecer"));
+        if (!vivo()) return;
+      }
       atuar(usuarioId, null);
-      atuar(alvoId, pose("parado", "sul"));
+      atuar(
+        alvoId,
+        dormindoRef.current.has(alvoId) ? null : pose("parado", "sul"),
+      );
       setCameraAcao(null);
       setFase("aberto");
     },

@@ -38,7 +38,8 @@ TAGS = ["south", "south-east", "east", "north-east", "north", "north-west", "wes
 
 # Animações da folha, na ordem das linhas (docs/avatar-formato.md §6): (nome, quadros, ms por quadro).
 # A linha 0 é `rotacao`; cada animação tem 8 linhas, uma por direção. As 6 primeiras mantêm as linhas
-# da primeira versão da folha; as 6 últimas vêm depois. Os tempos são os do .aseprite.
+# da primeira versão da folha; as 6 seguintes vêm depois, e as 4 de dormir, no fim (a folha de 97
+# linhas, sem elas, continua aceita na importação). Os tempos são os do .aseprite.
 ANIMACOES = [
     ("andar", 8, 100),
     ("correr", 8, 100),
@@ -52,9 +53,13 @@ ANIMACOES = [
     ("aceitar", 4, 120),
     ("recusar", 3, 150),
     ("provocar", 4, 120),
+    ("dormindo", 4, 350),
+    ("adormecer", 8, 140),
+    ("acordar", 5, 110),
+    ("levantar", 8, 120),
 ]
 COLUNAS = max(qt for _, qt, _ in ANIMACOES)  # 9
-LINHAS = 1 + 8 * len(ANIMACOES)  # 97
+LINHAS = 1 + 8 * len(ANIMACOES)  # 129
 
 
 def ler_tags() -> dict[str, list[Image.Image]]:

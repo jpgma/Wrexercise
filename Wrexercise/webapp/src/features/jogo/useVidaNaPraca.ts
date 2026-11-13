@@ -41,6 +41,10 @@ const pousos: readonly { x: [number, number]; y: number }[] = [
 const MargemDaBola = 60;
 
 const VooMs = 1400;
+/** A chance de o pombo pousar ao lado de quem dorme, quando há alguém dormindo. */
+const ChanceJuntoDeQuemDorme = 0.6;
+/** A distância entre o pombo e os pés de quem dorme, de lado. */
+const AoLadoDeQuemDorme = 20;
 /** A bola percorre a praça em px por ms. */
 const VelocidadeBola = 0.16;
 const ConversaMs = 5000;
@@ -52,7 +56,8 @@ function sortear(min: number, max: number): number {
 /**
  * A vida da praça entre as encenações (docs/gamificacao.md §3.4): de vez em quando um pombo pousa,
  * dois vizinhos conversam ou uma bola rola até alguém, que a devolve. Um evento de cada vez, nunca
- * durante uma encenação, e nada com movimento reduzido.
+ * durante uma encenação, e nada com movimento reduzido. Quem dorme não conversa nem pega a bola, mas
+ * o pombo gosta de pousar ao lado dele e chegar perto.
  */
 export function useVidaNaPraca({
   membros,
@@ -132,7 +137,24 @@ export function useVidaNaPraca({
         return proxima;
       });
 
+    /** Ao lado de alguém que dorme, do lado de fora da elipse, virado para ele. */
+    function pousoJuntoDeQuemDorme() {
+      const dormindo = cena.current.membros
+        .filter((m) => m.pose === "dormindo")
+        .map((m) => cena.current.posicoes.get(m.usuarioId))
+        .filter((p): p is Ponto => p !== undefined);
+      const p = dormindo[Math.floor(Math.random() * dormindo.length)];
+      if (!p || Math.random() >= ChanceJuntoDeQuemDorme) return null;
+      const lado: 1 | -1 = p.x < largura / 2 ? -1 : 1;
+      return {
+        x: Math.round(p.x + lado * AoLadoDeQuemDorme),
+        y: Math.round(p.y + 2),
+        virado: (lado * -1) as 1 | -1,
+      };
+    }
+
     function pombear(fim: () => void): boolean {
+      const junto = pousoJuntoDeQuemDorme();
       // Um ponto de pouso fora do chão dos Enfeites; com todos ocupados, o pombo não vem.
       const livres = pousos.flatMap((pouso) => {
         const x = Math.round(sortear(...pouso.x));
@@ -143,10 +165,10 @@ export function useVidaNaPraca({
           ? []
           : [{ x, y }];
       });
-      const pouso = livres[Math.floor(Math.random() * livres.length)];
+      const pouso = junto ?? livres[Math.floor(Math.random() * livres.length)];
       if (!pouso) return false;
       const { x, y } = pouso;
-      const virado: 1 | -1 = x < largura / 2 ? 1 : -1;
+      const virado: 1 | -1 = junto ? junto.virado : x < largura / 2 ? 1 : -1;
       // Vem de fora da praça, do alto, pelo lado de trás.
       setPombo({
         x: x - virado * 140,
@@ -159,7 +181,9 @@ export function useVidaNaPraca({
       let t = 30 + VooMs;
       depois(t, () => setPombo({ x, y, virado, fase: "bicando", ms: 0 }));
       t += sortear(3000, 5000);
-      const passo = Math.round(sortear(10, 22)) * virado;
+      // Ao lado de quem dorme, o passo é curto: chega perto sem subir nele.
+      const passo =
+        Math.round(junto ? sortear(4, 8) : sortear(10, 22)) * virado;
       depois(t, () =>
         setPombo({ x: x + passo, y, virado, fase: "andando", ms: 900 }),
       );

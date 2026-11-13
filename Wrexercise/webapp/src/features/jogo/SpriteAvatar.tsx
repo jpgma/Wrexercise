@@ -6,6 +6,7 @@ import {
   type Direcao,
   type NomeAnimacao,
 } from "./animacoes";
+import { useLinhasDaFolha } from "@/components/folhaAvatar";
 
 type SpriteAvatarProps = {
   /** Caminho da folha em 8 direções (células de 48 px; ver `folha` em animacoes.ts). */
@@ -35,13 +36,18 @@ export function SpriteAvatar({
   style,
   onFim,
 }: SpriteAvatarProps) {
-  const { linha, quadros, ms, repete, quadroEstatico } = animacoes[animacao];
+  // Uma folha sem a linha da animação (a de 97 linhas não tem as de dormir) mostra `parado`, parado.
+  const semLinha =
+    animacoes[animacao].linha + direcoes.length > useLinhasDaFolha(folha);
+  const { linha, quadros, ms, repete, quadroEstatico } =
+    animacoes[semLinha ? "parado" : animacao];
+  const parar = estatico || semLinha;
   const celula = formato.celula * escala;
 
   return (
     <span
       aria-hidden="true"
-      className={`sprite-avatar ${estatico ? "" : repete ? "sprite-repete" : "sprite-uma-vez"} ${className}`}
+      className={`sprite-avatar ${parar ? "" : repete ? "sprite-repete" : "sprite-uma-vez"} ${className}`}
       onAnimationEnd={onFim}
       style={
         {
@@ -49,9 +55,10 @@ export function SpriteAvatar({
           width: celula,
           height: celula,
           backgroundImage: `url(${folha})`,
-          backgroundSize: `${celula * formato.colunas}px ${celula * formato.linhas}px`,
-          backgroundPositionX: estatico
-            ? `${-(quadro ?? quadroEstatico) * celula}px`
+          // Só a largura: a altura acompanha, e serve às folhas de 97 e de 129 linhas.
+          backgroundSize: `${celula * formato.colunas}px auto`,
+          backgroundPositionX: parar
+            ? `${-(semLinha ? 0 : (quadro ?? quadroEstatico)) * celula}px`
             : undefined,
           backgroundPositionY: `${-(linha + direcoes.indexOf(direcao)) * celula}px`,
           "--quadros": quadros,

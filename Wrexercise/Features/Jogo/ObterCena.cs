@@ -10,7 +10,12 @@ namespace Wrexercise.Features.Jogo;
 
 internal static class ObterCena
 {
-    private sealed record MembroCena(Guid UsuarioId, string NomeExibicao, DateOnly EntradaLocal, bool ModoJogo);
+    private sealed record MembroCena(
+        Guid UsuarioId,
+        string NomeExibicao,
+        DateOnly EntradaLocal,
+        bool ModoJogo,
+        DateTimeOffset AcordadoEm);
 
     public static async Task<IResult> HandleAsync(
         Guid grupoId,
@@ -29,17 +34,30 @@ internal static class ObterCena
         var comPendentes = await LoadComAtividadePendenteAsync(connection, grupoId, cancellationToken);
         var comMeta = await LoadComMetaCumpridaAsync(connection, grupoId, membros, cancellationToken);
 
+        var agora = DateTimeOffset.UtcNow;
         var resposta = membros
-            .Select(m => new MembroCenaResponse(
-                m.UsuarioId,
-                m.NomeExibicao,
-                PoseAvatar.Calcular(comPendentes.Contains(m.UsuarioId), comMeta.Contains(m.UsuarioId)),
-                m.ModoJogo))
+            .Select(m =>
+            {
+                var pose = PoseAvatar.Calcular(
+                    comPendentes.Contains(m.UsuarioId),
+                    comMeta.Contains(m.UsuarioId),
+                    PoseAvatar.IsDormindo(m.AcordadoEm, agora));
+                return new MembroCenaResponse(
+                    m.UsuarioId,
+                    m.NomeExibicao,
+                    pose,
+                    m.ModoJogo,
+                    pose == PoseAvatar.Dormindo ? m.AcordadoEm : null);
+            })
             .ToList();
 
         return Results.Json(new CenaResponse(grupoId, resposta), AppJsonContext.Default.CenaResponse);
     }
 
+    /// <summary>
+    /// Os membros ativos. <c>AcordadoEm</c> é o início da última atividade deste grupo que não foi rejeitada
+    /// nem anulada, ou a entrada no grupo, o que for mais recente (GREATEST ignora a falta de atividade).
+    /// </summary>
     private static async Task<IReadOnlyList<MembroCena>> LoadMembrosAsync(
         NpgsqlConnection connection,
         Guid grupoId,
@@ -47,7 +65,13 @@ internal static class ObterCena
     {
         await using var command = new NpgsqlCommand("""
             SELECT m.usuario_id, u.nome_exibicao, (m.joined_at AT TIME ZONE g.fuso_horario)::date,
-                u.modo_inicio = 'Jogo'
+                u.modo_inicio = 'Jogo',
+                GREATEST(m.joined_at, (
+                    SELECT max(a.started_at)
+                    FROM atividades a
+                    WHERE a.grupo_id = m.grupo_id
+                      AND a.usuario_id = m.usuario_id
+                      AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')))
             FROM membros_grupo m
             JOIN grupos g ON g.id = m.grupo_id
             JOIN usuarios u ON u.id = m.usuario_id
@@ -61,7 +85,11 @@ internal static class ObterCena
         while (await reader.ReadAsync(cancellationToken))
         {
             membros.Add(new MembroCena(
-                reader.GetGuid(0), reader.GetString(1), reader.GetFieldValue<DateOnly>(2), reader.GetBoolean(3)));
+                reader.GetGuid(0),
+                reader.GetString(1),
+                reader.GetFieldValue<DateOnly>(2),
+                reader.GetBoolean(3),
+                reader.GetFieldValue<DateTimeOffset>(4)));
         }
 
         return membros;

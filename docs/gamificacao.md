@@ -1,6 +1,6 @@
 # Gamificação — Wrexercise
 
-> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas), G6 (avatar importado e Enfeites) e G7 (Rival da semana) estão implementadas, e a G5 (Missões) ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md` o Rival da semana de `decisoes/0038-rival-da-semana.md` e a meta diária de `decisoes/0040-meta-diaria.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
+> **Status:** proposta refinada; as fases G1 (modo Jogo e cena), G2 (Energia), G3 (cartas), G4 (Respostas), G6 (avatar importado e Enfeites) e G7 (Rival da semana) estão implementadas, e a G5 (Missões) ainda não. A direção geral está em `decisoes/0023-gamificacao.md`, com as mudanças de `decisoes/0024-cartas-e-avatar-importado.md`, as regras de Energia e Jogadas de `decisoes/0033-regras-de-energia-e-jogadas.md`, a ordem dos bônus de `decisoes/0034-ordem-dos-bonus-de-energia.md`, os detalhes das cartas de `decisoes/0035-cartas-e-jogadas.md` as Respostas de `decisoes/0036-respostas.md` o avatar importado e os Enfeites de `decisoes/0037-avatar-importado-e-enfeites.md` o Rival da semana de `decisoes/0038-rival-da-semana.md`, a meta diária de `decisoes/0040-meta-diaria.md` e o avatar dormindo de `decisoes/0057-avatar-dormindo.md`. O formato da folha de sprites está em `avatar-formato.md`, e o avatar base e o kit de camadas estão em `avatar-kit.md`. Cada fase atualiza `funcionalidades.md` quando for entregue.
 
 ## 1. Visão
 
@@ -86,9 +86,12 @@ A pose de cada avatar vem de `GET /api/grupos/{id}/cena`, calculada a partir do 
 |---|---|
 | Tem atividade `AguardandoFeedback` ou `EmRevisao` | `treinando` |
 | Meta cumprida (`metaCumprida`) | `comemorando` |
+| Nenhuma atividade deste grupo nas últimas 48 horas, sem contar as `Rejeitada` e as `Anulada` | `dormindo`: sentado no chão, com um "Zzz" |
 | Demais casos, sem desafio ou a semana não conta | `parado`, com uma variação de vez em quando (`alongar`, `olhar`) |
 
 As variações de `parado` tocam em momentos pseudoaleatórios, com semente no identificador do usuário, para que os avatares não se mexam todos juntos.
+
+**Dormindo** (`decisoes/0057-avatar-dormindo.md`): a regra das 48 horas vale com ou sem desafio, e quem entrou no grupo há menos de 48 horas não dorme. A resposta traz `dormindoDesde` (a última atividade válida, ou a entrada no grupo) só para quem dorme. Ao abrir a praça, quem dorme faz `adormecer` e passa a `dormindo`. Um "Zzz" sobe da cabeça e, a cada 14 a 28 s, uma bolha de sonho com um halter que vira um tênis toma o lugar dele (`ambiente.png`, linhas 5 e 6). Cada um vê o próprio avatar dormindo, sem notificação: nada de lembrete (§1.1).
 
 ### 3.3. Encenações
 
@@ -109,6 +112,8 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 - O movimento vertical usa o mesmo `andar` de lado, com um balanço de 1 a 2 px. O deslizamento na vertical é aceito como estilo.
 - No máximo uma encenação de cada vez, e no máximo 3 em sequência por visita. As demais aparecem só como estado final.
 - Tocar na tela pula a encenação. Ela nunca bloqueia a navegação nem o registro de atividade.
+- **Quem acordou:** quem dormia na última visita de quem vê e agora está acordado faz `levantar`, uma vez, antes das outras encenações. Todos juntos contam como uma encenação. A lista de quem estava dormindo fica no cookie comum `wx_dormindo_<grupo>` (o começo de cada identificador), gravado ao fim da encenação ou quando não há ninguém para acordar.
+- **Quem dorme numa encenação:** para andar ou fazer qualquer pose de pé (arremessar, aceitar, recusar, provocar, comemorar), faz `levantar` antes e `adormecer` depois. Atingido por uma carta, faz `acordar` (um susto, sentado) no lugar de `receber`.
 - Com `prefers-reduced-motion`, as poses ficam estáticas e as cartas aparecem no lugar final, sem voo.
 - As animações só rodam com a página visível.
 - A cena sabe o que já foi visto pelas colunas `vista_em` (destinatário) e `resultado_visto_em` (remetente) da Jogada. Por isso, na G3, só "carta recebida", "carta aceita" e "carta recusada" têm encenação; Jogadas concluídas ou expiradas aparecem já no estado final, com o carimbo (`decisoes/0035-cartas-e-jogadas.md`).
@@ -121,20 +126,21 @@ Entre as encenações, a praça tem luz e movimento próprios. Nada disso é enc
 - **Período do dia:** a luz segue a hora do aparelho de quem vê a cena. Amanhecer (5h às 7h): tom coral claro. Dia (7h às 17h): sem filtro. Entardecer (17h às 19h): violeta para coral. Noite (19h às 5h): violeta escuro. Os nomes dos avatares ficam acima da luz. A luz tinge só a praça: o céu transparente fica de fora.
 - **Luminárias:** uma acima da porta do fundo, espelhada, com a cúpula centrada na porta, e duas no chão, ao lado das floreiras da frente. Elas acendem no entardecer e à noite, com um brilho em degraus feito em CSS. As posições acompanham o chão atual da praça; mude-as em `VidaNaPraca.tsx` se a praça mudar.
 - **Eventos de ambiente:** um de cada vez, a cada 12 a 25 s, e o primeiro de 3 a 6 s depois de abrir a cena:
-  - Um pombo pousa num trecho livre do chão (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos.
+  - Um pombo pousa num trecho livre do chão (fora da elipse), bica o chão, anda alguns passos e vai embora. À noite não há pombos. Com alguém dormindo, em 60% das vezes ele pousa ao lado dessa pessoa, virado para ela, e dá um passo curto na direção dela.
   - Dois vizinhos `parado` se viram um para o outro e conversam por 5 s; no meio, um deles faz `olhar`.
   - Uma bola entra pela borda de baixo e rola até um avatar `parado`, que a devolve com `arremessar`.
 - **Entrada:** na primeira visita do dia (cookie `wx_entrada_praca`, com a data local), cada avatar chega ao seu lugar sem atravessar parede. A porta do fundo abre, e quem fica na metade de trás da elipse sai por ela, um de cada vez: dá um passo para fora (`andar`) e corre (`correr`) até o lugar; depois, a porta fecha. Quem fica na metade da frente sobe correndo pela borda de baixo, que é aberta. Em grupos de até 3 pessoas, todos saem pela porta. A porta é um recorte à parte (`ObjetosPraca.tsx`), pronta para outras encenações. As encenações começam depois da entrada. Tocar na praça pula a entrada.
-- **Toque:** tocar num avatar faz ele dar um pulinho enquanto o Foco abre.
+- **Toque:** tocar num avatar faz ele dar um pulinho enquanto o Foco abre. Quem dorme não pula: toma um susto no Foco (§3.5).
 - Durante uma encenação ou a entrada, os eventos param e o pombo levanta voo. Com `prefers-reduced-motion`, não há eventos, entrada nem pulinho; a luz e as luminárias continuam. Com a página escondida, nenhum evento começa.
-- A arte (pombo, bola e luminárias) fica em `webapp/public/ambiente.png`, gerada por `pixel-art/ambiente/build.py`.
+- A arte (pombo, bola, luminárias, o "Zzz" e a bolha de sonho) fica em `webapp/public/ambiente.png`, gerada por `pixel-art/ambiente/build.py`.
 
 ### 3.5. Foco
 
 Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria praça, e é dali que se joga uma carta ou se escolhe o Rival. Tocar no próprio avatar abre o mesmo Foco, com a Vitrine no lugar da Mão. O alvo fica na URL (`?foco=`), então o botão voltar fecha o Foco. A lógica está em `useFoco.ts`; o painel, em `PainelFoco.tsx`; a Mão, em `MaoJogo.tsx`; a Mesa, em `MesaJogadas.tsx`.
 
 - **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares e os Enfeites deles ficam apagados, e os Enfeites do alvo que não estavam no chão caem em volta dele; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até o alto da praça, com a Mão logo abaixo.
-- **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. As Jogadas entre os dois ficam na Mesa.
+- **Quem dorme:** não gira nem pula. Ao abrir o Foco, faz `acordar` e volta a dormir. Atingido pela carta, faz `acordar` no lugar de `receber`. Se quem joga, ou um dos dois do Rival, dorme, faz `levantar` antes do giro ou do passo e `adormecer` no fim.
+- **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. Para quem dorme, mostra "Dormindo há N dias". As Jogadas entre os dois ficam na Mesa.
 - **Mão:** uma só, logo abaixo da praça, dentro e fora do Foco. Ao abrir o Foco, ela sobe até ficar sob o painel e as cartas são distribuídas uma a uma, em leque. As cartas em Jogadas abertas ficam na Mesa e deixam na Mão uma vaga reservada, tracejada. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto. Durante o arrasto, um anel de mira pulsa sob os pés do alvo. Antes do arremesso, a Mão confere os limites de §6.3 que as Jogadas do grupo mostram (Jogada aberta entre os dois, carta para a mesma pessoa em 24 horas, 2 enviadas em aberto): as cartas ficam apagadas e o texto diz o motivo. O servidor confere tudo de novo.
 - **Carta primeiro:** fora do Foco, escolher uma Provocação faz um anel pulsar sob os colegas que podem recebê-la agora. Tocar num deles abre o Foco com a carta já escolhida. Um toque no chão ou de novo na carta desfaz a escolha.
 - **Mesa:** dentro da Mão, abaixo das cartas, uma fileira de mini-cartas com as Jogadas de quem vê no grupo: ícone com um anel do prazo que resta, o outro nome e a situação. As que pedem resposta vêm primeiro e pulsam; as encerradas, no fim e apagadas. O rótulo "Na mesa" fica à esquerda da fileira. No Foco, só as Jogadas com o alvo, com o rótulo "Entre vocês"; sem Jogadas, a Mesa some.
@@ -189,9 +195,9 @@ A arte padrão é o personagem do template CC0 *2D Platformer Character Template
 ### 4.3. Importação
 
 - O editor em `/perfil/avatar` tem três botões: **Exportar folha** (baixa a folha atual, importada ou padrão), **Exportar guia** (uma camada com a grade, o nome de cada linha e a âncora, gerada no navegador) e **Importar folha**. Antes de salvar, ele mostra uma prévia das 8 direções na animação escolhida.
-- O aplicativo só confere o tamanho (432×4656): o desenho é livre.
+- O aplicativo só confere o tamanho (432×6192, ou 432×4656 sem as animações de dormir): o desenho é livre.
 - O navegador envia como veio um PNG RGBA de 8 bits ou com paleta indexada, sem `acTL`. Qualquer outra imagem do tamanho certo é re-codificada num canvas como PNG RGBA.
-- O servidor confere de novo: assinatura PNG, cabeçalho `IHDR` com 432×4656, RGBA de 8 bits ou paleta indexada, sem `acTL` (APNG), nada depois do `IEND` e no máximo 1000 KB. O arquivo é recusado se algo falhar.
+- O servidor confere de novo: assinatura PNG, cabeçalho `IHDR` com 432×6192 ou 432×4656, RGBA de 8 bits ou paleta indexada, sem `acTL` (APNG), nada depois do `IEND` e no máximo 1000 KB. O arquivo é recusado se algo falhar.
 - O arquivo fica no disco, em `/dados/avatares/`, com nome aleatório, no mesmo padrão das evidências (`arquitetura.md` §11). Nada de nomes vindos do cliente.
 - Só membros de um grupo em comum podem baixar a folha. A resposta usa `Content-Type: image/png` e `X-Content-Type-Options: nosniff`.
 - A pessoa pode voltar ao avatar padrão a qualquer momento.

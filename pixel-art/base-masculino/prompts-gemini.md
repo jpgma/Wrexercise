@@ -613,7 +613,7 @@ fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic ton
 
 ### Dormir: `dormindo`, `adormecer`, `acordar` e `levantar`
 
-Quem não registra atividade no grupo há 48 horas aparece sentado no chão, dormindo. São quatro animações novas; as linhas delas na folha e a regra da pose ainda não existem (`avatar-formato.md` §6 e `gamificacao.md` §3.2 mudam quando entrarem).
+Quem não registra atividade no grupo há 48 horas aparece sentado no chão, dormindo (`docs/decisoes/0057-avatar-dormindo.md`). São quatro animações, nas linhas 97 a 128 da folha (`docs/avatar-formato.md` §6).
 
 | Animação | Uso | Células → quadros na folha | Grade | Tempo por quadro |
 |---|---|---|---|---|

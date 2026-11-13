@@ -139,6 +139,105 @@ public sealed class CenaRoutesTests : IAsyncLifetime
         Assert.Equal(PoseAvatar.Parado, PoseDe(cena, "Ana"));
     }
 
+    [Fact]
+    public async Task SemAtividadeHa48Horas_OMembroDormeDesdeQueEntrou()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await _host.ExecuteAsync($"""
+            UPDATE membros_grupo SET joined_at = now() - interval '3 days'
+            WHERE grupo_id = '{grupoId}' AND usuario_id = '{bia.Id}'
+            """);
+
+        var cena = await GetCenaAsync(ana, grupoId);
+
+        // Ana acabou de entrar: ainda não dorme.
+        var membroAna = Assert.Single(cena.Membros, m => m.NomeExibicao == "Ana");
+        Assert.Equal(PoseAvatar.Parado, membroAna.Pose);
+        Assert.Null(membroAna.DormindoDesde);
+        var membroBia = Assert.Single(cena.Membros, m => m.NomeExibicao == "Bia");
+        Assert.Equal(PoseAvatar.Dormindo, membroBia.Pose);
+        Assert.InRange(
+            membroBia.DormindoDesde!.Value,
+            DateTimeOffset.UtcNow.AddDays(-3).AddMinutes(-5),
+            DateTimeOffset.UtcNow.AddDays(-3).AddMinutes(5));
+    }
+
+    [Fact]
+    public async Task AtividadeRecente_MantemOMembroAcordado()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await EntrarHa3DiasAsync(grupoId);
+        await PostAtividadeAsync(ana, grupoId);
+        await DefinirSituacaoAsync(ana, "Verificada");
+
+        var cena = await GetCenaAsync(ana, grupoId);
+
+        Assert.Equal(PoseAvatar.Parado, PoseDe(cena, "Ana"));
+        Assert.Equal(PoseAvatar.Dormindo, PoseDe(cena, "Bia"));
+    }
+
+    [Fact]
+    public async Task AtividadeHa50Horas_ODormirComecaNela()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await EntrarHa3DiasAsync(grupoId);
+        await PostAtividadeAsync(ana, grupoId);
+        await DefinirSituacaoAsync(ana, "Verificada");
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET started_at = now() - interval '50 hours' WHERE usuario_id = '{ana.Id}'
+            """);
+
+        var cena = await GetCenaAsync(ana, grupoId);
+
+        var membro = Assert.Single(cena.Membros);
+        Assert.Equal(PoseAvatar.Dormindo, membro.Pose);
+        Assert.InRange(
+            membro.DormindoDesde!.Value,
+            DateTimeOffset.UtcNow.AddHours(-50).AddMinutes(-5),
+            DateTimeOffset.UtcNow.AddHours(-50).AddMinutes(5));
+    }
+
+    [Theory]
+    [InlineData("Rejeitada")]
+    [InlineData("Anulada")]
+    public async Task AtividadeRejeitadaOuAnulada_NaoAcorda(string situacao)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await EntrarHa3DiasAsync(grupoId);
+        await PostAtividadeAsync(ana, grupoId);
+        await DefinirSituacaoAsync(ana, situacao);
+
+        var cena = await GetCenaAsync(ana, grupoId);
+
+        Assert.Equal(PoseAvatar.Dormindo, PoseDe(cena, "Ana"));
+    }
+
+    [Fact]
+    public async Task AtividadeEmOutroGrupo_NaoAcorda()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoA = await _host.CreateGrupoAsync(ana);
+        var grupoB = await _host.CreateGrupoAsync(ana);
+        await EntrarHa3DiasAsync(grupoA);
+        await PostAtividadeAsync(ana, grupoB);
+        await DefinirSituacaoAsync(ana, "Verificada");
+
+        var cena = await GetCenaAsync(ana, grupoA);
+
+        Assert.Equal(PoseAvatar.Dormindo, PoseDe(cena, "Ana"));
+    }
+
+    private async Task EntrarHa3DiasAsync(Guid grupoId) =>
+        await _host.ExecuteAsync($"""
+            UPDATE membros_grupo SET joined_at = now() - interval '3 days' WHERE grupo_id = '{grupoId}'
+            """);
+
     private static string PoseDe(CenaResponse cena, string nome) =>
         Assert.Single(cena.Membros, m => m.NomeExibicao == nome).Pose;
 

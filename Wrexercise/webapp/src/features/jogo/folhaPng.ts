@@ -4,6 +4,8 @@ import { formatoFolha } from "@/components/folhaAvatar";
 export const folhaImportada = {
   largura: formatoFolha.colunas * formatoFolha.celula,
   altura: formatoFolha.linhas * formatoFolha.celula,
+  /** A folha sem as animações de dormir, que continua aceita. */
+  alturaSemDormir: formatoFolha.linhasSemDormir * formatoFolha.celula,
   /** Abaixo de 1 MiB, para caber no limite do corpo da API com o envelope multipart. */
   maxBytes: 1000 * 1024,
 } as const;
@@ -50,16 +52,16 @@ function isAceitaComoVeio(bytes: Uint8Array): boolean {
  * é gravado de novo num canvas, como PNG RGBA.
  */
 export async function prepararFolha(arquivo: File): Promise<Blob> {
-  const { largura, altura, maxBytes } = folhaImportada;
+  const { largura, altura, alturaSemDormir, maxBytes } = folhaImportada;
   const imagem = await createImageBitmap(arquivo).catch(() => {
     throw new Error("Não foi possível abrir essa imagem. Use um arquivo PNG.");
   });
   // Lidos antes do close(): depois dele, o bitmap informa 0×0.
   const { width, height } = imagem;
-  if (width !== largura || height !== altura) {
+  if (width !== largura || (height !== altura && height !== alturaSemDormir)) {
     imagem.close();
     throw new Error(
-      `A folha precisa ter exatamente ${largura}×${altura} px. Esta tem ${width}×${height} px.`,
+      `A folha precisa ter exatamente ${largura}×${altura} px (ou ${largura}×${alturaSemDormir}, sem as animações de dormir). Esta tem ${width}×${height} px.`,
     );
   }
 
@@ -71,7 +73,7 @@ export async function prepararFolha(arquivo: File): Promise<Blob> {
 
   const canvas = document.createElement("canvas");
   canvas.width = largura;
-  canvas.height = altura;
+  canvas.height = height;
   canvas.getContext("2d")?.drawImage(imagem, 0, 0);
   imagem.close();
 

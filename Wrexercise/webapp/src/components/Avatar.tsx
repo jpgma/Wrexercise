@@ -43,7 +43,8 @@ export function Avatar({ nome, id, size = 40, ring = false }: AvatarProps) {
             height: size,
             "--avatar-hue": getHue(id),
             backgroundImage: `url(${folha})`,
-            backgroundSize: `${formato.colunas * formato.celula * fator}px ${formato.linhas * formato.celula * fator}px`,
+            // Só a largura: a altura acompanha, e serve às folhas de 97 e de 129 linhas.
+            backgroundSize: `${formato.colunas * formato.celula * fator}px auto`,
             backgroundPosition: `${-x * fator}px ${-y * fator}px`,
             backgroundRepeat: "no-repeat",
             imageRendering: "pixelated",

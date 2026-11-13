@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { useSessao } from "@/features/autenticacao";
 import { getJson } from "@/services/api";
 
@@ -8,7 +8,9 @@ export const formatoFolha = {
   /** Lado da célula, em px. */
   celula: 48,
   colunas: 9,
-  linhas: 97,
+  linhas: 129,
+  /** A folha anterior, sem as 4 animações de dormir, continua aceita: no lugar delas, `parado`. */
+  linhasSemDormir: 97,
   /** Ponto entre os pés, igual em todos os quadros. */
   ancora: { x: 24, y: 44 },
   /** Área do corpo dentro da célula: é a área de toque na cena. */
@@ -16,6 +18,47 @@ export const formatoFolha = {
   /** Recorte quadrado da cabeça e dos ombros na `rotacao` `sul` (linha 0, coluna 0). */
   retrato: { x: 12, y: 10, lado: 24 },
 } as const;
+
+/** Quantas linhas tem cada folha já carregada: as importadas podem ter 97 ou 129. */
+const linhasPorFolha = new Map<string, number>();
+const medindo = new Set<string>();
+const ouvintes = new Set<() => void>();
+
+function medir(folha: string) {
+  if (linhasPorFolha.has(folha) || medindo.has(folha)) return;
+  medindo.add(folha);
+  // A mesma imagem que o CSS já baixa: vem do cache do navegador.
+  const imagem = new Image();
+  imagem.onload = () => {
+    linhasPorFolha.set(
+      folha,
+      Math.round(imagem.naturalHeight / formatoFolha.celula),
+    );
+    medindo.delete(folha);
+    ouvintes.forEach((avisar) => avisar());
+  };
+  imagem.onerror = () => medindo.delete(folha);
+  imagem.src = folha;
+}
+
+function assinar(avisar: () => void) {
+  ouvintes.add(avisar);
+  return () => {
+    ouvintes.delete(avisar);
+  };
+}
+
+/**
+ * Quantas linhas a folha tem. Até a imagem carregar, vale o formato atual: ela ainda não aparece, e
+ * a escala da folha usa só a largura, igual nos dois formatos.
+ */
+export function useLinhasDaFolha(folha: string): number {
+  useEffect(() => medir(folha), [folha]);
+  return useSyncExternalStore(
+    assinar,
+    () => linhasPorFolha.get(folha) ?? formatoFolha.linhas,
+  );
+}
 
 /** FNV-1a de 32 bits: estável entre execuções e sem dependências. */
 export function hashFnv1a(texto: string): number {

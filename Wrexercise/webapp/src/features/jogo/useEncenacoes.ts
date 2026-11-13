@@ -7,6 +7,7 @@ import {
   type NomeAnimacao,
   quadroImpacto,
   quadroSoltura,
+  quadroSusto,
 } from "./animacoes";
 import type { Jogada } from "./useCartas";
 
@@ -60,9 +61,13 @@ const PassoRivalMs = 500;
 type Etapa = { em: number; executar: () => void };
 
 /**
- * Toca, uma de cada vez, as encenações das Jogadas e do Rival que quem vê a cena ainda não viu:
- * a chegada de uma carta (para o destinatário) e a resposta (para o remetente). Depois vem a do
- * Enfeite novo de quem vê: o avatar comemora e o Enfeite brilha. No fim, ou ao pular, marca tudo como visto.
+ * Toca, uma de cada vez, as encenações que quem vê a cena ainda não viu: quem acordou desde a última
+ * visita se levanta; depois, as Jogadas (a chegada de uma carta, para o destinatário, e a resposta,
+ * para o remetente) e o Rival. Por fim vem a do Enfeite novo de quem vê: o avatar comemora e o
+ * Enfeite brilha. No fim, ou ao pular, marca tudo como visto.
+ *
+ * Quem dorme se levanta (`levantar`) antes de andar ou de qualquer pose de pé e volta a dormir
+ * (`adormecer`) depois. Atingido por uma carta, toma um susto (`acordar`) no lugar de `receber`.
  */
 export function useEncenacoes({
   jogadas,
@@ -75,6 +80,9 @@ export function useEncenacoes({
   onEnfeitesVistos,
   rivais,
   onRivaisVistos,
+  dormindo,
+  despertos,
+  onDespertosVistos,
 }: {
   jogadas: Jogada[] | undefined;
   posicoes: Map<string, Ponto>;
@@ -87,6 +95,11 @@ export function useEncenacoes({
   onEnfeitesVistos: () => void;
   rivais: RivalEmCena[];
   onRivaisVistos: (ids: string[]) => void;
+  /** Quem está com a pose `dormindo`. */
+  dormindo: Set<string>;
+  /** Quem quem vê viu dormindo e agora está acordado. */
+  despertos: string[];
+  onDespertosVistos: () => void;
 }) {
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const [carta, setCarta] = useState<CartaEmCena | null>(null);
@@ -99,12 +112,15 @@ export function useEncenacoes({
   const avisarEnfeites = useRef(onEnfeitesVistos);
   const pendentesRivais = useRef<string[]>([]);
   const avisarRivais = useRef(onRivaisVistos);
+  const pendenteDespertos = useRef(false);
+  const avisarDespertos = useRef(onDespertosVistos);
 
   useEffect(() => {
     avisar.current = onVistas;
     avisarEnfeites.current = onEnfeitesVistos;
     avisarRivais.current = onRivaisVistos;
-  }, [onVistas, onEnfeitesVistos, onRivaisVistos]);
+    avisarDespertos.current = onDespertosVistos;
+  }, [onVistas, onEnfeitesVistos, onRivaisVistos, onDespertosVistos]);
 
   const encerrar = useCallback(() => {
     temporizadores.current.forEach((t) => window.clearTimeout(t));
@@ -125,6 +141,10 @@ export function useEncenacoes({
       avisarRivais.current(pendentesRivais.current);
       pendentesRivais.current = [];
     }
+    if (pendenteDespertos.current) {
+      pendenteDespertos.current = false;
+      avisarDespertos.current();
+    }
   }, []);
 
   const chave = `${(jogadas ?? [])
@@ -132,14 +152,15 @@ export function useEncenacoes({
     .map((j) => j.id)
     .join(",")}|${enfeitesNovos.join(",")}|${rivais
     .map((r) => `${r.id}:${r.efeito}`)
-    .join(",")}`;
+    .join(",")}|${despertos.join(",")}`;
 
   useEffect(() => {
-    if (chave === "||") return;
+    if (chave === "|||") return;
     const fila = (jogadas ?? []).filter((j) => j.nova);
     pendentes.current = fila.map((j) => j.id);
     pendenteEnfeites.current = enfeitesNovos.length > 0;
     pendentesRivais.current = rivais.map((r) => r.id);
+    pendenteDespertos.current = despertos.length > 0;
 
     // Sem movimento, ou com a página escondida, tudo aparece direto no estado final.
     const avisarJa = () => {
@@ -150,6 +171,8 @@ export function useEncenacoes({
       if (pendentesRivais.current.length > 0)
         avisarRivais.current(pendentesRivais.current);
       pendentesRivais.current = [];
+      if (pendenteDespertos.current) avisarDespertos.current();
+      pendenteDespertos.current = false;
     };
     if (reduzido || document.visibilityState !== "visible") {
       avisarJa();
@@ -166,9 +189,59 @@ export function useEncenacoes({
         return proxima;
       });
 
+    /** Quem dorme fica de pé antes da cena: todos juntos, no lugar. */
+    const levantar = (lista: Etapa[], inicio: number, ids: string[]) => {
+      const quem = ids.filter((id) => dormindo.has(id));
+      if (quem.length === 0) return inicio;
+      lista.push({
+        em: inicio,
+        executar: () =>
+          quem.forEach((id) =>
+            atuar(id, { animacao: "levantar", dx: 0, dy: 0, passoMs: 0 }),
+          ),
+      });
+      return inicio + getDuracao("levantar");
+    };
+    /** E volta a dormir no fim, já no lugar. */
+    const deitar = (lista: Etapa[], inicio: number, ids: string[]) => {
+      const quem = ids.filter((id) => dormindo.has(id));
+      if (quem.length === 0) return inicio;
+      lista.push({
+        em: inicio,
+        executar: () =>
+          quem.forEach((id) =>
+            atuar(id, { animacao: "adormecer", dx: 0, dy: 0, passoMs: 0 }),
+          ),
+      });
+      const fim = inicio + getDuracao("adormecer");
+      lista.push({
+        em: fim,
+        executar: () => quem.forEach((id) => atuar(id, null)),
+      });
+      return fim;
+    };
+
     const meuPonto = posicoes.get(usuarioId);
     const comEnfeite = enfeitesNovos.length > 0 && meuPonto !== undefined;
     let vagas = comEnfeite ? MaxPorVisita - 1 : MaxPorVisita;
+    // Quem acordou se levanta, todos juntos: conta como uma encenação.
+    const acordados = despertos.filter((id) => posicoes.has(id));
+    if (acordados.length > 0 && vagas > 0) {
+      etapas.push({
+        em: tempo,
+        executar: () =>
+          acordados.forEach((id) =>
+            atuar(id, { animacao: "levantar", dx: 0, dy: 0, passoMs: 0 }),
+          ),
+      });
+      tempo += getDuracao("levantar");
+      etapas.push({
+        em: tempo,
+        executar: () => acordados.forEach((id) => atuar(id, null)),
+      });
+      tempo += 400;
+      vagas--;
+    }
     for (const jogada of [...fila]
       .sort((a, b) => a.enviadaEm.localeCompare(b.enviadaEm))
       .slice(0, vagas)) {
@@ -199,7 +272,7 @@ export function useEncenacoes({
     }
 
     if (comEnfeite) {
-      const inicio = tempo;
+      const inicio = levantar(etapas, tempo, [usuarioId]);
       etapas.push({
         em: inicio,
         executar: () => {
@@ -220,6 +293,7 @@ export function useEncenacoes({
           atuar(usuarioId, null);
         },
       });
+      tempo = deitar(etapas, tempo, [usuarioId]);
     }
 
     function encenarChegada(
@@ -231,7 +305,7 @@ export function useEncenacoes({
     ): number {
       const id = jogada.remetenteId;
       const ida = { dx: centro.x - de.x, dy: centro.y - de.y };
-      let t = inicio;
+      let t = levantar(lista, inicio, [id]);
       lista.push({
         em: t,
         executar: () =>
@@ -259,13 +333,18 @@ export function useEncenacoes({
         executar: () => setCarta({ jogada, efeito: "voo", de: centro, para }),
       });
       // O `receber` começa antes do fim do voo: a carta atinge o peito no quadro do impacto,
-      // com quem recebe virado para quem arremessou.
-      const impactoMs = quadroImpacto * animacoes.receber.ms;
+      // com quem recebe virado para quem arremessou. Quem dorme leva um susto, sentado.
+      const recebe: NomeAnimacao = dormindo.has(jogada.destinatarioId)
+        ? "acordar"
+        : "receber";
+      const impactoMs =
+        (recebe === "acordar" ? quadroSusto : quadroImpacto) *
+        animacoes[recebe].ms;
       lista.push({
         em: t + VooMs - impactoMs,
         executar: () =>
           atuar(jogada.destinatarioId, {
-            animacao: "receber",
+            animacao: recebe,
             dx: 0,
             dy: 0,
             direcao: getDirecao(para, centro),
@@ -274,7 +353,7 @@ export function useEncenacoes({
       });
       t += VooMs;
       lista.push({ em: t, executar: () => setCarta(null) });
-      t += getDuracao("receber") - impactoMs;
+      t += getDuracao(recebe) - impactoMs;
       lista.push({
         em: t,
         executar: () => {
@@ -290,7 +369,7 @@ export function useEncenacoes({
       });
       t += PassoMs;
       lista.push({ em: t, executar: () => atuar(id, null) });
-      return t;
+      return deitar(lista, t, [id]);
     }
 
     function encenarResposta(
@@ -301,7 +380,7 @@ export function useEncenacoes({
     ): number {
       const aceitou = jogada.situacao !== "Recusada";
       const animacao: NomeAnimacao = aceitou ? "aceitar" : "recusar";
-      let t = inicio;
+      let t = levantar(lista, inicio, [jogada.destinatarioId]);
       lista.push({
         em: t,
         executar: () => {
@@ -327,7 +406,7 @@ export function useEncenacoes({
           setCarta(null);
         },
       });
-      return t;
+      return deitar(lista, t, [jogada.destinatarioId]);
     }
 
     /** Os dois avançam um passo, se encaram e fazem `provocar`; depois voltam ao lugar. */
@@ -346,7 +425,8 @@ export function useEncenacoes({
         dx: Math.round((centro.x - de.x) * PassoRival),
         dy: Math.round((centro.y - de.y) * PassoRival),
       });
-      let t = inicio;
+      const ids = [rival.escolhedorId, rival.rivalId];
+      let t = levantar(lista, inicio, ids);
       lista.push({
         em: t,
         executar: () =>
@@ -391,7 +471,7 @@ export function useEncenacoes({
         em: t,
         executar: () => pares.forEach(([id]) => atuar(id, null)),
       });
-      return t;
+      return deitar(lista, t, ids);
     }
 
     function encenarVitoria(
@@ -399,7 +479,7 @@ export function useEncenacoes({
       inicio: number,
       vencedorId: string,
     ): number {
-      let t = inicio;
+      let t = levantar(lista, inicio, [vencedorId]);
       lista.push({
         em: t,
         executar: () =>
@@ -412,7 +492,7 @@ export function useEncenacoes({
       });
       t += Math.max(getDuracao("comemorando"), 1200);
       lista.push({ em: t, executar: () => atuar(vencedorId, null) });
-      return t;
+      return deitar(lista, t, [vencedorId]);
     }
 
     if (etapas.length === 0) {
@@ -434,6 +514,7 @@ export function useEncenacoes({
       pendentes.current = [];
       pendenteEnfeites.current = false;
       pendentesRivais.current = [];
+      pendenteDespertos.current = false;
       setAtuacoes(new Map());
       setCarta(null);
       setAtiva(false);

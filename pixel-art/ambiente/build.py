@@ -1,4 +1,4 @@
-"""Vida na praça do modo Jogo (docs/gamificacao.md §3.4): pombo, bola e luminárias.
+"""Vida na praça do modo Jogo (docs/gamificacao.md §3.4): pombo, bola, luminárias e o sono.
 
 A fonte é `fonte/folha.png`, gerada no Gemini com `prompts-gemini.md`: 20 sprites numa grade de
 4×5 sobre magenta. O Gemini desenhou cada pixel com cerca de 6,3 px, o dobro do tamanho pedido;
@@ -7,6 +7,9 @@ ajusta as cores à paleta `wrexercise` e põe cada quadro numa célula de 16×16
 
 A posição na célula não vem da fonte, onde o Gemini moveu o pombo de um quadro para outro: cada
 linha tem uma âncora fixa, para a animação não tremer.
+
+As linhas 5 (o "Zzz" de quem dorme) e 6 (a bolha de sonho) não vêm da fonte: são desenhadas aqui,
+como a bola.
 
 Uso: python build.py   (gera saida/ambiente.png e preview/ambiente-4x.png;
 copie saida/ambiente.png para Wrexercise/webapp/public/ambiente.png)
@@ -23,7 +26,8 @@ sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/script
 from pixelstudio import Sprite, hex2rgba, nearest  # noqa: E402
 
 FONTE = AQUI / "fonte" / "folha.png"
-COLUNAS, LINHAS = 4, 5
+COLUNAS, LINHAS = 4, 5  # grade da fonte
+DESENHADAS = 2  # linhas 5 e 6, desenhadas aqui
 LADO = 16  # célula da saída
 BLOCO = 12.6  # px da fonte por pixel da saída
 
@@ -150,9 +154,77 @@ def bola(quadro):
     return im
 
 
-saida = Image.new("RGBA", (LADO * COLUNAS, LADO * LINHAS), (0, 0, 0, 0))
-for lin in range(LINHAS):
+CONTORNO = "#14161f"
+GIZ = "#f5f1e8"
+
+# Nas letras pequenas, a diagonal tem 2 px: com 1 px, os degraus ficam um sobre o outro e a letra vira um I.
+Z_PEQUENO = ["####", "..##", "##..", "####"]
+Z_MEDIO = ["#####", "...##", ".##..", "##...", "#####"]
+Z_GRANDE = ["######", "....##", "..##..", "##....", "######"]
+# Uma letra sobe em diagonal e cresce, um passo por quadro. A cena mostra duas cópias, meio ciclo
+# defasadas: duas letras iguais na mesma linha deixariam os quadros 0 e 2 idênticos.
+ETAPAS_Z = [(Z_PEQUENO, 1, 11), (Z_MEDIO, 3, 7), (Z_GRANDE, 6, 3), (Z_GRANDE, 9, 0)]
+
+
+def letra(im, forma, x0, y0):
+    """Uma letra em giz com sombra de 1 px embaixo e à direita: o contorno inteiro fechava a diagonal."""
+    pontos = {(x0 + x, y0 + y) for y, linha in enumerate(forma) for x, c in enumerate(linha) if c == "#"}
+    for x, y in pontos:
+        for v in ((x + 1, y), (x, y + 1), (x + 1, y + 1)):
+            if v not in pontos and v[0] < LADO and v[1] < LADO:
+                im.putpixel(v, hex2rgba(CONTORNO))
+    for x, y in pontos:
+        im.putpixel((x, y), hex2rgba(GIZ))
+
+
+def zzz(quadro):
+    im = Image.new("RGBA", (LADO, LADO), (0, 0, 0, 0))
+    letra(im, *ETAPAS_Z[quadro])
+    return im
+
+
+HALTER = ["##...##", "#######", "##...##"]
+TENIS = ["##....", "####..", "######"]
+
+
+def sonho(quadro):
+    """A bolha de sonho: duas bolinhas sobem, a bolha abre com um halter e o sonho vira um tênis."""
+    im = Image.new("RGBA", (LADO, LADO), (0, 0, 0, 0))
+    # Bolinhas de giz com contorno: uma de 2 px e, depois, outra de 3 px, subindo até a bolha.
+    for x0, y0, lado in [(1, 12, 2), (3, 8, 3)][: 1 if quadro == 0 else 2]:
+        for y in range(y0 - 1, y0 + lado + 1):
+            for x in range(x0 - 1, x0 + lado + 1):
+                dentro = x0 <= x < x0 + lado and y0 <= y < y0 + lado
+                canto = x in (x0 - 1, x0 + lado) and y in (y0 - 1, y0 + lado)
+                if not canto:
+                    im.putpixel((x, y), hex2rgba(GIZ if dentro else CONTORNO))
+    if quadro < 2:
+        return im
+    # A bolha: 12×9 em (4, 0), com os cantos recortados.
+    x0, y0, w, h = 4, 0, 12, 9
+    for y in range(y0, y0 + h):
+        for x in range(x0, x0 + w):
+            na_borda = x in (x0, x0 + w - 1) or y in (y0, y0 + h - 1)
+            canto = (x in (x0, x0 + w - 1)) and (y in (y0, y0 + h - 1))
+            if not canto:
+                im.putpixel((x, y), hex2rgba(CONTORNO if na_borda else GIZ))
+    forma, cor, (fx, fy) = (HALTER, "#7957e8", (7, 3)) if quadro == 2 else (TENIS, "#ff684a", (7, 3))
+    for y, linha in enumerate(forma):
+        for x, c in enumerate(linha):
+            if c == "#":
+                im.putpixel((fx + x, fy + y), hex2rgba(cor))
+    return im
+
+
+saida = Image.new("RGBA", (LADO * COLUNAS, LADO * (LINHAS + DESENHADAS)), (0, 0, 0, 0))
+for lin in range(LINHAS + DESENHADAS):
     for col in range(COLUNAS):
+        if lin == LINHAS:
+            saida.alpha_composite(zzz(col), (col * LADO, lin * LADO))
+            continue
+        if lin == LINHAS + 1:
+            saida.alpha_composite(sonho(col), (col * LADO, lin * LADO))
+            continue
         im = bola(col) if lin == 3 else reduzir(caixa_da_celula(col, lin))
         x, y = ancorar(lin, im)
         if x < 0 or y < 0 or x + im.width > LADO or y + im.height > LADO:

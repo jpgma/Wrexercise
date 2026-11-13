@@ -1,4 +1,4 @@
-import { CalendarCheck, Dumbbell, Flame, Swords, X } from "lucide-react";
+import { CalendarCheck, Dumbbell, Flame, Moon, Swords, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { useVitrine } from "@/components/folhaAvatar";
@@ -14,6 +14,15 @@ const textoRival = {
   escolheu: "Escolheu você como Rival",
 } as const;
 
+/** "Dormindo há 3 dias": quantos dias inteiros desde o início do sono, que começa em 2. */
+function getTextoSono(desde: string): string {
+  const dias = Math.max(
+    2,
+    Math.floor((Date.now() - new Date(desde).getTime()) / 86_400_000),
+  );
+  return `Dormindo há ${dias} dias`;
+}
+
 function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
   return (
     <li className="flex items-center gap-1.5 text-xs text-foreground">
@@ -27,7 +36,7 @@ function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
 
 /**
  * O painel do Foco, sobre a parte de baixo da praça: nome, Vitrine, como a pessoa vai no desafio e
- * o Rival. As cartas entre as duas ficam na Mesa, logo abaixo. Some durante o arremesso e a escolha
+ * o Rival, ou há quantos dias dorme. As cartas entre as duas ficam na Mesa, logo abaixo. Some durante o arremesso e a escolha
  * do Rival. No próprio Foco não há Rival nem cartas: a Vitrine se edita logo abaixo (VitrineFoco).
  */
 export function PainelFoco({
@@ -78,11 +87,21 @@ export function PainelFoco({
           >
             {membro.nomeExibicao}
           </h2>
-          {rival && (
-            <p className="chip chip-game mt-1.5">
-              <Swords aria-hidden="true" className="size-3" />
-              {rival}
-            </p>
+          {(rival || membro.dormindoDesde) && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {rival && (
+                <p className="chip chip-game">
+                  <Swords aria-hidden="true" className="size-3" />
+                  {rival}
+                </p>
+              )}
+              {membro.dormindoDesde && (
+                <p className="chip">
+                  <Moon aria-hidden="true" className="size-3" />
+                  {getTextoSono(membro.dormindoDesde)}
+                </p>
+              )}
+            </div>
           )}
         </div>
         {vitrine.length > 0 && (

@@ -4,11 +4,16 @@ import type { BolaEmCena, FasePombo, PomboEmCena } from "./useVidaNaPraca";
 
 /**
  * Sprites de `ambiente.png` (pixel-art/ambiente/): células de 16 px, mostradas em 2×, 4 colunas e
- * 5 linhas. Linhas 0 a 2: pombo bicando, andando e voando; 3: bola; 4: luminárias.
+ * 7 linhas. Linhas 0 a 2: pombo bicando, andando e voando; 3: bola; 4: luminárias; 5: o "Zzz" de
+ * quem dorme; 6: a bolha de sonho.
  */
 const escala = 2;
 const celula = 16 * escala;
-const folha = { colunas: 4, linhas: 5 };
+const folha = { colunas: 4, linhas: 7 };
+/** Cada letra do "Zzz" sobe em 4 quadros. */
+const ZzzMs = 450;
+/** A bolha de sonho abre em 4 quadros e some no fim deles. */
+export const SonhoMs = 700;
 
 const linhaDoPombo: Record<FasePombo, { linha: number; ms: number }> = {
   bicando: { linha: 0, ms: 260 },
@@ -21,6 +26,8 @@ function Quadro({
   coluna = 0,
   ms,
   virado = 1,
+  atraso = 0,
+  uma = false,
   className = "",
 }: {
   linha: number;
@@ -28,12 +35,16 @@ function Quadro({
   /** Com `ms`, anima os 4 quadros da linha; sem, mostra só a coluna. */
   ms?: number;
   virado?: 1 | -1;
+  /** Começa a animação já adiantada, em ms. */
+  atraso?: number;
+  /** Toca os 4 quadros uma vez só. */
+  uma?: boolean;
   className?: string;
 }) {
   return (
     <span
       aria-hidden="true"
-      className={`sprite-avatar ${ms ? "sprite-repete" : ""} ${className}`}
+      className={`sprite-avatar ${ms ? (uma ? "sprite-uma-vez" : "sprite-repete") : ""} ${className}`}
       style={
         {
           width: celula,
@@ -43,6 +54,7 @@ function Quadro({
           backgroundPositionX: ms ? undefined : `${-coluna * celula}px`,
           backgroundPositionY: `${-linha * celula}px`,
           transform: virado === -1 ? "scaleX(-1)" : undefined,
+          animationDelay: atraso ? `${-atraso}ms` : undefined,
           "--quadros": 4,
           "--ms": `${ms ?? 0}ms`,
           "--celula": `${celula}px`,
@@ -100,6 +112,52 @@ export function Bola({ bola }: { bola: BolaEmCena }) {
         ms={bola.rolando ? 90 : undefined}
         virado={bola.virado}
       />
+    </span>
+  );
+}
+
+/**
+ * O "Zzz" de quem dorme: duas letras sobem da cabeça, meio ciclo defasadas. Com movimento reduzido,
+ * fica uma letra parada. `x`/`y` é o canto de baixo à esquerda, ao lado da cabeça.
+ */
+export function ZzzSono({
+  x,
+  y,
+  reduzido,
+}: {
+  x: number;
+  y: number;
+  reduzido: boolean;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute"
+      style={{ left: x, top: y - celula }}
+    >
+      {reduzido ? (
+        <Quadro linha={5} coluna={2} />
+      ) : (
+        <>
+          <Quadro linha={5} ms={ZzzMs} />
+          <span className="absolute" style={{ left: -6, top: 4 }}>
+            <Quadro linha={5} ms={ZzzMs} atraso={2 * ZzzMs} />
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
+/** A bolha de sonho, no lugar do "Zzz": abre com um halter, que vira um tênis, e some. */
+export function BolhaSonho({ x, y }: { x: number; y: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute"
+      style={{ left: x, top: y - celula }}
+    >
+      <Quadro linha={6} ms={SonhoMs} uma />
     </span>
   );
 }

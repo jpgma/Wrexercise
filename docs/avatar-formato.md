@@ -70,7 +70,7 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 | Tipo | PNG RGBA de 8 bits ou com paleta indexada (a folha padrão é indexada, com o índice 0 transparente) |
 | Tamanho máximo | 1000 KB |
 | Animação | proibida dentro do PNG (sem `acTL`) |
-| Dimensões | 432 × 4656 px: 9 colunas × 97 linhas de células de 48 × 48 px |
+| Dimensões | 432 × 6192 px: 9 colunas × 129 linhas de células de 48 × 48 px. A versão de 432 × 4656 px (97 linhas, sem as 4 animações de dormir) continua aceita |
 | Vista | de cima, em 8 direções, sem espelho |
 | Âncora | o ponto entre os pés fica em (24, 44), em todos os quadros |
 
@@ -92,9 +92,14 @@ As animações da arte padrão seguem a estrutura do *2D Platformer Character Te
 | 73 | `aceitar` | 4 | 120 ms | `aceitar` uma carta; uma vez |
 | 81 | `recusar` | 3 | 150 ms | `recusar` uma carta; uma vez |
 | 89 | `provocar` | 4 | 120 ms | `provocar`; uma vez |
+| 97 | `dormindo` | 4 | 350 ms | `dormindo`: sentado no chão, cabeça caída, respirando; repete |
+| 105 | `adormecer` | 8 | 140 ms | boceja e senta; termina no 1º quadro de `dormindo`; uma vez |
+| 113 | `acordar` | 5 | 110 ms | susto, sentado: começa no 1º quadro de `dormindo`, pula no 2º e olha em volta; uma vez |
+| 121 | `levantar` | 8 | 120 ms | acorda, fica de pé e se espreguiça: começa no 1º quadro de `dormindo` e termina na pose parada; uma vez |
 
 - As linhas 0 a 48 são as da primeira versão, de 49 linhas (432 × 2352), que não é mais aceita (migração `023`). Para adaptar uma folha dessa versão, copie as linhas de `correr` para `treinando` e as de `parado` para as outras animações novas, como faz `pixel-art/jpgma/build.py`.
 - As colunas além da quantidade de quadros de cada linha ficam sem uso.
+- As linhas 97 a 128 são as de dormir (`decisoes/0057-avatar-dormindo.md`). Numa folha de 97 linhas, quem dorme aparece num quadro fixo de `parado`, e as outras animações de dormir também viram esse quadro.
 
 - **Importação:** só o tamanho é conferido; o desenho é livre, e linhas vazias ficam transparentes na cena. Em `/perfil/avatar`, "Exportar folha" baixa a folha atual, e "Exportar guia" baixa uma camada do mesmo tamanho com a grade, o nome de cada linha, as células sem uso sombreadas e a âncora. O navegador envia como veio um PNG RGBA de 8 bits ou indexado; qualquer outra imagem do tamanho certo é re-codificada como PNG RGBA. O servidor confere tudo de novo.
 - **Direção na cena:** ao andar, o avatar olha para onde vai. Ao arremessar, provocar ou receber, olha para o alvo. Parado, olha para o centro da elipse, na direção mais próxima (quem fica embaixo aparece de costas).

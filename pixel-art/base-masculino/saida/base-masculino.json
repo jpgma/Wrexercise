@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 4656,
+  "altura": 6192,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -81,7 +81,27 @@
       "linha": 89,
       "quadros": 4,
       "ms": 120
+    },
+    "dormindo": {
+      "linha": 97,
+      "quadros": 4,
+      "ms": 350
+    },
+    "adormecer": {
+      "linha": 105,
+      "quadros": 8,
+      "ms": 140
+    },
+    "acordar": {
+      "linha": 113,
+      "quadros": 5,
+      "ms": 110
+    },
+    "levantar": {
+      "linha": 121,
+      "quadros": 8,
+      "ms": 120
     }
   },
-  "sha256": "6b6d1ac7fb06705c4f22fcb1f93a34f508ad2f8035dc24bbc9016726bb471b4c"
+  "sha256": "6c73699ba7d991965960a24b7a0ba706c5ec448ba6cd68808aa5afe7bbc7f1be"
 }

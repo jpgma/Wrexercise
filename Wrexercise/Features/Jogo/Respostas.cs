@@ -1,7 +1,13 @@
 namespace Wrexercise.Features.Jogo;
 
 /// <param name="RecebeCartas">Se a pessoa está no modo Jogo: só assim pode receber cartas.</param>
-internal sealed record MembroCenaResponse(Guid UsuarioId, string NomeExibicao, string Pose, bool RecebeCartas);
+/// <param name="DormindoDesde">Só com a pose <c>dormindo</c>: o início do sono, mostrado no Foco.</param>
+internal sealed record MembroCenaResponse(
+    Guid UsuarioId,
+    string NomeExibicao,
+    string Pose,
+    bool RecebeCartas,
+    DateTimeOffset? DormindoDesde);
 
 internal sealed record CenaResponse(Guid GrupoId, IReadOnlyList<MembroCenaResponse> Membros);
 

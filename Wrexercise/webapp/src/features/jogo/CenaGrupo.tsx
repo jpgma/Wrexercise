@@ -14,7 +14,12 @@ import {
   useFolhaAvatar,
   useVitrines,
 } from "@/components/folhaAvatar";
-import { getDirecao, variacoesDeParado, type NomeAnimacao } from "./animacoes";
+import {
+  getDirecao,
+  getDuracao,
+  variacoesDeParado,
+  type NomeAnimacao,
+} from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
 import { EnfeiteNoChao } from "./EnfeiteNoChao";
 import { getChaoDosEnfeites, posicionarEnfeites } from "./enfeitesNaPraca";
@@ -38,13 +43,21 @@ import {
   type RivalEmCena,
   useEncenacoes,
 } from "./useEncenacoes";
+import { useDespertos } from "./useDespertos";
 import { useEntrada } from "./useEntrada";
 import { type EfeitoFoco, useFoco } from "./useFoco";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 import { useVidaNaPraca } from "./useVidaNaPraca";
 import { VitrineFoco } from "./VitrineFoco";
 import { isLuzAcesa, usePeriodoDoDia } from "./periodoDoDia";
-import { Bola, LuzDaPraca, Pombo } from "./VidaNaPraca";
+import {
+  Bola,
+  BolhaSonho,
+  LuzDaPraca,
+  Pombo,
+  SonhoMs,
+  ZzzSono,
+} from "./VidaNaPraca";
 import {
   getRelacaoRival,
   getVencedorId,
@@ -83,6 +96,11 @@ const centro: Posicao = { x: centroX, y: elipse.centroY };
 const medalhas: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 /** Respiro entre a praça e as bordas da tela ao rolar para o Foco. */
 const Folga = 8;
+/** Ao lado da cabeça de quem dorme sentado, em px da folha: onde o "Zzz" começa a subir. */
+const CabecaSentado = { x: 27, y: 22 };
+/** A bolha de sonho de quem dorme aparece de vez em quando, no lugar do "Zzz". */
+const SonhoACada = { min: 14_000, max: 28_000 };
+const SonhoDura = 4 * SonhoMs;
 
 function mulberry32(semente: number): () => number {
   let a = semente;
@@ -172,6 +190,15 @@ function AvatarCena({
   /** Conta os toques: cada um recomeça o pulinho. */
   const [pulos, setPulos] = useState(0);
   const parado = membro.pose === "parado";
+  const dormindo = membro.pose === "dormindo";
+  // Quem dorme adormece de novo a cada vez que a cena abre, ou quando passa a dormir.
+  const [adormecendo, setAdormecendo] = useState(dormindo && !reduzido);
+  const [poseAnterior, setPoseAnterior] = useState(membro.pose);
+  if (poseAnterior !== membro.pose) {
+    setPoseAnterior(membro.pose);
+    setAdormecendo(dormindo && !reduzido);
+  }
+  const [sonhando, setSonhando] = useState(false);
 
   const sorteio = useMemo(
     () => mulberry32(hashFnv1a(membro.usuarioId)),
@@ -202,8 +229,55 @@ function AvatarCena({
     return () => window.clearTimeout(temporizador);
   }, [parado, reduzido, sorteio, variacao]);
 
+  // O `adormecer` toca quando ninguém mais move o avatar: depois da entrada e das encenações.
+  const emAtuacao = atuacao !== undefined;
+  useEffect(() => {
+    if (!adormecendo || emAtuacao) return;
+    const temporizador = window.setTimeout(
+      () => setAdormecendo(false),
+      getDuracao("adormecer"),
+    );
+    return () => window.clearTimeout(temporizador);
+  }, [adormecendo, emAtuacao]);
+
+  // De vez em quando, quem dorme sonha com o treino: a bolha toma o lugar do "Zzz" por um instante.
+  useEffect(() => {
+    if (!dormindo || reduzido) return;
+    let temporizador: number;
+    const agendar = () => {
+      temporizador = window.setTimeout(
+        () => {
+          if (document.visibilityState !== "visible") {
+            agendar();
+            return;
+          }
+          setSonhando(true);
+          temporizador = window.setTimeout(() => {
+            setSonhando(false);
+            agendar();
+          }, SonhoDura);
+        },
+        SonhoACada.min + sorteio() * (SonhoACada.max - SonhoACada.min),
+      );
+    };
+    agendar();
+    return () => {
+      window.clearTimeout(temporizador);
+      setSonhando(false);
+    };
+  }, [dormindo, reduzido, sorteio]);
+
   const animacao: NomeAnimacao =
-    atuacao?.animacao ?? (parado ? (variacao ?? "parado") : membro.pose);
+    atuacao?.animacao ??
+    (parado
+      ? (variacao ?? "parado")
+      : dormindo
+        ? adormecendo
+          ? "adormecer"
+          : "dormindo"
+        : membro.pose);
+  /** O "Zzz" e a bolha só aparecem com o avatar sentado, dormindo. */
+  const sono = animacao === "dormindo";
   const direcao = atuacao?.direcao ?? getDirecao(posicao, centro);
   const deslocamento = {
     transform: atuacao
@@ -233,7 +307,8 @@ function AvatarCena({
         type="button"
         aria-label={rotulo}
         onClick={() => {
-          if (!reduzido) setPulos((n) => n + 1);
+          // Quem dorme não pula: o Foco o faz levar um susto (`acordar`).
+          if (!reduzido && !dormindo) setPulos((n) => n + 1);
           onToque();
         }}
         className="absolute block cursor-pointer rounded-md focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none"
@@ -292,6 +367,19 @@ function AvatarCena({
             }}
             onFim={() => setVariacao(null)}
           />
+          {sono &&
+            (sonhando ? (
+              <BolhaSonho
+                x={(CabecaSentado.x - corpo.esquerda) * escala}
+                y={(CabecaSentado.y - corpo.topo) * escala}
+              />
+            ) : (
+              <ZzzSono
+                x={(CabecaSentado.x - corpo.esquerda) * escala}
+                y={(CabecaSentado.y - corpo.topo) * escala}
+                reduzido={reduzido}
+              />
+            ))}
         </span>
       </button>
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
@@ -458,6 +546,17 @@ function Praca({
   );
 
   const { membros } = cena;
+  const dormindo = useMemo(
+    () =>
+      new Set(
+        membros.filter((m) => m.pose === "dormindo").map((m) => m.usuarioId),
+      ),
+    [membros],
+  );
+  const { despertos, marcarVistos: marcarDespertosVistos } = useDespertos(
+    grupoId,
+    membros,
+  );
   const posicoes = useMemo(
     () => posicionar(membros, usuarioId),
     [membros, usuarioId],
@@ -482,6 +581,7 @@ function Praca({
     usuarioId,
     reduzido,
     pausado: entrada.ativa,
+    dormindo,
   });
   const emFoco = foco.alvoId !== null;
   /** O Foco no próprio avatar: a Vitrine toma o lugar da Mão. */
@@ -543,6 +643,9 @@ function Praca({
     onEnfeitesVistos: marcarEnfeitesVistos,
     rivais: aguardar ? semRivais : rivaisEmCena,
     onRivaisVistos: marcarRivaisVistos,
+    dormindo,
+    despertos: aguardar ? semNovos : despertos,
+    onDespertosVistos: marcarDespertosVistos,
   });
   const vitrines = useVitrines();
   const enfeitesNovos = meuAvatar.data?.novos ?? semNovos;

@@ -3,8 +3,9 @@ using System.Buffers.Binary;
 namespace Wrexercise.Infrastructure.Files;
 
 /// <summary>
-/// Confere o formato público da folha de sprites em 8 direções (docs/avatar-formato.md §6): PNG de 432×4656,
-/// RGBA de 8 bits ou com paleta indexada, sem animação APNG e com até 1000 KB. O conteúdo não é conferido:
+/// Confere o formato público da folha de sprites em 8 direções (docs/avatar-formato.md §6): PNG de 432×6192
+/// (ou 432×4656, a versão sem as animações de dormir, que continua aceita), RGBA de 8 bits ou com paleta
+/// indexada, sem animação APNG e com até 1000 KB. O conteúdo não é conferido:
 /// cada pessoa desenha o que quiser. O navegador já conferiu o tamanho; isto é a segunda barreira.
 /// </summary>
 internal static class ValidacaoFolhaAvatar
@@ -12,7 +13,9 @@ internal static class ValidacaoFolhaAvatar
     // Abaixo de 1 MiB, para caber com o envelope multipart no limite do Kestrel (Program.cs).
     public const int MaxBytes = 1000 * 1024;
     public const int Largura = 432;
-    public const int Altura = 4656;
+    public const int Altura = 6192;
+    /// <summary>A folha de 97 linhas, sem as animações de dormir: no lugar delas, a cena mostra `parado`.</summary>
+    public const int AlturaSemDormir = 4656;
 
     private const int TamanhoIhdr = 13;
     private const byte TipoCorIndexada = 3;
@@ -74,7 +77,7 @@ internal static class ValidacaoFolhaAvatar
     private static bool IsCabecalhoValido(ReadOnlySpan<byte> ihdr) =>
         ihdr.Length == TamanhoIhdr
         && BinaryPrimitives.ReadUInt32BigEndian(ihdr) == Largura
-        && BinaryPrimitives.ReadUInt32BigEndian(ihdr[4..]) == Altura
+        && BinaryPrimitives.ReadUInt32BigEndian(ihdr[4..]) is Altura or AlturaSemDormir
         && IsCorAceita(tipoCor: ihdr[9], profundidade: ihdr[8]);
 
     // Blocos de metadados (tEXt e afins) podem vir junto: são inofensivos, porque a folha é servida como
