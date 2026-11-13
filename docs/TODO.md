@@ -1,7 +1,7 @@
 1. Running it on the phone (biggest risk)
 
 - Uptime monitor is on (0051): UptimeRobot checks /ready every 5 min.
-- SSH from outside home. erros.bat (0056) reads recent errors, and an internal error now shows "Código: XXXXXX" that matches the log line. But SSH to the A14 only works over USB (adb forward) or the home Wi-Fi, so away from home you can't read the log. Add a Cloudflare SSH route on the existing a14 tunnel (Environment repo: an `ssh://127.0.0.1:8022` ingress rule behind Cloudflare Access, plus `cloudflared access ssh` as ProxyCommand on the PC). Until then, ask people for the code and read it when you're back.
+- SSH from outside home. erros.bat (0056) reads recent errors, and an internal error now shows "Código: XXXXXX" that matches the log line. But SSH to the A14 only works over USB (adb forward) or the home Wi-Fi, so away from home you can't read the log. The Cloudflare SSH route is ready in the Environment repo (`ssh-a14.jpgmaraujo.com.br`, commit ec308c8); finish it with the one-time steps in Environment README, "SSH fora de casa" (Access app first, then `run.bat implantar` and `run.bat dns`, then cloudflared on Windows and the `a14-fora` profile). After that: `erros.bat --perfil a14-fora`.
 - No real-load numbers yet (Q025). Memory, query speed and disk use on the A14 were only measured at startup (about 25 MB). Login timing was measured on x64, not ARM64 (0006). Watch stats.bat for the first couple of weeks, especially how fast the evidence folder grows against phone storage and the Drive quota estimate in 0046.
 - app.log is trimmed to its last 1 MB only when the app restarts. Check its size in stats.bat after a few weeks; if it grows a lot, trim it in the daily backup task too.
 
