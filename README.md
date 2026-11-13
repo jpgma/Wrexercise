@@ -176,6 +176,21 @@ Usa o `rclone.conf` deste PC (`run.bat configurar-backup`). Baixa o arquivo diá
 
 Na pilha local de Docker, o backup continua em `BACKUP_DIR`: `.\run.bat backup`, `.\run.bat reset`, `.\run.bat` e `.\run.bat restore <data>`.
 
+### Monitor externo
+
+Um monitor de fora avisa quando a produção cai: telefone, Termux, túnel, app ou banco (decisão 0051). Configure uma vez, na conta do UptimeRobot, sem nada no repositório nem no telefone:
+
+1. Crie uma conta gratuita em https://uptimerobot.com, com um e-mail que você lê.
+2. **New monitor:**
+   - tipo **HTTP(s)**;
+   - nome `Wrexercise`;
+   - URL `https://wx.jpgmaraujo.com.br/ready`;
+   - intervalo de **5 min**.
+3. Em **Alert contacts**, deixe o e-mail marcado. Instale o app do UptimeRobot no celular pessoal (não no A14) para receber push.
+4. Teste numa hora de pouco uso. Rode `sh ~/wrexercise/deploy/remote-termux.sh parar` e espere o alerta de queda, em até cerca de 10 min. Depois rode `remote-termux.sh iniciar` e espere o aviso de volta.
+
+O `/ready` responde 200 só quando o app consegue consultar o banco. Ele não grava log quando dá certo. Falhas do backup não entram neste monitor: veja `stats.bat`.
+
 ### Senha esquecida
 
 Não há envio de e-mail. O operador gera um link de uso único, válido por 1 hora, e o passa à pessoa. O comando encerra as sessões da conta. No telefone:

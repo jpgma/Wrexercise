@@ -1174,6 +1174,8 @@ GET /health
 GET /ready
 ```
 
+Um monitor externo gratuito (UptimeRobot) consulta o `/ready` público a cada 5 min e avisa o mantenedor quando a produção cai. Ver `docs/decisoes/0051-monitor-externo.md`.
+
 Nunca registrar senhas, cookies, tokens, conteúdo privado de evidências ou informações sensíveis.
 
 ---

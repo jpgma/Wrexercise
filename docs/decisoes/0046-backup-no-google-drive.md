@@ -93,5 +93,5 @@ Com o arquivo diário mais o espelho das evidências (decisão abaixo), 20 pesso
   - quando há envio pendente;
   - quando há um erro mais novo que o último envio;
   - quando a cota passa de 80%.
-- **Fora desta decisão:** um aviso externo quando um dia falha, como o healthchecks.io, exigiria decisão própria (observabilidade dedicada).
+- **Fora desta decisão:** um aviso externo quando um dia falha, como o healthchecks.io, exigiria decisão própria (observabilidade dedicada). A 0051 criou um monitor externo só para a disponibilidade (`/ready`). O heartbeat do backup ficou registrado lá como próximo passo.
 - Relacionadas: 0022, 0029, 0032, 0044.

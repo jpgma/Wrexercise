@@ -704,6 +704,7 @@ These functions are for the operator. They are not in the interface.
 - `migrate`: applies the SQL migrations.
 - `reset-senha <email>`: makes a link to reset a password (see 3.4).
 - `GET /health` and `GET /ready`: show if the application and the database operate.
+- An external monitor (UptimeRobot, free plan) sends `GET https://wx.jpgmaraujo.com.br/ready` every 5 minutes. When the answer is not 200, it sends an email and a push message to the operator. It does not monitor the backups. The configuration is only in the UptimeRobot account (see `docs/decisoes/0051-monitor-externo.md`).
 - Backup on Windows (Docker): the `backup` service makes a copy of the database and of the evidence files. It keeps the copies for 7 days. The `restore` command puts a copy back. The operator must stop the application before a restore.
 - Backup on the phone (`deploy/nuvem.sh`): each day, and before the migrations of each `run.bat --ssh`, the phone makes one file with the database, the avatars and the logs. It sends the file to Google Drive with `rclone`. It also sends the new evidence files to a copy of the evidence folder in Google Drive. The data is encrypted (`rclone crypt`). Google Drive keeps the daily files for 31 days, and always keeps the 7 newest. When the phone deletes an evidence file, Google Drive keeps it for 31 days. The phone keeps the 3 newest daily files.
 - After each backup, the phone empties `log/app.log`. The phone keeps only the logs after the last backup. The old logs are in the backup.
