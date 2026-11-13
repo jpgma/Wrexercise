@@ -8,7 +8,11 @@ Gera:
   ampliada 8× sem suavização. É a imagem de referência da `rotations` no Gemini;
 - saida/referencia-gemini/<direcao>.png: cada direção sozinha, no mesmo recorte de 48×64,
   ampliada 8× sobre magenta (384×512). É a imagem para anexar nas animações
-  (prompts-gemini.md §4).
+  (prompts-gemini.md §4);
+- saida/referencia-gemini/dormindo-<direcao>.png: a pose sentada de `dormindo` (o 2º quadro de
+  saida/gemini/dormindo-<direcao>.png, com o assento na linha do chão), no mesmo formato. É a
+  segunda imagem para anexar em `adormecer`, `acordar` e `levantar`. Só sai depois do
+  gemini.py, para as direções que já têm `dormindo`.
 
 Uso: python tira.py   (exige Pillow)
 """
@@ -65,6 +69,22 @@ def main() -> None:
         celula.alpha_composite(q.crop((CELULA_X0, 0, CELULA_X0 + CELULA_L, QUADRO)))
         celula = celula.resize((CELULA_L * ESCALA, QUADRO * ESCALA), Image.NEAREST)
         celula.convert("RGB").save(pasta / f"{nome}.png")
+
+    # A pose sentada de dormindo: o 2º quadro, descido até o chão do 1º (o Gemini às vezes deixa
+    # o assento 1 ou 2 px acima).
+    for nome in DIRECOES:
+        arq = SAIDA / "gemini" / f"dormindo-{nome}.png"
+        if not arq.exists():
+            continue
+        t = Image.open(arq).convert("RGBA")
+        chao = t.crop((0, 0, QUADRO, QUADRO)).getbbox()[3]
+        sentado = t.crop((QUADRO, 0, 2 * QUADRO, QUADRO))
+        q = Image.new("RGBA", (QUADRO, QUADRO), (0, 0, 0, 0))
+        q.paste(sentado, (0, chao - sentado.getbbox()[3]))
+        celula = Image.new("RGBA", (CELULA_L, QUADRO), MAGENTA)
+        celula.alpha_composite(q.crop((CELULA_X0, 0, CELULA_X0 + CELULA_L, QUADRO)))
+        celula = celula.resize((CELULA_L * ESCALA, QUADRO * ESCALA), Image.NEAREST)
+        celula.convert("RGB").save(pasta / f"dormindo-{nome}.png")
 
     print(f"saida/rotations-tira.png {tira.size}, saida/referencia-gemini.png {grade.size}, "
           f"saida/referencia-gemini/<direcao>.png {celula.size}")

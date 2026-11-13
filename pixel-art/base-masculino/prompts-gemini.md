@@ -611,6 +611,226 @@ no blur, no gradients, no glow, no rim light, no cast shadow, no text, no waterm
 fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic tone.
 ```
 
+### Dormir: `dormindo`, `adormecer`, `acordar` e `levantar`
+
+Quem não registra atividade no grupo há 48 horas aparece sentado no chão, dormindo. São quatro animações novas; as linhas delas na folha e a regra da pose ainda não existem (`avatar-formato.md` §6 e `gamificacao.md` §3.2 mudam quando entrarem).
+
+| Animação | Uso | Células → quadros na folha | Grade | Tempo por quadro |
+|---|---|---|---|---|
+| `dormindo` | dormindo, em repetição | 4 → 4 (2, 3, 2, 4: respiração em vaivém) | 2×2, 1:1 | 350 ms, repete |
+| `adormecer` | boceja e senta no chão | 8 → 8 | 4×2, 3:2 | 140 ms, uma vez |
+| `acordar` | toque: acorda assustado e volta a cochilar | 6 → 5 | 3×2, 3:2 | 110 ms, uma vez |
+| `levantar` | voltou a registrar: acorda e fica de pé | 8 → 8 | 4×2, 3:2 | 120 ms, uma vez |
+
+- **Célula de calibração:** cada folha tem uma célula que é uma cópia exata da referência, de pé. O `gemini.py` tira dela a escala e a linha do chão. Em `dormindo` e `acordar` é a 1ª célula, que não entra na folha.
+- **Direções:** só `south`, `southeast`, `east`, `northeast` e `north`; o `montar.py` espelha as outras três.
+- **Ordem:** gere `dormindo` primeiro, porque ele define a pose sentada. Depois do `gemini.py`, rode `python tira.py`: ele grava `saida/referencia-gemini/dormindo-<direcao>.png`, a pose sentada de cada direção. Nas outras três animações, anexe a imagem parada **e** essa, e cole depois do prompt o bloco abaixo.
+
+```text
+The second attached image shows the same character sitting asleep, in the same direction and
+at the same scale. Every sitting frame uses exactly that pose and size.
+```
+
+#### `dormindo` — Sleeping_Sitting
+
+4 quadros, grade 2×2, proporção 1:1.
+
+```text
+Animation sheet of the character in the attached reference image, for a pixel art game.
+
+LAYOUT: a grid of 2 columns and 2 rows of equal cells, exactly 4 frames, read left to right,
+top to bottom. Nothing else in the image: no extra frames, no numbers, no labels, no arrows,
+no grid lines, no cell borders, no floor, no shadow. Solid flat magenta background (#FF00FF)
+everywhere.
+
+CHARACTER: exactly the same character as in the reference in every frame: the same facing
+direction (do not turn the character), the same head size, the same body proportions, the
+same colors, the same near-black outline and the same pixel size. One pixel of the reference
+is one square block; every frame uses blocks of exactly that size. All cells share the same
+horizontal ground line: in frame 1 the soles of the feet rest on it; in frames 2 to 4 the
+seat and the soles of the feet rest on it. The character is centered horizontally in each
+cell; when sitting, the hips are where the feet are in frame 1. Keep the facing direction of
+the reference: if it shows the back, the sitting character shows the back and the hair only,
+no face; if it shows a side, the knees point to that side. All movements below are measured
+in those pixel blocks. Do not draw any pillow, blanket, bench, card, ball, weight or bottle.
+Do not draw any letter Z, bubble or symbol.
+
+ACTION: fast asleep while sitting on the ground, a cozy and comic seamless loop.
+Frame 1: an exact copy of the reference image (size reference only).
+Frame 2: the character sits on the ground, with the seat on the ground line, the knees bent
+and raised in front of the body and the feet flat on the ground in front of the seat. The
+forearms rest loosely on top of the knees, with the hands hanging limp. The head droops
+forward and a little to one side, with the chin almost on the chest. The eyes are closed:
+each eye is a short horizontal dark line, 2 blocks wide. The mouth is a small open dark dot
+of 1 block. The head keeps exactly the same size as in frame 1. The sitting figure is about
+two thirds as tall as frame 1.
+Frame 3: the same as frame 2, breathing in: the head, the shoulders and the chest are 1 block
+higher; the arms follow the shoulders. The legs, the feet and the seat are exactly as in
+frame 2.
+Frame 4: the same as frame 2, breathing out deeply: the head is 1 block lower than in frame 2
+and leans a little more forward. Everything else is exactly as in frame 2.
+
+STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
+Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
+(#0e071b), flat shading with 3 tones per material, light from the top left. No anti-aliasing,
+no blur, no gradients, no glow, no rim light, no cast shadow, no text, no watermark. No
+fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic tone.
+```
+
+#### `adormecer` — Yawn_And_Sit
+
+8 quadros, grade 4×2, proporção 3:2.
+
+```text
+Animation sheet of the character in the attached reference image, for a pixel art game.
+
+LAYOUT: a grid of 4 columns and 2 rows of equal cells, exactly 8 frames, read left to right,
+top to bottom. Nothing else in the image: no extra frames, no numbers, no labels, no arrows,
+no grid lines, no cell borders, no floor, no shadow. Solid flat magenta background (#FF00FF)
+everywhere.
+
+CHARACTER: exactly the same character as in the reference in every frame: the same facing
+direction (do not turn the character), the same head size, the same body proportions, the
+same colors, the same near-black outline and the same pixel size. One pixel of the reference
+is one square block; every frame uses blocks of exactly that size. All cells share the same
+horizontal ground line: the soles of the feet rest on it while standing or crouching, and
+the seat and the soles rest on it while sitting. The character is centered horizontally in
+each cell and the feet never slide sideways. Leave enough room above the head for the raised
+arms. Keep the facing direction of the reference: if it shows the back, show the back and the
+hair only, no face. All movements below are measured in those pixel blocks. Do not draw any
+pillow, blanket, bench, card, ball, weight or bottle. Do not draw any letter Z, bubble or
+symbol.
+
+ACTION: a huge sleepy yawn, then sits down on the ground and falls asleep, played once.
+Frame 1: an exact copy of the reference image.
+Frame 2: the yawn starts: both elbows bend and lift, fists near the shoulders, the head tilts
+back by 1 block, the eyes squeeze shut as short dark lines, and the mouth opens as a dark
+oval 2 blocks wide and 2 blocks tall.
+Frame 3: the big yawn: both arms reach straight up above the head, as two separate thin
+shapes on each side of the head; the head, the hair and the face stay fully visible between
+them, with the same size. The mouth is wide open, 3 blocks by 3 blocks. The body stretches
+1 block taller. The feet do not move.
+Frame 4: the arms come down; one hand rubs one eye and the other arm hangs loose. The eyes are
+half closed (1-block lines), the shoulders slump by 1 block.
+Frame 5: the knees bend into a crouch: the hips are 4 blocks lower, both hands reach back
+toward the ground behind the hips.
+Frame 6: the character sits on the ground, with the seat on the ground line, the knees bent
+and raised in front and the hands on the ground beside the hips. The head is upright, the
+eyes half closed.
+Frame 7: the forearms rest on top of the knees and the head starts to droop forward by
+1 block. The eyes are closed (short dark lines).
+Frame 8: asleep: sitting, the knees raised, the forearms resting loosely on the knees with
+the hands hanging limp, the head drooping forward and a little to one side with the chin
+almost on the chest, the eyes closed as short dark lines 2 blocks wide, the mouth a small
+open dark dot. The head keeps the same size as in frame 1.
+
+STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
+Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
+(#0e071b), flat shading with 3 tones per material, light from the top left. No anti-aliasing,
+no blur, no gradients, no glow, no rim light, no cast shadow, no text, no watermark. No
+fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic tone.
+```
+
+#### `acordar` — Startled_Awake
+
+6 células, grade 3×2, proporção 3:2. A 1ª é a de calibração; a folha usa as outras 5.
+
+```text
+Animation sheet of the character in the attached reference image, for a pixel art game.
+
+LAYOUT: a grid of 3 columns and 2 rows of equal cells, exactly 6 frames, read left to right,
+top to bottom. Nothing else in the image: no extra frames, no numbers, no labels, no arrows,
+no grid lines, no cell borders, no floor, no shadow. Solid flat magenta background (#FF00FF)
+everywhere.
+
+CHARACTER: exactly the same character as in the reference in every frame: the same facing
+direction for the body (do not turn the character), the same head size, the same body
+proportions, the same colors, the same near-black outline and the same pixel size. One pixel
+of the reference is one square block; every frame uses blocks of exactly that size. All cells
+share the same horizontal ground line: in frame 1 the soles of the feet rest on it; in the
+sitting frames the seat and the soles rest on it. The character is centered horizontally in
+each cell; when sitting, the hips are where the feet are in frame 1. Keep the facing
+direction of the reference: if it shows the back, show the back and the hair only, no face.
+All movements below are measured in those pixel blocks. Do not draw any pillow, blanket,
+bench, card, ball, weight or bottle. Do not draw any letter Z, exclamation mark, bubble or
+symbol.
+
+ACTION: someone pokes the sleeping character, who wakes up with a comic jolt, looks around
+confused and dozes off again, played once.
+Frame 1: an exact copy of the reference image (size reference only).
+Frame 2: asleep: sitting on the ground, the knees raised, the forearms resting loosely on the
+knees with the hands hanging limp, the head drooping forward with the chin almost on the
+chest, the eyes closed as short dark lines 2 blocks wide, the mouth a small open dark dot.
+The sitting figure is about two thirds as tall as frame 1, with the same head size.
+Frame 3: the jolt: the whole sitting body pops 2 blocks up off the ground line, still in the
+sitting shape. The head snaps upright, the eyes are wide open and round, the eyebrows are
+1 block higher, the mouth is a small round "o", and both arms fling out to the sides with
+open hands.
+Frame 4: lands back sitting, the seat and the feet on the ground line, the hands on the
+knees. The head is upright with the eyes open; it turns to the character's right: the eyes,
+the eyebrows and the nose move 1 block to that side.
+Frame 5: the same as frame 4, but the head turns to the character's left: the eyes, the
+eyebrows and the nose are 1 block to the other side.
+Frame 6: drowsy again: the eyes half closed (1-block lines), the head drooping forward by
+1 block, the forearms back on top of the knees.
+
+STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
+Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
+(#0e071b), flat shading with 3 tones per material, light from the top left. No anti-aliasing,
+no blur, no gradients, no glow, no rim light, no cast shadow, no text, no watermark. No
+fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic tone.
+```
+
+#### `levantar` — Wake_And_Stand
+
+8 quadros, grade 4×2, proporção 3:2. A célula de calibração é a 8ª.
+
+```text
+Animation sheet of the character in the attached reference image, for a pixel art game.
+
+LAYOUT: a grid of 4 columns and 2 rows of equal cells, exactly 8 frames, read left to right,
+top to bottom. Nothing else in the image: no extra frames, no numbers, no labels, no arrows,
+no grid lines, no cell borders, no floor, no shadow. Solid flat magenta background (#FF00FF)
+everywhere.
+
+CHARACTER: exactly the same character as in the reference in every frame: the same facing
+direction (do not turn the character), the same head size, the same body proportions, the
+same colors, the same near-black outline and the same pixel size. One pixel of the reference
+is one square block; every frame uses blocks of exactly that size. All cells share the same
+horizontal ground line: the seat and the soles rest on it while sitting, and the soles rest
+on it while crouching or standing. The character is centered horizontally in each cell and
+the feet never slide sideways. Leave enough room above the head for the raised arms. Keep the
+facing direction of the reference: if it shows the back, show the back and the hair only, no
+face. All movements below are measured in those pixel blocks. Do not draw any pillow,
+blanket, bench, card, ball, weight or bottle. Do not draw any letter Z, bubble or symbol.
+
+ACTION: wakes up from a nap on the ground, stands up and does a big refreshing stretch, ready
+to train again, played once.
+Frame 1: asleep: sitting on the ground, the knees raised, the forearms resting loosely on the
+knees with the hands hanging limp, the head drooping forward with the chin almost on the
+chest, the eyes closed as short dark lines 2 blocks wide, the mouth a small open dark dot.
+The sitting figure is about two thirds as tall as frame 8, with the same head size.
+Frame 2: the head lifts upright, the eyes open sleepily (1-block lines), the arms still on
+the knees.
+Frame 3: one hand rubs one eye, the other hand rests on the knee, the mouth is a small yawn.
+Frame 4: both hands press on the ground beside the hips and the body leans forward to push up.
+Frame 5: half up, crouching: the soles on the ground line, the knees bent, the hips 4 blocks
+lower than in frame 8, the hands on the knees.
+Frame 6: standing, the big morning stretch: both arms reach straight up above the head, as two
+separate thin shapes on each side of the head; the head, the hair and the face stay fully
+visible between them, with the same size. The eyes are closed in happy upward curves. The
+body stretches 1 block taller.
+Frame 7: the arms come down to shoulder height, the eyes are wide open, a small confident
+smile.
+Frame 8: an exact copy of the reference image.
+
+STYLE: contemporary urban pixel art for a cozy, playful fitness game, low top-down view.
+Every pixel is a crisp square block, all blocks the same size. Single-color near-black outline
+(#0e071b), flat shading with 3 tones per material, light from the top left. No anti-aliasing,
+no blur, no gradients, no glow, no rim light, no cast shadow, no text, no watermark. No
+fantasy, no armor, no weapons, no magic, no combat poses. Friendly and comic tone.
+```
+
 ## 5. Derivar personagens
 
 Para os personagens padrão, use a folha de `rotations` aprovada como referência e troque só uma ou duas regiões, com as regras de `prompts-pixellab.md` §5:

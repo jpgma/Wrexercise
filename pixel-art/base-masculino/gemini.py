@@ -26,7 +26,7 @@ from collections import Counter, deque
 
 from PIL import Image
 
-from build import CELULA, CENTRO_X, CONTORNO, OX, OY, PALETA, PE_Y, QUADRO, hex_rgb
+from rotacoes import CELULA, CENTRO_X, CONTORNO, OX, OY, PALETA, PE_Y, QUADRO, hex_rgb
 
 AQUI = pathlib.Path(__file__).resolve().parent
 FONTE = AQUI / "fonte" / "gemini"
@@ -36,6 +36,7 @@ SAIDA = AQUI / "saida" / "gemini"
 QUADROS = {
     "parado": 4, "andar": 8, "correr": 8, "treinando": 6, "alongar": 4, "olhar": 4,
     "arremessar": 6, "receber": 6, "aceitar": 4, "recusar": 3, "provocar": 4, "comemorar": 8,
+    "dormindo": 4,
 }
 # Colunas e linhas da grade por quantidade de quadros (prompts-gemini.md §4).
 GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2)}
