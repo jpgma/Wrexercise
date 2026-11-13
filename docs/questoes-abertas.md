@@ -154,7 +154,7 @@ Scripts SQL numerados e uma tabela `schema_migrations`.
 
 ## Q006 — Como organizar contratos JSON?
 
-**Status:** ABERTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. Records explícitos, serialização gerada em compilação (`AppJsonContext`, camelCase), enums como texto fixo e datas ISO 8601. Sem versionamento: a SPA é o único cliente.
 
 Investigar:
 
@@ -173,7 +173,7 @@ Evitar serializar diretamente estruturas internas do banco.
 
 ## Q007 — Como tratar erros da API?
 
-**Status:** PROPOSTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. `application/problem+json` com `code` estável e título em pt-BR (`Infrastructure/Errors/ApiProblem.cs`).
 
 Definir um formato consistente de erros.
 
@@ -395,7 +395,7 @@ Não implementar um sistema de reputação no MVP.
 
 ## Q017 — Quais formatos de evidência serão aceitos?
 
-**Status:** PROPOSTA
+**Status:** DECIDIDA — ver `decisoes/0011-atividades.md`, `0052-avisos-nas-evidencias.md` e `0055-questoes-resolvidas-pela-implementacao.md`. JPEG, PNG e WebP até 5 MB, conferidos pelo conteúdo; o navegador redimensiona e remove o EXIF.
 
 Métodos:
 
@@ -418,7 +418,7 @@ Aceitar JPEG, PNG e WebP, com limite inicial de 5 MB por arquivo.
 
 ## Q018 — Como será feito o armazenamento?
 
-**Status:** PROPOSTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. Disco local do servidor (hoje o A14, 0032), nomes aleatórios em pastas `AAAA/MM`, leitura só por rota autenticada, backup em 0022 e 0046, exclusão só junto com a atividade (0054). O texto abaixo, que fala da VM, é o histórico.
 
 O MVP utilizará armazenamento local persistente na VM.
 
@@ -481,7 +481,7 @@ Não considerar hashes iguais como prova definitiva de fraude.
 
 ## Q021 — Qual será a estratégia de estado?
 
-**Status:** PROPOSTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. TanStack Query para dados remotos e estado local do React, sem Redux (`Wrexercise/webapp/AGENTS.md`).
 
 Investigar:
 
@@ -520,7 +520,7 @@ Não implementar sincronização offline de atividades na primeira versão.
 
 ## Q023 — Como otimizar imagens no frontend?
 
-**Status:** ABERTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. O navegador redimensiona para 1600 px e gera a miniatura de 240 px, em JPEG e sem biblioteca (`comprimirImagem.ts`). Não converte para WebP.
 
 Investigar:
 
@@ -598,7 +598,7 @@ Não introduzir cache distribuído ou materializações complexas para dez usuá
 
 ## Q027 — Como limitar requisições?
 
-**Status:** ABERTA
+**Status:** PARCIALMENTE DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. Há limites por IP para autenticação, envio de evidência, comentários e folha de avatar. Criação de atividade, reações e feed não têm limite próprio; acrescentar só se aparecer abuso.
 
 Definir limites para:
 
@@ -637,7 +637,7 @@ A participação deve exigir autenticação.
 
 ## Q029 — Qual será a política de retenção?
 
-**Status:** ABERTA
+**Status:** ABERTA. A exclusão de atividades já tem uma regra (`decisoes/0054-correcao-de-atividade.md`: o autor apaga nos primeiros 15 minutos). Continuam sem regra a exclusão de conta e de grupo, a retenção de evidências e os dados nos backups.
 
 Definir:
 
@@ -672,7 +672,7 @@ Remover metadados desnecessários durante o processamento de imagens e manter ev
 
 ## Q031 — Qual será o design system inicial?
 
-**Status:** PROPOSTA
+**Status:** PARCIALMENTE DECIDIDA — ver `decisoes/0014-novo-mockup-como-referencia-visual.md`, `0027-identidade-visual-wrexercise.md` e `0055-questoes-resolvidas-pela-implementacao.md`. Falta decidir se vale um seletor manual de tema.
 
 Utilizar Apple Human Interface Guidelines como inspiração.
 
@@ -694,7 +694,7 @@ Não utilizar dependências externas para carregar fontes ou recursos visuais.
 
 ## Q032 — Quais páginas serão obrigatórias no MVP?
 
-**Status:** PROPOSTA
+**Status:** DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. As sete páginas existem, e outras entraram por ADRs próprios. A lista viva é `funcionalidades.md`.
 
 Páginas iniciais:
 
@@ -754,6 +754,22 @@ Uma questão pode ser considerada concluída quando:
 Questões sem impacto sobre o MVP podem permanecer adiadas.
 
 ## 12. Prioridade de investigação
+
+### Situação em 2026-11-13
+
+Continuam abertas ou parciais:
+
+- Q016: abuso das reações. Esperar uso real.
+- Q025: orçamento de recursos. Falta medir o A14 sob uso real (`stats.bat`).
+- Q026: consultas SQL. Só se algo ficar lento.
+- Q027: limites para criação de atividade, reações e feed. Só se aparecer abuso.
+- Q029: exclusão de conta e de grupo, retenção de evidências e backups.
+- Q030: mostrar a localização da foto e avisar que ela é guardada.
+- Q031: seletor manual de tema.
+- Q033: visualizações adicionais de progresso.
+- Q034: avatar em 8 direções (andamento no ADR 0039).
+
+As listas abaixo são o plano original e ficam como histórico.
 
 ### Prioridade alta — antes da implementação
 

@@ -19,18 +19,12 @@ These were decided before anyone used the app, and several ADRs say to look agai
 - Jogo: the early-morning bonus may encourage training at dawn instead of consistency (gamificacao §12.3). The Enfeite clutter with 10 people on a 360 px screen still needs checking (§12.4). Achievement limits of 10 per type should be revisited with real data (§12.5).
 - gamificacao §13 lists success criteria (people log as often as before, Energy gets spent weekly, cards spark conversation). Decide now how you'll judge them, even if it's just a monthly query.
 
-4. Update the open-questions doc
+4. Open questions
 
-questoes-abertas.md is behind the code. Several questions marked open or proposed are already handled in the code:
-- Q017 and Q018: 5 MB limit, JPEG/PNG/WebP validation, random file names, authenticated access.
-- Q023: resizing and compression in the browser.
-- Q027: rate limiters for login, activities, reactions and Jogo.
-- Q006 and Q007 are probably settled in practice too.
-
-Q001's text still talks about the Oracle VM. Marking these decided, with links to the code, would leave a clear list of what's actually still open.
+questoes-abertas.md is up to date (0055). Q006, Q007, Q017, Q018, Q021, Q023 and Q032 are closed with links to the code. Q027 is partial: activity creation, reactions and the feed have no rate limit of their own. §12 now lists what is still open.
 
 5. Can wait
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: turn on the uptime monitor (manual step, needs the UptimeRobot account), then update questoes-abertas.md, then a remote way to read recent errors.
+My suggested order: turn on the uptime monitor (manual step, needs the UptimeRobot account), then a remote way to read recent errors, then decide on showing the photo location (Q030).
