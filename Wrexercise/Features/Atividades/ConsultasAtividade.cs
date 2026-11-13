@@ -212,6 +212,7 @@ internal static class ConsultasAtividade
             submittedAt,
             autorId == usuarioId,
             evidencias,
-            avisos);
+            avisos,
+            ExclusaoAtividade.PermitidaAte(autorId == usuarioId, situacao, submittedAt, DateTimeOffset.UtcNow));
     }
 }

@@ -6,7 +6,7 @@
 
 2. Gaps people will hit in the first week
 
-- Nobody can edit or delete an activity (funcionalidades.md §… "Nobody can edit or delete an activity", "Nobody can replace or delete evidence"). The wrong type, a typo in the duration, or a double submit stays forever, and the only fix is getting the group to reject it. I expect this to be the first complaint. A short owner/admin "void" action, or a few minutes where the author can delete their own entry, would help.
+- Activity correction shipped (0054): the author deletes within 15 minutes while nobody contested; owner/admin can mark a pending activity `Anulada`. Watch whether 15 minutes is enough and whether admins use `Anulada` for real suspicions instead of rejecting.
 - Photo location is now stored (0052) but not shown. Decide whether to show it, and tell participants it is kept (a line on the record form). Deleting it belongs with Q029.
 - The review queue blocks new entries. 409 AVALIACOES_PENDENTES stops anyone with pending reviews from recording an activity (0041). That's a strong push; check whether it feels annoying or helpful once real people use it.
 
@@ -33,4 +33,4 @@ Q001's text still talks about the Oracle VM. Marking these decided, with links t
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: turn on the uptime monitor, then activity correction/void (the EXIF fallback fix shipped with 0052). I can start on any of them, or update questoes-abertas.md first.
+My suggested order: turn on the uptime monitor (manual step, needs the UptimeRobot account), then update questoes-abertas.md, then a remote way to read recent errors.

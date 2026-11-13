@@ -7,6 +7,7 @@ import { SplashScreen } from "@/components/SplashScreen";
 import {
   AvisosAtividade,
   EvidenciasAtividade,
+  ExcluirAtividade,
   formatarDataRelativa,
   formatarDuracao,
   tipoAtividadeLabels,
@@ -60,6 +61,7 @@ export function AtividadePage() {
     voce,
     evidencias,
     avisos,
+    exclusaoPermitidaAte,
   } = atividade.data;
 
   return (
@@ -116,6 +118,13 @@ export function AtividadePage() {
               <div className="mt-4">
                 <AvisosAtividade avisos={avisos} />
               </div>
+            )}
+            {exclusaoPermitidaAte && (
+              <ExcluirAtividade
+                atividadeId={id}
+                grupoId={grupoId}
+                permitidaAte={exclusaoPermitidaAte}
+              />
             )}
           </div>
         </div>

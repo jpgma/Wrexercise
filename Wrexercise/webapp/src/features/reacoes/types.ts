@@ -29,6 +29,6 @@ export type Comentario = {
 };
 
 export type RevisaoAtividadeData = {
-  decisao: "Verificada" | "Rejeitada";
+  decisao: "Verificada" | "Rejeitada" | "Anulada";
   justificativa: string;
 };

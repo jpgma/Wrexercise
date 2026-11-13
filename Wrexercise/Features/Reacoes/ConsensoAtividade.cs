@@ -41,7 +41,8 @@ internal static class ConsensoAtividade
 
     /// <summary>
     /// Calcula a situação após reações comunitárias ou encerramento da janela.
-    /// <see cref="SituacaoVerificacao.Verificada"/> e <see cref="SituacaoVerificacao.Rejeitada"/>
+    /// <see cref="SituacaoVerificacao.Verificada"/>, <see cref="SituacaoVerificacao.Rejeitada"/> e
+    /// <see cref="SituacaoVerificacao.Anulada"/>
     /// são finais. Com a janela encerrada, <see cref="SituacaoVerificacao.EmRevisao"/> só muda
     /// por revisão administrativa. Com um aviso que bloqueia (ADR 0052), o silêncio do grupo não
     /// verifica: ao fim da janela, a atividade vai para <see cref="SituacaoVerificacao.EmRevisao"/>.
@@ -58,7 +59,8 @@ internal static class ConsensoAtividade
             return SituacaoVerificacao.Verificada;
         }
 
-        if (situacaoAtual is SituacaoVerificacao.Verificada or SituacaoVerificacao.Rejeitada)
+        if (situacaoAtual is SituacaoVerificacao.Verificada or SituacaoVerificacao.Rejeitada
+            or SituacaoVerificacao.Anulada)
         {
             return situacaoAtual;
         }
@@ -99,6 +101,7 @@ internal static class SituacaoVerificacao
     public const string Verificada = "Verificada";
     public const string EmRevisao = "EmRevisao";
     public const string Rejeitada = "Rejeitada";
+    public const string Anulada = "Anulada";
 }
 
 internal static class ValidacaoRevisao

@@ -413,7 +413,7 @@ The proof method comes from the evidence:
 
 The form adds the duration to the other activities of the user on the same day in the current week (`seusSegundosPorDia`, not `Rejeitada`). The form also adds the duration to the activities of the same types (`segundosPorTipo`). It shows "Conta para a meta" when the parts of the day add up to 100% (see 6.1). If not, it shows the minutes of the selected type that are necessary: "Faltam N min no dia para contar", or "Faltam N min de [type goal] para contar" when the selected type is in a type goal. If a different type needs fewer minutes, the form adds it: "(ou M min de [type goal])" or "(ou M min de outro treino)". If the day already has activities, it shows "Você já tem N min nesse dia".
 
-Nobody can edit or delete an activity.
+Nobody can edit an activity. To correct a mistake, the author deletes the activity and records it again (see 7.6), or an administrator voids it (see 8.4).
 
 The form sends the header `Idempotency-Key` with a UUID. If the user submits the same data again, the form uses the same key. Different data gets a new key. When the key already exists for the user in the same group, the API does not create a new activity. It returns the existing activity with `200` instead of `201`, also when the review queue of the user is no longer empty. The same key in a different group returns `422 CHAVE_IDEMPOTENCIA_REUTILIZADA`. A key that is not a UUID returns `400 DADOS_INVALIDOS`. Without the header, the API always creates a new activity.
 
@@ -435,7 +435,7 @@ When the queue is not empty, the form page does not show the form. It shows only
 - If the same file is already evidence of the same activity, the API returns `409 EVIDENCIA_JA_ANEXADA`, also when the activity has 3 images. This occurs when the form submits again after a lost response (see 7.1). The form counts the image as sent.
 - The server accepts JPEG, PNG and WebP files. The maximum size is 5 MB for each file and 100 KB for each thumbnail. The server examines the real content of the file.
 - Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
-- Nobody can replace or delete evidence.
+- Nobody can replace evidence. Evidence is deleted only with its activity (see 7.6).
 - Only active members of the group can see the evidence.
 - The feed shows the thumbnail. The full image loads only when the user opens it.
 - The full-screen gallery shows the images of one activity. The user can swipe or use the arrow keys to go to the next image. The user can tap two times to zoom. The "back" button of the phone closes the gallery.
@@ -468,6 +468,16 @@ The system adds warnings to an activity. All members of the group see them, also
 - `FotoSemData` only gives information. The other warnings stop the automatic verification (see 8.3).
 - When the user selects a photo, the form shows the warning that the photo will cause: "Foto N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Foto N: Sem data na foto. O grupo verá que não deu para conferir." The form calculates the warning again when the user changes the start or the duration.
 - The browser gives these data. A user can change them. The warnings help the reviewers. They are not proof.
+
+### 7.6. Delete an activity
+
+- The author can delete his or her activity for 15 minutes after recording it (`submitted_at`), while the status is `AguardandoFeedback`. A `Kudos` does not stop this. A `Suspeito` or `Rejeitar` reaction changes the status to `EmRevisao`, and then the author cannot delete.
+- `DELETE /api/atividades/{id}`. Out of these limits, the API returns `409 EXCLUSAO_NAO_PERMITIDA`. A different member gets `403 ACESSO_NEGADO`.
+- The deletion is permanent. The system deletes the reviewers, reactions, comments, notifications, warnings, evidence and image files of the activity.
+- A `FotoParecida` warning of a different activity that links to the deleted activity stays, without the link.
+- After the deletion, the author can use the same photo again.
+- The activity response has `exclusaoPermitidaAte`: the time limit for the author, or `null`. The activity page shows "Registrou errado? Dá para apagar até HH:MM" and the button "Apagar" to the author. The button asks for a confirmation. After the deletion, the page shows "Atividade apagada." and opens the group feed.
+- A push notification that the system already sent stays on the device.
 
 ## 8. Community verification
 
@@ -509,7 +519,10 @@ After each reaction, the system calculates the status again:
 | There is no negative reaction, and all reviewers reacted. | `Verificada` |
 | There is no negative reaction, and some reviewers did not react. | `AguardandoFeedback` |
 
-- `Verificada` and `Rejeitada` are final. After these statuses, the system does not accept reactions.
+An administrator can also change the status to `Anulada` (see 8.4).
+
+- `Verificada`, `Rejeitada` and `Anulada` are final. After these statuses, the system does not accept reactions.
+- `Anulada` counts as `Rejeitada` in all calculations: goals, progress, Energy, plays and profile charts do not count it. The feed shows it with the label "Anulada".
 - When a reviewer changes the only negative reaction to `Kudos`, the activity leaves `EmRevisao`.
 - A background task runs approximately each 10 minutes. When the window closes, an activity in `AguardandoFeedback` becomes `Verificada`. If the activity has a `FotoForaDoPeriodo`, `FotoParecida` or `RegistroTardio` warning (see 7.5), it becomes `EmRevisao` and an administrator must decide. When all reviewers give `Kudos`, the activity becomes `Verificada` also with a warning.
 - When the window closes, an activity in `EmRevisao` stays in `EmRevisao`. Only an administrative review can change it.
@@ -519,7 +532,10 @@ After each reaction, the system calculates the status again:
 
 - The owner and the administrators can decide an activity in `EmRevisao` at any time, also while the window is open.
 - Nobody can decide his or her own activity. The API returns `403 REVISAO_PROPRIA_NAO_PERMITIDA`, and the activity page does not show the decision form to the author. The activity stays in `EmRevisao` until a different administrator decides.
-- The decision is `Verificada` or `Rejeitada`. A justification is necessary (maximum 500 characters).
+- The decision is `Verificada`, `Rejeitada` or `Anulada`. A justification is necessary (maximum 500 characters).
+- `Anulada` is for an incorrect or double record, not for a suspicion. The owner and the administrators can use it also in `AguardandoFeedback`. `Verificada` and `Rejeitada` need `EmRevisao`. In other statuses, the API returns `409 REVISAO_NAO_PENDENTE`.
+- In `AguardandoFeedback`, the activity page shows "Registro errado ou em dobro?" and the button "Anular atividade" to the owner and the administrators (not to the author). The button opens the form with the justification.
+- The author gets the notification "Seu treino foi anulado".
 - The system keeps a record of the person, the date and the justification. Nobody can change the decision.
 - The group page shows a list "Disputas para decidir" to the owner and the administrators.
 
@@ -765,7 +781,7 @@ These functions are for the operator. They are not in the interface.
 
 These features are not in the application. Some are out of scope in `docs/arquitetura.md` §19.
 
-- Edit or delete an activity, evidence or comment.
+- Edit an activity, evidence or comment. Delete a comment. Delete an activity after 15 minutes or after a negative reaction.
 - Edit the goal or the dates of a challenge.
 - Change the name or the time zone of a group. Delete a group.
 - Change the e-mail of an account. Delete an account.

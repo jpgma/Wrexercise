@@ -140,7 +140,7 @@ internal static class Jogadas
     }
 
     /// <summary>
-    /// As atividades que podem cumprir cada Jogada aceita: não rejeitadas, do destinatário, no grupo da
+    /// As atividades que podem cumprir cada Jogada aceita: não rejeitadas nem anuladas, do destinatário, no grupo da
     /// Jogada e com início entre o envio e o prazo. O objetivo da carta é conferido em <see cref="ObjetivoCarta"/>.
     /// </summary>
     public static async Task<Dictionary<Guid, List<AtividadeJogada>>> LoadAtividadesAsync(
@@ -158,7 +158,7 @@ internal static class Jogadas
             JOIN atividades a ON a.usuario_id = j.destinatario_id AND a.grupo_id = j.grupo_id
             WHERE ($1 IN (j.remetente_id, j.destinatario_id) OR $2 IN (j.remetente_id, j.destinatario_id))
               AND j.resposta = 'Aceita'
-              AND a.situacao_verificacao <> 'Rejeitada'
+              AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
               AND a.started_at >= j.enviada_em
               AND a.started_at <= j.expira_em
             """, connection, transaction);

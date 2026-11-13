@@ -114,7 +114,7 @@ internal static class ContagensAtividadeDesafio
             a.tipo,
             coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao = 'Verificada'), 0)
                 AS segundos_verificados,
-            coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao <> 'Rejeitada'), 0)
+            coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')), 0)
                 AS segundos_provisorios
         {FromElegiveisSql}
         {filtros}
@@ -132,7 +132,7 @@ internal static class ContagensAtividadeDesafio
         """;
 
     /// <summary>
-    /// Os dias da semana com atividade não rejeitada de quem consulta: a soma das durações, se o dia conta
+    /// Os dias da semana com atividade não rejeitada nem anulada de quem consulta: a soma das durações, se o dia conta
     /// para a meta (contando as pendentes) e a meta por tipo que o fez contar.
     /// $1 = desafio_id, $2 e $3 = a semana, $4 = usuario_id.
     /// </summary>
@@ -144,7 +144,7 @@ internal static class ContagensAtividadeDesafio
         """;
 
     /// <summary>
-    /// A soma das durações não rejeitadas de quem consulta, por dia e tipo, na semana.
+    /// A soma das durações não rejeitadas nem anuladas de quem consulta, por dia e tipo, na semana.
     /// $1 = desafio_id, $2 e $3 = a semana, $4 = usuario_id.
     /// </summary>
     internal const string SegundosPorTipoDaSemanaSql = $"""
@@ -152,7 +152,7 @@ internal static class ContagensAtividadeDesafio
         {FromElegiveisSql}
         {FiltroSemanaSql}
           AND a.usuario_id = $4
-          AND a.situacao_verificacao <> 'Rejeitada'
+          AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
         GROUP BY {DiaSql}, a.tipo
         ORDER BY {DiaSql}, a.tipo
         """;

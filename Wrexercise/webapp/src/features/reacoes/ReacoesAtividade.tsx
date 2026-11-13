@@ -8,7 +8,7 @@ import { canRevisarAtividade, useGrupo } from "@/features/grupos";
 import { getErrorMessage } from "@/services/api";
 import { Comentarios } from "./Comentarios";
 import { tipoReacaoEmojis, tipoReacaoLabels } from "./labels";
-import type { TipoReacao } from "./types";
+import type { RevisaoAtividadeData, TipoReacao } from "./types";
 import {
   useReacoes,
   useRegistrarReacao,
@@ -88,9 +88,9 @@ export function ReacoesAtividade({
   const { showToast } = useToast();
   const [confirmandoRejeicao, setConfirmandoRejeicao] = useState(false);
   const [justificativa, setJustificativa] = useState("");
-  const [decisao, setDecisao] = useState<"Verificada" | "Rejeitada">(
-    "Verificada",
-  );
+  const [decisao, setDecisao] =
+    useState<RevisaoAtividadeData["decisao"]>("Verificada");
+  const [anulando, setAnulando] = useState(false);
 
   const primeiroNome = nomeAutor.trim().split(/\s+/)[0];
 
@@ -137,11 +137,14 @@ export function ReacoesAtividade({
       situacaoVerificacao === "EmRevisao");
 
   // Ninguém decide a própria disputa (ADR 0052): outro administrador decide.
-  const mostrarRevisaoAdmin =
-    grupo.data !== undefined &&
-    canRevisarAtividade(grupo.data.papel) &&
-    situacaoVerificacao === "EmRevisao" &&
-    !voce;
+  const podeDecidir =
+    grupo.data !== undefined && canRevisarAtividade(grupo.data.papel) && !voce;
+  const emDisputa = podeDecidir && situacaoVerificacao === "EmRevisao";
+  // Antes da disputa, o administrador só pode anular um registro errado (ADR 0054).
+  const podeAnular =
+    podeDecidir && situacaoVerificacao === "AguardandoFeedback";
+  const mostrarRevisaoAdmin = emDisputa || (podeAnular && anulando);
+  const decisaoEnviada = emDisputa ? decisao : "Anulada";
 
   return (
     <div className="space-y-5">
@@ -254,22 +257,47 @@ export function ReacoesAtividade({
 
       <Comentarios atividadeId={atividadeId} />
 
+      {podeAnular && !anulando && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+          <p className="text-sm text-muted">Registro errado ou em dobro?</p>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setAnulando(true)}
+          >
+            Anular atividade
+          </button>
+        </div>
+      )}
+
       {mostrarRevisaoAdmin && (
         <div className="card p-5">
-          <h3 className="text-base font-bold">Revisão administrativa</h3>
-          <label className="mt-4 block">
-            <span className="input-label">Decisão</span>
-            <select
-              className="input-field"
-              value={decisao}
-              onChange={(event) =>
-                setDecisao(event.target.value as "Verificada" | "Rejeitada")
-              }
-            >
-              <option value="Verificada">Aprovar atividade</option>
-              <option value="Rejeitada">Rejeitar atividade</option>
-            </select>
-          </label>
+          <h3 className="text-base font-bold">
+            {emDisputa ? "Revisão administrativa" : "Anular atividade"}
+          </h3>
+          {emDisputa ? (
+            <label className="mt-4 block">
+              <span className="input-label">Decisão</span>
+              <select
+                className="input-field"
+                value={decisao}
+                onChange={(event) =>
+                  setDecisao(
+                    event.target.value as RevisaoAtividadeData["decisao"],
+                  )
+                }
+              >
+                <option value="Verificada">Aprovar atividade</option>
+                <option value="Rejeitada">Rejeitar atividade</option>
+                <option value="Anulada">Anular (registro errado)</option>
+              </select>
+            </label>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              A atividade deixa de contar e não recebe mais reações. Use para
+              registro errado ou em dobro, não para suspeita.
+            </p>
+          )}
           <label className="mt-3 block">
             <span className="input-label">Justificativa</span>
             <textarea
@@ -285,11 +313,31 @@ export function ReacoesAtividade({
             className="btn-primary mt-4 w-full"
             disabled={revisar.isPending || justificativa.trim().length === 0}
             onClick={() =>
-              revisar.mutate({ decisao, justificativa: justificativa.trim() })
+              revisar.mutate({
+                decisao: decisaoEnviada,
+                justificativa: justificativa.trim(),
+              })
             }
           >
-            {revisar.isPending ? "Registrando…" : "Registrar decisão"}
+            {revisar.isPending
+              ? "Registrando…"
+              : emDisputa
+                ? "Registrar decisão"
+                : "Anular atividade"}
           </button>
+          {!emDisputa && (
+            <button
+              type="button"
+              className="btn-ghost mt-2 w-full"
+              disabled={revisar.isPending}
+              onClick={() => {
+                revisar.reset();
+                setAnulando(false);
+              }}
+            >
+              Cancelar
+            </button>
+          )}
           {revisar.isError && (
             <p role="alert" className="form-error mt-3">
               {getErrorMessage(revisar.error)}

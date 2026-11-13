@@ -32,6 +32,7 @@ export const situacaoVerificacaoLabels: Record<SituacaoVerificacao, string> = {
   EmRevisao: "Em revisão",
   Contestada: "Contestada",
   Rejeitada: "Rejeitada",
+  Anulada: "Anulada",
 };
 
 export function formatarDuracao(segundos: number): string {

@@ -20,6 +20,7 @@ internal enum AtividadeOperacaoStatus
     EvidenciaDuplicada,
     EvidenciaJaAnexada,
     ChaveIdempotenciaReutilizada,
+    ExclusaoNaoPermitida,
 }
 
 internal static class OperacaoAtividade
@@ -68,6 +69,10 @@ internal static class OperacaoAtividade
             StatusCodes.Status422UnprocessableEntity,
             "CHAVE_IDEMPOTENCIA_REUTILIZADA",
             "Este envio já foi usado em outro registro. Tente de novo."),
+        AtividadeOperacaoStatus.ExclusaoNaoPermitida => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "EXCLUSAO_NAO_PERMITIDA",
+            "Só dá para apagar nos primeiros 15 minutos, antes de alguém contestar."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

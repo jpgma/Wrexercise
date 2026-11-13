@@ -39,6 +39,7 @@ export function getTextoNotificacao({
       return `O treino de ${primeiroNome(atorNome)} precisa de uma decisão`;
     case "SituacaoAlterada":
       if (situacao === "Rejeitada") return "Seu treino foi rejeitado";
+      if (situacao === "Anulada") return "Seu treino foi anulado";
       return "Seu treino entrou em revisão";
     case "CartaRecebida":
       return `${primeiroNome(atorNome)} te mandou uma carta. Topa?`;

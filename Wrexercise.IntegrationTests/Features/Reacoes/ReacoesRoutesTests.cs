@@ -107,6 +107,45 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PostRevisao_Anular_AtividadeAindaNaoDecidida()
+    {
+        var (dono, atividadeId, revisores, admin) = await CriarComRevisoresEAdminAsync(2);
+
+        // Aprovar ou rejeitar continua só na disputa; anular vale antes dela.
+        await ApiTestHost.AssertProblemAsync(
+            await PostRevisaoAsync(admin, atividadeId, Situacao.Rejeitada, "Registro em dobro."),
+            HttpStatusCode.Conflict,
+            "REVISAO_NAO_PENDENTE");
+        await ApiTestHost.AssertProblemAsync(
+            await PostRevisaoAsync(dono, atividadeId, Situacao.Anulada, "Registrei duas vezes."),
+            HttpStatusCode.Forbidden,
+            "REVISAO_PROPRIA_NAO_PERMITIDA");
+
+        (await PostRevisaoAsync(admin, atividadeId, Situacao.Anulada, "Registro em dobro.")).EnsureSuccessStatusCode();
+
+        Assert.Equal(Situacao.Anulada, await SituacaoAsync(dono, atividadeId));
+        await ApiTestHost.AssertProblemAsync(
+            await PutReacaoAsync(revisores[0], atividadeId, TipoReacao.Kudos),
+            HttpStatusCode.Conflict,
+            "REACAO_ENCERRADA");
+        Assert.Equal(1L, await _host.ScalarAsync<long>(
+            $"SELECT count(*) FROM notificacoes WHERE atividade_id = '{atividadeId}' AND situacao = 'Anulada'"));
+    }
+
+    [Fact]
+    public async Task PostRevisao_AnularVerificada_Recusada()
+    {
+        var (dono, atividadeId, revisores, admin) = await CriarComRevisoresEAdminAsync(1);
+        (await PutReacaoAsync(revisores[0], atividadeId, TipoReacao.Kudos)).EnsureSuccessStatusCode();
+        Assert.Equal(Situacao.Verificada, await SituacaoAsync(dono, atividadeId));
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostRevisaoAsync(admin, atividadeId, Situacao.Anulada, "Tipo errado."),
+            HttpStatusCode.Conflict,
+            "REVISAO_NAO_PENDENTE");
+    }
+
+    [Fact]
     public async Task Encerramento_PrazoExpirado_Verificada()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");

@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Ban,
   CheckCircle2,
   Hourglass,
   MessageCircleWarning,
@@ -18,6 +19,7 @@ const estilos: Record<
   EmRevisao: { classe: "chip-warning", Icon: AlertTriangle },
   Contestada: { classe: "chip-warning", Icon: MessageCircleWarning },
   Rejeitada: { classe: "chip-danger", Icon: XCircle },
+  Anulada: { classe: "", Icon: Ban },
 };
 
 export function SituacaoBadge({ situacao }: { situacao: SituacaoVerificacao }) {

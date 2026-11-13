@@ -15,6 +15,7 @@ export {
 export { AvisosAtividade, AvisosAtividadeResumo } from "./AvisosAtividade";
 export { calcularAvisoDataFoto, maximoNoPassadoMs } from "./janelaEvidencia";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
+export { ExcluirAtividade } from "./ExcluirAtividade";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";
 export { SituacaoBadge } from "./SituacaoBadge";
@@ -25,6 +26,7 @@ export {
   useAtividadesFeed,
   useAtividadesRecentes,
   useCriarAtividade,
+  useExcluirAtividade,
   useFilaAvaliacao,
 } from "./useAtividades";
 export type {

@@ -672,6 +672,75 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
             "EVIDENCIA_JA_ANEXADA");
     }
 
+    [Fact]
+    public async Task Excluir_AutorNosPrimeirosMinutos_ApagaAtividadeEFotos()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await _host.AddMembroAsync(grupoId, nome: "Caio");
+        var id = await CriarComFotoAsync(ana, grupoId);
+        (await PostEvidenciaAsync(ana, id, JpegVariante(1))).EnsureSuccessStatusCode();
+        // Um Kudos não impede: a exclusão só fecha quando alguém contesta.
+        await ReagirAsync(bia, id, "Kudos");
+
+        Assert.NotNull((await ObterAsync(ana, id)).ExclusaoPermitidaAte);
+        Assert.Null((await ObterAsync(bia, id)).ExclusaoPermitidaAte);
+        await ApiTestHost.AssertProblemAsync(
+            await bia.Client.DeleteAsync($"/api/atividades/{id}", Token),
+            HttpStatusCode.Forbidden,
+            "ACESSO_NEGADO");
+
+        var response = await ana.Client.DeleteAsync($"/api/atividades/{id}", Token);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ana.Client.GetAsync($"/api/atividades/{id}", Token)).StatusCode);
+        Assert.Equal(0L, await _host.ScalarAsync<long>("SELECT count(*) FROM evidencias_atividade"));
+        // A mesma foto volta a valer: o autor registra de novo, agora com os dados certos.
+        var nova = await CriarComFotoAsync(ana, grupoId);
+        Assert.Equal(HttpStatusCode.Created, (await PostEvidenciaAsync(ana, nova, JpegVariante(1))).StatusCode);
+    }
+
+    [Fact]
+    public async Task Excluir_DepoisDe15MinutosOuContestada_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var antiga = await CriarManualAsync(ana, grupoId);
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET submitted_at = now() - interval '16 minutes' WHERE id = '{antiga}'");
+        var contestada = await CriarManualAsync(ana, grupoId);
+        await ReagirAsync(bia, contestada, "Suspeito");
+
+        Assert.Null((await ObterAsync(ana, antiga)).ExclusaoPermitidaAte);
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.DeleteAsync($"/api/atividades/{antiga}", Token),
+            HttpStatusCode.Conflict,
+            "EXCLUSAO_NAO_PERMITIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.DeleteAsync($"/api/atividades/{contestada}", Token),
+            HttpStatusCode.Conflict,
+            "EXCLUSAO_NAO_PERMITIDA");
+    }
+
+    [Fact]
+    public async Task Excluir_FotoParecidaDeOutra_AvisoFicaSemLink()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var primeira = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        var segunda = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "000000000000003f" });
+
+        (await ana.Client.DeleteAsync($"/api/atividades/{primeira}", Token)).EnsureSuccessStatusCode();
+
+        var parecida = Assert.Single((await ObterAsync(ana, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
+        Assert.Null(parecida.AtividadeRelacionadaId);
+    }
+
     private static Task<HttpResponseMessage> PostAtividadeComChaveAsync(TestUsuario usuario, Guid grupoId, Guid chave)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"/api/grupos/{grupoId}/atividades")

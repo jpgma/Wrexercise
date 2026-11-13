@@ -37,6 +37,7 @@ internal static class TextosPush
             "Comentario" => $"{aviso.Total} novos comentários em uma atividade",
             "Disputa" => $"O treino de {nome} precisa de uma decisão",
             "SituacaoAlterada" when aviso.Situacao == "Rejeitada" => "Seu treino foi rejeitado",
+            "SituacaoAlterada" when aviso.Situacao == "Anulada" => "Seu treino foi anulado",
             "SituacaoAlterada" => "Seu treino entrou em revisão",
             "CartaRecebida" => $"{nome} te mandou uma carta. Topa?",
             "RivalEscolhido" => $"{nome} escolheu você como Rival da semana. Quem cumpre a meta primeiro?",

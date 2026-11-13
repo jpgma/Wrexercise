@@ -16,7 +16,8 @@ export type SituacaoVerificacao =
   | "Verificada"
   | "EmRevisao"
   | "Contestada"
-  | "Rejeitada";
+  | "Rejeitada"
+  | "Anulada";
 
 export type Evidencia = {
   id: string;
@@ -73,6 +74,8 @@ export type Atividade = Omit<
   voce: boolean;
   evidencias: Evidencia[];
   avisos: Aviso[];
+  /** Até quando o autor pode apagar (ADR 0054); `null` quando não pode. */
+  exclusaoPermitidaAte: string | null;
 };
 
 export type CriarAtividadeData = {

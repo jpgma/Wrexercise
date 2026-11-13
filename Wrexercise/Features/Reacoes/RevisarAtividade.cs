@@ -32,6 +32,7 @@ internal static class RevisarAtividade
 
     private static bool IsValidRequest(RevisaoRequest request) =>
         request.Decisao is SituacaoVerificacao.Verificada or SituacaoVerificacao.Rejeitada
+            or SituacaoVerificacao.Anulada
         && ValidacaoRevisao.IsValidJustificativa(request.Justificativa);
 
     private static async Task<(IResult? Erro, RevisaoRegistradaResponse? Valor)> ExecutarAsync(
@@ -85,7 +86,11 @@ internal static class RevisarAtividade
             return (OperacaoReacao.ToResult(ReacaoOperacaoStatus.RevisaoPropria), null);
         }
 
-        if (situacao != SituacaoVerificacao.EmRevisao)
+        // Anular (ADR 0054) vale para qualquer atividade ainda não decidida; aprovar ou rejeitar, só na disputa.
+        var pendente = decisao == SituacaoVerificacao.Anulada
+            ? situacao is SituacaoVerificacao.AguardandoFeedback or SituacaoVerificacao.EmRevisao
+            : situacao == SituacaoVerificacao.EmRevisao;
+        if (!pendente)
         {
             return (OperacaoReacao.ToResult(ReacaoOperacaoStatus.RevisaoNaoPendente), null);
         }

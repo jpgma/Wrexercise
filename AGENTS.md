@@ -50,7 +50,7 @@ Tipos de `Aviso` (ADR 0052): `FotoForaDoPeriodo`, `FotoSemData`, `FotoParecida`,
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 
-Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`.
+Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`, `Anulada` (ADR 0054: o administrador anula um registro errado; o autor pode apagar a própria atividade nos primeiros 15 minutos).
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 

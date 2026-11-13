@@ -26,6 +26,7 @@ internal static class SituacaoVerificacao
     public const string EmRevisao = "EmRevisao";
     public const string Contestada = "Contestada";
     public const string Rejeitada = "Rejeitada";
+    public const string Anulada = "Anulada";
 
     public static bool ContaComoPendente(string situacao) =>
         situacao is AguardandoFeedback or EmRevisao or Contestada;
@@ -75,4 +76,24 @@ internal static class ValidacaoAtividade
 
     public static int NormalizeLimite(int? limite) =>
         limite is > 0 and <= LimiteFeedMaximo ? limite.Value : LimiteFeedPadrao;
+}
+
+/// <summary>
+/// ADR 0054: o autor apaga a própria atividade logo depois de registrá-la, para desfazer um registro em
+/// dobro ou com erro. Só enquanto ninguém a contestou: com Suspeito ou Rejeitar ela já está em revisão.
+/// </summary>
+internal static class ExclusaoAtividade
+{
+    public static readonly TimeSpan Janela = TimeSpan.FromMinutes(15);
+
+    /// <returns>Até quando o autor pode apagar, ou <c>null</c> se não pode.</returns>
+    public static DateTimeOffset? PermitidaAte(
+        bool autor,
+        string situacao,
+        DateTimeOffset submittedAt,
+        DateTimeOffset agora)
+    {
+        var limite = submittedAt + Janela;
+        return autor && situacao == SituacaoVerificacao.AguardandoFeedback && agora < limite ? limite : null;
+    }
 }

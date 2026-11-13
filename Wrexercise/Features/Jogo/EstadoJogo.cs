@@ -108,7 +108,7 @@ internal sealed record EstadoJogo(
     }
 
     /// <summary>
-    /// As atividades não rejeitadas, inclusive de grupos que a pessoa deixou, em ordem de registro
+    /// As atividades não rejeitadas nem anuladas, inclusive de grupos que a pessoa deixou, em ordem de registro
     /// (decisão 0034): uma atividade retroativa não toma o bônus de outra já verificada.
     /// </summary>
     private static async Task<List<AtividadeEnergia>> LoadAtividadesAsync(
@@ -121,7 +121,7 @@ internal sealed record EstadoJogo(
             SELECT a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.situacao_verificacao = 'Verificada', a.grupo_id
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
-            WHERE a.usuario_id = $1 AND a.situacao_verificacao <> 'Rejeitada'
+            WHERE a.usuario_id = $1 AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
             ORDER BY a.created_at, a.id
             """, connection, transaction);
         command.Parameters.AddWithValue(usuarioId);

@@ -5,7 +5,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { gruposKey, shouldRetry } from "@/features/grupos";
-import { ApiError, getJson, postFormData, postJson } from "@/services/api";
+import {
+  ApiError,
+  deleteEmpty,
+  getJson,
+  postFormData,
+  postJson,
+} from "@/services/api";
 import type { EvidenciaPreparada } from "./comprimirImagem";
 import type {
   Atividade,
@@ -98,6 +104,26 @@ export function useAtividade(id: string, enabled = true) {
       getJson<Atividade>(`/api/atividades/${id}`, signal),
     enabled,
     retry: shouldRetry,
+  });
+}
+
+/** O autor apaga a própria atividade nos primeiros 15 minutos (ADR 0054). */
+export function useExcluirAtividade(id: string, grupoId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => deleteEmpty(`/api/atividades/${id}`),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: atividadeKey(id) });
+      void queryClient.invalidateQueries({
+        queryKey: atividadesDoGrupoKey(grupoId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...atividadesKey, "recentes"],
+      });
+      void queryClient.invalidateQueries({ queryKey: ["desafios"] });
+      void queryClient.invalidateQueries({ queryKey: gruposKey });
+      void queryClient.invalidateQueries({ queryKey: ["jogo"] });
+    },
   });
 }
 

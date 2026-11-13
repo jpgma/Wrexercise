@@ -76,7 +76,7 @@ internal static class ObterMeuPerfil
             )
             SELECT s.inicio,
                 count(a.id) FILTER (WHERE a.situacao_verificacao = 'Verificada')::int,
-                count(a.id) FILTER (WHERE a.situacao_verificacao <> 'Rejeitada')::int
+                count(a.id) FILTER (WHERE a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada'))::int
             FROM semanas s
             LEFT JOIN (atividades a JOIN grupos g ON g.id = a.grupo_id)
                 ON a.usuario_id = $1

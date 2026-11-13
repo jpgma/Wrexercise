@@ -54,6 +54,7 @@ internal sealed record AtividadeResponse(
     DateTimeOffset SubmittedAt,
     bool Voce,
     IReadOnlyList<EvidenciaResponse> Evidencias,
-    IReadOnlyList<AvisoResponse> Avisos);
+    IReadOnlyList<AvisoResponse> Avisos,
+    DateTimeOffset? ExclusaoPermitidaAte);
 
 internal sealed record EvidenciaCriadaResponse(Guid Id, int Ordem, string Url);
