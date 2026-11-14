@@ -1,11 +1,14 @@
 import { CalendarCheck, Dumbbell, Flame, Moon, Swords, X } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { useVitrine } from "@/components/folhaAvatar";
 import { formatarDuracao } from "@/features/atividades";
 import { usePerfilMembro } from "@/features/usuarios";
+import { getErrorMessage } from "@/services/api";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { primeiroNome } from "./textosCartas";
+import { tiposCutucada } from "./textosCutucada";
+import { useCutucar } from "./useCutucar";
 import type { MembroCena } from "./useCena";
 import { getRelacaoRival, useRivais } from "./useRivais";
 
@@ -45,12 +48,15 @@ export function PainelFoco({
   membro,
   oculto,
   onFechar,
+  onCutucado,
 }: {
   grupoId: string;
   usuarioId: string;
   membro: MembroCena;
   oculto: boolean;
   onFechar: () => void;
+  /** Depois da Cutucada: quem dorme leva um susto na praça. */
+  onCutucado: () => void;
 }) {
   const alvoId = membro.usuarioId;
   const proprio = alvoId === usuarioId;
@@ -160,6 +166,15 @@ export function PainelFoco({
         )}
       </ul>
 
+      {!proprio && membro.pose === "dormindo" && (
+        <Cutucada
+          grupoId={grupoId}
+          membro={membro}
+          nome={nome}
+          onCutucado={onCutucado}
+        />
+      )}
+
       {!proprio && !membro.recebeCartas && (
         <p className="mt-2 text-xs text-muted">
           {nome} está no modo App e não recebe cartas.
@@ -173,5 +188,86 @@ export function PainelFoco({
         {proprio ? "Ver a minha página" : `Ver a página de ${nome}`}
       </Link>
     </section>
+  );
+}
+
+/**
+ * A Cutucada (decisão 0063): só para quem dorme, uma vez a cada 24 horas. O botão abre as mensagens
+ * prontas; tocar numa delas já envia.
+ */
+function Cutucada({
+  grupoId,
+  membro,
+  nome,
+  onCutucado,
+}: {
+  grupoId: string;
+  membro: MembroCena;
+  nome: string;
+  onCutucado: () => void;
+}) {
+  const [aberta, setAberta] = useState(false);
+  const cutucar = useCutucar(grupoId);
+  const cutucado = membro.cutucadoPorMimEm !== null || cutucar.isSuccess;
+
+  if (cutucado) {
+    return (
+      <p className="mt-2 flex min-h-11 items-center gap-1.5 text-sm text-muted">
+        <span aria-hidden="true">👉</span>
+        Você já cutucou {nome} hoje.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        aria-expanded={aberta}
+        aria-controls="cutucadas-opcoes"
+        onClick={() => setAberta((a) => !a)}
+        className="btn-secondary min-h-11 w-full justify-center"
+      >
+        <span aria-hidden="true">👉</span> Cutucar {nome}
+      </button>
+      {aberta && (
+        <div
+          id="cutucadas-opcoes"
+          role="group"
+          aria-label={`Mensagens para cutucar ${nome}`}
+          className="mt-2 grid grid-cols-2 gap-1.5"
+        >
+          {tiposCutucada.map((tipo) => (
+            <button
+              key={tipo.codigo}
+              type="button"
+              disabled={cutucar.isPending}
+              onClick={() =>
+                cutucar.mutate(
+                  { destinatarioId: membro.usuarioId, tipo: tipo.codigo },
+                  {
+                    onSuccess: () => {
+                      setAberta(false);
+                      onCutucado();
+                    },
+                  },
+                )
+              }
+              className="flex min-h-11 items-center gap-1.5 rounded-lg border-2 border-outline bg-surface px-2 text-left text-xs leading-tight tap disabled:opacity-50"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">
+                {tipo.emoji}
+              </span>
+              {tipo.texto}
+            </button>
+          ))}
+        </div>
+      )}
+      {cutucar.isError && (
+        <p role="alert" className="form-error mt-1">
+          {getErrorMessage(cutucar.error)}
+        </p>
+      )}
+    </div>
   );
 }

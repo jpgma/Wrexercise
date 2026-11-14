@@ -12,6 +12,10 @@ export type MembroCena = {
   recebeCartas: boolean;
   /** Só com a pose `dormindo`: desde quando, em ISO 8601. */
   dormindoDesde: string | null;
+  /** Só com a pose `dormindo`: as cutucadas recebidas nas últimas 24 horas. */
+  cutucadas: { total: number; ultimoTipo: string } | null;
+  /** Só com a pose `dormindo`: quando quem vê cutucou este membro nas últimas 24 horas. */
+  cutucadoPorMimEm: string | null;
 };
 
 export type Cena = {

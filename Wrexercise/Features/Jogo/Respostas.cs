@@ -2,17 +2,25 @@ namespace Wrexercise.Features.Jogo;
 
 /// <param name="RecebeCartas">Se a pessoa está no modo Jogo: só assim pode receber cartas.</param>
 /// <param name="DormindoDesde">Só com a pose <c>dormindo</c>: o início do sono, mostrado no Foco.</param>
+/// <param name="Cutucadas">Só com a pose <c>dormindo</c>: as cutucadas recebidas nas últimas 24 horas.</param>
+/// <param name="CutucadoPorMimEm">Só com a pose <c>dormindo</c>: quando quem vê cutucou este membro nas últimas 24 horas.</param>
 internal sealed record MembroCenaResponse(
     Guid UsuarioId,
     string NomeExibicao,
     string Pose,
     bool RecebeCartas,
-    DateTimeOffset? DormindoDesde);
+    DateTimeOffset? DormindoDesde,
+    CutucadasMembroResponse? Cutucadas = null,
+    DateTimeOffset? CutucadoPorMimEm = null);
+
+/// <param name="UltimoTipo">O código da mensagem pronta da cutucada mais recente.</param>
+internal sealed record CutucadasMembroResponse(int Total, string UltimoTipo);
 
 internal sealed record CenaResponse(Guid GrupoId, IReadOnlyList<MembroCenaResponse> Membros);
 
 /// <summary>A Energia ganha por origem. A soma é a Energia ganha total.</summary>
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo ou zero.</param>
+/// <param name="Despertador">O que rendeu acordar colegas com a Cutucada.</param>
 internal sealed record EnergiaDetalhamentoResponse(
     int Atividades,
     int Bonus,
@@ -21,7 +29,8 @@ internal sealed record EnergiaDetalhamentoResponse(
     int Desafios,
     int Jogadas,
     int Rivais,
-    int Fadiga = 0);
+    int Fadiga = 0,
+    int Despertador = 0);
 
 /// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (0 a 3).</param>
 internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento, int FadigaRestante = 0);

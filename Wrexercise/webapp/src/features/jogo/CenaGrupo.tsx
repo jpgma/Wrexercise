@@ -28,6 +28,7 @@ import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { PainelFoco } from "./PainelFoco";
+import { getTipoCutucada } from "./textosCutucada";
 import { getBloqueioJogada, primeiroNome } from "./textosCartas";
 import {
   type CartaMao,
@@ -297,6 +298,10 @@ function AvatarCena({
     medalha && `${posicaoClassificacao}º lugar no desafio`,
     rival === "escolhido" && "seu Rival da semana",
     rival === "escolheu" && "escolheu você como Rival",
+    membro.cutucadas &&
+      (membro.cutucadas.total === 1
+        ? "cutucado 1 vez hoje"
+        : `cutucado ${membro.cutucadas.total} vezes hoje`),
   ]
     .filter(Boolean)
     .join(", ");
@@ -380,6 +385,13 @@ function AvatarCena({
                 reduzido={reduzido}
               />
             ))}
+          {sono && membro.cutucadas && (
+            <BolhaCutucada
+              x={(CabecaSentado.x - corpo.esquerda) * escala}
+              y={(CabecaSentado.y - corpo.topo) * escala}
+              {...membro.cutucadas}
+            />
+          )}
         </span>
       </button>
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
@@ -405,6 +417,34 @@ function AvatarCena({
         </span>
       )}
     </>
+  );
+}
+
+/**
+ * Sobre quem dorme e foi cutucado nas últimas 24 horas: o emoji da última cutucada e quantas foram,
+ * do lado oposto ao "Zzz". Todos na praça veem quem está sendo chamado (decisão 0063).
+ */
+function BolhaCutucada({
+  x,
+  y,
+  total,
+  ultimoTipo,
+}: {
+  x: number;
+  y: number;
+  total: number;
+  ultimoTipo: string;
+}) {
+  const tipo = getTipoCutucada(ultimoTipo);
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute flex -translate-x-full items-center gap-0.5 rounded-full border-2 border-outline bg-surface px-1 text-xs leading-none whitespace-nowrap shadow-sticker"
+      style={{ left: x - 6, top: y - 22 }}
+    >
+      <span>{tipo?.emoji ?? "👉"}</span>
+      {total > 1 && <span className="font-score text-2xs">×{total}</span>}
+    </span>
   );
 }
 
@@ -843,6 +883,7 @@ function Praca({
               membro={alvo}
               oculto={emAcao}
               onFechar={foco.fechar}
+              onCutucado={foco.cutucar}
             />
           )}
           {(entrada.ativa || encenacao.ativa) && (

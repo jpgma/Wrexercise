@@ -25,6 +25,25 @@ public class TextosPushTests
     }
 
     [Fact]
+    public void GetTexto_CutucadaMostraAMensagemPronta()
+    {
+        Assert.Equal(
+            "Ana te cutucou 👉 🛋️ Levanta desse sofá!",
+            TextosPush.GetTexto(new AvisoPush("Cutucada", GrupoId, null, "Ana Souza", null, 1, "Sofa")));
+        Assert.Equal(
+            "Ana te cutucou 👉",
+            TextosPush.GetTexto(new AvisoPush("Cutucada", GrupoId, null, "Ana", null, 1, "Desconhecida")));
+    }
+
+    [Fact]
+    public void GetDestino_CutucadaAbreACenaDoGrupo()
+    {
+        Assert.Equal(
+            $"/grupos/{GrupoId}/inicio",
+            TextosPush.GetDestino(new AvisoPush("Cutucada", GrupoId, null, "Ana", null, 1, "Sofa")));
+    }
+
+    [Fact]
     public void GetDestino_NovaAtividadeAbreARevisao()
     {
         Assert.Equal(

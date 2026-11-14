@@ -14,8 +14,9 @@ export type Notificacao = {
     | "CartaAceita"
     | "CartaRecusada"
     | "JogadaConcluida"
-    | "RivalEscolhido";
-  /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival, nenhum dos dois. */
+    | "RivalEscolhido"
+    | "Cutucada";
+  /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival e na Cutucada, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;
   grupoId: string;
@@ -25,6 +26,8 @@ export type Notificacao = {
   total: number;
   lida: boolean;
   updatedAt: string;
+  /** Só na `Cutucada`: o código da mensagem pronta. */
+  cutucada: string | null;
 };
 
 const notificacoesKey = ["notificacoes"] as const;

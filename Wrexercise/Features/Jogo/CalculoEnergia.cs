@@ -13,10 +13,19 @@ internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool 
 internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false);
 
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo (decisão 0059).</param>
+/// <param name="Despertador">O que rendeu acordar colegas com a Cutucada (decisão 0063).</param>
 internal sealed record EnergiaGanha(
-    int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0, int Rivais = 0, int Fadiga = 0)
+    int Atividades,
+    int Bonus,
+    int Metas,
+    int Sequencias,
+    int Desafios,
+    int Jogadas = 0,
+    int Rivais = 0,
+    int Fadiga = 0,
+    int Despertador = 0)
 {
-    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga;
+    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga + Despertador;
 }
 
 /// <summary>
@@ -32,6 +41,9 @@ internal static class CalculoEnergia
     public const int PorMeta = 20;
     public const int PorDesafioConcluido = 75;
     public const int TetoBonus = 10;
+
+    /// <summary>Para quem cutucou, por colega que voltou a treinar (decisão 0063).</summary>
+    public const int PorDespertar = 5;
 
     public const int BonusAntesDas6 = 5;
     public const int BonusAntesDas8 = 3;
@@ -54,12 +66,14 @@ internal static class CalculoEnergia
     /// Quantas vezes a pessoa venceu o Rival que escolheu. Cada grupo conta à parte (decisão 0038).
     /// </param>
     /// <param name="diasComFadiga">Os dias pagos que rendem só metade da base (<see cref="Fadiga"/>).</param>
+    /// <param name="despertares">Quantos colegas cutucados voltaram a treinar (<see cref="Despertador"/>).</param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
         IReadOnlyList<DesafioDaPessoa> desafios,
         IReadOnlyList<RecompensaJogada>? jogadas = null,
         int rivaisVencidos = 0,
-        int diasComFadiga = 0)
+        int diasComFadiga = 0,
+        int despertares = 0)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -74,7 +88,8 @@ internal static class CalculoEnergia
             desafios.Count(d => d.IsConcluido()) * PorDesafioConcluido,
             (jogadas ?? []).Sum(GetRecompensa),
             rivaisVencidos * ResultadoRival.Energia,
-            -diasComFadiga * Fadiga.Desconto);
+            -diasComFadiga * Fadiga.Desconto,
+            despertares * PorDespertar);
     }
 
     /// <summary>

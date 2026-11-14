@@ -44,9 +44,11 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`.
 
 `Fadiga` (ADR 0059): debuff de quem recusa ou deixa expirar uma Provocação recebida. Os próximos 3 dias verificados rendem metade da base de Energia. Na interface, aparece como "FADIGA".
+
+`Cutucada` (ADR 0063): um membro chama um colega que dorme no grupo, com uma de 6 mensagens prontas (`Sofa`, `Frango`, `Meta`, `Halter`, `Despertador`, `Fantasma`). Na interface, o botão é "Cutucar" e a notificação diz "te cutucou 👉". Quem cutucou ganha o bônus Despertador quando o colega volta a treinar.
 
 Tipos de `Aviso` (ADR 0052, 0058): `FotoForaDoPeriodo`, `FotoSemData`, `FotoParecida`, `RegistroTardio`, `VideoParado`. Os nomes `Foto*` valem também para vídeos.
 

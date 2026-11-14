@@ -18,11 +18,12 @@ internal static class ListarNotificacoes
     {
         await using var command = dataSource.CreateCommand($"""
             SELECT n.id, n.tipo, n.atividade_id, n.jogada_id, n.grupo_id, g.nome, u.nome_exibicao, n.situacao,
-                n.total, n.read_at IS NOT NULL, n.updated_at
+                n.total, n.read_at IS NOT NULL, n.updated_at, c.tipo
             FROM notificacoes n
             JOIN membros_grupo m ON m.grupo_id = n.grupo_id AND m.usuario_id = n.usuario_id AND m.removed_at IS NULL
             JOIN grupos g ON g.id = n.grupo_id
             LEFT JOIN usuarios u ON u.id = n.ator_id
+            LEFT JOIN cutucadas c ON c.id = n.cutucada_id
             WHERE n.usuario_id = $1
             ORDER BY n.updated_at DESC, n.id
             LIMIT {Limite}
@@ -44,7 +45,8 @@ internal static class ListarNotificacoes
                 reader.IsDBNull(7) ? null : reader.GetString(7),
                 reader.GetInt32(8),
                 reader.GetBoolean(9),
-                TimestampLeitura.FromReader(reader, 10)));
+                TimestampLeitura.FromReader(reader, 10),
+                reader.IsDBNull(11) ? null : reader.GetString(11)));
         }
 
         return Results.Json(new NotificacoesResponse(notificacoes), AppJsonContext.Default.NotificacoesResponse);

@@ -1,6 +1,6 @@
 # 0057 — Avatar dormindo: 48 horas sem atividade
 
-**Status:** DECIDIDA. Complementa `0023-gamificacao.md`, `0039-avatar-em-8-direcoes.md` e `0037-avatar-importado-e-enfeites.md`.
+**Status:** DECIDIDA. A alternativa "cutucar" foi revista pela `0063-cutucada.md`. Complementa `0023-gamificacao.md`, `0039-avatar-em-8-direcoes.md` e `0037-avatar-importado-e-enfeites.md`.
 
 ## Contexto
 

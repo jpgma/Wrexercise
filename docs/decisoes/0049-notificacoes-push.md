@@ -29,7 +29,7 @@ Antes do push, a `0048` tirou os avisos que só confirmavam o caminho esperado.
 
 ## Decisão
 
-- **O que vai ao telefone:** `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada` (`Rejeitada` e `EmRevisao`), `Disputa`, `CartaRecebida` e `RivalEscolhido`. `CartaAceita`, `CartaRecusada` e `JogadaConcluida` ficam só na lista do app. A lista em `Features/Notificacoes/TextosPush.cs`.
+- **O que vai ao telefone:** `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada` (`Rejeitada` e `EmRevisao`), `Disputa`, `CartaRecebida`, `RivalEscolhido` e `Cutucada` (ADR 0063). `CartaAceita`, `CartaRecusada` e `JogadaConcluida` ficam só na lista do app. A lista em `Features/Notificacoes/TextosPush.cs`.
 - **Conteúdo:** o título é o nome do grupo; o corpo é o mesmo texto da lista do app (`textos.ts`, espelhado em `TextosPush.cs`). A mensagem vai cifrada de ponta a ponta, mas aparece na tela bloqueada.
 - **Inscrições:** tabela `push_subscriptions`, uma linha por aparelho, no máximo 10 por pessoa. O mesmo aparelho passa para quem entrar por último. Só endpoints `https` dos serviços conhecidos (Google, Apple, Mozilla, Microsoft) são aceitos, para o servidor não fazer requisições a endereços quaisquer. Uma resposta 404 ou 410 do serviço apaga a inscrição.
 - **Envio:** `EnvioPushBackgroundService` varre a cada 30 segundos. Marca o lote antes de enviar (no máximo uma tentativa por mudança) e só envia o que não foi lido, mudou há menos de 1 hora, é de um grupo do qual a pessoa ainda participa e tem inscrição. Quando uma reação ou um comentário soma na mesma notificação, a coluna volta a nulo e o aviso vai de novo.

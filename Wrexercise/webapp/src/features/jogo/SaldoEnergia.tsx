@@ -69,6 +69,7 @@ const origens: { chave: keyof DetalhamentoEnergia; rotulo: string }[] = [
   { chave: "desafios", rotulo: "Desafios concluídos" },
   { chave: "jogadas", rotulo: "Cartas cumpridas" },
   { chave: "rivais", rotulo: "Rivais vencidos" },
+  { chave: "despertador", rotulo: "Colegas acordados com a Cutucada" },
   { chave: "fadiga", rotulo: "FADIGA (treinos com −50%)" },
 ];
 

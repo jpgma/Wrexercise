@@ -33,6 +33,7 @@ internal static class ObterCena
         var membros = await LoadMembrosAsync(connection, grupoId, cancellationToken);
         var comPendentes = await LoadComAtividadePendenteAsync(connection, grupoId, cancellationToken);
         var comMeta = await LoadComMetaCumpridaAsync(connection, grupoId, membros, cancellationToken);
+        var cutucadas = await LoadCutucadasAsync(connection, grupoId, usuarioId, cancellationToken);
 
         var agora = DateTimeOffset.UtcNow;
         var resposta = membros
@@ -42,12 +43,16 @@ internal static class ObterCena
                     comPendentes.Contains(m.UsuarioId),
                     comMeta.Contains(m.UsuarioId),
                     PoseAvatar.IsDormindo(m.AcordadoEm, agora));
+                var dorme = pose == PoseAvatar.Dormindo;
+                var cutucado = dorme ? cutucadas.GetValueOrDefault(m.UsuarioId) : null;
                 return new MembroCenaResponse(
                     m.UsuarioId,
                     m.NomeExibicao,
                     pose,
                     m.ModoJogo,
-                    pose == PoseAvatar.Dormindo ? m.AcordadoEm : null);
+                    dorme ? m.AcordadoEm : null,
+                    cutucado is null ? null : new CutucadasMembroResponse(cutucado.Total, cutucado.UltimoTipo),
+                    cutucado?.PorMimEm);
             })
             .ToList();
 
@@ -88,6 +93,38 @@ internal static class ObterCena
         }
 
         return membros;
+    }
+
+    private sealed record CutucadasRecebidas(int Total, string UltimoTipo, DateTimeOffset? PorMimEm);
+
+    /// <summary>As cutucadas das últimas 24 horas por quem recebeu (decisão 0063).</summary>
+    private static async Task<Dictionary<Guid, CutucadasRecebidas>> LoadCutucadasAsync(
+        NpgsqlConnection connection,
+        Guid grupoId,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            SELECT destinatario_id, count(*)::int, (array_agg(tipo ORDER BY created_at DESC, id))[1],
+                max(created_at) FILTER (WHERE autor_id = $2)
+            FROM cutucadas
+            WHERE grupo_id = $1 AND created_at > now() - interval '24 hours'
+            GROUP BY destinatario_id
+            """, connection);
+        command.Parameters.AddWithValue(grupoId);
+        command.Parameters.AddWithValue(usuarioId);
+
+        var cutucadas = new Dictionary<Guid, CutucadasRecebidas>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            cutucadas[reader.GetGuid(0)] = new CutucadasRecebidas(
+                reader.GetInt32(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : TimestampLeitura.FromReader(reader, 3));
+        }
+
+        return cutucadas;
     }
 
     /// <summary>Quem tem atividade ainda sem veredito neste grupo, na semana corrente (segunda a domingo, fuso do grupo).</summary>

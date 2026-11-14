@@ -1,3 +1,5 @@
+using Wrexercise.Features.Jogo.Contracts;
+
 namespace Wrexercise.Features.Notificacoes;
 
 internal sealed record AvisoPush(
@@ -6,7 +8,8 @@ internal sealed record AvisoPush(
     Guid? AtividadeId,
     string? AtorNome,
     string? Situacao,
-    int Total);
+    int Total,
+    string? Cutucada = null);
 
 /// <summary>
 /// Texto e destino de cada aviso no telefone. Espelha `webapp/src/features/notificacoes/textos.ts`:
@@ -23,6 +26,7 @@ internal static class TextosPush
         "Disputa",
         "CartaRecebida",
         "RivalEscolhido",
+        "Cutucada",
     ];
 
     public static string GetTexto(AvisoPush aviso)
@@ -41,17 +45,23 @@ internal static class TextosPush
             "SituacaoAlterada" => "Seu treino entrou em revisão",
             "CartaRecebida" => $"{nome} te mandou uma carta. Topa?",
             "RivalEscolhido" => $"{nome} escolheu você como Rival da semana. Quem cumpre a meta primeiro?",
+            "Cutucada" => TextoCutucada(nome, aviso.Cutucada),
             _ => "Você tem uma nova notificação",
         };
     }
 
     public static string GetDestino(AvisoPush aviso) => aviso.AtividadeId switch
     {
-        // As cartas e o Rival aparecem na cena do grupo.
+        // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
         null => $"/grupos/{aviso.GrupoId}/inicio",
         { } atividadeId when aviso.Tipo == "NovaAtividade" => $"/grupos/{aviso.GrupoId}/revisar/{atividadeId}",
         { } atividadeId => $"/atividades/{atividadeId}",
     };
+
+    private static string TextoCutucada(string nome, string? codigo) =>
+        TiposCutucada.Find(codigo) is { } tipo
+            ? $"{nome} te cutucou 👉 {tipo.Emoji} {tipo.Texto}"
+            : $"{nome} te cutucou 👉";
 
     private static string PrimeiroNome(string? nome) =>
         nome?.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Alguém";

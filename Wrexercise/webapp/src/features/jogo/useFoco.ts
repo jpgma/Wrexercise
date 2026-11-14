@@ -482,6 +482,17 @@ export function useFoco({
     [alvoId, atuar, cancelar, centro, esperar, mirar, reduzido, usuarioId],
   );
 
+  /** Depois da Cutucada, quem dorme leva outro susto (`acordar`) e volta a dormir. */
+  const cutucar = useCallback(() => {
+    if (!alvoId || reduzido || !dormindoRef.current.has(alvoId)) return;
+    const p = posicoesRef.current.get(alvoId);
+    const minha = geracao.current;
+    atuar(alvoId, pose("acordar", p ? getDirecao(p, centro) : "sul"));
+    void esperar(getDuracao("acordar")).then(
+      () => geracao.current === minha && atuar(alvoId, null),
+    );
+  }, [alvoId, atuar, centro, esperar, reduzido]);
+
   const alvo = alvoId ? posicoes.get(alvoId) : undefined;
   const camera: Camera = !alvo
     ? { ...semCamera, ms: CameraMs }
@@ -499,5 +510,6 @@ export function useFoco({
     fechar,
     arremessar,
     rivalizar,
+    cutucar,
   };
 }

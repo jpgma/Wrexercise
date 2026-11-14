@@ -13,6 +13,8 @@ export type DetalhamentoEnergia = {
   rivais: number;
   /** O que a FADIGA deixou de render: zero ou negativo. */
   fadiga: number;
+  /** O que rendeu acordar colegas com a Cutucada. */
+  despertador: number;
 };
 
 export type Energia = {

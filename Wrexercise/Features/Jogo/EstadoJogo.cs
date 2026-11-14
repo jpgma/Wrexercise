@@ -82,8 +82,74 @@ internal sealed record EstadoJogo(
                 j.CodigoResposta == CodigoCarta.Aposta))
             .ToList();
 
-        var ganha = CalculoEnergia.Calcular(atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga);
+        var despertares = await LoadDespertaresAsync(connection, transaction, usuarioId, cancellationToken);
+
+        var ganha = CalculoEnergia.Calcular(
+            atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga, despertares);
         return new EstadoJogo(usuarioId, ganha, cartas, jogadas, fadiga.Restantes);
+    }
+
+    /// <summary>
+    /// Quantos colegas que a pessoa cutucou voltaram a treinar (decisão 0063). Carrega as cutucadas enviadas e
+    /// só as atividades verificadas que podem despertar alguma delas; a escolha fica em <see cref="Despertador"/>.
+    /// </summary>
+    private static async Task<int> LoadDespertaresAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        var cutucadas = new List<CutucadaEnviada>();
+        await using (var command = new NpgsqlCommand("""
+            SELECT grupo_id, destinatario_id, created_at
+            FROM cutucadas
+            WHERE autor_id = $1
+            """, connection, transaction))
+        {
+            command.Parameters.AddWithValue(usuarioId);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                cutucadas.Add(new CutucadaEnviada(
+                    reader.GetGuid(0),
+                    reader.GetGuid(1),
+                    TimestampLeitura.FromReader(reader, 2)));
+            }
+        }
+
+        if (cutucadas.Count == 0)
+        {
+            return 0;
+        }
+
+        var atividades = new List<AtividadeDespertar>();
+        await using (var command = new NpgsqlCommand("""
+            SELECT a.id, a.grupo_id, a.usuario_id, a.started_at, a.submitted_at
+            FROM atividades a
+            WHERE a.situacao_verificacao = 'Verificada'
+              AND EXISTS (
+                  SELECT 1 FROM cutucadas c
+                  WHERE c.autor_id = $1
+                    AND c.grupo_id = a.grupo_id
+                    AND c.destinatario_id = a.usuario_id
+                    AND a.submitted_at > c.created_at
+                    AND a.started_at <= c.created_at + interval '24 hours')
+            """, connection, transaction))
+        {
+            command.Parameters.AddWithValue(usuarioId);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                atividades.Add(new AtividadeDespertar(
+                    reader.GetGuid(0),
+                    reader.GetGuid(1),
+                    reader.GetGuid(2),
+                    TimestampLeitura.FromReader(reader, 3),
+                    TimestampLeitura.FromReader(reader, 4)));
+            }
+        }
+
+        return Despertador.Contar(cutucadas, atividades);
     }
 
     private static async Task<List<CartaComprada>> LoadCartasAsync(

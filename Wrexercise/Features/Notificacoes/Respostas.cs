@@ -1,5 +1,6 @@
 namespace Wrexercise.Features.Notificacoes;
 
+/// <param name="Cutucada">Só no tipo <c>Cutucada</c>: o código da mensagem pronta (decisão 0063).</param>
 internal sealed record NotificacaoResponse(
     Guid Id,
     string Tipo,
@@ -11,7 +12,8 @@ internal sealed record NotificacaoResponse(
     string? Situacao,
     int Total,
     bool Lida,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string? Cutucada = null);
 
 internal sealed record NotificacoesResponse(IReadOnlyList<NotificacaoResponse> Notificacoes);
 

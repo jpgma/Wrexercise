@@ -33,6 +33,15 @@ public class CalculoEnergiaTests
     public void SemNada_NaoGanhaEnergia() => Assert.Equal(0, CalculoEnergia.Calcular([], []).Total);
 
     [Fact]
+    public void Despertador_CadaDespertarRende5()
+    {
+        var ganha = CalculoEnergia.Calcular([], [], despertares: 3);
+
+        Assert.Equal(15, ganha.Despertador);
+        Assert.Equal(15, ganha.Total);
+    }
+
+    [Fact]
     public void Rivais_CadaVitoriaRende15()
     {
         var ganha = CalculoEnergia.Calcular([], [], rivaisVencidos: 2);

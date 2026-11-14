@@ -1,3 +1,4 @@
+import { getTipoCutucada } from "@/features/jogo";
 import type { Notificacao } from "./useNotificacoes";
 
 function primeiroNome(nome: string | null): string {
@@ -20,6 +21,7 @@ export function getTextoNotificacao({
   atorNome,
   situacao,
   total,
+  cutucada,
 }: Notificacao): string {
   switch (tipo) {
     case "NovaAtividade":
@@ -51,6 +53,12 @@ export function getTextoNotificacao({
       return `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`;
     case "RivalEscolhido":
       return `${primeiroNome(atorNome)} escolheu você como Rival da semana. Quem cumpre a meta primeiro?`;
+    case "Cutucada": {
+      const tipo = getTipoCutucada(cutucada);
+      return tipo
+        ? `${primeiroNome(atorNome)} te cutucou 👉 ${tipo.emoji} ${tipo.texto}`
+        : `${primeiroNome(atorNome)} te cutucou 👉`;
+    }
   }
 }
 
@@ -59,7 +67,7 @@ export function getDestinoNotificacao({
   grupoId,
   atividadeId,
 }: Notificacao): string {
-  // As cartas e o Rival aparecem na cena do grupo.
+  // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
   if (atividadeId === null) return `/grupos/${grupoId}/inicio`;
   return tipo === "NovaAtividade"
     ? `/grupos/${grupoId}/revisar/${atividadeId}`
