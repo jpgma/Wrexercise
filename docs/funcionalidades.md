@@ -446,7 +446,16 @@ The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the
   - The latitude and the longitude (EXIF GPS), if they exist. The server keeps them. No API response shows them.
 - The server refuses an image if the same file (SHA-256 of the sent file or of the original file) is already evidence in any group of the user, also in the same activity. The API returns `409 EVIDENCIA_DUPLICADA`. The confirmation page shows "Esta foto já foi usada em outra atividade."
 - If the same file is already evidence of the same activity, the API returns `409 EVIDENCIA_JA_ANEXADA`, also when the activity has 3 images. This occurs when the form submits again after a lost response (see 7.1). The form counts the image as sent.
-- The server accepts JPEG, PNG and WebP files. The maximum size is 5 MB for each file and 100 KB for each thumbnail. The server examines the real content of the file.
+- The server accepts JPEG, PNG and WebP images and MP4 videos (ADR 0058). The maximum size is 5 MB for each image, 25 MB for each video and 100 KB for each thumbnail. The server examines the real content of the file. A thumbnail is always a JPEG.
+- The server reads the boxes of each MP4 file. It does not decode the video. It refuses a video:
+  - That it cannot read (no `ftyp` box first, no `moov` box, a box larger than the file, no video track, a truncated file): `400 VIDEO_INVALIDO`.
+  - With a brand that it does not know, a video codec that is not H.264 (`avc1`, `avc3`), an audio codec that is not AAC (`mp4a`), or a longest side of more than 1920 pixels: `400 VIDEO_FORMATO_NAO_SUPORTADO`.
+  - Shorter than 2 seconds: `400 VIDEO_MUITO_CURTO`.
+  - Longer than 61 seconds: `400 VIDEO_MUITO_LONGO`.
+- The `moov` box can be before or after the media data.
+- When the server refuses a file, it deletes all the files of that request. No temporary file stays on the disk.
+- The API returns `tipo` (`Foto` or `Video`) and `duracaoMs` (only for videos) for each evidence. Each item in the feed has `miniaturaDuracaoMs` when the first evidence is a video.
+- The server sends a video with support for `Range` requests. The `<video>` element needs this to go to a different position.
 - Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
 - Nobody can replace evidence. Evidence is deleted only with its activity (see 7.6).
 - Only active members of the group can see the evidence.
@@ -476,9 +485,11 @@ The system adds warnings to an activity. All members of the group see them, also
 | `FotoSemData` | The photo has no EXIF or `Camera` date. A file date in or after the window does not change this. | "Foto sem data" |
 | `FotoParecida` | The `dhash` has a maximum difference of 6 bits from a photo of a different activity, in any group of the user. | "Foto parecida" |
 | `RegistroTardio` | The user records the activity more than 12 hours after its end. | "Registrada depois" |
+| `VideoParado` | The video has the fields `dhashInicio`, `dhash` and `dhashFim` (frames at 10%, 50% and 90%). Each pair of neighbor frames has a maximum difference of 2 bits. | "Vídeo parado" |
 
 - `FotoParecida` shows the link "Ver a outra" only when the user can see the other activity.
-- `FotoSemData` only gives information. The other warnings stop the automatic verification (see 8.3).
+- `FotoSemData` and `VideoParado` only give information. The other warnings stop the automatic verification (see 8.3).
+- The `Foto*` warnings also apply to videos. The video date comes from the `creation_time` of the original MP4 file.
 - When the user selects a photo, the form shows the warning that the photo will cause: "Foto N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Foto N: Sem data na foto. O grupo verá que não deu para conferir." The form calculates the warning again when the user changes the start or the duration.
 - The browser gives these data. A user can change them. The warnings help the reviewers. They are not proof.
 

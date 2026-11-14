@@ -1,5 +1,6 @@
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Infrastructure.Errors;
+using Wrexercise.Infrastructure.Files;
 
 namespace Wrexercise.Features.Atividades;
 
@@ -23,8 +24,36 @@ internal enum AtividadeOperacaoStatus
     ExclusaoNaoPermitida,
 }
 
+internal static class TipoEvidencia
+{
+    public const string Foto = "Foto";
+    public const string Video = "Video";
+}
+
 internal static class OperacaoAtividade
 {
+    /// <summary>Recusa de um vídeo pelo motivo próprio (ADR 0058); o resto é <c>EVIDENCIA_INVALIDA</c>.</summary>
+    public static IResult EvidenciaInvalida(string? codigo) => codigo switch
+    {
+        CodigosVideo.Invalido => ApiProblem.Create(
+            StatusCodes.Status400BadRequest,
+            codigo,
+            "Não foi possível ler este vídeo. Tente outro."),
+        CodigosVideo.FormatoNaoSuportado => ApiProblem.Create(
+            StatusCodes.Status400BadRequest,
+            codigo,
+            "Formato de vídeo não suportado. Envie um vídeo MP4 (H.264) de até 1920 pixels."),
+        CodigosVideo.MuitoCurto => ApiProblem.Create(
+            StatusCodes.Status400BadRequest,
+            codigo,
+            "O vídeo precisa ter pelo menos 2 segundos."),
+        CodigosVideo.MuitoLongo => ApiProblem.Create(
+            StatusCodes.Status400BadRequest,
+            codigo,
+            "O vídeo pode ter no máximo 1 minuto."),
+        _ => ToResult(AtividadeOperacaoStatus.EvidenciaInvalida),
+    };
+
     public static IResult ToResult(AtividadeOperacaoStatus status) => status switch
     {
         AtividadeOperacaoStatus.Concluida => Results.NoContent(),

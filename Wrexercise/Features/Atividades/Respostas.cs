@@ -7,8 +7,17 @@ internal sealed record CriarAtividadeRequest(
     string? Descricao,
     string? TipoComprovacao);
 
-/// <summary><c>GravadaNoApp</c>: a câmera do aplicativo fez a captura (ADR 0058); é um sinal do navegador.</summary>
-internal sealed record EvidenciaResponse(Guid Id, int Ordem, string Url, bool GravadaNoApp);
+/// <summary>
+/// <c>Tipo</c>: <c>Foto</c> ou <c>Video</c>; <c>DuracaoMs</c> só no vídeo. <c>GravadaNoApp</c>: a câmera do
+/// aplicativo fez a captura (ADR 0058); é um sinal do navegador.
+/// </summary>
+internal sealed record EvidenciaResponse(
+    Guid Id,
+    int Ordem,
+    string Url,
+    bool GravadaNoApp,
+    string Tipo,
+    int? DuracaoMs);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,
@@ -29,7 +38,8 @@ internal sealed record AtividadeResumoResponse(
     int Rejeitar,
     string? MiniaturaUrl,
     int Comentarios,
-    IReadOnlyList<string> Avisos);
+    IReadOnlyList<string> Avisos,
+    int? MiniaturaDuracaoMs);
 
 /// <summary>Um <c>Aviso</c> sobre a atividade (ADR 0052). Todo o grupo vê, inclusive o autor.</summary>
 internal sealed record AvisoResponse(string Tipo, Guid? EvidenciaId, Guid? AtividadeRelacionadaId);

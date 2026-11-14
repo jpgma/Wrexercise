@@ -45,6 +45,17 @@ public class AvisosEvidenciaTests
     public void TryParseOrigem_AceitaSoAsOrigensConhecidas(string valor, bool esperado) =>
         Assert.Equal(esperado, AvisosEvidencia.TryParseOrigem(valor, out _));
 
+    [Theory]
+    [InlineData(0x00L, 0x03L, 0x00L, true)]
+    [InlineData(0x00L, 0x07L, 0x00L, false)]
+    [InlineData(0x00L, 0x00L, 0xF0L, false)]
+    public void VideoParado_QuadrosQuaseIguais(long inicio, long meio, long fim, bool esperado) =>
+        Assert.Equal(esperado, AvisosEvidencia.IsVideoParado(inicio, meio, fim));
+
+    [Fact]
+    public void VideoParado_SemOsTresHashes_NaoAvisa() =>
+        Assert.False(AvisosEvidencia.IsVideoParado(null, 0, 0));
+
     [Fact]
     public void SemData_FotoSemData() =>
         Assert.Equal(TipoAviso.FotoSemData, Aviso(null, null));

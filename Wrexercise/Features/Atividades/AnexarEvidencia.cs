@@ -45,9 +45,12 @@ internal static class AnexarEvidencia
         try
         {
             await using var stream = arquivo.OpenReadStream();
-            var (caminhoRelativo, tipoMime, tamanho, sha256) =
-                await armazenamento.SalvarAsync(stream, ValidacaoImagemEvidencia.MaxBytes, cancellationToken);
-            caminhosSalvos.Add(caminhoRelativo);
+            var salvo = await armazenamento.SalvarAsync(
+                stream,
+                aceitaVideo: true,
+                ValidacaoMidiaEvidencia.MaxBytes,
+                cancellationToken);
+            caminhosSalvos.Add(salvo.CaminhoRelativo);
 
             string? caminhoMiniatura = null;
             if (miniatura is not null)
@@ -55,13 +58,14 @@ internal static class AnexarEvidencia
                 await using var streamMiniatura = miniatura.OpenReadStream();
                 var salva = await armazenamento.SalvarAsync(
                     streamMiniatura,
-                    ValidacaoImagemEvidencia.MaxBytesMiniatura,
+                    aceitaVideo: false,
+                    ValidacaoMidiaEvidencia.MaxBytesMiniatura,
                     cancellationToken);
                 caminhosSalvos.Add(salva.CaminhoRelativo);
                 caminhoMiniatura = salva.CaminhoRelativo;
 
                 // Sempre JPEG: é o que o navegador gera, e a leitura não precisa guardar outro tipo.
-                if (salva.TipoMime != ValidacaoImagemEvidencia.TipoMimeMiniatura)
+                if (salva.TipoMime != ValidacaoMidiaEvidencia.TipoMimeMiniatura)
                 {
                     throw new EvidenciaInvalidaException("Miniatura precisa ser JPEG.");
                 }
@@ -71,10 +75,7 @@ internal static class AnexarEvidencia
                 dataSource,
                 id,
                 usuarioId,
-                caminhoRelativo,
-                tipoMime,
-                tamanho,
-                sha256,
+                salvo,
                 caminhoMiniatura,
                 sinais,
                 cancellationToken);
@@ -90,10 +91,10 @@ internal static class AnexarEvidencia
                 AppJsonContext.Default.EvidenciaCriadaResponse,
                 statusCode: StatusCodes.Status201Created);
         }
-        catch (EvidenciaInvalidaException)
+        catch (EvidenciaInvalidaException ex)
         {
             ExcluirSalvos();
-            return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.EvidenciaInvalida);
+            return OperacaoAtividade.EvidenciaInvalida(ex.Codigo);
         }
     }
 
@@ -107,6 +108,8 @@ internal static class AnexarEvidencia
         string? Origem,
         string? Sha256Original,
         long? Dhash,
+        long? DhashInicio,
+        long? DhashFim,
         double? Latitude,
         double? Longitude);
 
@@ -136,6 +139,8 @@ internal static class AnexarEvidencia
             origem,
             AvisosEvidencia.TryParseSha256(form["sha256Original"], out var sha256Original) ? sha256Original : null,
             AvisosEvidencia.TryParseDhash(form["dhash"], out var dhash) ? dhash : null,
+            AvisosEvidencia.TryParseDhash(form["dhashInicio"], out var dhashInicio) ? dhashInicio : null,
+            AvisosEvidencia.TryParseDhash(form["dhashFim"], out var dhashFim) ? dhashFim : null,
             temCoordenadas ? latitude : null,
             temCoordenadas ? longitude : null);
     }
@@ -144,10 +149,7 @@ internal static class AnexarEvidencia
         NpgsqlDataSource dataSource,
         Guid atividadeId,
         Guid usuarioId,
-        string caminhoRelativo,
-        string tipoMime,
-        int tamanho,
-        string sha256,
+        EvidenciaSalva salvo,
         string? caminhoMiniatura,
         SinaisEvidencia sinais,
         CancellationToken cancellationToken)
@@ -208,7 +210,7 @@ internal static class AnexarEvidencia
         }
 
         // Antes do limite: ao repetir o registro (ADR 0053), o navegador reenvia as fotos que já chegaram.
-        string[] hashes = sinais.Sha256Original is { } original ? [sha256, original] : [sha256];
+        string[] hashes = sinais.Sha256Original is { } original ? [salvo.Sha256, original] : [salvo.Sha256];
         if (await BuscarFotoIgualAsync(connection, transaction, usuarioId, atividadeId, hashes, cancellationToken)
             is { } atividadeDaFoto)
         {
@@ -243,16 +245,16 @@ internal static class AnexarEvidencia
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO evidencias_atividade (
                 atividade_id, caminho_relativo, tipo_mime, tamanho_bytes, sha256, ordem, caminho_miniatura,
-                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude, duracao_ms)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING id
             """, connection, transaction))
         {
             insert.Parameters.AddWithValue(atividadeId);
-            insert.Parameters.AddWithValue(caminhoRelativo);
-            insert.Parameters.AddWithValue(tipoMime);
-            insert.Parameters.AddWithValue(tamanho);
-            insert.Parameters.AddWithValue(sha256);
+            insert.Parameters.AddWithValue(salvo.CaminhoRelativo);
+            insert.Parameters.AddWithValue(salvo.TipoMime);
+            insert.Parameters.AddWithValue(salvo.TamanhoBytes);
+            insert.Parameters.AddWithValue(salvo.Sha256);
             insert.Parameters.AddWithValue((short)proximaOrdem);
             insert.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)caminhoMiniatura ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, (object?)sinais.CapturadaEm?.ToUniversalTime() ?? DBNull.Value);
@@ -261,6 +263,7 @@ internal static class AnexarEvidencia
             insert.Parameters.AddWithValue(NpgsqlDbType.Bigint, (object?)sinais.Dhash ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.Double, (object?)sinais.Latitude ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.Double, (object?)sinais.Longitude ?? DBNull.Value);
+            insert.Parameters.AddWithValue(NpgsqlDbType.Integer, (object?)salvo.DuracaoMs ?? DBNull.Value);
             evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
         }
 
@@ -274,6 +277,13 @@ internal static class AnexarEvidencia
         {
             await ConsultasAtividade.InserirAvisoAsync(
                 connection, transaction, atividadeId, avisoData, evidenciaId, null, cancellationToken);
+        }
+
+        if (salvo.DuracaoMs is not null
+            && AvisosEvidencia.IsVideoParado(sinais.DhashInicio, sinais.Dhash, sinais.DhashFim))
+        {
+            await ConsultasAtividade.InserirAvisoAsync(
+                connection, transaction, atividadeId, TipoAviso.VideoParado, evidenciaId, null, cancellationToken);
         }
 
         if (parecidaCom is { } relacionada)

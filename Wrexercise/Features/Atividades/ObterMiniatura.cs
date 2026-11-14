@@ -51,6 +51,6 @@ internal static class ObterMiniatura
 
         // Uma evidência não pode ser trocada: a miniatura pode ficar no navegador, mas nunca em cache compartilhado.
         context.Response.Headers[HeaderNames.CacheControl] = "private, max-age=604800, immutable";
-        return Results.File(caminhoCompleto, ValidacaoImagemEvidencia.TipoMimeMiniatura);
+        return Results.File(caminhoCompleto, ValidacaoMidiaEvidencia.TipoMimeMiniatura);
     }
 }

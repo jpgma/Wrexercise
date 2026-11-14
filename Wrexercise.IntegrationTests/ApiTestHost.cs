@@ -32,6 +32,7 @@ internal sealed class ApiTestHost : IAsyncDisposable
         Action<IWebHostBuilder>? configurar)
     {
         _database = database;
+        EvidenciasDiretorio = evidenciasDiretorio;
         AvataresDiretorio = avataresDiretorio;
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
@@ -43,6 +44,9 @@ internal sealed class ApiTestHost : IAsyncDisposable
             configurar?.Invoke(builder);
         });
     }
+
+    /// <summary>Onde o servidor de teste guarda as evidências.</summary>
+    public string EvidenciasDiretorio { get; }
 
     /// <summary>Onde o servidor de teste guarda as folhas de avatar importadas.</summary>
     public string AvataresDiretorio { get; }

@@ -1070,16 +1070,16 @@ Estrutura sugerida:
 
 Requisitos:
 
-- Limite inicial de 5 MB por arquivo.
+- Limite de 5 MB por imagem e 25 MB por vídeo (ADR 0058).
 - Validar extensão e conteúdo real.
-- Aceitar JPEG, PNG e WebP.
+- Aceitar JPEG, PNG e WebP, e vídeos MP4 com H.264 e AAC de 2 a 61 segundos. O servidor lê as caixas do MP4 sem biblioteca (`Infrastructure/Files/LeitorMp4.cs`) e nunca decodifica a mídia.
 - Gerar nomes aleatórios.
 - Não utilizar nomes enviados pelo cliente como caminhos.
 - Não expor diretórios de armazenamento diretamente.
 - Exigir autorização para consultar evidências.
 - Implementar exclusão de arquivos associados a atividades removidas, respeitando as regras de retenção.
 
-As imagens deverão ser redimensionadas e comprimidas no cliente quando possível.
+As imagens deverão ser redimensionadas e comprimidas no cliente quando possível. Os vídeos são convertidos no navegador, com WebCodecs, para 720p (ADR 0058).
 
 A aplicação deverá utilizar streaming para leitura e gravação dos arquivos, evitando manter arquivos grandes integralmente em memória.
 

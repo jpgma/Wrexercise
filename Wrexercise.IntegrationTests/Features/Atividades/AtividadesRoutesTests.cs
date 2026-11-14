@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
 using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Infrastructure.Json;
+using Wrexercise.IntegrationTests.Infrastructure;
 
 namespace Wrexercise.IntegrationTests.Features.Atividades;
 
@@ -528,6 +529,144 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var atividade = await ObterAsync(ana, id);
         Assert.Empty(atividade.Avisos);
         Assert.Equal([true, false], atividade.Evidencias.Select(e => e.GravadaNoApp));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_Video_GuardaDuracaoESeServeComRange()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, id, JpegVariante(1));
+
+        var response = await PostEvidenciaAsync(ana, id, Mp4Teste.Criar(duracaoMs: 42_000));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var atividade = await ObterAsync(ana, id);
+        Assert.Equal([TipoEvidencia.Foto, TipoEvidencia.Video], atividade.Evidencias.Select(e => e.Tipo));
+        Assert.Equal([null, 42_000], atividade.Evidencias.Select(e => e.DuracaoMs));
+
+        using var pedido = new HttpRequestMessage(HttpMethod.Get, atividade.Evidencias[1].Url);
+        pedido.Headers.Range = new RangeHeaderValue(0, 15);
+        using var parcial = await ana.Client.SendAsync(pedido, Token);
+        Assert.Equal(HttpStatusCode.PartialContent, parcial.StatusCode);
+        Assert.Equal("video/mp4", parcial.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(16, (await parcial.Content.ReadAsByteArrayAsync(Token)).Length);
+    }
+
+    [Fact]
+    public async Task ListarAtividades_PrimeiraEvidenciaEmVideo_DevolveDuracao()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, id, Mp4Teste.Criar(duracaoMs: 15_000));
+
+        var resumo = Assert.Single(await ListarAsync(ana, grupoId), a => a.Id == id);
+        Assert.Equal(15_000, resumo.MiniaturaDuracaoMs);
+    }
+
+    [Theory]
+    [InlineData(70_000, "avc1", "VIDEO_MUITO_LONGO")]
+    [InlineData(1_000, "avc1", "VIDEO_MUITO_CURTO")]
+    [InlineData(10_000, "hvc1", "VIDEO_FORMATO_NAO_SUPORTADO")]
+    public async Task AnexarEvidencia_VideoForaDasRegras_RecusaSemDeixarArquivo(
+        int duracaoMs,
+        string codec,
+        string codigo)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        var response = await PostEvidenciaAsync(ana, id, Mp4Teste.Criar(duracaoMs: duracaoMs, codecVideo: codec));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains(codigo, await response.Content.ReadAsStringAsync(Token), StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_VideoTruncado_VideoInvalido()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        var bytes = Mp4Teste.Criar(moovNoFim: true);
+
+        var response = await PostEvidenciaAsync(ana, id, bytes[..(bytes.Length - 20)]);
+
+        Assert.Contains("VIDEO_INVALIDO", await response.Content.ReadAsStringAsync(Token), StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_VideoRepetidoEmOutraAtividade_Duplicada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var primeira = await CriarComFotoAsync(ana, grupoId);
+        var segunda = await CriarComFotoAsync(ana, grupoId);
+        var video = Mp4Teste.Criar(variante: 7);
+
+        (await PostEvidenciaAsync(ana, primeira, video)).EnsureSuccessStatusCode();
+        var response = await PostEvidenciaAsync(ana, segunda, video);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("EVIDENCIA_DUPLICADA", await response.Content.ReadAsStringAsync(Token), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_VideoParado_AvisaSemImpedirVerificacao()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, id, Mp4Teste.Criar(), new()
+        {
+            ["capturadaEm"] = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+            ["origemDataCaptura"] = "Camera",
+            ["dhashInicio"] = "00000000000000f0",
+            ["dhash"] = "00000000000000f1",
+            ["dhashFim"] = "00000000000000f0",
+        });
+
+        var atividade = await ObterAsync(ana, id);
+        Assert.Equal(TipoAviso.VideoParado, Assert.Single(atividade.Avisos).Tipo);
+        Assert.Equal("Verificada", atividade.SituacaoVerificacao);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_VideoComMovimento_SemAviso()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, id, Mp4Teste.Criar(), new()
+        {
+            ["capturadaEm"] = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+            ["origemDataCaptura"] = "Exif",
+            ["dhashInicio"] = "ffff000000000000",
+            ["dhash"] = "00000000000000f1",
+            ["dhashFim"] = "000000000000ffff",
+        });
+
+        Assert.Empty((await ObterAsync(ana, id)).Avisos);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_MiniaturaEmVideo_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        var response = await PostEvidenciaComMiniaturaAsync(ana, id, Mp4Teste.Criar());
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
     }
 
     [Theory]

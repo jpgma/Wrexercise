@@ -29,7 +29,7 @@
 
 ### Vídeo
 
-- Formato guardado: MP4 com H.264 e áudio AAC, `moov` antes do `mdat`.
+- Formato guardado: MP4 com H.264 e áudio AAC. O navegador grava o `moov` antes do `mdat`; o servidor aceita os dois jeitos.
 - O navegador converte para 720p (lado maior 1280 px), 30 quadros por segundo, cerca de 1,2 Mbps, com áudio AAC mono a 64 kbps. Um minuto ocupa cerca de 9,5 MB.
 - Duração de 2 a 60 segundos. Um vídeo da galeria mais longo abre um recorte: a pessoa escolhe o trecho de 60 segundos.
 - Sem WebCodecs para H.264 ou AAC, o navegador envia o original se ele for MP4 ou MOV com H.264, de até 60 segundos e 25 MB. Senão, recusa.
@@ -37,7 +37,7 @@
 - A miniatura do vídeo é o quadro do meio, gerado no navegador como a das fotos. O `dhash` é o desse quadro: `FotoParecida` compara vídeos e fotos.
 - O navegador também envia `dhashInicio` e `dhashFim` (quadros a 10% e 90%). Se os três quadros quase não mudam, o servidor cria o aviso informativo `VideoParado`, que não impede a verificação automática: uma prancha filmada num tripé também parece parada.
 - A data do vídeo vem do `creation_time` do MP4 original (origem `Exif`), senão da data do arquivo (`Arquivo`). A localização vem do átomo `©xyz`. As regras de `FotoForaDoPeriodo` e `FotoSemData` valem para vídeos; os nomes dos avisos ficam como estão (ADR 0052) e só os textos da interface dizem "foto ou vídeo".
-- O servidor lê as caixas do MP4 em C#, sem biblioteca, e recusa: tipo de arquivo desconhecido, `mdat` antes do `moov`, duração fora de 2 a 61 segundos, sem faixa de vídeo, vídeo que não seja H.264, lado maior acima de 1920 px. Limite de 25 MB por vídeo; o das imagens continua 5 MB.
+- O servidor lê as caixas do MP4 em C#, sem biblioteca, e recusa: tipo de arquivo desconhecido, estrutura ilegível, duração fora de 2 a 61 segundos, sem faixa de vídeo, vídeo que não seja H.264, lado maior acima de 1920 px. Limite de 25 MB por vídeo; o das imagens continua 5 MB.
 - O retorno do vídeo usa `Range`, que o `<video>` precisa para avançar e que o Safari exige.
 - Retenção: igual à das fotos, sem prazo (a questão Q029 continua aberta).
 
@@ -61,5 +61,5 @@
 ## Andamento
 
 - Câmera no aplicativo, galeria, rascunho e origem `Camera`: feito.
-- Vídeo no servidor: pendente.
+- Vídeo no servidor: feito. A caixa `moov` pode vir antes ou depois do `mdat`: as câmeras de celular a gravam no fim, e exigir o `moov` no início recusaria quase todo original enviado sem conversão.
 - Vídeo no navegador, exibição e backups por mês: pendente.

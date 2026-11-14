@@ -25,6 +25,7 @@ internal static class AvisosEvidencia
     public static readonly TimeSpan MaximoNoPassado = TimeSpan.FromHours(48);
     public static readonly TimeSpan ToleranciaFuturo = TimeSpan.FromHours(1);
     public const int DistanciaMaximaFotoParecida = 6;
+    public const int DistanciaMaximaVideoParado = 2;
 
     public static (DateTimeOffset Inicio, DateTimeOffset Fim) JanelaFoto(DateTimeOffset startedAt, int duracaoSegundos) =>
         (startedAt - MargemAntesDoInicio, startedAt.AddSeconds(duracaoSegundos) + MargemDepoisDoFim);
@@ -68,6 +69,15 @@ internal static class AvisosEvidencia
         startedAt >= agora - MaximoNoPassado;
 
     public static int DistanciaHamming(long a, long b) => BitOperations.PopCount((ulong)(a ^ b));
+
+    /// <summary>
+    /// Os quadros a 10%, 50% e 90% do vídeo quase iguais: pode ser uma foto disfarçada de vídeo (ADR 0058).
+    /// Sem os três hashes, não há como dizer.
+    /// </summary>
+    public static bool IsVideoParado(long? inicio, long? meio, long? fim) =>
+        inicio is { } a && meio is { } b && fim is { } c
+        && DistanciaHamming(a, b) <= DistanciaMaximaVideoParado
+        && DistanciaHamming(b, c) <= DistanciaMaximaVideoParado;
 
     /// <summary>Lê o SHA-256 em hexadecimal (64 caracteres) e normaliza para maiúsculas, como o servidor grava.</summary>
     public static bool TryParseSha256(string? valor, out string normalizado)

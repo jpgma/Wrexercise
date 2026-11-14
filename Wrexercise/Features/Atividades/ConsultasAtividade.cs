@@ -15,7 +15,8 @@ internal static class ConsultasAtividade
             (SELECT e.id FROM evidencias_atividade e
              WHERE e.atividade_id = a.id AND e.ordem = 1 AND e.caminho_miniatura IS NOT NULL),
             (SELECT count(*)::int FROM comentarios c WHERE c.atividade_id = a.id),
-            ARRAY(SELECT DISTINCT av.tipo FROM avisos_atividade av WHERE av.atividade_id = a.id ORDER BY av.tipo)
+            ARRAY(SELECT DISTINCT av.tipo FROM avisos_atividade av WHERE av.atividade_id = a.id ORDER BY av.tipo),
+            (SELECT e.duracao_ms FROM evidencias_atividade e WHERE e.atividade_id = a.id AND e.ordem = 1)
         FROM atividades a
         JOIN grupos g ON g.id = a.grupo_id
         JOIN usuarios u ON u.id = a.usuario_id
@@ -71,7 +72,8 @@ internal static class ConsultasAtividade
             reader.GetInt32(15),
             reader.IsDBNull(16) ? null : BuildMiniaturaUrl(reader.GetGuid(0), reader.GetGuid(16)),
             reader.GetInt32(17),
-            reader.GetFieldValue<string[]>(18));
+            reader.GetFieldValue<string[]>(18),
+            reader.IsDBNull(19) ? null : reader.GetInt32(19));
 
     public static async Task InserirAvisoAsync(
         NpgsqlConnection connection,
@@ -157,7 +159,7 @@ internal static class ConsultasAtividade
         var evidencias = new List<EvidenciaResponse>();
         await using (var lista = new NpgsqlCommand(
             """
-            SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera'
+            SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms
             FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
             """,
             connection))
@@ -171,7 +173,9 @@ internal static class ConsultasAtividade
                     evidenciaId,
                     reader.GetInt16(1),
                     BuildEvidenciaUrl(id, evidenciaId),
-                    reader.GetBoolean(2)));
+                    reader.GetBoolean(2),
+                    reader.IsDBNull(3) ? TipoEvidencia.Foto : TipoEvidencia.Video,
+                    reader.IsDBNull(3) ? null : reader.GetInt32(3)));
             }
         }
 
