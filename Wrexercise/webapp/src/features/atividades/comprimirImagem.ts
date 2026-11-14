@@ -133,11 +133,12 @@ function isPrint(metadados: MetadadosFoto, bitmap: ImageBitmap) {
 
 /**
  * A câmera do aplicativo sabe quando capturou: a data vale como a do EXIF (ADR 0058). O quadro tirado do
- * vídeo da câmera não tem localização.
+ * vídeo da câmera não tem EXIF: o local é o da geolocalização, quando o autor quer mostrá-lo (ADR 0061).
  */
 export function marcarCapturaNoApp(
   preparada: EvidenciaPreparada,
   capturadaEm: Date,
+  local: { latitude: number; longitude: number } | null,
 ): EvidenciaPreparada {
   return {
     ...preparada,
@@ -145,8 +146,9 @@ export function marcarCapturaNoApp(
       ...preparada.sinais,
       capturadaEm,
       origem: "Camera",
-      latitude: null,
-      longitude: null,
+      // A captura não tem EXIF: o local vem da geolocalização do navegador, se o autor quis mostrá-lo.
+      latitude: local?.latitude ?? null,
+      longitude: local?.longitude ?? null,
       print: false,
     },
   };

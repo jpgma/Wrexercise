@@ -37,6 +37,7 @@ import {
   type TrechoVideo,
   VideoNaoProcessadoError,
   type EvidenciaPreparada,
+  type LocalCaptura,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   tiposAtividade,
@@ -476,10 +477,10 @@ export function RegistrarAtividadePage() {
   }
 
   // Prepara na escolha: a foto que o navegador não processa não entra, e nunca vai o original com EXIF (Q030).
-  // `capturadaNoApp`: veio da câmera do aplicativo, no instante informado (ADR 0058).
+  // `capturadaNoApp`: veio da câmera do aplicativo, no instante e no local informados (ADR 0058, 0061).
   const adicionarAnexos = async (
     lista: FileList | File[] | null,
-    capturadaNoApp?: Date,
+    capturadaNoApp?: { em: Date; local: LocalCaptura | null },
   ) => {
     if (!lista) return;
     const escolhidos = Array.from(lista).slice(
@@ -491,7 +492,7 @@ export function RegistrarAtividadePage() {
     const videos = escolhidos.filter(ehVideo);
     const marcar = (preparada: EvidenciaPreparada) =>
       capturadaNoApp
-        ? marcarCapturaNoApp(preparada, capturadaNoApp)
+        ? marcarCapturaNoApp(preparada, capturadaNoApp.em, capturadaNoApp.local)
         : preparada;
     const erros: string[] = [];
     setErroAnexo(null);
@@ -882,15 +883,16 @@ export function RegistrarAtividadePage() {
         )}
         <CameraEvidencia
           aberta={camera.aberta}
+          pedirLocalizacao={valores.mostrarLocalizacao ?? true}
           onFechar={camera.fechar}
-          onFoto={(arquivo) => {
-            const instante = new Date();
+          onFoto={(arquivo, local) => {
+            const em = new Date();
             camera.fechar();
-            void adicionarAnexos([arquivo], instante);
+            void adicionarAnexos([arquivo], { em, local });
           }}
-          onVideo={(arquivo, iniciadoEm) => {
+          onVideo={(arquivo, em, local) => {
             camera.fechar();
-            void adicionarAnexos([arquivo], iniciadoEm);
+            void adicionarAnexos([arquivo], { em, local });
           }}
         />
         {recorte && (

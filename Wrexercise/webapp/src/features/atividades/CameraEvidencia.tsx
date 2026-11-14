@@ -4,13 +4,22 @@ import { duracaoMaximaS, duracaoMinimaS } from "./prepararVideo";
 
 type Modo = "Foto" | "Video";
 
+/** Onde o aparelho estava na captura, pela geolocalização do navegador (ADR 0061). */
+export type LocalCaptura = { latitude: number; longitude: number };
+
 type CameraEvidenciaProps = {
   aberta: boolean;
+  /** O autor quer mostrar o local: a câmera pede a geolocalização enquanto está aberta (ADR 0061). */
+  pedirLocalizacao: boolean;
   onFechar: () => void;
   /** A foto capturada, ainda sem processar; quem recebe prepara como as da galeria. */
-  onFoto: (arquivo: File) => void;
+  onFoto: (arquivo: File, local: LocalCaptura | null) => void;
   /** O vídeo gravado (WebM ou MP4, conforme o navegador) e o instante em que a gravação começou. */
-  onVideo: (arquivo: File, iniciadoEm: Date) => void;
+  onVideo: (
+    arquivo: File,
+    iniciadoEm: Date,
+    local: LocalCaptura | null,
+  ) => void;
 };
 
 /**
@@ -81,11 +90,37 @@ type Gravacao = {
   partes: Blob[];
 };
 
+/**
+ * A última posição do aparelho enquanto a câmera está aberta. A foto da câmera não tem EXIF: sem isso, ela
+ * nunca teria local. Sem permissão ou sem sinal, fica `null` e a captura segue sem local. O GPS desliga ao
+ * fechar a câmera.
+ */
+function useLocalAtual(ativo: boolean) {
+  const local = useRef<LocalCaptura | null>(null);
+  useEffect(() => {
+    if (!ativo || !("geolocation" in navigator)) return;
+    const id = navigator.geolocation.watchPosition(
+      ({ coords }) => {
+        local.current = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        };
+      },
+      () => undefined,
+      { enableHighAccuracy: true, maximumAge: 60_000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [ativo]);
+  return local;
+}
+
 function Camera({
+  pedirLocalizacao,
   onFechar,
   onFoto,
   onVideo,
 }: Omit<CameraEvidenciaProps, "aberta">) {
+  const local = useLocalAtual(pedirLocalizacao);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -171,6 +206,7 @@ function Camera({
     }
     onFoto(
       new File([foto], `camera-${Date.now()}.jpg`, { type: "image/jpeg" }),
+      local.current,
     );
   }
 
@@ -210,6 +246,7 @@ function Camera({
           type: tipo.split(";")[0],
         }),
         atual.iniciadoEm,
+        local.current,
       );
     };
     gravacao.current = atual;

@@ -24,7 +24,7 @@
 ### Câmera, galeria e rascunho
 
 - O formulário tem dois botões: "Câmera" (câmera dentro do aplicativo) e "Galeria" (seletor de arquivos, sem `capture`).
-- A captura da câmera do aplicativo tem a origem `Camera` em `origem_data_captura`, com a data do momento e sem localização. O servidor trata `Camera` como `Exif` no cálculo dos avisos. A API devolve `gravadaNoApp` em cada evidência, e a interface mostra o selo "Câmera do app". É um sinal do navegador, como o EXIF: um cliente modificado pode forjá-lo.
+- A captura da câmera do aplicativo tem a origem `Camera` em `origem_data_captura`, com a data do momento. Não há EXIF: o local vem da geolocalização do navegador, quando o autor quer mostrá-lo (ADR 0061). O servidor trata `Camera` como `Exif` no cálculo dos avisos. A API devolve `gravadaNoApp` em cada evidência, e a interface mostra o selo "Câmera do app". É um sinal do navegador, como o EXIF: um cliente modificado pode forjá-lo.
 - O registro em andamento fica num rascunho no IndexedDB do aparelho (`services/rascunhos.ts`): campos, comprovantes já preparados e a chave de idempotência. O rascunho volta ao abrir o formulário, é apagado no envio, no "Descartar", ao sair da conta e depois de 48 horas. Se o envio cair no meio, repetir com a mesma chave devolve a mesma atividade (ADR 0053).
 
 ### Vídeo

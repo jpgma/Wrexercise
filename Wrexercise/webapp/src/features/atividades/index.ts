@@ -15,7 +15,7 @@ export {
 } from "./comprimirImagem";
 export { AvisosAtividade, AvisosAtividadeResumo } from "./AvisosAtividade";
 export { calcularAvisoDataFoto, maximoNoPassadoMs } from "./janelaEvidencia";
-export { CameraEvidencia } from "./CameraEvidencia";
+export { CameraEvidencia, type LocalCaptura } from "./CameraEvidencia";
 export { RecorteVideo } from "./RecorteVideo";
 export {
   analisarVideo,
