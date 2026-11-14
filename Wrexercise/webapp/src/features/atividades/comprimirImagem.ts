@@ -14,6 +14,8 @@ const qualidadeMiniatura = 0.6;
  */
 export type SinaisEvidencia = MetadadosFoto & {
   sha256Original: string | null;
+  /** Uma captura de tela (ADR 0060). Ausente nos vídeos e nos rascunhos antigos: vale `false`. */
+  print?: boolean;
   dhash: string;
   dhashInicio?: string;
   dhashFim?: string;
@@ -102,6 +104,34 @@ export async function calcularSha256(arquivo: Blob): Promise<string | null> {
 }
 
 /**
+ * Um print do próprio aparelho tem o tamanho exato da tela, em pixels físicos, em pé ou deitado. A margem
+ * cobre o arredondamento de `devicePixelRatio` fracionário (2,625 × 411 = 1078,9 para uma tela de 1080).
+ */
+function isTamanhoDaTela(largura: number, altura: number) {
+  const dpr = window.devicePixelRatio || 1;
+  const telaLargura = Math.round(screen.width * dpr);
+  const telaAltura = Math.round(screen.height * dpr);
+  const perto = (a: number, b: number) => Math.abs(a - b) <= 3;
+  return (
+    (perto(largura, telaLargura) && perto(altura, telaAltura)) ||
+    (perto(largura, telaAltura) && perto(altura, telaLargura))
+  );
+}
+
+/**
+ * Print pelo nome do arquivo ou, quando o nome se perdeu (o seletor de fotos do Android troca o nome e a
+ * data do arquivo), por uma imagem do tamanho da tela, sem câmera e sem data no EXIF (ADR 0060).
+ */
+function isPrint(metadados: MetadadosFoto, bitmap: ImageBitmap) {
+  if (metadados.origem === "Print") return true;
+  return (
+    !metadados.temCamera &&
+    metadados.origem !== "Exif" &&
+    isTamanhoDaTela(bitmap.width, bitmap.height)
+  );
+}
+
+/**
  * A câmera do aplicativo sabe quando capturou: a data vale como a do EXIF (ADR 0058). O quadro tirado do
  * vídeo da câmera não tem localização.
  */
@@ -117,6 +147,7 @@ export function marcarCapturaNoApp(
       origem: "Camera",
       latitude: null,
       longitude: null,
+      print: false,
     },
   };
 }
@@ -156,7 +187,12 @@ export async function prepararEvidencia(
       tipo: "Foto",
       arquivo: new File([foto], nome, { type: "image/jpeg" }),
       miniatura,
-      sinais: { ...metadados, sha256Original, dhash },
+      sinais: {
+        ...metadados,
+        sha256Original,
+        dhash,
+        print: isPrint(metadados, bitmap),
+      },
     };
   } finally {
     bitmap.close();

@@ -1,7 +1,7 @@
 import { Smartphone } from "lucide-react";
 
 /**
- * Comprovante que é uma captura de tela, com a data no nome do arquivo (ADR 0060). Sinal do navegador, não prova.
+ * Comprovante que é uma captura de tela (ADR 0060). Sinal do navegador, não prova.
  * Lembra quem avalia de conferir a data que aparece na própria imagem.
  */
 export function SeloPrint({ className = "" }: { className?: string }) {

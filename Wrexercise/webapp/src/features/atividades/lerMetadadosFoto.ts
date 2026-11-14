@@ -15,11 +15,15 @@ export type MetadadosFoto = {
   origem: OrigemDataCaptura | null;
   latitude: number | null;
   longitude: number | null;
+  /** O EXIF diz a marca ou o modelo da câmera: não é um print. */
+  temCamera?: boolean;
 };
 
 // O EXIF fica no começo do arquivo; 128 KB cobrem o APP1 das câmeras de celular.
 const bytesLidos = 128 * 1024;
 
+const tagMarca = 0x010f;
+const tagModelo = 0x0110;
 const tagExifIfd = 0x8769;
 const tagGpsIfd = 0x8825;
 const tagDataOriginal = 0x9003;
@@ -130,11 +134,19 @@ function interpretarData(
 }
 
 function lerExif(view: DataView): Omit<MetadadosFoto, "origem"> {
-  const vazio = { capturadaEm: null, latitude: null, longitude: null };
+  const vazio = {
+    capturadaEm: null,
+    latitude: null,
+    longitude: null,
+    temCamera: false,
+  };
   const tiff = encontrarTiff(view);
   if (!tiff) return vazio;
 
   const ifd0 = tiff.entradas(tiff.u32(4));
+  const temCamera = Boolean(
+    tiff.texto(ifd0.get(tagMarca)) || tiff.texto(ifd0.get(tagModelo)),
+  );
   let capturadaEm: Date | null = null;
   const exif = ifd0.get(tagExifIfd);
   if (exif) {
@@ -159,7 +171,7 @@ function lerExif(view: DataView): Omit<MetadadosFoto, "origem"> {
     }
   }
 
-  return { capturadaEm, latitude, longitude };
+  return { capturadaEm, latitude, longitude, temCamera };
 }
 
 /**
@@ -197,6 +209,7 @@ export async function lerMetadadosFoto(arquivo: File): Promise<MetadadosFoto> {
     capturadaEm: null,
     latitude: null,
     longitude: null,
+    temCamera: false,
   };
   try {
     const buffer = await arquivo.slice(0, bytesLidos).arrayBuffer();

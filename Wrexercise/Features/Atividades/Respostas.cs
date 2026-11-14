@@ -9,7 +9,7 @@ internal sealed record CriarAtividadeRequest(
 
 /// <summary>
 /// <c>Tipo</c>: <c>Foto</c> ou <c>Video</c>; <c>DuracaoMs</c> só no vídeo. <c>GravadaNoApp</c>: a câmera do
-/// aplicativo fez a captura (ADR 0058). <c>Print</c>: uma captura de tela com a data no nome do arquivo (ADR 0060).
+/// aplicativo fez a captura (ADR 0058). <c>Print</c>: o navegador reconheceu uma captura de tela, pelo nome do arquivo ou pelo tamanho da tela (ADR 0060).
 /// Os dois são sinais do navegador.
 /// </summary>
 internal sealed record EvidenciaResponse(

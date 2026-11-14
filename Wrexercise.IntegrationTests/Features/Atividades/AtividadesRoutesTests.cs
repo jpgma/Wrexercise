@@ -570,6 +570,26 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AnexarEvidencia_PrintSemDataNoNome_MarcaPrintEAvisaSemData()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["capturadaEm"] = DateTimeOffset.UtcNow.ToString("O"),
+            ["origemDataCaptura"] = "Arquivo",
+            ["print"] = "true",
+        });
+        await PostEvidenciaAsync(ana, id, JpegVariante(2), new() { ["print"] = "sim" });
+
+        var atividade = await ObterAsync(ana, id);
+        Assert.Equal([true, false], atividade.Evidencias.Select(e => e.Print));
+        Assert.Equal([TipoAviso.FotoSemData, TipoAviso.FotoSemData], atividade.Avisos.Select(a => a.Tipo));
+    }
+
+    [Fact]
     public async Task AnexarEvidencia_Video_GuardaDuracaoESeServeComRange()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");

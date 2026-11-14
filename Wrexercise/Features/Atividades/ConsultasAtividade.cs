@@ -160,7 +160,7 @@ internal static class ConsultasAtividade
         await using (var lista = new NpgsqlCommand(
             """
             SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms,
-                origem_data_captura IS NOT DISTINCT FROM 'Print'
+                print
             FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
             """,
             connection))

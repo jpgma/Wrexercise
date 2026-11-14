@@ -101,7 +101,8 @@ internal static class AnexarEvidencia
     /// <summary>
     /// Sinais lidos pelo navegador antes de a compressão apagar o EXIF (ADR 0052). Todos opcionais:
     /// um valor malformado é descartado, e a foto segue como se não o tivesse. A localização é guardada
-    /// sem ser devolvida pela API nem registrada em log.
+    /// sem ser devolvida pela API nem registrada em log. <c>Print</c>: o navegador reconheceu uma captura de tela
+    /// (ADR 0060), pelo nome do arquivo ou pelo tamanho da tela.
     /// </summary>
     private sealed record SinaisEvidencia(
         DateTimeOffset? CapturadaEm,
@@ -111,7 +112,8 @@ internal static class AnexarEvidencia
         long? DhashInicio,
         long? DhashFim,
         double? Latitude,
-        double? Longitude);
+        double? Longitude,
+        bool Print);
 
     private static SinaisEvidencia LerSinais(IFormCollection form)
     {
@@ -142,7 +144,8 @@ internal static class AnexarEvidencia
             AvisosEvidencia.TryParseDhash(form["dhashInicio"], out var dhashInicio) ? dhashInicio : null,
             AvisosEvidencia.TryParseDhash(form["dhashFim"], out var dhashFim) ? dhashFim : null,
             temCoordenadas ? latitude : null,
-            temCoordenadas ? longitude : null);
+            temCoordenadas ? longitude : null,
+            form["print"] == "true" || origem == OrigemDataCaptura.Print);
     }
 
     private static async Task<(AtividadeOperacaoStatus Status, EvidenciaCriadaResponse? Evidencia)> PersistirAsync(
@@ -245,8 +248,8 @@ internal static class AnexarEvidencia
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO evidencias_atividade (
                 atividade_id, caminho_relativo, tipo_mime, tamanho_bytes, sha256, ordem, caminho_miniatura,
-                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude, duracao_ms)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude, duracao_ms, print)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             RETURNING id
             """, connection, transaction))
         {
@@ -264,6 +267,7 @@ internal static class AnexarEvidencia
             insert.Parameters.AddWithValue(NpgsqlDbType.Double, (object?)sinais.Latitude ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.Double, (object?)sinais.Longitude ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.Integer, (object?)salvo.DuracaoMs ?? DBNull.Value);
+            insert.Parameters.AddWithValue(sinais.Print && salvo.DuracaoMs is null);
             evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
         }
 

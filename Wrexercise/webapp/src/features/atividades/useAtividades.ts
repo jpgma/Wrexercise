@@ -177,6 +177,7 @@ export function anexarEvidencia(
   // Só no vídeo: os quadros do início e do fim, para o aviso VideoParado (ADR 0058).
   if (sinais.dhashInicio) form.append("dhashInicio", sinais.dhashInicio);
   if (sinais.dhashFim) form.append("dhashFim", sinais.dhashFim);
+  if (sinais.print) form.append("print", "true");
   if (sinais.latitude !== null && sinais.longitude !== null) {
     form.append("latitude", String(sinais.latitude));
     form.append("longitude", String(sinais.longitude));

@@ -19,7 +19,9 @@
 ## Decisão
 
 - **Origem `Print`:** quando o nome do arquivo segue um dos padrões de captura de tela, o navegador envia a data e a hora do nome, no relógio do aparelho, com a origem `Print`. Ela vem antes do EXIF. O servidor trata `Print` como `Exif`: vale nos dois sentidos da janela [início − 2 h, fim + 12 h].
-- **Selo "Print":** a API devolve `print: true` na evidência com a origem `Print`. A página da atividade e a galeria mostram o selo "Print", que lembra quem avalia de conferir a data que aparece na imagem.
+- **Selo "Print":** a API devolve `print: true` quando o navegador reconhece um print. A página da atividade e a galeria mostram o selo "Print", que lembra quem avalia de conferir a data que aparece na imagem. O navegador reconhece um print de dois jeitos:
+  - pelo nome do arquivo (origem `Print`, com a data);
+  - por uma imagem do tamanho exato da tela do aparelho, em pixels físicos (`screen` × `devicePixelRatio`, em pé ou deitado, com margem de 3 px), sem marca nem modelo de câmera e sem data no EXIF. Aqui não há data: a foto segue com `FotoSemData`.
 - **"Sem data" fora dos cartões:** o feed não mostra mais o selo de `FotoSemData`. O aviso continua gravado e aparece na página da atividade e na tela de avaliação.
 - Como os outros sinais da ADR 0052, o nome do arquivo pode ser forjado. É um aviso, não uma prova.
 
@@ -27,6 +29,8 @@
 
 - **Migração 032:** `Print` entra na lista de `origem_data_captura`.
 - **iPhone:** o print continua com `FotoSemData` (agora só na página da atividade) e sem o selo. Ler o PNG fica para quando houver arquivos reais para testar.
-- **Seletor de fotos do Android:** se o seletor entrega o arquivo com outro nome, a data do nome se perde e vale a regra antiga. Conferir num aparelho real.
+- **Seletor de fotos do Android (confirmado em 2026-11-14):** no Chrome do Android, o seletor de fotos entrega uma cópia, com outro nome e com a data do arquivo igual à hora da escolha. Um print escolhido assim perde a data. Por isso existe o segundo jeito de reconhecer um print, pelo tamanho da tela: o selo aparece, mas o aviso `FotoSemData` fica (só na página da atividade).
+- **Tamanho da tela:** só reconhece prints do próprio aparelho. Um print recebido de outra pessoa, ou recortado, não ganha o selo. Uma imagem baixada que por acaso tenha o tamanho da tela ganha o selo sem ser print.
+- **Migração 033:** coluna `print` em `evidencias_atividade`, preenchida para as evidências com origem `Print`. O servidor ignora o campo nos vídeos.
 - Prints de gravação de tela (vídeo) não são lidos pelo nome.
 - Relacionadas: 0052, 0058.

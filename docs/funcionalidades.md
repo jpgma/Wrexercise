@@ -446,7 +446,11 @@ The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the
   - "Galeria" opens the file selector of the device, without the `capture` attribute. It accepts JPEG, PNG and WebP images and all video types.
   - A photo from the in-app camera has the origin `Camera` and the date of the capture. It has no location. The server treats `Camera` like `Exif` (see 7.5).
   - The activity page and the full-screen gallery show the label "Câmera do app" on evidence with the origin `Camera` (`gravadaNoApp` in the API). The browser gives this origin. A user can change it.
-  - The activity page and the full-screen gallery show the label "Print" on evidence with the origin `Print` (`print` in the API). The label tells the reviewer to examine the date in the image (ADR 0060).
+  - The activity page and the full-screen gallery show the label "Print" on a screenshot (`print` in the API). The label tells the reviewer to examine the date in the image (ADR 0060). The browser finds a screenshot in two ways:
+    - The file name is the name of a screenshot (origin `Print`, see below).
+    - The image has the exact size of the device screen in physical pixels (`screen` × `devicePixelRatio`, portrait or landscape, 3 pixels of tolerance), and the EXIF has no camera make, no camera model and no date. This photo has no date: it gets `FotoSemData`.
+  - The photo picker of Chrome on Android gives a copy of the file with a different name. The file date is the time of the selection. Thus a screenshot from Android Chrome has no date, but it can get the label "Print" from its size.
+  - The browser sends the field `print=true`. The server ignores it on a video.
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
 - The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location, from the file that it sends.
 - The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original file.
