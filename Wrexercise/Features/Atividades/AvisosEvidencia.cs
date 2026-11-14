@@ -8,6 +8,9 @@ internal static class OrigemDataCaptura
 {
     public const string Exif = "Exif";
     public const string Arquivo = "Arquivo";
+
+    /// <summary>Capturada pela câmera do próprio aplicativo, com a data do momento da captura (ADR 0058).</summary>
+    public const string Camera = "Camera";
 }
 
 /// <summary>
@@ -51,8 +54,8 @@ internal static class AvisosEvidencia
 
         return origem switch
         {
-            OrigemDataCaptura.Exif when instante > fim => TipoAviso.FotoForaDoPeriodo,
-            OrigemDataCaptura.Exif => null,
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera when instante > fim => TipoAviso.FotoForaDoPeriodo,
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera => null,
             // A data do arquivo dentro ou depois da janela não diz nada sobre quando a foto foi tirada.
             _ => TipoAviso.FotoSemData,
         };
@@ -108,6 +111,6 @@ internal static class AvisosEvidencia
     public static bool TryParseOrigem(string? valor, out string origem)
     {
         origem = valor ?? string.Empty;
-        return valor is OrigemDataCaptura.Exif or OrigemDataCaptura.Arquivo;
+        return valor is OrigemDataCaptura.Exif or OrigemDataCaptura.Arquivo or OrigemDataCaptura.Camera;
     }
 }

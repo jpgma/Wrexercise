@@ -7,7 +7,8 @@ internal sealed record CriarAtividadeRequest(
     string? Descricao,
     string? TipoComprovacao);
 
-internal sealed record EvidenciaResponse(Guid Id, int Ordem, string Url);
+/// <summary><c>GravadaNoApp</c>: a câmera do aplicativo fez a captura (ADR 0058); é um sinal do navegador.</summary>
+internal sealed record EvidenciaResponse(Guid Id, int Ordem, string Url, bool GravadaNoApp);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,

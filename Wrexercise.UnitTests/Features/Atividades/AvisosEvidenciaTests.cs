@@ -29,6 +29,22 @@ public class AvisosEvidenciaTests
     public void Exif_ValeNosDoisSentidos(int minutosDoInicio, string? esperado) =>
         Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Exif));
 
+    [Theory]
+    [InlineData(30, null)]
+    [InlineData(-121, TipoAviso.FotoForaDoPeriodo)]
+    [InlineData((13 * 60) + 1, TipoAviso.FotoForaDoPeriodo)]
+    public void CameraDoApp_ValeComoExif(int minutosDoInicio, string? esperado) =>
+        Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Camera));
+
+    [Theory]
+    [InlineData("Exif", true)]
+    [InlineData("Arquivo", true)]
+    [InlineData("Camera", true)]
+    [InlineData("camera", false)]
+    [InlineData("", false)]
+    public void TryParseOrigem_AceitaSoAsOrigensConhecidas(string valor, bool esperado) =>
+        Assert.Equal(esperado, AvisosEvidencia.TryParseOrigem(valor, out _));
+
     [Fact]
     public void SemData_FotoSemData() =>
         Assert.Equal(TipoAviso.FotoSemData, Aviso(null, null));

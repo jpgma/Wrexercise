@@ -23,6 +23,8 @@ export type Evidencia = {
   id: string;
   ordem: number;
   url: string;
+  /** A câmera do aplicativo fez a captura (ADR 0058). Sinal do navegador, não prova. */
+  gravadaNoApp: boolean;
 };
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */

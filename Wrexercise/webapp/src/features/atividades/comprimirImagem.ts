@@ -87,6 +87,26 @@ async function calcularSha256(arquivo: File): Promise<string | null> {
 }
 
 /**
+ * A câmera do aplicativo sabe quando capturou: a data vale como a do EXIF (ADR 0058). O quadro tirado do
+ * vídeo da câmera não tem localização.
+ */
+export function marcarCapturaNoApp(
+  preparada: EvidenciaPreparada,
+  capturadaEm: Date,
+): EvidenciaPreparada {
+  return {
+    ...preparada,
+    sinais: {
+      ...preparada.sinais,
+      capturadaEm,
+      origem: "Camera",
+      latitude: null,
+      longitude: null,
+    },
+  };
+}
+
+/**
  * Reduz a foto e gera a miniatura do feed antes do upload, para economizar banda. Passar pelo canvas
  * descarta os metadados do arquivo enviado; a data e a localização seguem em campos à parte.
  * Se o navegador não conseguir processar a imagem, ela não é enviada: o original carregaria o EXIF

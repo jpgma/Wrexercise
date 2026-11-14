@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Camera,
   CheckCircle2,
+  Images,
   Info,
   Lock,
   Minus,
@@ -17,16 +18,22 @@ import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
   anexarEvidencia,
+  apagarRascunhoRegistro,
+  CameraEvidencia,
   calcularAvisoDataFoto,
   formatarDataHora,
+  lerRascunhoRegistro,
+  marcarCapturaNoApp,
   maximoNoPassadoMs,
   prepararEvidencia,
+  salvarRascunhoRegistro,
   type EvidenciaPreparada,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   tiposAtividade,
   useCriarAtividade,
   useFilaAvaliacao,
+  useGaleria,
   type AtividadeResumo,
   type CriarAtividadeData,
   type TipoAtividade,
@@ -38,6 +45,7 @@ import {
   useDesafio,
   useProgresso,
 } from "@/features/desafios";
+import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
 import { useResumoGrupo } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
@@ -67,6 +75,19 @@ const maximoDeAutores = 5;
 function toLocalInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function valoresPadrao(): Partial<FormData> {
+  return {
+    duracaoMinutos: 60,
+    startedAt: toLocalInputValue(new Date()),
+    descricao: "",
+  };
+}
+
+function criarAnexo(preparada: EvidenciaPreparada): Anexo {
+  // A prévia usa o arquivo já comprimido: é o que vai para o servidor e ocupa menos memória.
+  return { preparada, url: URL.createObjectURL(preparada.arquivo) };
 }
 
 type Registrada = {
@@ -219,6 +240,9 @@ export function RegistrarAtividadePage() {
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
   const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
+  const usuarioId = useSessao().data?.id;
+  // A câmera aberta fica no histórico, como a galeria: o Voltar do celular a fecha.
+  const camera = useGaleria("camera-registro");
   const seletor = useRef<HTMLInputElement>(null);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [preparando, setPreparando] = useState(false);
@@ -230,21 +254,21 @@ export function RegistrarAtividadePage() {
   const [erroAnexo, setErroAnexo] = useState<string | null>(null);
   const [enviando, setEnviando] = useState<string | null>(null);
   const [registrada, setRegistrada] = useState<Registrada | null>(null);
+  const [rascunhoRestaurado, setRascunhoRestaurado] = useState(false);
+  const rascunhoLido = useRef(false);
 
   const {
     register,
     handleSubmit,
     control,
+    reset,
     setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      duracaoMinutos: 60,
-      startedAt: toLocalInputValue(new Date()),
-      descricao: "",
-    },
+    defaultValues: valoresPadrao(),
   });
+  const valores = useWatch({ control });
 
   const duracaoMinutos = useWatch({ control, name: "duracaoMinutos" });
   const tipoAtual = useWatch({ control, name: "tipo" });
@@ -259,6 +283,46 @@ export function RegistrarAtividadePage() {
     () => () => urls.current.forEach((url) => URL.revokeObjectURL(url)),
     [],
   );
+
+  // O Android pode encerrar o PWA enquanto a pessoa está na galeria: o rascunho traz tudo de volta (ADR 0058).
+  useEffect(() => {
+    if (!usuarioId || rascunhoLido.current) return;
+    let cancelado = false;
+    void lerRascunhoRegistro<Partial<FormData>>(usuarioId, grupoId).then(
+      (rascunho) => {
+        if (cancelado) return;
+        rascunhoLido.current = true;
+        if (!rascunho) return;
+        reset({ ...valoresPadrao(), ...rascunho.valores });
+        setAnexos(rascunho.evidencias.map(criarAnexo));
+        envio.current = rascunho.envio;
+        setRascunhoRestaurado(true);
+      },
+    );
+    return () => {
+      cancelado = true;
+    };
+  }, [usuarioId, grupoId, reset]);
+
+  useEffect(() => {
+    if (!usuarioId || !rascunhoLido.current || registrada) return;
+    const temAlgo =
+      valores.tipo !== undefined ||
+      anexos.length > 0 ||
+      (valores.descricao ?? "").trim() !== "";
+    const espera = setTimeout(() => {
+      if (temAlgo) {
+        void salvarRascunhoRegistro(usuarioId, grupoId, {
+          valores,
+          evidencias: anexos.map(({ preparada }) => preparada),
+          envio: envio.current,
+        });
+      } else {
+        void apagarRascunhoRegistro(usuarioId, grupoId);
+      }
+    }, 300);
+    return () => clearTimeout(espera);
+  }, [valores, anexos, usuarioId, grupoId, registrada]);
 
   // As atividades do mesmo dia se somam, em proporção ao mínimo de cada tipo (decisões 0040 e 0045). O dia do
   // campo é o do aparelho, que costuma ser o fuso do grupo.
@@ -289,6 +353,14 @@ export function RegistrarAtividadePage() {
     if (envio.current?.assinatura !== assinatura) {
       envio.current = { assinatura, chave: crypto.randomUUID() };
     }
+    // Se o aplicativo for encerrado no meio do envio, o rascunho repete a mesma chave.
+    if (usuarioId) {
+      await salvarRascunhoRegistro(usuarioId, grupoId, {
+        valores: data,
+        evidencias: anexos.map(({ preparada }) => preparada),
+        envio: envio.current,
+      });
+    }
     const atividade = await criar.mutateAsync({
       ...dados,
       chave: envio.current.chave,
@@ -317,6 +389,7 @@ export function RegistrarAtividadePage() {
       }
     }
     setEnviando(null);
+    if (usuarioId) void apagarRascunhoRegistro(usuarioId, grupoId);
 
     setRegistrada({
       id: atividade.id,
@@ -363,7 +436,11 @@ export function RegistrarAtividadePage() {
   }
 
   // Prepara na escolha: a foto que o navegador não processa não entra, e nunca vai o original com EXIF (Q030).
-  const adicionarAnexos = async (lista: FileList | null) => {
+  // `capturadaNoApp`: veio da câmera do aplicativo, no instante informado (ADR 0058).
+  const adicionarAnexos = async (
+    lista: FileList | File[] | null,
+    capturadaNoApp?: Date,
+  ) => {
     if (!lista) return;
     const escolhidos = Array.from(lista).slice(
       0,
@@ -377,15 +454,17 @@ export function RegistrarAtividadePage() {
     setPreparando(false);
 
     const novos: Anexo[] = [];
-    escolhidos.forEach((arquivo, indice) => {
-      const resultado = resultados[indice];
-      if (resultado?.status === "fulfilled") {
-        novos.push({
-          preparada: resultado.value,
-          url: URL.createObjectURL(arquivo),
-        });
+    for (const resultado of resultados) {
+      if (resultado.status === "fulfilled") {
+        novos.push(
+          criarAnexo(
+            capturadaNoApp
+              ? marcarCapturaNoApp(resultado.value, capturadaNoApp)
+              : resultado.value,
+          ),
+        );
       }
-    });
+    }
     if (novos.length < escolhidos.length) {
       setErroAnexo(
         "Não foi possível processar uma das fotos. Tente outra imagem.",
@@ -412,6 +491,16 @@ export function RegistrarAtividadePage() {
     return null;
   };
 
+  const descartarRascunho = () => {
+    anexos.forEach(({ url }) => URL.revokeObjectURL(url));
+    setAnexos([]);
+    reset(valoresPadrao());
+    envio.current = null;
+    setErroAnexo(null);
+    setRascunhoRestaurado(false);
+    if (usuarioId) void apagarRascunhoRegistro(usuarioId, grupoId);
+  };
+
   const removerAnexo = ({ url }: Anexo) => {
     URL.revokeObjectURL(url);
     setAnexos(anexos.filter((anexo) => anexo.url !== url));
@@ -430,6 +519,25 @@ export function RegistrarAtividadePage() {
         title="Registrar atividade"
         back={`/grupos/${grupoId}/inicio`}
       />
+
+      {rascunhoRestaurado && (
+        <div
+          role="status"
+          className="mb-5 flex items-center gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft"
+        >
+          <Info aria-hidden="true" className="size-4 shrink-0" />
+          <p className="flex-1">
+            Recuperamos o registro que você não terminou.
+          </p>
+          <button
+            type="button"
+            className="btn-ghost h-11 shrink-0 px-3"
+            onClick={descartarRascunho}
+          >
+            Descartar
+          </button>
+        </div>
+      )}
 
       {desafio.data && (
         <div className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft">
@@ -599,22 +707,43 @@ export function RegistrarAtividadePage() {
           </p>
         )}
         {anexos.length < maximoDeEvidencias && (
-          <button
-            type="button"
-            disabled={preparando}
-            className="flex w-full flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-border-strong bg-surface py-8 text-sm text-muted tap hover:border-outline"
-            onClick={() => seletor.current?.click()}
-          >
-            <Camera aria-hidden="true" className="size-7 text-link" />
-            <span className="font-medium text-foreground">
-              Adicionar foto ou print
-            </span>
-            <span className="text-xs">
-              Do relógio, app de corrida ou uma selfie no treino (até{" "}
-              {maximoDeEvidencias})
-            </span>
-          </button>
+          <div className="rounded-2xl border-2 border-dashed border-border-strong bg-surface p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={preparando}
+                className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
+                onClick={() => camera.abrir(0)}
+              >
+                <Camera aria-hidden="true" className="size-7" />
+                Câmera
+              </button>
+              <button
+                type="button"
+                disabled={preparando}
+                className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
+                onClick={() => seletor.current?.click()}
+              >
+                <Images aria-hidden="true" className="size-7" />
+                Galeria
+              </button>
+            </div>
+            <p className="mt-2 text-center text-xs text-muted">
+              {preparando
+                ? "Preparando…"
+                : `Selfie no treino, print do relógio ou do app de corrida (até ${maximoDeEvidencias})`}
+            </p>
+          </div>
         )}
+        <CameraEvidencia
+          aberta={camera.aberta}
+          onFechar={camera.fechar}
+          onFoto={(arquivo) => {
+            const instante = new Date();
+            camera.fechar();
+            void adicionarAnexos([arquivo], instante);
+          }}
+        />
 
         <label className="mt-6 block">
           <span className="mb-2 block text-sm font-semibold">

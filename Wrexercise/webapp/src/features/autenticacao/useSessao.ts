@@ -8,6 +8,7 @@ import {
   putJson,
 } from "@/services/api";
 import { desativarPush, reiniciarPush } from "@/services/push";
+import { apagarTodosRascunhos } from "@/services/rascunhos";
 
 export type ModoInicio = "App" | "Jogo";
 
@@ -126,6 +127,7 @@ export function useSair() {
       await postEmpty(`${basePath}/sair`);
     },
     onSuccess: () => {
+      void apagarTodosRascunhos();
       reiniciarPush();
       queryClient.setQueryData(sessaoKey, null);
       // Nada da conta anterior pode continuar disponível para a próxima.

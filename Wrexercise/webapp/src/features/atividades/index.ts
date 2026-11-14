@@ -9,12 +9,19 @@ export {
 } from "./labels";
 export {
   FotoNaoProcessadaError,
+  marcarCapturaNoApp,
   prepararEvidencia,
   type EvidenciaPreparada,
 } from "./comprimirImagem";
 export { AvisosAtividade, AvisosAtividadeResumo } from "./AvisosAtividade";
 export { calcularAvisoDataFoto, maximoNoPassadoMs } from "./janelaEvidencia";
+export { CameraEvidencia } from "./CameraEvidencia";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
+export {
+  apagarRascunhoRegistro,
+  lerRascunhoRegistro,
+  salvarRascunhoRegistro,
+} from "./rascunhoRegistro";
 export { ExcluirAtividade } from "./ExcluirAtividade";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";

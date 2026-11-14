@@ -4,7 +4,8 @@
  * Qualquer arquivo estranho resulta em "sem metadados", nunca em erro.
  */
 
-export type OrigemDataCaptura = "Exif" | "Arquivo";
+/** `Camera`: capturada pela câmera do próprio aplicativo, com a data do momento (ADR 0058). */
+export type OrigemDataCaptura = "Exif" | "Arquivo" | "Camera";
 
 export type MetadadosFoto = {
   capturadaEm: Date | null;

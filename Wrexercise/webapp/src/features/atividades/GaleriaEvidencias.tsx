@@ -17,6 +17,7 @@ import {
   formatarDuracao,
   tipoAtividadeLabels,
 } from "./labels";
+import { SeloCameraDoApp } from "./SeloCameraDoApp";
 import type { AtividadeResumo, Evidencia } from "./types";
 
 export type LegendaGaleria = Pick<
@@ -267,11 +268,14 @@ function Galeria({
       )}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-linear-to-b from-lightbox/70 to-transparent px-3 pt-[max(env(safe-area-inset-top),0.75rem)] pb-6">
-        <span
-          aria-live="polite"
-          className="pl-2 text-sm font-semibold tabular-nums"
-        >
-          {total > 1 && `${indice + 1} / ${total}`}
+        <span className="flex items-center gap-3 pl-2">
+          <span
+            aria-live="polite"
+            className="text-sm font-semibold tabular-nums"
+          >
+            {total > 1 && `${indice + 1} / ${total}`}
+          </span>
+          {evidencias?.[indice]?.gravadaNoApp && <SeloCameraDoApp />}
         </span>
         <button
           type="button"

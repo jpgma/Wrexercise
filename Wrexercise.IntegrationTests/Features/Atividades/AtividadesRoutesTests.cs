@@ -507,6 +507,29 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         Assert.DoesNotContain("latitude", json, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task AnexarEvidencia_CameraDoApp_MarcaGravadaNoAppSemAviso()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["capturadaEm"] = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+            ["origemDataCaptura"] = "Camera",
+        });
+        await PostEvidenciaAsync(ana, id, JpegVariante(2), new()
+        {
+            ["capturadaEm"] = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+            ["origemDataCaptura"] = "Exif",
+        });
+
+        var atividade = await ObterAsync(ana, id);
+        Assert.Empty(atividade.Avisos);
+        Assert.Equal([true, false], atividade.Evidencias.Select(e => e.GravadaNoApp));
+    }
+
     [Theory]
     [InlineData(-3 * 24 * 60, "Exif", TipoAviso.FotoForaDoPeriodo)]
     [InlineData(-3 * 24 * 60, "Arquivo", TipoAviso.FotoForaDoPeriodo)]

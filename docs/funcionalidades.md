@@ -425,15 +425,22 @@ The form sends the header `Idempotency-Key` with a UUID. If the user submits the
 
 A member with activities in his or her review queue (see 8.6) cannot record an activity in that group. The API returns `409 AVALIACOES_PENDENTES`. Any reaction (`Kudos`, `Suspeito` or `Rejeitar`) removes an activity from the queue.
 
-When the queue is not empty, the form page does not show the form. It shows only the notice "N treinos esperam sua avaliação", for all entry points. The notice shows the avatars of the authors in the queue (a maximum of 5, then "+N"). The avatars come in one after the other. The notice also shows two steps: "1 Avaliar N" and "Seu treino" with a lock. The button "Começar avaliação" opens the first activity in the queue. If the API returns `409 AVALIACOES_PENDENTES` while the form is open, the application updates the queue and shows the notice. The form data is lost.
+When the queue is not empty, the form page does not show the form. It shows only the notice "N treinos esperam sua avaliação", for all entry points. The notice shows the avatars of the authors in the queue (a maximum of 5, then "+N"). The avatars come in one after the other. The notice also shows two steps: "1 Avaliar N" and "Seu treino" with a lock. The button "Começar avaliação" opens the first activity in the queue. If the API returns `409 AVALIACOES_PENDENTES` while the form is open, the application updates the queue and shows the notice. The form data stays in the draft (see below).
+
+The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the form fields, the prepared images and the `Idempotency-Key`. The form saves the draft when the user changes a field or an image, and before it sends the activity. Android can stop the application while the user is in the gallery. When the user opens the form again, the form loads the draft and shows "Recuperamos o registro que você não terminou." with the button "Descartar". The form deletes the draft when the activity is sent, when the user selects "Descartar", and when the user signs out (all drafts). A draft older than 48 hours is deleted. If the application stopped during the upload, the user sends the draft again: the same `Idempotency-Key` returns the same activity, and the images that arrived return `409 EVIDENCIA_JA_ANEXADA`.
 
 ### 7.2. Evidence
 
+- The form has two buttons: "Câmera" and "Galeria".
+  - "Câmera" opens the camera inside the application (`getUserMedia`). The user does not leave the application. The user can change between the back and the front camera. The "back" button of the phone closes the camera. If the browser cannot open the camera (no permission, no camera, camera in use), the camera shows a message that tells the user to use "Galeria".
+  - "Galeria" opens the file selector of the device, without the `capture` attribute.
+  - A photo from the in-app camera has the origin `Camera` and the date of the capture. It has no location. The server treats `Camera` like `Exif` (see 7.5).
+  - The activity page and the full-screen gallery show the label "Câmera do app" on evidence with the origin `Camera` (`gravadaNoApp` in the API). The browser gives this origin. A user can change it.
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
 - The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location, from the file that it sends.
 - The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original file.
 - Before it removes the metadata, the browser reads these data from the original file and sends them in separate fields (see 7.5):
-  - The date and time when the photo was taken (EXIF `DateTimeOriginal`). If there is no EXIF date, the browser sends the date of the file, with the origin `Arquivo`.
+  - The date and time when the photo was taken (EXIF `DateTimeOriginal`). If there is no EXIF date, the browser sends the date of the file, with the origin `Arquivo`. A photo from the in-app camera has the origin `Camera`.
   - The SHA-256 of the original file.
   - A 64-bit perceptual hash (`dhash`).
   - The latitude and the longitude (EXIF GPS), if they exist. The server keeps them. No API response shows them.
@@ -465,8 +472,8 @@ The system adds warnings to an activity. All members of the group see them, also
 
 | `Aviso` | When | Label |
 |---|---|---|
-| `FotoForaDoPeriodo` | The EXIF date is before the start − 2 hours, after the end + 12 hours, or in the future. Or the file date is before the start − 2 hours. | "Foto de outro horário" |
-| `FotoSemData` | The photo has no EXIF date. A file date in or after the window does not change this. | "Foto sem data" |
+| `FotoForaDoPeriodo` | The EXIF or `Camera` date is before the start − 2 hours, after the end + 12 hours, or in the future. Or the file date is before the start − 2 hours. | "Foto de outro horário" |
+| `FotoSemData` | The photo has no EXIF or `Camera` date. A file date in or after the window does not change this. | "Foto sem data" |
 | `FotoParecida` | The `dhash` has a maximum difference of 6 bits from a photo of a different activity, in any group of the user. | "Foto parecida" |
 | `RegistroTardio` | The user records the activity more than 12 hours after its end. | "Registrada depois" |
 

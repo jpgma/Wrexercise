@@ -156,7 +156,10 @@ internal static class ConsultasAtividade
 
         var evidencias = new List<EvidenciaResponse>();
         await using (var lista = new NpgsqlCommand(
-            "SELECT id, ordem FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem",
+            """
+            SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera'
+            FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
+            """,
             connection))
         {
             lista.Parameters.AddWithValue(atividadeId);
@@ -167,7 +170,8 @@ internal static class ConsultasAtividade
                 evidencias.Add(new EvidenciaResponse(
                     evidenciaId,
                     reader.GetInt16(1),
-                    BuildEvidenciaUrl(id, evidenciaId)));
+                    BuildEvidenciaUrl(id, evidenciaId),
+                    reader.GetBoolean(2)));
             }
         }
 

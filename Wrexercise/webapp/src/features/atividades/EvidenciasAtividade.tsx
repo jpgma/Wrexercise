@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GaleriaEvidencias, type LegendaGaleria } from "./GaleriaEvidencias";
+import { SeloCameraDoApp } from "./SeloCameraDoApp";
 import type { Evidencia } from "./types";
 import { useGaleria } from "./useGaleria";
 
@@ -39,7 +40,7 @@ export function EvidenciasAtividade({
             type="button"
             onClick={() => galeria.abrir(i)}
             aria-label={`Ampliar comprovante ${i + 1} de ${total}`}
-            className="w-full shrink-0 cursor-zoom-in snap-center focus-visible:-outline-offset-4"
+            className="relative w-full shrink-0 cursor-zoom-in snap-center focus-visible:-outline-offset-4"
           >
             <img
               src={evidencia.url}
@@ -47,6 +48,9 @@ export function EvidenciasAtividade({
               className="aspect-[4/3] w-full object-cover"
               loading="lazy"
             />
+            {evidencia.gravadaNoApp && (
+              <SeloCameraDoApp className="absolute top-3 left-3" />
+            )}
           </button>
         ))}
       </div>
