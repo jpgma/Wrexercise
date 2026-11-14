@@ -7,17 +7,32 @@ const qualidade = 0.82;
 const maxLadoMiniatura = 240;
 const qualidadeMiniatura = 0.6;
 
-/** Sinais sobre a foto original, lidos antes de o canvas apagar os metadados (ADR 0052). */
+/**
+ * Sinais sobre a foto ou o vídeo original, lidos antes de o canvas ou a conversão apagarem os metadados
+ * (ADR 0052). No vídeo, `dhash` é o do quadro do meio, e `dhashInicio`/`dhashFim`, os dos quadros a 10% e
+ * 90% (ADR 0058).
+ */
 export type SinaisEvidencia = MetadadosFoto & {
   sha256Original: string | null;
   dhash: string;
+  dhashInicio?: string;
+  dhashFim?: string;
 };
 
+export type TipoEvidencia = "Foto" | "Video";
+
 export type EvidenciaPreparada = {
+  /** Ausente nos rascunhos gravados antes dos vídeos: vale `Foto`. */
+  tipo?: TipoEvidencia;
   arquivo: File;
   miniatura: Blob | null;
   sinais: SinaisEvidencia;
+  /** Só no vídeo. */
+  duracaoMs?: number;
 };
+
+/** Qualquer coisa que o canvas desenha e que diz o próprio tamanho: bitmap de foto ou quadro de vídeo. */
+export type FonteImagem = ImageBitmap | HTMLCanvasElement | OffscreenCanvas;
 
 export class FotoNaoProcessadaError extends Error {
   constructor() {
@@ -25,8 +40,8 @@ export class FotoNaoProcessadaError extends Error {
   }
 }
 
-function redimensionar(
-  bitmap: ImageBitmap,
+export function redimensionar(
+  bitmap: FonteImagem,
   limite: number,
   qualidadeJpeg: number,
 ): Promise<Blob | null> {
@@ -47,7 +62,7 @@ function redimensionar(
  * dHash de 64 bits: a imagem em 9×8 tons de cinza, um bit por par de vizinhos na linha. Fotos iguais
  * redimensionadas ou recomprimidas dão hashes próximos; o servidor compara a distância entre eles.
  */
-function calcularDhash(bitmap: ImageBitmap): string | null {
+export function calcularDhash(bitmap: FonteImagem): string | null {
   const canvas = document.createElement("canvas");
   canvas.width = 9;
   canvas.height = 8;
@@ -74,9 +89,9 @@ function calcularDhash(bitmap: ImageBitmap): string | null {
   return bits.toString(16).padStart(16, "0");
 }
 
-async function calcularSha256(arquivo: File): Promise<string | null> {
+export async function calcularSha256(arquivo: Blob): Promise<string | null> {
   // Só existe em contexto seguro (HTTPS ou localhost).
-  if (!crypto.subtle) return null;
+  if (typeof crypto.subtle === "undefined") return null;
   const digest = await crypto.subtle.digest(
     "SHA-256",
     await arquivo.arrayBuffer(),
@@ -138,6 +153,7 @@ export async function prepararEvidencia(
 
     const nome = arquivo.name.replace(/\.\w+$/, "") + ".jpg";
     return {
+      tipo: "Foto",
       arquivo: new File([foto], nome, { type: "image/jpeg" }),
       miniatura,
       sinais: { ...metadados, sha256Original, dhash },

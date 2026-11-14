@@ -9,7 +9,7 @@ import {
   ApiError,
   deleteEmpty,
   getJson,
-  postFormData,
+  postFormDataComProgresso,
   postJson,
 } from "@/services/api";
 import type { EvidenciaPreparada } from "./comprimirImagem";
@@ -161,6 +161,7 @@ export function useCriarAtividade(grupoId: string) {
 export function anexarEvidencia(
   atividadeId: string,
   { arquivo, miniatura, sinais }: EvidenciaPreparada,
+  onProgresso: (fracao: number) => void = () => undefined,
 ) {
   const form = new FormData();
   form.append("arquivo", arquivo);
@@ -173,12 +174,16 @@ export function anexarEvidencia(
   if (sinais.sha256Original)
     form.append("sha256Original", sinais.sha256Original);
   form.append("dhash", sinais.dhash);
+  // Só no vídeo: os quadros do início e do fim, para o aviso VideoParado (ADR 0058).
+  if (sinais.dhashInicio) form.append("dhashInicio", sinais.dhashInicio);
+  if (sinais.dhashFim) form.append("dhashFim", sinais.dhashFim);
   if (sinais.latitude !== null && sinais.longitude !== null) {
     form.append("latitude", String(sinais.latitude));
     form.append("longitude", String(sinais.longitude));
   }
-  return postFormData<Evidencia>(
+  return postFormDataComProgresso<Evidencia>(
     `/api/atividades/${atividadeId}/evidencias`,
     form,
+    onProgresso,
   );
 }

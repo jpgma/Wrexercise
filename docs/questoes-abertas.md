@@ -650,6 +650,8 @@ Definir:
 
 A exclusão de dados deve considerar as relações históricas e as necessidades de auditoria.
 
+Os vídeos (`decisoes/0058-video-como-evidencia.md`) pesam cerca de 25 vezes uma foto por minuto e ficam sem prazo, como as fotos. Se o disco do A14 ou a cota do Drive crescerem rápido, uma opção é guardar só a miniatura do vídeo depois do fim do desafio.
+
 ## Q030 — Como tratar dados pessoais em imagens?
 
 **Status:** PARCIALMENTE DECIDIDA (0052). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data e a localização do EXIF ficam em colunas à parte, sem aparecer na API. Mostrar a localização e a retenção (Q029) continuam abertas.

@@ -18,6 +18,7 @@ O orçamento é zero. Por isso, as 0022 e 0032 rejeitaram o rclone, que exige um
 Premissas:
 
 - Uma evidência tem cerca de 0,36 MB: 1600 px em JPEG 0,82, mais a miniatura.
+- Um vídeo (ADR 0058) tem cerca de 9,5 MB por minuto, mais a miniatura. Com 10 pessoas e um vídeo curto por dia, cerca de 1,5 GB por mês: a cota de 15 GB dura uns 9 meses só com vídeos. O espelho (`rclone sync`) só envia arquivos novos.
 - Cada pessoa registra cerca de 1 atividade por dia.
 - O dump cresce cerca de 2 KB por pessoa por dia.
 

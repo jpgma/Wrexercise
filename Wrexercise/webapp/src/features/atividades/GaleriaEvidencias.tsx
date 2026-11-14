@@ -91,6 +91,17 @@ function Galeria({
     // Só ao chegar as evidências: depois disso, a posição é de quem rola.
   }, [total]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Trocar de slide pausa o vídeo que ficou para trás.
+  useEffect(() => {
+    trilhoRef.current
+      ?.querySelectorAll<HTMLVideoElement>("video[data-indice]")
+      .forEach((video) => {
+        if (Number(video.dataset.indice) !== indice) video.pause();
+      });
+  }, [indice]);
+
+  const videoAtual = evidencias?.[indice]?.tipo === "Video";
+
   function irPara(novo: number) {
     const trilho = trilhoRef.current;
     if (!trilho || novo < 0 || novo >= total) return;
@@ -230,6 +241,27 @@ function Galeria({
           }`}
         >
           {evidencias.map((evidencia, i) => {
+            if (evidencia.tipo === "Video") {
+              // Vídeo não amplia: os gestos são dos controles do próprio player.
+              return (
+                <div
+                  key={evidencia.id}
+                  aria-roledescription="slide"
+                  aria-label={`Vídeo ${i + 1} de ${total}`}
+                  className="grid h-full w-full shrink-0 snap-center place-items-center overflow-hidden px-2 pt-16 pb-6 touch-pan-x"
+                >
+                  <video
+                    data-indice={i}
+                    src={evidencia.url}
+                    poster={`${evidencia.url}/miniatura`}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="max-h-full max-w-full"
+                  />
+                </div>
+              );
+            }
             const ampliada = zoom !== null && i === indice;
             return (
               <div
@@ -312,7 +344,7 @@ function Galeria({
 
       <div
         className={`pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-lightbox/90 via-lightbox/60 to-transparent px-5 pt-12 pb-[max(env(safe-area-inset-bottom),1.25rem)] transition-opacity duration-200 ${
-          zoom ? "opacity-0" : ""
+          zoom || videoAtual ? "opacity-0" : ""
         }`}
       >
         <div className="mx-auto max-w-2xl">

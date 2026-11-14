@@ -1,3 +1,4 @@
+import { Play } from "lucide-react";
 import { useState } from "react";
 import { GaleriaEvidencias, type LegendaGaleria } from "./GaleriaEvidencias";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
@@ -39,15 +40,38 @@ export function EvidenciasAtividade({
             key={evidencia.id}
             type="button"
             onClick={() => galeria.abrir(i)}
-            aria-label={`Ampliar comprovante ${i + 1} de ${total}`}
+            aria-label={
+              evidencia.tipo === "Video"
+                ? `Assistir ao vídeo ${i + 1} de ${total}`
+                : `Ampliar comprovante ${i + 1} de ${total}`
+            }
             className="relative w-full shrink-0 cursor-zoom-in snap-center focus-visible:-outline-offset-4"
           >
-            <img
-              src={evidencia.url}
-              alt=""
-              className="aspect-[4/3] w-full object-cover"
-              loading="lazy"
-            />
+            {evidencia.tipo === "Video" ? (
+              <>
+                {/* Só o começo do arquivo (metadados e o primeiro quadro); toca na galeria. */}
+                <video
+                  src={evidencia.url}
+                  poster={`${evidencia.url}/miniatura`}
+                  preload="metadata"
+                  muted
+                  playsInline
+                  className="pointer-events-none aspect-[4/3] w-full bg-lightbox object-contain"
+                />
+                <span className="absolute inset-0 grid place-items-center">
+                  <span className="grid size-14 place-items-center rounded-full bg-lightbox/60 text-on-lightbox">
+                    <Play aria-hidden="true" className="size-7 fill-current" />
+                  </span>
+                </span>
+              </>
+            ) : (
+              <img
+                src={evidencia.url}
+                alt=""
+                className="aspect-[4/3] w-full object-cover"
+                loading="lazy"
+              />
+            )}
             {evidencia.gravadaNoApp && (
               <SeloCameraDoApp className="absolute top-3 left-3" />
             )}

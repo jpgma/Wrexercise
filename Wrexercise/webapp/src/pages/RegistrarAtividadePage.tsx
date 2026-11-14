@@ -6,6 +6,7 @@ import {
   Info,
   Lock,
   Minus,
+  Play,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -25,8 +26,15 @@ import {
   lerRascunhoRegistro,
   marcarCapturaNoApp,
   maximoNoPassadoMs,
+  analisarVideo,
+  duracaoMaximaS,
+  duracaoMinimaS,
   prepararEvidencia,
+  prepararVideo,
+  RecorteVideo,
   salvarRascunhoRegistro,
+  type TrechoVideo,
+  VideoNaoProcessadoError,
   type EvidenciaPreparada,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
@@ -86,8 +94,18 @@ function valoresPadrao(): Partial<FormData> {
 }
 
 function criarAnexo(preparada: EvidenciaPreparada): Anexo {
-  // A prévia usa o arquivo já comprimido: é o que vai para o servidor e ocupa menos memória.
-  return { preparada, url: URL.createObjectURL(preparada.arquivo) };
+  // A prévia usa o arquivo já comprimido: é o que vai para o servidor e ocupa menos memória. No vídeo, a
+  // miniatura (o quadro do meio).
+  const previa =
+    preparada.tipo === "Video" && preparada.miniatura
+      ? preparada.miniatura
+      : preparada.arquivo;
+  return { preparada, url: URL.createObjectURL(previa) };
+}
+
+function formatarDuracaoVideo(ms: number) {
+  const segundos = Math.round(ms / 1000);
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
 }
 
 type Registrada = {
@@ -130,8 +148,8 @@ function TreinoRegistrado({
       {faltaram > 0 && (
         <p role="alert" className="form-error mt-4 w-full">
           {faltaram === 1
-            ? "Uma imagem não pôde ser enviada."
-            : `${faltaram} imagens não puderam ser enviadas.`}
+            ? "Um comprovante não pôde ser enviado."
+            : `${faltaram} comprovantes não puderam ser enviados.`}
           {registrada.motivos.map((motivo) => ` ${motivo}`)}
         </p>
       )}
@@ -253,6 +271,14 @@ export function RegistrarAtividadePage() {
   );
   const [erroAnexo, setErroAnexo] = useState<string | null>(null);
   const [enviando, setEnviando] = useState<string | null>(null);
+  // Vídeo com mais de 1 minuto: a promessa espera a pessoa escolher o trecho (ADR 0058).
+  const [recorte, setRecorte] = useState<{
+    arquivo: File;
+    duracao: number;
+    resolver: (trecho: TrechoVideo | null) => void;
+  } | null>(null);
+  const [progressoVideo, setProgressoVideo] = useState<number | null>(null);
+  const conversao = useRef<AbortController | null>(null);
   const [registrada, setRegistrada] = useState<Registrada | null>(null);
   const [rascunhoRestaurado, setRascunhoRestaurado] = useState(false);
   const rascunhoLido = useRef(false);
@@ -370,9 +396,12 @@ export function RegistrarAtividadePage() {
     let enviadas = 0;
     const motivos = new Set<string>();
     for (const [indice, { preparada }] of anexos.entries()) {
-      setEnviando(`Enviando ${indice + 1} de ${anexos.length}…`);
+      const rotulo = `Enviando ${indice + 1} de ${anexos.length}…`;
+      setEnviando(rotulo);
       try {
-        await anexarEvidencia(atividade.id, preparada);
+        await anexarEvidencia(atividade.id, preparada, (fracao) =>
+          setEnviando(`${rotulo} ${Math.round(fracao * 100)}%`),
+        );
         enviadas += 1;
       } catch (error) {
         // Na repetição, a foto que já tinha chegado conta como enviada.
@@ -382,8 +411,12 @@ export function RegistrarAtividadePage() {
         ) {
           enviadas += 1;
         }
-        // O resumo final mostra quantas faltaram; a foto já usada tem motivo próprio.
-        if (error instanceof ApiError && error.code === "EVIDENCIA_DUPLICADA") {
+        // O resumo final mostra quantos faltaram; a foto já usada e o vídeo recusado têm motivo próprio.
+        if (
+          error instanceof ApiError &&
+          (error.code === "EVIDENCIA_DUPLICADA" ||
+            error.code?.startsWith("VIDEO_") === true)
+        ) {
           motivos.add(getErrorMessage(error));
         }
       }
@@ -446,31 +479,87 @@ export function RegistrarAtividadePage() {
       0,
       maximoDeEvidencias - anexos.length,
     );
+    const ehVideo = (arquivo: File) => arquivo.type.startsWith("video/");
+    const fotos = escolhidos.filter((arquivo) => !ehVideo(arquivo));
+    const videos = escolhidos.filter(ehVideo);
+    const marcar = (preparada: EvidenciaPreparada) =>
+      capturadaNoApp
+        ? marcarCapturaNoApp(preparada, capturadaNoApp)
+        : preparada;
+    const erros: string[] = [];
     setErroAnexo(null);
-    setPreparando(true);
-    const resultados = await Promise.allSettled(
-      escolhidos.map(prepararEvidencia),
-    );
-    setPreparando(false);
 
-    const novos: Anexo[] = [];
-    for (const resultado of resultados) {
-      if (resultado.status === "fulfilled") {
-        novos.push(
-          criarAnexo(
-            capturadaNoApp
-              ? marcarCapturaNoApp(resultado.value, capturadaNoApp)
-              : resultado.value,
-          ),
+    if (fotos.length > 0) {
+      setPreparando(true);
+      const resultados = await Promise.allSettled(fotos.map(prepararEvidencia));
+      setPreparando(false);
+      const novos = resultados.flatMap((resultado) =>
+        resultado.status === "fulfilled"
+          ? [criarAnexo(marcar(resultado.value))]
+          : [],
+      );
+      if (novos.length < fotos.length) {
+        erros.push(
+          "Não foi possível processar uma das fotos. Tente outra imagem.",
         );
       }
+      setAnexos((atuais) => [...atuais, ...novos]);
     }
-    if (novos.length < escolhidos.length) {
-      setErroAnexo(
-        "Não foi possível processar uma das fotos. Tente outra imagem.",
-      );
+
+    // Um vídeo por vez: a conversão usa o codificador do aparelho.
+    for (const video of videos) {
+      const erro = await adicionarVideo(video, marcar);
+      if (erro) erros.push(erro);
     }
-    setAnexos((atuais) => [...atuais, ...novos]);
+    setErroAnexo(erros.length > 0 ? erros.join(" ") : null);
+  };
+
+  /** Prepara um vídeo; devolve o motivo da recusa, ou `null` quando entrou ou a pessoa desistiu. */
+  const adicionarVideo = async (
+    arquivo: File,
+    marcar: (preparada: EvidenciaPreparada) => EvidenciaPreparada,
+  ): Promise<string | null> => {
+    setPreparando(true);
+    try {
+      const analise = await analisarVideo(arquivo);
+      if (analise.duracao < duracaoMinimaS) {
+        return "O vídeo precisa ter pelo menos 2 segundos.";
+      }
+      let trecho: TrechoVideo = {
+        inicio: 0,
+        fim: Math.min(analise.duracao, duracaoMaximaS),
+      };
+      if (analise.duracao > duracaoMaximaS + 0.5) {
+        if (!analise.podeConverter) {
+          return "Seu navegador não consegue recortar vídeos. Envie um vídeo de até 1 minuto.";
+        }
+        const escolhido = await new Promise<TrechoVideo | null>((resolver) =>
+          setRecorte({ arquivo, duracao: analise.duracao, resolver }),
+        );
+        setRecorte(null);
+        if (!escolhido) return null;
+        trecho = escolhido;
+      }
+
+      const controle = new AbortController();
+      conversao.current = controle;
+      setProgressoVideo(0);
+      const preparada = await prepararVideo(arquivo, analise, trecho, {
+        onProgresso: setProgressoVideo,
+        signal: controle.signal,
+      });
+      setAnexos((atuais) => [...atuais, criarAnexo(marcar(preparada))]);
+      return null;
+    } catch (error) {
+      if (conversao.current?.signal.aborted) return null;
+      return error instanceof VideoNaoProcessadoError
+        ? error.message
+        : "Não foi possível preparar este vídeo. Tente outro.";
+    } finally {
+      conversao.current = null;
+      setProgressoVideo(null);
+      setPreparando(false);
+    }
   };
 
   const inicioEscolhido = startedAt ? new Date(startedAt) : null;
@@ -482,11 +571,12 @@ export function RegistrarAtividadePage() {
       (duracaoMinutos || 0) * 60,
       preparada.sinais,
     );
+    const video = preparada.tipo === "Video";
     if (aviso === "FotoForaDoPeriodo" && preparada.sinais.capturadaEm) {
-      return `Foto de ${formatarDataHora(preparada.sinais.capturadaEm.toISOString())}, fora do horário do treino. O grupo verá um aviso.`;
+      return `${video ? "Vídeo" : "Foto"} de ${formatarDataHora(preparada.sinais.capturadaEm.toISOString())}, fora do horário do treino. O grupo verá um aviso.`;
     }
     if (aviso === "FotoSemData") {
-      return "Sem data na foto. O grupo verá que não deu para conferir.";
+      return `Sem data ${video ? "no vídeo" : "na foto"}. O grupo verá que não deu para conferir.`;
     }
     return null;
   };
@@ -644,7 +734,7 @@ export function RegistrarAtividadePage() {
         <input
           ref={seletor}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,video/*"
           multiple
           className="hidden"
           onChange={(event) => {
@@ -663,9 +753,15 @@ export function RegistrarAtividadePage() {
               >
                 <img
                   src={anexo.url}
-                  alt={`Prévia do comprovante ${indice + 1}`}
+                  alt={`Prévia do comprovante ${indice + 1}${anexo.preparada.tipo === "Video" ? ", vídeo" : ""}`}
                   className="aspect-square w-full object-cover"
                 />
+                {anexo.preparada.tipo === "Video" && (
+                  <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
+                    <Play aria-hidden="true" className="size-3 fill-current" />
+                    {formatarDuracaoVideo(anexo.preparada.duracaoMs ?? 0)}
+                  </span>
+                )}
                 <button
                   type="button"
                   aria-label={`Remover comprovante ${indice + 1}`}
@@ -693,7 +789,7 @@ export function RegistrarAtividadePage() {
                       className="mt-0.5 size-3.5 shrink-0"
                     />
                     <span>
-                      Foto {indice + 1}: {aviso}
+                      Comprovante {indice + 1}: {aviso}
                     </span>
                   </li>
                 )
@@ -728,11 +824,34 @@ export function RegistrarAtividadePage() {
                 Galeria
               </button>
             </div>
-            <p className="mt-2 text-center text-xs text-muted">
-              {preparando
-                ? "Preparando…"
-                : `Selfie no treino, print do relógio ou do app de corrida (até ${maximoDeEvidencias})`}
-            </p>
+            {progressoVideo !== null ? (
+              <div className="mt-3" role="status">
+                <div className="flex items-center justify-between gap-3 text-xs">
+                  <span>
+                    Preparando o vídeo… {Math.round(progressoVideo * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-ghost h-11 px-3"
+                    onClick={() => conversao.current?.abort()}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-soft">
+                  <div
+                    className="h-full rounded-full bg-progress transition-[width]"
+                    style={{ width: `${Math.round(progressoVideo * 100)}%` }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="mt-2 text-center text-xs text-muted">
+                {preparando
+                  ? "Preparando…"
+                  : `Selfie, vídeo de até 1 minuto ou print do relógio (até ${maximoDeEvidencias})`}
+              </p>
+            )}
           </div>
         )}
         <CameraEvidencia
@@ -743,7 +862,19 @@ export function RegistrarAtividadePage() {
             camera.fechar();
             void adicionarAnexos([arquivo], instante);
           }}
+          onVideo={(arquivo, iniciadoEm) => {
+            camera.fechar();
+            void adicionarAnexos([arquivo], iniciadoEm);
+          }}
         />
+        {recorte && (
+          <RecorteVideo
+            arquivo={recorte.arquivo}
+            duracao={recorte.duracao}
+            onEscolher={recorte.resolver}
+            onCancelar={() => recorte.resolver(null)}
+          />
+        )}
 
         <label className="mt-6 block">
           <span className="mb-2 block text-sm font-semibold">

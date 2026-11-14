@@ -16,6 +16,16 @@ export {
 export { AvisosAtividade, AvisosAtividadeResumo } from "./AvisosAtividade";
 export { calcularAvisoDataFoto, maximoNoPassadoMs } from "./janelaEvidencia";
 export { CameraEvidencia } from "./CameraEvidencia";
+export { RecorteVideo } from "./RecorteVideo";
+export {
+  analisarVideo,
+  duracaoMaximaS,
+  duracaoMinimaS,
+  prepararVideo,
+  VideoNaoProcessadoError,
+  type AnaliseVideo,
+  type TrechoVideo,
+} from "./prepararVideo";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
 export {
   apagarRascunhoRegistro,

@@ -14,6 +14,7 @@
 3. Rules to adjust with real data
 
 These were decided before anyone used the app, and several ADRs say to look again once real use starts:
+- Video evidence (0058): after the first month, measure the evidence folder and the Drive use (`stats.bat`) against the estimate in 0046 (about 9.5 MB per video minute). If it grows too fast, decide on video retention with Q029 (for example, keep only the thumbnail after the challenge ends). Count `VideoParado` warnings and check false positives (planks, tripod shots). Check on a real Android PWA that the in-app camera, the 60 s recording and the conversion work, and how long a 1-minute conversion takes on a low-end phone.
 - Avisos (0052): count each type after the first month. Check `FotoParecida` false positives (gym mirror selfies; the 6-bit limit), how many flagged activities end in EmRevisao waiting for an admin, and whether the 48 h backdating limit blocks honest late logging.
 - The consensus formula and the 48 h review window (0012, 0015). Is anything ever rejected, or does everything sit in EmRevisao?
 - Daily and proportional goals (0040, 0043, 0045). 0045 notes the rule changed after only two days with no real use.

@@ -25,11 +25,18 @@ export type Evidencia = {
   url: string;
   /** A câmera do aplicativo fez a captura (ADR 0058). Sinal do navegador, não prova. */
   gravadaNoApp: boolean;
+  tipo: "Foto" | "Video";
+  /** Só no vídeo. */
+  duracaoMs: number | null;
 };
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */
 export type TipoAviso =
-  "FotoForaDoPeriodo" | "FotoSemData" | "FotoParecida" | "RegistroTardio";
+  | "FotoForaDoPeriodo"
+  | "FotoSemData"
+  | "FotoParecida"
+  | "RegistroTardio"
+  | "VideoParado";
 
 export type Aviso = {
   tipo: TipoAviso;
@@ -56,6 +63,8 @@ export type AtividadeResumo = {
   suspeito: number;
   rejeitar: number;
   miniaturaUrl: string | null;
+  /** Quando a primeira evidência é um vídeo: a miniatura ganha o símbolo de play e a duração. */
+  miniaturaDuracaoMs: number | null;
   comentarios: number;
   avisos: TipoAviso[];
 };
@@ -70,6 +79,7 @@ export type Atividade = Omit<
   | "rejeitar"
   | "totalEvidencias"
   | "miniaturaUrl"
+  | "miniaturaDuracaoMs"
   | "comentarios"
   | "avisos"
 > & {

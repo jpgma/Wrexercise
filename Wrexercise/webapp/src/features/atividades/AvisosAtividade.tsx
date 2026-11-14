@@ -4,6 +4,7 @@ import {
   Copy,
   ImageOff,
   type LucideIcon,
+  Pause,
 } from "lucide-react";
 import { Link } from "react-router";
 import type { Aviso, TipoAviso } from "./types";
@@ -12,20 +13,20 @@ type Estilo = {
   curto: string;
   longo: string;
   Icon: LucideIcon;
-  /** "Sem data" só informa: fica neutro, sem o tom de alerta dos outros. */
+  /** "Sem data" e "Vídeo parado" só informam: ficam neutros, sem o tom de alerta dos outros. */
   classe: string;
 };
 
 const estilos: Record<TipoAviso, Estilo> = {
   FotoForaDoPeriodo: {
     curto: "Foto de outro horário",
-    longo: "A data de uma foto não bate com o horário do treino.",
+    longo: "A data de uma foto ou vídeo não bate com o horário do treino.",
     Icon: CalendarX,
     classe: "chip-warning",
   },
   FotoParecida: {
     curto: "Foto parecida",
-    longo: "Uma foto parece com a de outra atividade.",
+    longo: "Uma foto ou vídeo parece com o de outra atividade.",
     Icon: Copy,
     classe: "chip-warning",
   },
@@ -37,8 +38,14 @@ const estilos: Record<TipoAviso, Estilo> = {
   },
   FotoSemData: {
     curto: "Foto sem data",
-    longo: "Não deu para conferir quando uma foto foi tirada.",
+    longo: "Não deu para conferir quando uma foto ou vídeo foi feito.",
     Icon: ImageOff,
+    classe: "",
+  },
+  VideoParado: {
+    curto: "Vídeo parado",
+    longo: "A imagem de um vídeo quase não muda do começo ao fim.",
+    Icon: Pause,
     classe: "",
   },
 };
@@ -48,6 +55,7 @@ const ordem: TipoAviso[] = [
   "FotoParecida",
   "RegistroTardio",
   "FotoSemData",
+  "VideoParado",
 ];
 
 /** Selos curtos para os cartões do feed e da fila de avaliação. */

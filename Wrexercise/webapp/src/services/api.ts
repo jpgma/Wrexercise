@@ -78,6 +78,53 @@ export async function postFormData<T>(
   return (await response.json()) as T;
 }
 
+/**
+ * Como `postFormData`, mas informa o progresso do envio: o `fetch` não tem esse evento, o XMLHttpRequest tem.
+ * Um vídeo pode ter 25 MB numa conexão móvel (ADR 0058). Mesma origem: o cookie da sessão vai sozinho.
+ */
+export function postFormDataComProgresso<T>(
+  path: string,
+  body: FormData,
+  onProgresso: (fracao: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", path);
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgresso(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let corpo: unknown = null;
+      try {
+        corpo = JSON.parse(xhr.responseText) as unknown;
+      } catch {
+        // Resposta sem JSON: o status decide.
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(corpo as T);
+        return;
+      }
+      const problem = corpo as {
+        code?: string;
+        title?: string;
+        referencia?: string;
+      } | null;
+      reject(
+        new ApiError(
+          xhr.status,
+          problem?.code,
+          problem?.title,
+          problem?.referencia,
+        ),
+      );
+    };
+    // Sem resposta: `getErrorMessage` mostra a mensagem de conexão.
+    xhr.onerror = () => reject(new TypeError("Falha de rede."));
+    xhr.send(body);
+  });
+}
+
 export async function putFormData<T>(path: string, body: FormData): Promise<T> {
   const response = await request(path, { method: "PUT", body });
   return (await response.json()) as T;

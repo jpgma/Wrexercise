@@ -409,12 +409,12 @@ An active member records an activity with these data:
 - Start date and time. It cannot be more than 1 hour in the future. It cannot be more than 48 hours in the past: the API returns `400 ATIVIDADE_MUITO_ANTIGA`.
 - Duration: 1 minute to 24 hours.
 - Description: optional, maximum 500 characters.
-- Evidence: 0 to 3 images.
+- Evidence: 0 to 3 items. Each item is an image or a video, in any mix (ADR 0058).
 
 The proof method comes from the evidence:
 
-- No image: `RegistroManual`.
-- One or more images: `Fotografia`.
+- No evidence: `RegistroManual`.
+- One or more images or videos: `Fotografia`.
 - The code also has `CapturaDeTela`. The interface does not use it.
 
 The form adds the duration to the other activities of the user on the same day in the current week (`seusSegundosPorDia`, not `Rejeitada`). The form also adds the duration to the activities of the same types (`segundosPorTipo`). It shows "Conta para a meta" when the parts of the day add up to 100% (see 6.1). If not, it shows the minutes of the selected type that are necessary: "Faltam N min no dia para contar", or "Faltam N min de [type goal] para contar" when the selected type is in a type goal. If a different type needs fewer minutes, the form adds it: "(ou M min de [type goal])" or "(ou M min de outro treino)". If the day already has activities, it shows "Você já tem N min nesse dia".
@@ -433,7 +433,9 @@ The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the
 
 - The form has two buttons: "Câmera" and "Galeria".
   - "Câmera" opens the camera inside the application (`getUserMedia`). The user does not leave the application. The user can change between the back and the front camera. The "back" button of the phone closes the camera. If the browser cannot open the camera (no permission, no camera, camera in use), the camera shows a message that tells the user to use "Galeria".
-  - "Galeria" opens the file selector of the device, without the `capture` attribute.
+  - The camera has two modes: "Foto" and "Vídeo". The "Vídeo" mode also asks for the microphone. It shows a countdown from 1:00 and stops at 60 seconds. The user cannot stop a recording before 2 seconds. During a recording, the user cannot close the camera, change the camera or change the mode.
+  - The camera records with `MediaRecorder` (MP4 when the browser supports it, else WebM). The browser then converts the recording like a video from the gallery.
+  - "Galeria" opens the file selector of the device, without the `capture` attribute. It accepts JPEG, PNG and WebP images and all video types.
   - A photo from the in-app camera has the origin `Camera` and the date of the capture. It has no location. The server treats `Camera` like `Exif` (see 7.5).
   - The activity page and the full-screen gallery show the label "Câmera do app" on evidence with the origin `Camera` (`gravadaNoApp` in the API). The browser gives this origin. A user can change it.
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
@@ -459,8 +461,23 @@ The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the
 - Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
 - Nobody can replace evidence. Evidence is deleted only with its activity (see 7.6).
 - Only active members of the group can see the evidence.
-- The feed shows the thumbnail. The full image loads only when the user opens it.
-- The full-screen gallery shows the images of one activity. The user can swipe or use the arrow keys to go to the next image. The user can tap two times to zoom. The "back" button of the phone closes the gallery.
+- The feed shows the thumbnail. The full image loads only when the user opens it. When the first evidence is a video, the thumbnail shows ▶ and the duration.
+- The full-screen gallery shows the images and videos of one activity. The user can swipe or use the arrow keys to go to the next item. The user can tap two times to zoom an image. A video has the player controls and no zoom; the caption is hidden on a video. A video stops when the user goes to a different item. The "back" button of the phone closes the gallery.
+- The activity page shows a video with its first frame and ▶. A tap opens the gallery. The page loads only the start of the video file (`preload="metadata"`).
+
+### 7.2.1. Video
+
+- The browser converts each video before it sends it (ADR 0058): MP4, H.264 video, maximum 1280 pixels on the longest side, 30 frames per second, about 1.2 Mbps; AAC audio, 1 channel, 64 kbps. One minute is about 9.5 MB. The converted file has no metadata from the original.
+- The browser uses WebCodecs through the library `mediabunny`. The browser loads the library only when the user adds a video.
+- A video must have 2 to 60 seconds. If the video is shorter, the form shows "O vídeo precisa ter pelo menos 2 segundos."
+- If a video from the gallery is longer than 60 seconds, the form opens "Escolha 1 minuto do vídeo". The user moves a slider to select the start. The selection is always 60 seconds. The preview plays only the selection. "Usar este trecho" converts only the selection. The "X" button cancels and adds nothing.
+- During the conversion, the form shows "Preparando o vídeo… N%" with a progress bar and the button "Cancelar".
+- If the browser cannot convert (no H.264 or AAC encoder), it sends the original file without conversion, but only if the original is MP4 or MOV, H.264, AAC or no audio, maximum 1920 pixels, maximum 25 MB and maximum 60 seconds. Else the form shows "Seu navegador não consegue preparar este vídeo. Envie fotos, ou um vídeo MP4 de até 1 minuto e 25 MB." If the video is longer than 60 seconds and the browser cannot convert, the form shows "Seu navegador não consegue recortar vídeos. Envie um vídeo de até 1 minuto."
+- The thumbnail of a video is the frame at 50% (240 pixels, JPEG). The `dhash` is from the same frame. The browser also sends `dhashInicio` and `dhashFim`, from the frames at 10% and 90%.
+- The browser reads these data from the original file before the conversion: the creation date (`mvhd`, origin `Exif`; else the date of the file, origin `Arquivo`) and the location (ISO 6709). A video from the in-app camera has the origin `Camera` and the time when the recording started.
+- `sha256Original` is the SHA-256 of the original file. If the original is larger than 64 MB, it is the SHA-256 of the first 8 MB, the last 8 MB and the size.
+- The form preview of a video shows the thumbnail, ▶ and the duration.
+- The form sends each evidence with a progress percentage: "Enviando N de M… P%".
 
 ### 7.3. Week of an activity
 
@@ -490,7 +507,7 @@ The system adds warnings to an activity. All members of the group see them, also
 - `FotoParecida` shows the link "Ver a outra" only when the user can see the other activity.
 - `FotoSemData` and `VideoParado` only give information. The other warnings stop the automatic verification (see 8.3).
 - The `Foto*` warnings also apply to videos. The video date comes from the `creation_time` of the original MP4 file.
-- When the user selects a photo, the form shows the warning that the photo will cause: "Foto N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Foto N: Sem data na foto. O grupo verá que não deu para conferir." The form calculates the warning again when the user changes the start or the duration.
+- When the user selects a photo or a video, the form shows the warning that it will cause: "Comprovante N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Comprovante N: Sem data na foto. O grupo verá que não deu para conferir." For a video, the text says "Vídeo de [date]" and "Sem data no vídeo". The form calculates the warning again when the user changes the start or the duration.
 - The browser gives these data. A user can change them. The warnings help the reviewers. They are not proof.
 
 ### 7.6. Delete an activity

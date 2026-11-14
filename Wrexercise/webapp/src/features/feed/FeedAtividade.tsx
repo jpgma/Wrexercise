@@ -1,4 +1,4 @@
-import { Camera, Clock, MessageCircle } from "lucide-react";
+import { Camera, Clock, MessageCircle, Play } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import {
@@ -46,6 +46,7 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
     suspeito,
     rejeitar,
     miniaturaUrl,
+    miniaturaDuracaoMs,
     comentarios,
     avisos,
   } = atividade;
@@ -119,7 +120,11 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
           <button
             type="button"
             onClick={() => galeria.abrir(0)}
-            aria-label="Ver comprovantes em tela cheia"
+            aria-label={
+              miniaturaDuracaoMs === null
+                ? "Ver comprovantes em tela cheia"
+                : "Assistir ao vídeo em tela cheia"
+            }
             className="absolute top-4 right-4 size-16 cursor-zoom-in overflow-hidden rounded-xl tap"
           >
             <img
@@ -128,6 +133,16 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
               loading="lazy"
               className="size-full object-cover"
             />
+            {miniaturaDuracaoMs !== null && (
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-lightbox/60 py-0.5 text-[0.6875rem] font-semibold text-on-lightbox tabular-nums">
+                <Play aria-hidden="true" className="size-2.5 fill-current" />
+                {Math.floor(Math.round(miniaturaDuracaoMs / 1000) / 60)}:
+                {String(Math.round(miniaturaDuracaoMs / 1000) % 60).padStart(
+                  2,
+                  "0",
+                )}
+              </span>
+            )}
           </button>
           <GaleriaEvidencias
             aberta={galeria.aberta}

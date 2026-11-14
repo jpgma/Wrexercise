@@ -531,7 +531,7 @@ Diretrizes:
 - Evitar bibliotecas de interface pesadas.
 - Evitar imagens decorativas grandes.
 - Utilizar imagens WebP ou JPEG comprimidas.
-- Carregar evidências somente quando solicitadas. O feed carrega apenas miniaturas geradas no navegador, sob demanda.
+- Carregar evidências somente quando solicitadas. O feed carrega apenas miniaturas geradas no navegador, sob demanda. Na página da atividade, o vídeo carrega só os metadados e o primeiro quadro; o resto vem por `Range` quando a pessoa assiste (ADR 0058).
 - Utilizar paginação.
 - Utilizar skeletons discretos durante carregamento.
 - Evitar atualizações completas de página.
