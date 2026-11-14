@@ -144,12 +144,11 @@ function TreinoRegistrado({
         </div>
       </div>
       <h1 className="mt-6 text-4xl uppercase">Boa! Tá registrado.</h1>
-      <p className="mt-2 text-muted">
-        {registrada.faltaNoDia
-          ? `Registramos. ${registrada.faltaNoDia} para o dia contar na meta. `
-          : ""}
-        Seus amigos já podem dar moral.
-      </p>
+      {registrada.faltaNoDia && (
+        <p className="mt-2 text-muted">
+          Registramos. {registrada.faltaNoDia} para o dia contar na meta.
+        </p>
+      )}
       {faltaram > 0 && (
         <p role="alert" className="form-error mt-4 w-full">
           {faltaram === 1
