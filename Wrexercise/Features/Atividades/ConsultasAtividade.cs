@@ -159,7 +159,8 @@ internal static class ConsultasAtividade
         var evidencias = new List<EvidenciaResponse>();
         await using (var lista = new NpgsqlCommand(
             """
-            SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms
+            SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms,
+                origem_data_captura IS NOT DISTINCT FROM 'Print'
             FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
             """,
             connection))
@@ -175,7 +176,8 @@ internal static class ConsultasAtividade
                     BuildEvidenciaUrl(id, evidenciaId),
                     reader.GetBoolean(2),
                     reader.IsDBNull(3) ? TipoEvidencia.Foto : TipoEvidencia.Video,
-                    reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+                    reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                    reader.GetBoolean(4)));
             }
         }
 

@@ -446,11 +446,13 @@ The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the
   - "Galeria" opens the file selector of the device, without the `capture` attribute. It accepts JPEG, PNG and WebP images and all video types.
   - A photo from the in-app camera has the origin `Camera` and the date of the capture. It has no location. The server treats `Camera` like `Exif` (see 7.5).
   - The activity page and the full-screen gallery show the label "Câmera do app" on evidence with the origin `Camera` (`gravadaNoApp` in the API). The browser gives this origin. A user can change it.
+  - The activity page and the full-screen gallery show the label "Print" on evidence with the origin `Print` (`print` in the API). The label tells the reviewer to examine the date in the image (ADR 0060).
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
 - The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location, from the file that it sends.
 - The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original file.
 - Before it removes the metadata, the browser reads these data from the original file and sends them in separate fields (see 7.5):
   - The date and time when the photo was taken (EXIF `DateTimeOriginal`). If there is no EXIF date, the browser sends the date of the file, with the origin `Arquivo`. A photo from the in-app camera has the origin `Camera`.
+  - If the file name is the name of a screenshot with a date and a time, the browser sends that date with the origin `Print`, before the EXIF date. Examples: `Screenshot_20261114-083012.png`, `Screenshot_20261114_083012_Strava.jpg`, `Screenshot_2026-11-14-08-30-12-345_com.strava.jpg`, `Captura de Tela 2026-11-14 às 08.30.12.png`. The time is the time of the device. iPhone screenshots do not have the date in the name.
   - The SHA-256 of the original file.
   - A 64-bit perceptual hash (`dhash`).
   - The latitude and the longitude (EXIF GPS), if they exist. The server keeps them. No API response shows them.
@@ -498,7 +500,7 @@ The week of an activity is the week of its start date and time, in the time zone
 - Group feed ("Atividades"): all the activities of the group, the most recent first. Filters: "Todas", "Minhas", "Pendentes", "Verificadas".
 - The member page shows the activities of one member.
 - The feed loads 20 activities at a time. "Carregar mais" loads the next 20.
-- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions. If the activity has comments, the item also shows 💬 and the number of comments. If the activity has warnings (see 7.5), the item shows one short label for each type.
+- Each item in the feed shows the author, the type, the duration, the date, the thumbnail, the status and the reactions. If the activity has comments, the item also shows 💬 and the number of comments. If the activity has warnings (see 7.5), the item shows one short label for each type, except `FotoSemData`.
 
 ### 7.5. Warnings (`Aviso`)
 
@@ -506,14 +508,15 @@ The system adds warnings to an activity. All members of the group see them, also
 
 | `Aviso` | When | Label |
 |---|---|---|
-| `FotoForaDoPeriodo` | The EXIF or `Camera` date is before the start − 2 hours, after the end + 12 hours, or in the future. Or the file date is before the start − 2 hours. | "Foto de outro horário" |
-| `FotoSemData` | The photo has no EXIF or `Camera` date. A file date in or after the window does not change this. | "Foto sem data" |
+| `FotoForaDoPeriodo` | The EXIF, `Camera` or `Print` date is before the start − 2 hours, after the end + 12 hours, or in the future. Or the file date is before the start − 2 hours. | "Foto de outro horário" |
+| `FotoSemData` | The photo has no EXIF, `Camera` or `Print` date. A file date in or after the window does not change this. | "Foto sem data" |
 | `FotoParecida` | The `dhash` has a maximum difference of 6 bits from a photo of a different activity, in any group of the user. The system compares only a `dhash` with 12 to 52 bits set, on the two sides. Images with large areas of one color, for example screenshots of apps, do not get this warning. | "Foto parecida" |
 | `RegistroTardio` | The user records the activity more than 12 hours after its end. | "Registrada depois" |
 | `VideoParado` | The video has the fields `dhashInicio`, `dhash` and `dhashFim` (frames at 10%, 50% and 90%). Each pair of neighbor frames has a maximum difference of 2 bits. | "Vídeo parado" |
 
 - `FotoParecida` shows the link "Ver a outra" only when the user can see the other activity.
 - `FotoSemData` and `VideoParado` only give information. The other warnings stop the automatic verification (see 8.3).
+- The feed does not show the label of `FotoSemData`. The activity page and the review page show its sentence (ADR 0060).
 - The `Foto*` warnings also apply to videos. The video date comes from the `creation_time` of the original MP4 file.
 - When the user selects a photo or a video, the form shows the warning that it will cause: "Comprovante N: Foto de [date], fora do horário do treino. O grupo verá um aviso." or "Comprovante N: Sem data na foto. O grupo verá que não deu para conferir." For a video, the text says "Vídeo de [date]" and "Sem data no vídeo". The form calculates the warning again when the user changes the start or the duration.
 - The browser gives these data. A user can change them. The warnings help the reviewers. They are not proof.

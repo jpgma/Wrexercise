@@ -28,6 +28,8 @@ export type Evidencia = {
   tipo: "Foto" | "Video";
   /** Só no vídeo. */
   duracaoMs: number | null;
+  /** Captura de tela com a data no nome do arquivo (ADR 0060). Sinal do navegador, não prova. */
+  print: boolean;
 };
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */

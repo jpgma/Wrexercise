@@ -18,6 +18,7 @@ import {
   tipoAtividadeLabels,
 } from "./labels";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
+import { SeloPrint } from "./SeloPrint";
 import type { AtividadeResumo, Evidencia } from "./types";
 
 export type LegendaGaleria = Pick<
@@ -308,6 +309,7 @@ function Galeria({
             {total > 1 && `${indice + 1} / ${total}`}
           </span>
           {evidencias?.[indice]?.gravadaNoApp && <SeloCameraDoApp />}
+          {evidencias?.[indice]?.print && <SeloPrint />}
         </span>
         <button
           type="button"

@@ -50,7 +50,7 @@ Use exatamente estas grafias:
 
 Tipos de `Aviso` (ADR 0052, 0058): `FotoForaDoPeriodo`, `FotoSemData`, `FotoParecida`, `RegistroTardio`, `VideoParado`. Os nomes `Foto*` valem também para vídeos.
 
-Tipos de `Evidencia` (ADR 0058): `Foto`, `Video`. Origens da data da captura: `Exif`, `Arquivo`, `Camera` (a câmera do aplicativo).
+Tipos de `Evidencia` (ADR 0058): `Foto`, `Video`. Origens da data da captura: `Exif`, `Arquivo`, `Camera` (a câmera do aplicativo), `Print` (a data no nome de uma captura de tela, ADR 0060). Na interface, a evidência com origem `Print` mostra o selo "Print".
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 

@@ -58,22 +58,29 @@ const ordem: TipoAviso[] = [
   "VideoParado",
 ];
 
+/**
+ * "Sem data" sai dos cartões: aparecia em quase todo print e não impede a verificação (ADR 0060).
+ * Continua na página da atividade.
+ */
+const foraDoResumo: TipoAviso[] = ["FotoSemData"];
+
 /** Selos curtos para os cartões do feed e da fila de avaliação. */
 export function AvisosAtividadeResumo({ avisos }: { avisos: TipoAviso[] }) {
-  if (avisos.length === 0) return null;
+  const visiveis = ordem.filter(
+    (tipo) => avisos.includes(tipo) && !foraDoResumo.includes(tipo),
+  );
+  if (visiveis.length === 0) return null;
   return (
     <ul aria-label="Avisos" className="flex flex-wrap gap-1.5">
-      {ordem
-        .filter((tipo) => avisos.includes(tipo))
-        .map((tipo) => {
-          const { curto, Icon, classe } = estilos[tipo];
-          return (
-            <li key={tipo} className={`chip ${classe}`}>
-              <Icon aria-hidden="true" className="size-3" />
-              {curto}
-            </li>
-          );
-        })}
+      {visiveis.map((tipo) => {
+        const { curto, Icon, classe } = estilos[tipo];
+        return (
+          <li key={tipo} className={`chip ${classe}`}>
+            <Icon aria-hidden="true" className="size-3" />
+            {curto}
+          </li>
+        );
+      })}
     </ul>
   );
 }

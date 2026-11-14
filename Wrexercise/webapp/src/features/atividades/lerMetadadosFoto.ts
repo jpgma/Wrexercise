@@ -4,8 +4,11 @@
  * Qualquer arquivo estranho resulta em "sem metadados", nunca em erro.
  */
 
-/** `Camera`: capturada pela câmera do próprio aplicativo, com a data do momento (ADR 0058). */
-export type OrigemDataCaptura = "Exif" | "Arquivo" | "Camera";
+/**
+ * `Camera`: capturada pela câmera do próprio aplicativo, com a data do momento (ADR 0058).
+ * `Print`: captura de tela com a data e a hora no nome do arquivo (ADR 0060).
+ */
+export type OrigemDataCaptura = "Exif" | "Arquivo" | "Camera" | "Print";
 
 export type MetadadosFoto = {
   capturadaEm: Date | null;
@@ -160,6 +163,32 @@ function lerExif(view: DataView): Omit<MetadadosFoto, "origem"> {
 }
 
 /**
+ * Nomes que o Android, o Windows e o macOS dão às capturas de tela, com a data e a hora locais:
+ * `Screenshot_20261114-083012.png`, `Screenshot_20261114_083012_Strava.jpg`,
+ * `Screenshot_2026-11-14-08-30-12-345_com.strava.jpg`, `Captura de Tela 2026-11-14 às 08.30.12.png`.
+ * O iPhone não põe a data no nome: os prints dele seguem com a data do arquivo.
+ */
+const nomeDoPrint =
+  /^(?:screenshot|screen ?shot|captura de tela)[ _-]*(\d{4})-?(\d{2})-?(\d{2})(?:[ _-]+|\s+(?:at|às)\s+)(\d{2})[.:_-]?(\d{2})[.:_-]?(\d{2})/i;
+
+/** A data e a hora do nome de uma captura de tela, no relógio do aparelho; `null` em qualquer outro nome. */
+export function dataNoNomeDoPrint(nome: string): Date | null {
+  const partes = nome.match(nomeDoPrint);
+  if (!partes) return null;
+  const [ano = 0, mes = 1, dia = 1, hora = 0, minuto = 0, segundo = 0] = partes
+    .slice(1)
+    .map(Number);
+  const instante = new Date(ano, mes - 1, dia, hora, minuto, segundo);
+  // Rejeita datas impossíveis, que o Date ajustaria para o mês seguinte.
+  return instante.getMonth() === mes - 1 &&
+    instante.getDate() === dia &&
+    instante.getHours() === hora
+    ? instante
+    : null;
+}
+
+/**
+ * O nome de uma captura de tela vem antes do EXIF: é a mesma data, e marca a evidência como print.
  * Sem data no EXIF, usa a data do arquivo como pista mais fraca: o servidor só a leva em conta quando ela é
  * anterior ao treino, porque copiar ou receber o arquivo a muda para depois, nunca para antes.
  */
@@ -176,6 +205,9 @@ export async function lerMetadadosFoto(arquivo: File): Promise<MetadadosFoto> {
     // RangeError de um EXIF truncado ou malformado: segue sem metadados.
   }
 
+  const dataDoPrint = dataNoNomeDoPrint(arquivo.name);
+  if (dataDoPrint)
+    return { ...exif, capturadaEm: dataDoPrint, origem: "Print" };
   if (exif.capturadaEm) return { ...exif, origem: "Exif" };
   if (arquivo.lastModified > 0) {
     return {

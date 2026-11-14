@@ -2,6 +2,7 @@ import { Play } from "lucide-react";
 import { useState } from "react";
 import { GaleriaEvidencias, type LegendaGaleria } from "./GaleriaEvidencias";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
+import { SeloPrint } from "./SeloPrint";
 import type { Evidencia } from "./types";
 import { useGaleria } from "./useGaleria";
 
@@ -75,6 +76,7 @@ export function EvidenciasAtividade({
             {evidencia.gravadaNoApp && (
               <SeloCameraDoApp className="absolute top-3 left-3" />
             )}
+            {evidencia.print && <SeloPrint className="absolute top-3 left-3" />}
           </button>
         ))}
       </div>

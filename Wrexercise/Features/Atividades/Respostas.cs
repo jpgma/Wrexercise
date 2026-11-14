@@ -9,7 +9,8 @@ internal sealed record CriarAtividadeRequest(
 
 /// <summary>
 /// <c>Tipo</c>: <c>Foto</c> ou <c>Video</c>; <c>DuracaoMs</c> só no vídeo. <c>GravadaNoApp</c>: a câmera do
-/// aplicativo fez a captura (ADR 0058); é um sinal do navegador.
+/// aplicativo fez a captura (ADR 0058). <c>Print</c>: uma captura de tela com a data no nome do arquivo (ADR 0060).
+/// Os dois são sinais do navegador.
 /// </summary>
 internal sealed record EvidenciaResponse(
     Guid Id,
@@ -17,7 +18,8 @@ internal sealed record EvidenciaResponse(
     string Url,
     bool GravadaNoApp,
     string Tipo,
-    int? DuracaoMs);
+    int? DuracaoMs,
+    bool Print);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,

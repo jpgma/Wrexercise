@@ -24,7 +24,7 @@ export function calcularAvisoDataFoto(
   const janelaInicio = inicio.getTime() - margemAntesMs;
   const janelaFim = inicio.getTime() + duracaoSegundos * 1000 + margemDepoisMs;
   if (instante < janelaInicio) return "FotoForaDoPeriodo";
-  if (origem === "Exif" || origem === "Camera")
+  if (origem === "Exif" || origem === "Camera" || origem === "Print")
     return instante > janelaFim ? "FotoForaDoPeriodo" : null;
   return "FotoSemData";
 }

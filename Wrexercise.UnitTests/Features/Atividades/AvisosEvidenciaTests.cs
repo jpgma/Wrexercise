@@ -37,7 +37,16 @@ public class AvisosEvidenciaTests
         Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Camera));
 
     [Theory]
+    [InlineData(30, null)]
+    [InlineData(13 * 60, null)]
+    [InlineData(-121, TipoAviso.FotoForaDoPeriodo)]
+    [InlineData((13 * 60) + 1, TipoAviso.FotoForaDoPeriodo)]
+    public void PrintComDataNoNome_ValeComoExif(int minutosDoInicio, string? esperado) =>
+        Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Print));
+
+    [Theory]
     [InlineData("Exif", true)]
+    [InlineData("Print", true)]
     [InlineData("Arquivo", true)]
     [InlineData("Camera", true)]
     [InlineData("camera", false)]

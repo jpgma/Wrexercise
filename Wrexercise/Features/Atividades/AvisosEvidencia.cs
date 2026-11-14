@@ -11,6 +11,12 @@ internal static class OrigemDataCaptura
 
     /// <summary>Capturada pela câmera do próprio aplicativo, com a data do momento da captura (ADR 0058).</summary>
     public const string Camera = "Camera";
+
+    /// <summary>
+    /// Captura de tela com a data e a hora no nome do arquivo, como <c>Screenshot_20261114-083012.png</c> (ADR 0060).
+    /// O nome não muda ao copiar o arquivo; ao contrário da data do arquivo, vale nos dois sentidos.
+    /// </summary>
+    public const string Print = "Print";
 }
 
 /// <summary>
@@ -62,8 +68,9 @@ internal static class AvisosEvidencia
 
         return origem switch
         {
-            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera when instante > fim => TipoAviso.FotoForaDoPeriodo,
-            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera => null,
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print when instante > fim
+                => TipoAviso.FotoForaDoPeriodo,
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print => null,
             // A data do arquivo dentro ou depois da janela não diz nada sobre quando a foto foi tirada.
             _ => TipoAviso.FotoSemData,
         };
@@ -135,6 +142,9 @@ internal static class AvisosEvidencia
     public static bool TryParseOrigem(string? valor, out string origem)
     {
         origem = valor ?? string.Empty;
-        return valor is OrigemDataCaptura.Exif or OrigemDataCaptura.Arquivo or OrigemDataCaptura.Camera;
+        return valor is OrigemDataCaptura.Exif
+            or OrigemDataCaptura.Arquivo
+            or OrigemDataCaptura.Camera
+            or OrigemDataCaptura.Print;
     }
 }
