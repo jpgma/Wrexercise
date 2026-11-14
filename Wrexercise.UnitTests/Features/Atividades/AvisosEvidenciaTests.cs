@@ -97,6 +97,25 @@ public class AvisosEvidenciaTests
         Assert.Equal(2, AvisosEvidencia.DistanciaHamming(0b1010, 0b0000));
     }
 
+    [Theory]
+    // Hashes reais de prints de app com fundo liso: diferentes entre si, mas a 4 bits um do outro.
+    [InlineData("0080002001000001", false)]
+    [InlineData("00000000a0000000", false)]
+    [InlineData("0000000023010000", false)]
+    [InlineData("0000000080a00100", false)]
+    [InlineData("0000000000000000", false)]
+    [InlineData("ffffffffffffffff", false)]
+    [InlineData("0000000000000fff", true)]
+    [InlineData("fffffffffffff000", true)]
+    [InlineData("fffffffffffff800", false)]
+    // Foto real da câmera do app.
+    [InlineData("0a0306ebd4cc330e", true)]
+    public void DhashInformativo_IgnoraImagensDeCorLisa(string hex, bool esperado)
+    {
+        Assert.True(AvisosEvidencia.TryParseDhash(hex, out var dhash));
+        Assert.Equal(esperado, AvisosEvidencia.IsDhashInformativo(dhash));
+    }
+
     [Fact]
     public void TryParseDhash_AceitaHexDe16()
     {

@@ -27,6 +27,13 @@ internal static class AvisosEvidencia
     public const int DistanciaMaximaFotoParecida = 6;
     public const int DistanciaMaximaVideoParado = 2;
 
+    /// <summary>
+    /// Bits ligados que um <c>dhash</c> precisa ter, de cada lado, para servir à comparação. O dHash só liga um bit
+    /// quando um ponto é mais claro que o vizinho da direita: áreas de cor lisa, como o fundo de um print de app,
+    /// dão bits desligados, e dois prints diferentes ficavam a menos de 6 bits um do outro.
+    /// </summary>
+    public const int MinimoBitsDhashInformativo = 12;
+
     public static (DateTimeOffset Inicio, DateTimeOffset Fim) JanelaFoto(DateTimeOffset startedAt, int duracaoSegundos) =>
         (startedAt - MargemAntesDoInicio, startedAt.AddSeconds(duracaoSegundos) + MargemDepoisDoFim);
 
@@ -69,6 +76,13 @@ internal static class AvisosEvidencia
         startedAt >= agora - MaximoNoPassado;
 
     public static int DistanciaHamming(long a, long b) => BitOperations.PopCount((ulong)(a ^ b));
+
+    /// <summary>
+    /// O hash diz algo sobre a imagem: nem quase todos os bits desligados (cor lisa), nem quase todos ligados.
+    /// Sem isso, <see cref="TipoAviso.FotoParecida"/> não compara a foto.
+    /// </summary>
+    public static bool IsDhashInformativo(long dhash) =>
+        BitOperations.PopCount((ulong)dhash) is >= MinimoBitsDhashInformativo and <= 64 - MinimoBitsDhashInformativo;
 
     /// <summary>
     /// Os quadros a 10%, 50% e 90% do vídeo quase iguais: pode ser uma foto disfarçada de vídeo (ADR 0058).

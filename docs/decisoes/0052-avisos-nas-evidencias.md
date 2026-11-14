@@ -36,7 +36,7 @@ O arquivo enviado continua sem EXIF. Se o navegador não consegue processar a im
 |---|---|---|
 | `FotoForaDoPeriodo` | Data do EXIF fora de [início − 2 h, fim + 12 h], ou no futuro. Data do arquivo antes do início − 2 h. | Sim |
 | `FotoSemData` | Sem data no EXIF (a data do arquivo dentro ou depois da janela não diz nada). | Não: só informa |
-| `FotoParecida` | `dhash` a no máximo 6 bits de uma foto de outra atividade, em qualquer grupo de quem envia. | Sim |
+| `FotoParecida` | `dhash` a no máximo 6 bits de uma foto de outra atividade, em qualquer grupo de quem envia. Os dois hashes precisam ter de 12 a 52 bits ligados. | Sim |
 | `RegistroTardio` | Registro mais de 12 h depois do fim do treino. | Sim |
 
 - A data do arquivo só vale para trás: copiar ou receber o arquivo muda essa data para depois, nunca para antes da foto.
@@ -58,7 +58,7 @@ A latitude e a longitude do EXIF ficam guardadas em `evidencias_atividade`. Nenh
 
 - **Migração 027:** colunas novas em `evidencias_atividade` e a tabela `avisos_atividade`.
 - **Mesma foto em dois grupos:** é recusada. Quem posta o mesmo treino em dois grupos precisa de outra foto. Compromisso aceito para pegar o reaproveitamento entre grupos.
-- **Falsos positivos de `FotoParecida`:** selfies no mesmo espelho da academia podem ficar a menos de 6 bits. Revisar o limite com dados reais (`AvisosEvidencia.DistanciaMaximaFotoParecida`).
+- **Falsos positivos de `FotoParecida`:** selfies no mesmo espelho da academia podem ficar a menos de 6 bits. Revisar o limite com dados reais (`AvisosEvidencia.DistanciaMaximaFotoParecida`). **Atualização (2026-11-13):** em produção, prints de apps com fundo liso (resumo do treino, Strava, Samsung Health, Wellhub) deram hashes com 2 a 4 bits ligados, a 4 bits uns dos outros, e geraram o aviso entre imagens que não se parecem. O dHash só liga um bit quando um ponto é mais claro que o vizinho da direita, e a cor lisa deixa os bits desligados. Agora só entram na comparação hashes com 12 a 52 bits ligados (`AvisosEvidencia.IsDhashInformativo`).
 - **Sem foto, sem aviso de foto:** uma atividade `RegistroManual` só recebe `RegistroTardio`. O limite de 48 h vale para todas.
 - **Privacidade:** a localização passa a ser um dado pessoal guardado. Os participantes devem saber disso; avisar na tela de registro fica para a decisão sobre exibição. A exclusão entra em Q029.
 - **Revisão:** depois do primeiro mês de uso real, conferir quantos avisos houve de cada tipo e quantos viraram `Rejeitada`.

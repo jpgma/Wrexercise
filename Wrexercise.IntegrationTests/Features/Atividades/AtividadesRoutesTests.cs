@@ -453,14 +453,28 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
         var primeira = await CriarComFotoAsync(ana, grupoId);
-        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000ffff00ff" });
         var segunda = await CriarComFotoAsync(ana, grupoId);
 
-        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "000000000000003f" });
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000ffff003f" });
 
         var avisos = (await ObterAsync(ana, segunda)).Avisos;
         var parecida = Assert.Single(avisos, a => a.Tipo == TipoAviso.FotoParecida);
         Assert.Equal(primeira, parecida.AtividadeRelacionadaId);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_PrintsDeCorLisa_SemFotoParecida()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var primeira = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "0000000080a00100" });
+        var segunda = await CriarComFotoAsync(ana, grupoId);
+
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000a0000000" });
+
+        Assert.DoesNotContain((await ObterAsync(ana, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
     }
 
     [Fact]
@@ -471,10 +485,10 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var grupoB = await _host.CreateGrupoAsync(ana, "B");
         var bia = await _host.AddMembroAsync(grupoB, nome: "Bia");
         var primeira = await CriarComFotoAsync(ana, grupoA);
-        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000ffff00ff" });
         var segunda = await CriarComFotoAsync(ana, grupoB);
 
-        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000000000ff" });
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000ffff00ff" });
 
         var vistoPelaBia = Assert.Single((await ObterAsync(bia, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
         Assert.Null(vistoPelaBia.AtividadeRelacionadaId);
@@ -893,9 +907,9 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var grupoId = await _host.CreateGrupoAsync(ana);
         await _host.AddMembroAsync(grupoId, nome: "Bia");
         var primeira = await CriarComFotoAsync(ana, grupoId);
-        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000000000ff" });
+        await PostEvidenciaAsync(ana, primeira, JpegVariante(1), new() { ["dhash"] = "00000000ffff00ff" });
         var segunda = await CriarComFotoAsync(ana, grupoId);
-        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "000000000000003f" });
+        await PostEvidenciaAsync(ana, segunda, JpegVariante(2), new() { ["dhash"] = "00000000ffff003f" });
 
         (await ana.Client.DeleteAsync($"/api/atividades/{primeira}", Token)).EnsureSuccessStatusCode();
 

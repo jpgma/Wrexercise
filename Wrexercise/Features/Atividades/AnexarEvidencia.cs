@@ -237,7 +237,7 @@ internal static class AnexarEvidencia
             proximaOrdem = total + 1;
         }
 
-        var parecidaCom = sinais.Dhash is { } dhash
+        var parecidaCom = sinais.Dhash is { } dhash && AvisosEvidencia.IsDhashInformativo(dhash)
             ? await BuscarFotoParecidaAsync(connection, transaction, usuarioId, atividadeId, dhash, cancellationToken)
             : null;
 
@@ -346,7 +346,10 @@ internal static class AnexarEvidencia
         return await command.ExecuteScalarAsync(cancellationToken) is Guid id ? id : null;
     }
 
-    /// <summary>A atividade com a foto mais parecida, nos grupos de quem envia, fora a própria atividade.</summary>
+    /// <summary>
+    /// A atividade com a foto mais parecida, nos grupos de quem envia, fora a própria atividade.
+    /// Ignora os hashes guardados que não dizem nada sobre a imagem (<see cref="AvisosEvidencia.IsDhashInformativo"/>).
+    /// </summary>
     private static async Task<Guid?> BuscarFotoParecidaAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
@@ -362,6 +365,7 @@ internal static class AnexarEvidencia
             JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $1 AND m.removed_at IS NULL
             WHERE e.dhash IS NOT NULL
               AND e.atividade_id <> $2
+              AND bit_count(int8send(e.dhash)) BETWEEN $5 AND 64 - $5
               AND bit_count(int8send(e.dhash # $3)) <= $4
             ORDER BY bit_count(int8send(e.dhash # $3)), e.created_at DESC
             LIMIT 1
@@ -370,6 +374,7 @@ internal static class AnexarEvidencia
         command.Parameters.AddWithValue(atividadeId);
         command.Parameters.AddWithValue(dhash);
         command.Parameters.AddWithValue(AvisosEvidencia.DistanciaMaximaFotoParecida);
+        command.Parameters.AddWithValue(AvisosEvidencia.MinimoBitsDhashInformativo);
         return await command.ExecuteScalarAsync(cancellationToken) is Guid id ? id : null;
     }
 }
