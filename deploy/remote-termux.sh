@@ -14,6 +14,8 @@
 #   remote-termux.sh status
 #   remote-termux.sh stats                    CPU, memória, banco, disco e backups (stats.bat usa este)
 #   remote-termux.sh erros [N|CODIGO]         erros recentes de log/app.log, ou os da referência (erros.bat usa este)
+#   remote-termux.sh metricas [DIAS]          uso do app nos últimos DIAS (padrão 30), de deploy/metricas.sql
+#                                             (metricas.bat usa este)
 set -eu
 
 base=$HOME/wrexercise
@@ -368,6 +370,25 @@ erros() {
     }'
 }
 
+# Métricas de uso, para metricas.bat: as consultas de deploy/metricas.sql sobre os últimos N dias. Só leitura.
+metricas() {
+  dias=${1:-30}
+  case $dias in
+    ''|*[!0-9]*) echo "Informe o período em dias, de 1 a 3650." >&2; return 2 ;;
+  esac
+  if [ "$dias" -lt 1 ] || [ "$dias" -gt 3650 ]; then
+    echo "Informe o período em dias, de 1 a 3650." >&2
+    return 2
+  fi
+  if [ ! -f "$base/deploy/metricas.sql" ]; then
+    echo "Falta deploy/metricas.sql no celular. Envie os scripts: run.bat --ssh --scripts" >&2
+    return 1
+  fi
+  ler_env
+  # A transação só de leitura garante que o relatório nunca altera nada.
+  PGPASSWORD=$DB_PASSWORD PGOPTIONS='-c default_transaction_read_only=on'     psql -X -q -h 127.0.0.1 -U wrexercise -d wrexercise -At -F ' | ' -v ON_ERROR_STOP=1 -v dias="$dias"     -f "$base/deploy/metricas.sql"
+}
+
 case ${1:-} in
   implantar) implantar ;;
   iniciar) iniciar ;;
@@ -375,6 +396,7 @@ case ${1:-} in
   status) status ;;
   stats) stats ;;
   erros) erros "${2:-}" ;;
+  metricas) metricas "${2:-}" ;;
   backup)
     ler_env
     preparar_banco
@@ -390,5 +412,5 @@ case ${1:-} in
     ler_env
     ambiente_app
     grun "$base/app/Wrexercise" reset-senha "$2" ;;
-  *) echo "Uso: remote-termux.sh implantar|iniciar|parar|status|backup|restore|reset-senha|stats|erros" >&2; exit 2 ;;
+  *) echo "Uso: remote-termux.sh implantar|iniciar|parar|status|backup|restore|reset-senha|stats|erros|metricas" >&2; exit 2 ;;
 esac

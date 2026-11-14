@@ -99,6 +99,15 @@ Usa o perfil compartilhado `%LOCALAPPDATA%\jpgma\a14.env`; se faltar ou o telefo
 
 Quando alguém disser "deu erro", peça o código que apareceu na tela. O horário é UTC, e o log guarda o último 1 MB a cada reinício do app. Usa o mesmo perfil SSH do `stats.bat`. Ver `docs/decisoes/0056-erros-recentes.md`.
 
+### Métricas de uso
+
+```powershell
+.\metricas.bat        # uso do app nos últimos 30 dias: regularidade, verificação, Avisos, evidências e Jogo
+.\metricas.bat 90     # os últimos 90 dias
+```
+
+Serve para rever, uma vez por mês, as regras decididas antes do uso real (`docs/TODO.md` §3) e os critérios de sucesso do Jogo (`docs/gamificacao.md` §13). As consultas ficam em `deploy/metricas.sql` e rodam numa transação só de leitura; um teste de integração as roda no banco migrado. Depois de mudar o arquivo, envie-o com `run.bat --ssh --scripts`. Usa o mesmo perfil SSH do `stats.bat` (`--perfil NOME` troca).
+
 ### Backups
 
 O telefone envia o backup cifrado ao Google Drive sozinho, uma vez por dia e antes das migrações de cada `run.bat --ssh` (ver `docs/decisoes/0046-backup-no-google-drive.md`). Datas em UTC.

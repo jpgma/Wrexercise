@@ -19,7 +19,7 @@ rem                          %LOCALAPPDATA%\jpgma\a14.env (pergunta o que faltar
 rem                          e o sshd ligado no Termux. Pode ser combinado com --rebuild. Antes das
 rem                          migrações, grava um backup e o envia ao Google Drive (decisão 0046). Ver
 rem                          docs/decisoes/0029-implantacao-nativa-no-termux.md e 0044.
-rem   run.bat --ssh --scripts  envia só deploy/*.sh e reinicia o app que já está no celular, sem build
+rem   run.bat --ssh --scripts  envia só deploy/*.sh e deploy/metricas.sql e reinicia o app que já está no celular, sem build
 rem   run.bat logs         acompanha os logs da aplicação
 rem   run.bat backup       grava um backup do banco e das evidências em BACKUP_DIR
 rem   run.bat ssh-backup   roda o backup no celular (banco, avatares e logs; envia ao Google Drive com as
@@ -450,7 +450,7 @@ echo.
 echo ==^> Enviando os scripts de deploy
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy"
 if errorlevel 1 goto :fail
-tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
+tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh deploy/metricas.sql | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
 if errorlevel 1 goto :fail
 
 echo.
@@ -547,7 +547,7 @@ if errorlevel 1 (
   goto :fail
 )
 rem Os scripts novos vão antes: o celular pode ter uma versão sem o nuvem.sh.
-tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
+tar --format ustar -cf - deploy/nuvem.sh deploy/remote-termux.sh deploy/metricas.sql | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise"
 if errorlevel 1 goto :fail
 echo Scripts de deploy atualizados no celular.
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "command -v rclone >/dev/null"

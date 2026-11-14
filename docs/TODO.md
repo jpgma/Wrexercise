@@ -12,7 +12,7 @@
 
 3. Rules to adjust with real data
 
-These were decided before anyone used the app, and several ADRs say to look again once real use starts:
+These were decided before anyone used the app, and several ADRs say to look again once real use starts. `metricas.bat` (queries in `deploy/metricas.sql`) gives the numbers for most items below; run it once a month. It cannot count the 409 AVALIACOES_PENDENTES and 400 ATIVIDADE_MUITO_ANTIGA refusals or the activities that authors deleted, because the database does not keep them.
 - Video evidence (0058): after the first month, measure the evidence folder and the Drive use (`stats.bat`) against the estimate in 0046 (about 9.5 MB per video minute). If it grows too fast, decide on video retention with Q029 (for example, keep only the thumbnail after the challenge ends). Count `VideoParado` warnings and check false positives (planks, tripod shots). Check on a real Android PWA that the in-app camera, the 60 s recording and the conversion work, and how long a 1-minute conversion takes on a low-end phone.
 - Avisos (0052): count each type after the first month. Check `FotoParecida` false positives (gym mirror selfies; the 6-bit limit), how many flagged activities end in EmRevisao waiting for an admin, and whether the 48 h backdating limit blocks honest late logging.
 - The consensus formula and the 48 h review window (0012, 0015). Is anything ever rejected, or does everything sit in EmRevisao?
@@ -20,7 +20,7 @@ These were decided before anyone used the app, and several ADRs say to look agai
 - Prints (0060): the date comes from the screenshot file name on Android, Windows and macOS. iPhone prints still get `FotoSemData`; reading PNG `eXIf`/XMP waits for a real iPhone file to test with. Android Chrome's photo picker renames files, so those prints only get the "Print" label from the screen size.
 - FADIGA (0059): an expired card counts as a refusal, so someone who doesn't open the app gets FADIGA from cards they never saw. Watch for abuse (sending cards to inactive people).
 - Jogo: the early-morning bonus may encourage training at dawn instead of consistency (gamificacao §12.3). The Enfeite clutter with 10 people on a 360 px screen still needs checking (§12.4). Achievement limits of 10 per type should be revisited with real data (§12.5).
-- gamificacao §13 lists success criteria (people log as often as before, Energy gets spent weekly, cards spark conversation). Decide now how you'll judge them, even if it's just a monthly query.
+- gamificacao §13 lists success criteria. How to judge them is now written there ("Como julgar"): `metricas.bat` once a month for criteria 1 and 2, and talking to the group for 3 to 5.
 
 4. Open questions
 
@@ -30,4 +30,4 @@ questoes-abertas.md is up to date (0055, 0061). Q006, Q007, Q017, Q018, Q021, Q0
 
 Q016 (abuse of reactions) and Q026 (query tuning, only if something gets slow), G5 Missões, and Q029 (retention and account deletion). Q029 can wait until someone asks to leave and have their data removed, but keep in mind there's currently no way to delete an account or a group.
 
-My suggested order: set up SSH from outside home through the Cloudflare tunnel (manual steps, still pending), then a first look at real-load numbers with stats.bat. The next code item is account deletion (Q029), which would also wipe the stored location; it can wait until someone asks.
+My suggested order: set up SSH from outside home through the Cloudflare tunnel (manual steps, still pending), then a first look at real-load numbers with stats.bat, and the first `metricas.bat` report about a month after real use started. The next code item is account deletion (Q029), which would also wipe the stored location; it can wait until someone asks.

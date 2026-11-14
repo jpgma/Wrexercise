@@ -576,3 +576,10 @@ Fechadas em `decisoes/0033-regras-de-energia-e-jogadas.md`: valores das recompen
 3. Pessoas com condicionamentos diferentes têm chances parecidas. As cartas de duração são opcionais e podem ser recusadas.
 4. Nenhuma mecânica dificulta a meta de outra pessoa.
 5. O desafio oficial continua compreensível e confiável. Quem prefere o App não recebe cartas e não percebe diferença, salvo pelos retratos no lugar das iniciais.
+
+**Como julgar:** uma vez por mês, `metricas.bat` (consultas em `deploy/metricas.sql`).
+
+- Critério 1: "Regularidade por semana" compara atividades por pessoa no modo `Jogo` e no `App`. O modo é o atual da conta, então quem trocou de modo no mês confunde a comparação.
+- Critério 2: "Energia gasta" por semana. A conversa não tem número: veja se os comentários e as reações crescem nas semanas com Jogadas.
+- Critérios 3 a 5: julgamento qualitativo, conversando com o grupo. "Jogadas" mostra quantas cartas são recusadas ou expiram, e "Jogadas para inativos" mostra o abuso da FADIGA (ADR 0059).
+- §12.3: a coluna "antes das 6" na regularidade.
