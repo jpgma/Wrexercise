@@ -1,6 +1,6 @@
 # 0063 — Cutucada
 
-**Status:** DECIDIDA. Revê em parte `0057-avatar-dormindo.md` (a alternativa "cutucar", vetada lá) e o princípio 4 de `gamificacao.md` §1.1. Complementa `0020-notificacoes-no-aplicativo.md`, `0049-notificacoes-push.md` e `0033-regras-de-energia-e-jogadas.md`.
+**Status:** DECIDIDA. O texto livre, descartado aqui, foi aceito pela `0064-cutucada-com-texto.md`. Revê em parte `0057-avatar-dormindo.md` (a alternativa "cutucar", vetada lá) e o princípio 4 de `gamificacao.md` §1.1. Complementa `0020-notificacoes-no-aplicativo.md`, `0049-notificacoes-push.md` e `0033-regras-de-energia-e-jogadas.md`.
 
 ## Contexto
 

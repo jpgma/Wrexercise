@@ -26,8 +26,10 @@ export type Notificacao = {
   total: number;
   lida: boolean;
   updatedAt: string;
-  /** Só na `Cutucada`: o código da mensagem pronta. */
+  /** Só na `Cutucada`: o código da mensagem pronta, ou `Livre`. */
   cutucada: string | null;
+  /** Só na `Cutucada` `Livre`: o texto que quem cutucou escreveu. */
+  cutucadaTexto: string | null;
 };
 
 const notificacoesKey = ["notificacoes"] as const;

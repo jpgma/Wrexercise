@@ -9,9 +9,10 @@ using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Jogo;
 
-internal sealed record CutucarRequest(Guid? DestinatarioId, string? Tipo);
+/// <param name="Texto">Só com o tipo <c>Livre</c>: até 80 caracteres, numa linha (decisão 0064).</param>
+internal sealed record CutucarRequest(Guid? DestinatarioId, string? Tipo, string? Texto = null);
 
-internal sealed record CutucadaResponse(Guid Id, string Tipo, DateTimeOffset EnviadaEm);
+internal sealed record CutucadaResponse(Guid Id, string Tipo, DateTimeOffset EnviadaEm, string? Texto = null);
 
 /// <summary>
 /// Cutuca um colega que dorme no grupo, com uma mensagem pronta (decisão 0063). Grátis, uma por par a cada
@@ -29,10 +30,12 @@ internal static class Cutucar
         var usuarioId = context.GetSessaoAtual().UsuarioId;
         if (request.DestinatarioId is not { } destinatarioId
             || destinatarioId == usuarioId
-            || TiposCutucada.Find(request.Tipo) is not { } tipo)
+            || GetTipoETexto(request) is not { } escolhida)
         {
             return ErrosJogo.DadosInvalidos();
         }
+
+        var (tipo, texto) = escolhida;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -91,15 +94,16 @@ internal static class Cutucar
         Guid id;
         DateTimeOffset enviadaEm;
         await using (var insert = new NpgsqlCommand("""
-            INSERT INTO cutucadas (grupo_id, autor_id, destinatario_id, tipo)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO cutucadas (grupo_id, autor_id, destinatario_id, tipo, texto)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id, created_at
             """, connection, transaction))
         {
             insert.Parameters.AddWithValue(grupoId);
             insert.Parameters.AddWithValue(usuarioId);
             insert.Parameters.AddWithValue(destinatarioId);
-            insert.Parameters.AddWithValue(tipo.Codigo);
+            insert.Parameters.AddWithValue(tipo);
+            insert.Parameters.AddWithValue((object?)texto ?? DBNull.Value);
             await using var reader = await insert.ExecuteReaderAsync(cancellationToken);
             await reader.ReadAsync(cancellationToken);
             id = reader.GetGuid(0);
@@ -110,8 +114,23 @@ internal static class Cutucar
 
         await transaction.CommitAsync(cancellationToken);
         return Results.Json(
-            new CutucadaResponse(id, tipo.Codigo, enviadaEm),
+            new CutucadaResponse(id, tipo, enviadaEm, texto),
             AppJsonContext.Default.CutucadaResponse,
             statusCode: StatusCodes.Status201Created);
+    }
+
+    /// <summary>
+    /// Uma mensagem pronta, sem texto, ou o tipo <c>Livre</c> com um texto válido. Qualquer outra combinação é inválida.
+    /// </summary>
+    private static (string Tipo, string? Texto)? GetTipoETexto(CutucarRequest request)
+    {
+        if (request.Tipo == TiposCutucada.Livre)
+        {
+            return ValidacaoCutucada.NormalizeTexto(request.Texto) is { } texto ? (TiposCutucada.Livre, texto) : null;
+        }
+
+        return TiposCutucada.Find(request.Tipo) is { } pronta && string.IsNullOrWhiteSpace(request.Texto)
+            ? (pronta.Codigo, null)
+            : null;
     }
 }

@@ -97,7 +97,7 @@ internal static class EnvioPush
                  FROM notificacoes t
                  JOIN membros_grupo tm ON tm.grupo_id = t.grupo_id AND tm.usuario_id = t.usuario_id AND tm.removed_at IS NULL
                  WHERE t.usuario_id = n.usuario_id AND t.read_at IS NULL),
-                c.tipo
+                c.tipo, c.texto
             FROM notificacoes n
             JOIN membros_grupo m ON m.grupo_id = n.grupo_id AND m.usuario_id = n.usuario_id AND m.removed_at IS NULL
             JOIN grupos g ON g.id = n.grupo_id
@@ -124,7 +124,8 @@ internal static class EnvioPush
                     reader.IsDBNull(6) ? null : reader.GetString(6),
                     reader.IsDBNull(7) ? null : reader.GetString(7),
                     reader.GetInt32(8),
-                    reader.IsDBNull(10) ? null : reader.GetString(10));
+                    reader.IsDBNull(10) ? null : reader.GetString(10),
+                    reader.IsDBNull(11) ? null : reader.GetString(11));
                 avisos.Add((reader.GetGuid(1), new PushMensagem(
                     reader.GetGuid(0),
                     reader.GetString(4),

@@ -7,7 +7,14 @@ import { usePerfilMembro } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { primeiroNome } from "./textosCartas";
-import { tiposCutucada } from "./textosCutucada";
+import {
+  type CodigoCutucada,
+  contarCaracteres,
+  cutucadaLivre,
+  normalizarTextoCutucada,
+  TextoMaximoCutucada,
+  tiposCutucada,
+} from "./textosCutucada";
 import { useCutucar } from "./useCutucar";
 import type { MembroCena } from "./useCena";
 import { getRelacaoRival, useRivais } from "./useRivais";
@@ -192,8 +199,9 @@ export function PainelFoco({
 }
 
 /**
- * A Cutucada (decisão 0063): só para quem dorme, uma vez a cada 24 horas. O botão abre as mensagens
- * prontas; tocar numa delas já envia.
+ * A Cutucada (decisões 0063 e 0064): só para quem dorme, uma vez a cada 24 horas. O botão abre as
+ * mensagens prontas; tocar numa delas já envia. "Escrever" abre um campo para um texto de até 80
+ * caracteres, que só quem recebe lê.
  */
 function Cutucada({
   grupoId,
@@ -207,8 +215,25 @@ function Cutucada({
   onCutucado: () => void;
 }) {
   const [aberta, setAberta] = useState(false);
+  const [escrevendo, setEscrevendo] = useState(false);
+  const [texto, setTexto] = useState("");
   const cutucar = useCutucar(grupoId);
   const cutucado = membro.cutucadoPorMimEm !== null || cutucar.isSuccess;
+  const normalizado = normalizarTextoCutucada(texto);
+  const caracteres = contarCaracteres(normalizado);
+  const textoValido = caracteres > 0 && caracteres <= TextoMaximoCutucada;
+
+  const enviar = (tipo: CodigoCutucada, livre?: string) =>
+    cutucar.mutate(
+      { destinatarioId: membro.usuarioId, tipo, texto: livre },
+      {
+        onSuccess: () => {
+          setAberta(false);
+          setEscrevendo(false);
+          onCutucado();
+        },
+      },
+    );
 
   if (cutucado) {
     return (
@@ -225,12 +250,65 @@ function Cutucada({
         type="button"
         aria-expanded={aberta}
         aria-controls="cutucadas-opcoes"
-        onClick={() => setAberta((a) => !a)}
+        onClick={() => {
+          setAberta((a) => !a);
+          setEscrevendo(false);
+        }}
         className="btn-secondary min-h-11 w-full justify-center"
       >
         <span aria-hidden="true">👉</span> Cutucar {nome}
       </button>
-      {aberta && (
+      {aberta && escrevendo && (
+        <form
+          id="cutucadas-opcoes"
+          className="mt-2"
+          onSubmit={(evento) => {
+            evento.preventDefault();
+            if (textoValido) enviar(cutucadaLivre.codigo, normalizado);
+          }}
+        >
+          <label htmlFor="cutucada-texto" className="input-label">
+            Sua mensagem para {nome}
+          </label>
+          <div className="mt-1 flex gap-1.5">
+            <input
+              id="cutucada-texto"
+              type="text"
+              autoFocus
+              enterKeyHint="send"
+              autoComplete="off"
+              value={texto}
+              onChange={(evento) => setTexto(evento.target.value)}
+              aria-describedby="cutucada-contador"
+              className="input-field min-h-11 min-w-0 flex-1"
+            />
+            <button
+              type="submit"
+              disabled={!textoValido || cutucar.isPending}
+              className="btn-primary min-h-11 shrink-0"
+            >
+              Enviar
+            </button>
+          </div>
+          <div className="mt-1 flex items-center justify-between text-xs text-muted">
+            <button
+              type="button"
+              onClick={() => setEscrevendo(false)}
+              className="min-h-11 font-semibold text-link"
+            >
+              Voltar às prontas
+            </button>
+            <span
+              id="cutucada-contador"
+              className={caracteres > TextoMaximoCutucada ? "text-danger" : ""}
+            >
+              {caracteres}/{TextoMaximoCutucada}
+              <span className="sr-only"> caracteres. Só {nome} lê.</span>
+            </span>
+          </div>
+        </form>
+      )}
+      {aberta && !escrevendo && (
         <div
           id="cutucadas-opcoes"
           role="group"
@@ -242,17 +320,7 @@ function Cutucada({
               key={tipo.codigo}
               type="button"
               disabled={cutucar.isPending}
-              onClick={() =>
-                cutucar.mutate(
-                  { destinatarioId: membro.usuarioId, tipo: tipo.codigo },
-                  {
-                    onSuccess: () => {
-                      setAberta(false);
-                      onCutucado();
-                    },
-                  },
-                )
-              }
+              onClick={() => enviar(tipo.codigo)}
               className="flex min-h-11 items-center gap-1.5 rounded-lg border-2 border-outline bg-surface px-2 text-left text-xs leading-tight tap disabled:opacity-50"
             >
               <span aria-hidden="true" className="text-lg leading-none">
@@ -261,6 +329,17 @@ function Cutucada({
               {tipo.texto}
             </button>
           ))}
+          <button
+            type="button"
+            disabled={cutucar.isPending}
+            onClick={() => setEscrevendo(true)}
+            className="col-span-2 flex min-h-11 items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-outline px-2 text-xs font-semibold tap disabled:opacity-50"
+          >
+            <span aria-hidden="true" className="text-lg leading-none">
+              ✍️
+            </span>
+            Escrever a minha
+          </button>
         </div>
       )}
       {cutucar.isError && (

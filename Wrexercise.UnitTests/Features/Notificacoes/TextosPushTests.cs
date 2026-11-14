@@ -33,6 +33,9 @@ public class TextosPushTests
         Assert.Equal(
             "Ana te cutucou 👉",
             TextosPush.GetTexto(new AvisoPush("Cutucada", GrupoId, null, "Ana", null, 1, "Desconhecida")));
+        Assert.Equal(
+            "Ana te cutucou 👉 💬 \"cadê você, sumido?\"",
+            TextosPush.GetTexto(new AvisoPush("Cutucada", GrupoId, null, "Ana", null, 1, "Livre", "cadê você, sumido?")));
     }
 
     [Fact]

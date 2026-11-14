@@ -47,6 +47,60 @@ public sealed class CutucadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Cutucar_TextoLivre_ChegaSoParaQuemRecebe()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        await AdormecerAsync(grupoId, bia);
+
+        var response = await CutucarAsync(ana, grupoId, bia.Id, "Livre", "  cadê você,\n sumida?  ");
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var criada = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.CutucadaResponse, Token);
+        Assert.Equal("cadê você, sumida?", criada!.Texto);
+
+        var notificacoes = await (await bia.Client.GetAsync("/api/notificacoes", Token))
+            .Content.ReadFromJsonAsync(AppJsonContext.Default.NotificacoesResponse, Token);
+        var notificacao = notificacoes!.Notificacoes.Single(n => n.Tipo == "Cutucada");
+        Assert.Equal("Livre", notificacao.Cutucada);
+        Assert.Equal("cadê você, sumida?", notificacao.CutucadaTexto);
+
+        // Na praça, todos veem só que houve uma cutucada livre, não o texto.
+        var cena = await (await ana.Client.GetAsync($"/api/grupos/{grupoId}/cena", Token)).Content.ReadAsStringAsync(Token);
+        Assert.DoesNotContain("sumida", cena, StringComparison.Ordinal);
+        Assert.Contains("\"ultimoTipo\":\"Livre\"", cena, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Livre", null)]
+    [InlineData("Livre", "   ")]
+    [InlineData("Sofa", "texto junto com a mensagem pronta")]
+    public async Task Cutucar_TextoInvalido_Recusa(string tipo, string? texto)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        await AdormecerAsync(grupoId, bia);
+
+        await ApiTestHost.AssertProblemAsync(
+            await CutucarAsync(ana, grupoId, bia.Id, tipo, texto), HttpStatusCode.BadRequest, "DADOS_INVALIDOS");
+    }
+
+    [Fact]
+    public async Task Cutucar_TextoLongo_Recusa()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        await AdormecerAsync(grupoId, bia);
+
+        await ApiTestHost.AssertProblemAsync(
+            await CutucarAsync(ana, grupoId, bia.Id, "Livre", new string('a', 81)),
+            HttpStatusCode.BadRequest,
+            "DADOS_INVALIDOS");
+    }
+
+    [Fact]
     public async Task Cutucar_QuemEstaAcordado_Recusa()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
@@ -150,10 +204,11 @@ public sealed class CutucadasRoutesTests : IAsyncLifetime
             WHERE grupo_id = '{grupoId}' AND usuario_id = '{usuario.Id}'
             """);
 
-    private static Task<HttpResponseMessage> CutucarAsync(TestUsuario usuario, Guid grupoId, Guid destinatarioId, string tipo) =>
+    private static Task<HttpResponseMessage> CutucarAsync(
+        TestUsuario usuario, Guid grupoId, Guid destinatarioId, string tipo, string? texto = null) =>
         usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/cutucadas",
-            new CutucarRequest(destinatarioId, tipo),
+            new CutucarRequest(destinatarioId, tipo, texto),
             AppJsonContext.Default.CutucarRequest,
             Token);
 

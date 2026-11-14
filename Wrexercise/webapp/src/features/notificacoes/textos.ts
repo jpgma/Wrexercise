@@ -22,6 +22,7 @@ export function getTextoNotificacao({
   situacao,
   total,
   cutucada,
+  cutucadaTexto,
 }: Notificacao): string {
   switch (tipo) {
     case "NovaAtividade":
@@ -55,7 +56,9 @@ export function getTextoNotificacao({
       return `${primeiroNome(atorNome)} escolheu você como Rival da semana. Quem cumpre a meta primeiro?`;
     case "Cutucada": {
       const tipo = getTipoCutucada(cutucada);
-      return tipo
+      if (tipo?.codigo === "Livre" && cutucadaTexto)
+        return `${primeiroNome(atorNome)} te cutucou 👉 ${tipo.emoji} "${cutucadaTexto}"`;
+      return tipo && tipo.texto
         ? `${primeiroNome(atorNome)} te cutucou 👉 ${tipo.emoji} ${tipo.texto}`
         : `${primeiroNome(atorNome)} te cutucou 👉`;
     }

@@ -6,11 +6,17 @@ import type { CodigoCutucada } from "./textosCutucada";
 export function useCutucar(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dados: { destinatarioId: string; tipo: CodigoCutucada }) =>
-      postJson<{ id: string; tipo: string; enviadaEm: string }>(
-        `/api/grupos/${grupoId}/cutucadas`,
-        dados,
-      ),
+    mutationFn: (dados: {
+      destinatarioId: string;
+      tipo: CodigoCutucada;
+      texto?: string;
+    }) =>
+      postJson<{
+        id: string;
+        tipo: string;
+        enviadaEm: string;
+        texto: string | null;
+      }>(`/api/grupos/${grupoId}/cutucadas`, dados),
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["jogo", "cena", grupoId] }),
   });

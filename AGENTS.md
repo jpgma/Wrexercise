@@ -48,7 +48,7 @@ Use exatamente estas grafias:
 
 `Fadiga` (ADR 0059): debuff de quem recusa ou deixa expirar uma Provocação recebida. Os próximos 3 dias verificados rendem metade da base de Energia. Na interface, aparece como "FADIGA".
 
-`Cutucada` (ADR 0063): um membro chama um colega que dorme no grupo, com uma de 6 mensagens prontas (`Sofa`, `Frango`, `Meta`, `Halter`, `Despertador`, `Fantasma`). Na interface, o botão é "Cutucar" e a notificação diz "te cutucou 👉". Quem cutucou ganha o bônus Despertador quando o colega volta a treinar.
+`Cutucada` (ADR 0063): um membro chama um colega que dorme no grupo, com uma de 6 mensagens prontas (`Sofa`, `Frango`, `Meta`, `Halter`, `Despertador`, `Fantasma`) ou um texto escrito (tipo `Livre`, até 80 caracteres, só quem recebe lê; ADR 0064). Na interface, o botão é "Cutucar" e a notificação diz "te cutucou 👉". Quem cutucou ganha o bônus Despertador quando o colega volta a treinar.
 
 Tipos de `Aviso` (ADR 0052, 0058): `FotoForaDoPeriodo`, `FotoSemData`, `FotoParecida`, `RegistroTardio`, `VideoParado`. Os nomes `Foto*` valem também para vídeos.
 

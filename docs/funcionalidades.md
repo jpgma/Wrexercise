@@ -315,7 +315,7 @@ The user cannot change the e-mail.
 
 - A member can poke (`Cutucada`) another member of the same group when the other member is `dormindo` in that group (see 8.1). A member cannot poke himself or herself. A poke is free.
 - A member can poke the same member in the same group one time in 24 hours.
-- The poke uses one of 6 fixed messages. There is no free text:
+- The poke uses one of 6 fixed messages or a text that the user writes (ADR 0064). The fixed messages are:
 
   | `tipo` | Text |
   |---|---|
@@ -326,18 +326,20 @@ The user cannot change the e-mail.
   | `Despertador` | ⏰ Acorda, dorminhoco! |
   | `Fantasma` | 👻 Sumiu, foi? |
 
-- `POST /api/grupos/{id}/cutucadas` with `{ "destinatarioId": "…", "tipo": "Sofa" }` sends a poke. It returns 201 with `{ "id": "…", "tipo": "Sofa", "enviadaEm": "…" }`. Errors:
-  - 400 `DADOS_INVALIDOS`: there is no recipient, the recipient is the user, or the type is not in the list.
+- A written poke has the type `Livre` and a `texto` of 1 to 80 characters. An emoji counts as one character. The server changes spaces and line breaks to one space, removes control characters and removes spaces at the start and at the end. Only the recipient can read the text.
+
+- `POST /api/grupos/{id}/cutucadas` with `{ "destinatarioId": "…", "tipo": "Sofa" }` or `{ "destinatarioId": "…", "tipo": "Livre", "texto": "…" }` sends a poke. It returns 201 with `{ "id": "…", "tipo": "Sofa", "enviadaEm": "…", "texto": null }`. Errors:
+  - 400 `DADOS_INVALIDOS`: there is no recipient, the recipient is the user, the type is not in the list, a `Livre` poke has no valid text, or a fixed message has a text.
   - 404 `GRUPO_NAO_ENCONTRADO`: the user is not a member of the group.
   - 404 `MEMBRO_NAO_ENCONTRADO`: the recipient is not an active member of the group.
   - 409 `MEMBRO_ACORDADO`: the recipient is not `dormindo`.
   - 409 `CUTUCADA_RECENTE`: the user poked this member in this group in the last 24 hours.
-- The recipient gets the notification `Cutucada`, with a push: "Ana te cutucou 👉 🛋️ Levanta desse sofá!". The recipient gets it in the mode `App` and in the mode `Jogo`. A tap opens the scene of the group.
-- In the focus view (`Foco`) of a member that is `dormindo`, the panel shows the button "👉 Cutucar Nome". The button opens a grid with the 6 messages. A tap on a message sends the poke. Then the `Avatar` of the member does `acordar` and sleeps again. The panel shows "Você já cutucou Nome hoje." for 24 hours.
+- The recipient gets the notification `Cutucada`, with a push: "Ana te cutucou 👉 🛋️ Levanta desse sofá!", or "Ana te cutucou 👉 💬 "texto"" for a written poke. `GET /api/notificacoes` returns `cutucada` (the type) and `cutucadaTexto` (the text of a `Livre` poke, or `null`). The recipient gets it in the mode `App` and in the mode `Jogo`. A tap opens the scene of the group.
+- In the focus view (`Foco`) of a member that is `dormindo`, the panel shows the button "👉 Cutucar Nome". The button opens a grid with the 6 messages and "✍️ Escrever a minha". A tap on a message sends the poke. "Escrever a minha" opens a text field with a counter (0/80), the button "Enviar" and the link "Voltar às prontas". Then the `Avatar` of the member does `acordar` and sleeps again. The panel shows "Você já cutucou Nome hoje." for 24 hours.
 - `GET /api/grupos/{id}/cena` returns two more fields for each member that is `dormindo`:
   - `cutucadas`: the pokes of the last 24 hours, as `{ "total": 2, "ultimoTipo": "Sofa" }`, or `null`.
   - `cutucadoPorMimEm`: the time of the last poke of the user to this member in the last 24 hours, or `null`.
-- In the plaza, a member that is `dormindo` and has pokes in the last 24 hours shows a bubble with the symbol of the last poke. The bubble shows "×N" when there is more than one poke. All members see it.
+- In the plaza, a member that is `dormindo` and has pokes in the last 24 hours shows a bubble with the symbol of the last poke (💬 for a written poke, without the text). The bubble shows "×N" when there is more than one poke. All members see it.
 - Wake-up bonus (Despertador): the user who poked gets 5 EN when the member trains again. The activity must:
   - be of the same group and have the state `Verificada`,
   - be recorded after the poke,
