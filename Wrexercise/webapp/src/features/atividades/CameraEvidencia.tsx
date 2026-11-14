@@ -90,28 +90,83 @@ type Gravacao = {
   partes: Blob[];
 };
 
+/** Quanto a foto espera pela primeira posição do aparelho antes de seguir sem local. */
+const esperaMaximaLocalMs = 6000;
+
 /**
  * A última posição do aparelho enquanto a câmera está aberta. A foto da câmera não tem EXIF: sem isso, ela
  * nunca teria local. Sem permissão ou sem sinal, fica `null` e a captura segue sem local. O GPS desliga ao
  * fechar a câmera.
+ *
+ * A primeira posição do GPS pode levar vários segundos, e a foto costuma sair antes disso. Por isso a
+ * posição aproximada (rede) é pedida logo de início, e `aguardar` espera a primeira posição por um tempo
+ * curto. O vídeo não precisa esperar: dura pelo menos 2 segundos e pega a posição no fim.
  */
 function useLocalAtual(ativo: boolean) {
   const local = useRef<LocalCaptura | null>(null);
+  // `false` quando não há como obter a posição (sem permissão, sem suporte): ninguém espera à toa.
+  const disponivel = useRef(ativo);
+  const esperando = useRef(new Set<(valor: LocalCaptura | null) => void>());
+
   useEffect(() => {
-    if (!ativo || !("geolocation" in navigator)) return;
+    const avisar = () => {
+      esperando.current.forEach((resolver) => resolver(local.current));
+      esperando.current.clear();
+    };
+    if (!ativo || !("geolocation" in navigator)) {
+      disponivel.current = false;
+      avisar();
+      return;
+    }
+    disponivel.current = true;
+    const guardar = ({ coords }: GeolocationPosition, precisa: boolean) => {
+      // A posição aproximada não substitui a do GPS.
+      if (!precisa && local.current) return;
+      local.current = {
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      };
+      avisar();
+    };
+    const falhar = (error: GeolocationPositionError) => {
+      if (error.code === error.PERMISSION_DENIED) {
+        disponivel.current = false;
+        avisar();
+      }
+    };
+    navigator.geolocation.getCurrentPosition(
+      (posicao) => guardar(posicao, false),
+      falhar,
+      { enableHighAccuracy: false, maximumAge: 5 * 60_000 },
+    );
     const id = navigator.geolocation.watchPosition(
-      ({ coords }) => {
-        local.current = {
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        };
-      },
-      () => undefined,
+      (posicao) => guardar(posicao, true),
+      falhar,
       { enableHighAccuracy: true, maximumAge: 60_000 },
     );
-    return () => navigator.geolocation.clearWatch(id);
+    return () => {
+      navigator.geolocation.clearWatch(id);
+      avisar();
+    };
   }, [ativo]);
-  return local;
+
+  /** A posição atual; sem ela ainda, espera a primeira por até `esperaMaximaLocalMs`. */
+  const aguardar = () => {
+    if (local.current || !disponivel.current) {
+      return Promise.resolve(local.current);
+    }
+    return new Promise<LocalCaptura | null>((resolver) => {
+      const terminar = (valor: LocalCaptura | null) => {
+        clearTimeout(limite);
+        esperando.current.delete(terminar);
+        resolver(valor);
+      };
+      const limite = setTimeout(() => terminar(null), esperaMaximaLocalMs);
+      esperando.current.add(terminar);
+    });
+  };
+
+  return { local, aguardar };
 }
 
 function Camera({
@@ -120,7 +175,8 @@ function Camera({
   onFoto,
   onVideo,
 }: Omit<CameraEvidenciaProps, "aberta">) {
-  const local = useLocalAtual(pedirLocalizacao);
+  const { local, aguardar: aguardarLocal } = useLocalAtual(pedirLocalizacao);
+  const [buscandoLocal, setBuscandoLocal] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -199,14 +255,19 @@ function Camera({
     if (!video || capturando) return;
     setCapturando(true);
     const foto = await capturarQuadro(video);
-    setCapturando(false);
     if (!foto) {
+      setCapturando(false);
       setErro("Não foi possível tirar a foto. Tente de novo ou use a Galeria.");
       return;
     }
+    // O quadro já foi capturado; só falta a posição, se ainda não chegou.
+    setBuscandoLocal(local.current === null && pedirLocalizacao);
+    const posicao = await aguardarLocal();
+    setBuscandoLocal(false);
+    setCapturando(false);
     onFoto(
       new File([foto], `camera-${Date.now()}.jpg`, { type: "image/jpeg" }),
-      local.current,
+      posicao,
     );
   }
 
@@ -295,6 +356,14 @@ function Camera({
           className="absolute inset-0 grid place-items-center text-sm text-on-lightbox/80"
         >
           Abrindo a câmera…
+        </p>
+      )}
+      {buscandoLocal && (
+        <p
+          role="status"
+          className="absolute inset-x-0 top-1/2 mx-auto w-fit -translate-y-1/2 rounded-full bg-lightbox/70 px-4 py-2 text-sm"
+        >
+          Buscando o local…
         </p>
       )}
 
