@@ -79,6 +79,14 @@ if errorlevel 1 (
   echo O celular responde, mas o Wrexercise não está implantado nele. Rode: run.bat --ssh
   exit /b 1
 )
+rem Um celular com scripts anteriores ao metricas.bat só mostraria a linha de uso do remote-termux.sh.
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "grep -q '^  metricas)' wrexercise/deploy/remote-termux.sh && test -f wrexercise/deploy/metricas.sql"
+if errorlevel 1 (
+  echo.
+  echo Os scripts do celular são de antes do metricas.bat. Envie os novos e rode de novo:
+  echo   run.bat --ssh --scripts
+  exit /b 1
+)
 rem Entre aspas simples, o período chega ao celular como texto; o script aceita só números.
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh metricas '%DIAS%'"
 exit /b %errorlevel%
