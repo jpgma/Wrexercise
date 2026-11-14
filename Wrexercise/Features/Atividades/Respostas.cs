@@ -10,7 +10,8 @@ internal sealed record CriarAtividadeRequest(
 /// <summary>
 /// <c>Tipo</c>: <c>Foto</c> ou <c>Video</c>; <c>DuracaoMs</c> só no vídeo. <c>GravadaNoApp</c>: a câmera do
 /// aplicativo fez a captura (ADR 0058). <c>Print</c>: o navegador reconheceu uma captura de tela, pelo nome do arquivo ou pelo tamanho da tela (ADR 0060).
-/// Os dois são sinais do navegador.
+/// Os dois são sinais do navegador. <c>Latitude</c> e <c>Longitude</c>: o GPS do arquivo original, só quando o
+/// autor escolheu mostrá-lo ao grupo; sem essa escolha, o navegador nem o envia (ADR 0061).
 /// </summary>
 internal sealed record EvidenciaResponse(
     Guid Id,
@@ -19,7 +20,9 @@ internal sealed record EvidenciaResponse(
     bool GravadaNoApp,
     string Tipo,
     int? DuracaoMs,
-    bool Print);
+    bool Print,
+    double? Latitude,
+    double? Longitude);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,

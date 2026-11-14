@@ -157,16 +157,20 @@ export function useCriarAtividade(grupoId: string) {
   });
 }
 
-/** Fora de um hook: a atividade só existe depois de criada, no meio do envio do formulário. */
+/**
+ * Fora de um hook: a atividade só existe depois de criada, no meio do envio do formulário.
+ * `mostrarLocalizacao`: sem essa escolha do autor, a localização nem sai do aparelho (ADR 0061).
+ */
 export function anexarEvidencia(
   atividadeId: string,
   { arquivo, miniatura, sinais }: EvidenciaPreparada,
+  mostrarLocalizacao: boolean,
   onProgresso: (fracao: number) => void = () => undefined,
 ) {
   const form = new FormData();
   form.append("arquivo", arquivo);
   if (miniatura) form.append("miniatura", miniatura, "miniatura.jpg");
-  // Sinais da foto original (ADR 0052). A localização é guardada, mas a API não a devolve.
+  // Sinais da foto original (ADR 0052).
   if (sinais.capturadaEm && sinais.origem) {
     form.append("capturadaEm", sinais.capturadaEm.toISOString());
     form.append("origemDataCaptura", sinais.origem);
@@ -178,7 +182,11 @@ export function anexarEvidencia(
   if (sinais.dhashInicio) form.append("dhashInicio", sinais.dhashInicio);
   if (sinais.dhashFim) form.append("dhashFim", sinais.dhashFim);
   if (sinais.print) form.append("print", "true");
-  if (sinais.latitude !== null && sinais.longitude !== null) {
+  if (
+    mostrarLocalizacao &&
+    sinais.latitude !== null &&
+    sinais.longitude !== null
+  ) {
     form.append("latitude", String(sinais.latitude));
     form.append("longitude", String(sinais.longitude));
   }

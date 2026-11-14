@@ -52,7 +52,7 @@ O arquivo enviado continua sem EXIF. Se o navegador não consegue processar a im
 
 ### Localização
 
-A latitude e a longitude do EXIF ficam guardadas em `evidencias_atividade`. Nenhuma resposta da API as devolve, e o log não as registra. Mostrá-las ao grupo, usá-las num aviso ou apagá-las é uma decisão futura.
+A latitude e a longitude do EXIF ficam guardadas em `evidencias_atividade`. Nenhuma resposta da API as devolve, e o log não as registra. Mostrá-las ao grupo, usá-las num aviso ou apagá-las é uma decisão futura. **Atualização (2026-11-14):** a ADR 0061 decidiu: o autor escolhe mostrar o local ao grupo (opção ligada por padrão); sem a escolha, a localização não é enviada. As coordenadas guardadas antes foram apagadas.
 
 ## Impacto
 

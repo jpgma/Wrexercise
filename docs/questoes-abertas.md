@@ -654,7 +654,7 @@ Os vídeos (`decisoes/0058-video-como-evidencia.md`) pesam cerca de 25 vezes uma
 
 ## Q030 — Como tratar dados pessoais em imagens?
 
-**Status:** PARCIALMENTE DECIDIDA (0052). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data e a localização do EXIF ficam em colunas à parte, sem aparecer na API. Mostrar a localização e a retenção (Q029) continuam abertas.
+**Status:** PARCIALMENTE DECIDIDA (0052, 0061). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data do EXIF fica em coluna à parte. A localização só é enviada quando o autor escolhe mostrá-la ao grupo (0061), e então todo o grupo a vê. A retenção (Q029) continua aberta.
 
 Investigar:
 
@@ -766,7 +766,6 @@ Continuam abertas ou parciais:
 - Q026: consultas SQL. Só se algo ficar lento.
 - Q027: limites para criação de atividade, reações e feed. Só se aparecer abuso.
 - Q029: exclusão de conta e de grupo, retenção de evidências e backups.
-- Q030: mostrar a localização da foto e avisar que ela é guardada.
 - Q031: seletor manual de tema.
 - Q033: visualizações adicionais de progresso.
 - Q034: avatar em 8 direções (andamento no ADR 0039).

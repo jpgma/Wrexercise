@@ -30,6 +30,9 @@ export type Evidencia = {
   duracaoMs: number | null;
   /** Captura de tela, pelo nome do arquivo ou pelo tamanho da tela (ADR 0060). Sinal do navegador, não prova. */
   print: boolean;
+  /** Só quando o autor escolheu mostrar a localização ao grupo (ADR 0061). */
+  latitude: number | null;
+  longitude: number | null;
 };
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */

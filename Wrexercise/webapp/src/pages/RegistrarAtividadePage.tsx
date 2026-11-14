@@ -5,6 +5,7 @@ import {
   Images,
   Info,
   Lock,
+  MapPin,
   Minus,
   Play,
   Plus,
@@ -69,6 +70,8 @@ const schema = z.object({
     .max(1440, "Use no máximo 1440 minutos"),
   startedAt: z.string().min(1, "Informe quando você treinou"),
   descricao: z.string().trim().max(500, "Use no máximo 500 caracteres"),
+  // Ligada por padrão; desligada, a localização nem é enviada (ADR 0061).
+  mostrarLocalizacao: z.boolean(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -90,6 +93,7 @@ function valoresPadrao(): Partial<FormData> {
     duracaoMinutos: 60,
     startedAt: toLocalInputValue(new Date()),
     descricao: "",
+    mostrarLocalizacao: true,
   };
 }
 
@@ -399,8 +403,11 @@ export function RegistrarAtividadePage() {
       const rotulo = `Enviando ${indice + 1} de ${anexos.length}…`;
       setEnviando(rotulo);
       try {
-        await anexarEvidencia(atividade.id, preparada, (fracao) =>
-          setEnviando(`${rotulo} ${Math.round(fracao * 100)}%`),
+        await anexarEvidencia(
+          atividade.id,
+          preparada,
+          data.mostrarLocalizacao,
+          (fracao) => setEnviando(`${rotulo} ${Math.round(fracao * 100)}%`),
         );
         enviadas += 1;
       } catch (error) {
@@ -796,6 +803,25 @@ export function RegistrarAtividadePage() {
               );
             })}
           </ul>
+        )}
+        {anexos.some(
+          ({ preparada: { sinais } }) =>
+            sinais.latitude !== null && sinais.longitude !== null,
+        ) && (
+          <label className="mb-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-soft px-3 py-2 text-sm text-on-soft">
+            <input
+              type="checkbox"
+              className="size-5 shrink-0 accent-progress"
+              {...register("mostrarLocalizacao")}
+            />
+            <span className="flex-1">
+              Mostrar ao grupo o local do comprovante
+              <span className="block text-xs">
+                Desmarcado, a localização não sai do seu celular.
+              </span>
+            </span>
+            <MapPin aria-hidden="true" className="size-5 shrink-0" />
+          </label>
         )}
         {erroAnexo && (
           <p role="alert" className="input-error mb-2">

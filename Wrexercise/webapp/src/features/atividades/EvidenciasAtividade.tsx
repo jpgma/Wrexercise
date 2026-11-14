@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import { MapPin, Play } from "lucide-react";
 import { useState } from "react";
 import { GaleriaEvidencias, type LegendaGaleria } from "./GaleriaEvidencias";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
@@ -37,47 +37,69 @@ export function EvidenciasAtividade({
         className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none]"
       >
         {evidencias.map((evidencia, i) => (
-          <button
+          <div
             key={evidencia.id}
-            type="button"
-            onClick={() => galeria.abrir(i)}
-            aria-label={
-              evidencia.tipo === "Video"
-                ? `Assistir ao vídeo ${i + 1} de ${total}`
-                : `Ampliar comprovante ${i + 1} de ${total}`
-            }
-            className="relative w-full shrink-0 cursor-zoom-in snap-center focus-visible:-outline-offset-4"
+            className="relative w-full shrink-0 snap-center"
           >
-            {evidencia.tipo === "Video" ? (
-              <>
-                {/* Só o começo do arquivo (metadados e o primeiro quadro); toca na galeria. */}
-                <video
-                  src={evidencia.url}
-                  poster={`${evidencia.url}/miniatura`}
-                  preload="metadata"
-                  muted
-                  playsInline
-                  className="pointer-events-none aspect-[4/3] w-full bg-lightbox object-contain"
-                />
-                <span className="absolute inset-0 grid place-items-center">
-                  <span className="grid size-14 place-items-center rounded-full bg-lightbox/60 text-on-lightbox">
-                    <Play aria-hidden="true" className="size-7 fill-current" />
+            <button
+              type="button"
+              onClick={() => galeria.abrir(i)}
+              aria-label={
+                evidencia.tipo === "Video"
+                  ? `Assistir ao vídeo ${i + 1} de ${total}`
+                  : `Ampliar comprovante ${i + 1} de ${total}`
+              }
+              className="relative w-full cursor-zoom-in focus-visible:-outline-offset-4"
+            >
+              {evidencia.tipo === "Video" ? (
+                <>
+                  {/* Só o começo do arquivo (metadados e o primeiro quadro); toca na galeria. */}
+                  <video
+                    src={evidencia.url}
+                    poster={`${evidencia.url}/miniatura`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    className="pointer-events-none aspect-[4/3] w-full bg-lightbox object-contain"
+                  />
+                  <span className="absolute inset-0 grid place-items-center">
+                    <span className="grid size-14 place-items-center rounded-full bg-lightbox/60 text-on-lightbox">
+                      <Play
+                        aria-hidden="true"
+                        className="size-7 fill-current"
+                      />
+                    </span>
                   </span>
-                </span>
-              </>
-            ) : (
-              <img
-                src={evidencia.url}
-                alt=""
-                className="aspect-[4/3] w-full object-cover"
-                loading="lazy"
-              />
+                </>
+              ) : (
+                <img
+                  src={evidencia.url}
+                  alt=""
+                  className="aspect-[4/3] w-full object-cover"
+                  loading="lazy"
+                />
+              )}
+              {evidencia.gravadaNoApp && (
+                <SeloCameraDoApp className="absolute top-3 left-3" />
+              )}
+              {evidencia.print && (
+                <SeloPrint className="absolute top-3 left-3" />
+              )}
+            </button>
+            {evidencia.latitude !== null && evidencia.longitude !== null && (
+              // O autor escolheu mostrar o local (ADR 0061). Só um link: o mapa abre fora do aplicativo.
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${evidencia.latitude},${evidencia.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Ver no mapa o local do comprovante ${i + 1}`}
+                className="absolute top-3 right-3 inline-flex min-h-11 items-center gap-1 rounded-full bg-lightbox/60 px-3 text-xs font-semibold text-on-lightbox"
+              >
+                <MapPin aria-hidden="true" className="size-3.5" />
+                Local
+              </a>
             )}
-            {evidencia.gravadaNoApp && (
-              <SeloCameraDoApp className="absolute top-3 left-3" />
-            )}
-            {evidencia.print && <SeloPrint className="absolute top-3 left-3" />}
-          </button>
+          </div>
         ))}
       </div>
 

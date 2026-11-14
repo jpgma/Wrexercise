@@ -100,8 +100,8 @@ internal static class AnexarEvidencia
 
     /// <summary>
     /// Sinais lidos pelo navegador antes de a compressão apagar o EXIF (ADR 0052). Todos opcionais:
-    /// um valor malformado é descartado, e a foto segue como se não o tivesse. A localização é guardada
-    /// sem ser devolvida pela API nem registrada em log. <c>Print</c>: o navegador reconheceu uma captura de tela
+    /// um valor malformado é descartado, e a foto segue como se não o tivesse. A localização só chega
+    /// quando o autor escolheu mostrá-la ao grupo (ADR 0061); nunca vai para o log. <c>Print</c>: o navegador reconheceu uma captura de tela
     /// (ADR 0060), pelo nome do arquivo ou pelo tamanho da tela.
     /// </summary>
     private sealed record SinaisEvidencia(

@@ -497,7 +497,7 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AnexarEvidencia_GuardaSinaisSemDevolverLocalizacao()
+    public async Task AnexarEvidencia_GuardaSinaisEMostraLocalizacaoAoGrupo()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -518,8 +518,25 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
             SELECT count(*) FROM evidencias_atividade
             WHERE origem_data_captura = 'Exif' AND latitude = -23.5505 AND longitude = -46.6333
             """));
-        var json = await (await ana.Client.GetAsync($"/api/atividades/{id}", Token)).Content.ReadAsStringAsync(Token);
-        Assert.DoesNotContain("latitude", json, StringComparison.OrdinalIgnoreCase);
+        var evidencia = Assert.Single((await ObterAsync(ana, id)).Evidencias);
+        Assert.Equal(-23.5505, evidencia.Latitude);
+        Assert.Equal(-46.6333, evidencia.Longitude);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_SemLocalizacao_NaoDevolveCoordenadas()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        // Só a latitude: as duas ou nenhuma.
+        var response = await PostEvidenciaAsync(ana, id, JpegVariante(1), new() { ["latitude"] = "-23.5505" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var evidencia = Assert.Single((await ObterAsync(ana, id)).Evidencias);
+        Assert.Null(evidencia.Latitude);
+        Assert.Null(evidencia.Longitude);
     }
 
     [Fact]
