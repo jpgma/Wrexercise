@@ -268,8 +268,8 @@ export function RevisarPage() {
         />
       )}
       <p className="mb-4 text-sm text-muted">
-        Confira o registro com calma. Na dúvida, prefira “Suspeito” e explique
-        nos comentários em vez de rejeitar.
+        Confira o registro com calma. Na dúvida, prefira 🤨 “Suspeito” e
+        explique nos comentários em vez de rejeitar.
       </p>
 
       <div className="card overflow-hidden">

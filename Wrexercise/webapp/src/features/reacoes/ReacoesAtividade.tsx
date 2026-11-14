@@ -42,13 +42,18 @@ function BotaoReacao({
 }) {
   const selecionada = suaReacao === tipo;
   const apagada = suaReacao !== null && !selecionada;
-  // Só o "Dar moral" tem largura garantida para o texto.
-  const largo = tipo === "Kudos";
+  // Só o "Dar moral" mostra texto; os outros mostram só o símbolo, e o
+  // nome fica no aria-label para leitores de tela.
+  const soSimbolo = tipo !== "Kudos";
   return (
     <button
       type="button"
       aria-pressed={selecionada}
+      aria-label={soSimbolo ? label : undefined}
+      title={soSimbolo ? label : undefined}
       className={`${className} h-11 min-w-0 gap-1.5 px-2 ${
+        soSimbolo ? "text-xl" : ""
+      } ${
         selecionada
           ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
           : ""
@@ -57,9 +62,7 @@ function BotaoReacao({
       onClick={selecionada ? undefined : onClick}
     >
       <Emoji tipo={tipo} />
-      <span className={largo ? "truncate" : "truncate @max-[24rem]:sr-only"}>
-        {label}
-      </span>
+      {!soSimbolo && <span className="truncate">{label}</span>}
     </button>
   );
 }
@@ -207,19 +210,13 @@ export function ReacoesAtividade({
         </p>
       )}
 
-      {voce && totalRevisores > 0 && (
-        <p className="rounded-2xl bg-surface-muted p-4 text-sm text-muted">
-          Essa atividade é sua. Seus amigos vão avaliar.
-        </p>
-      )}
-
       {podeReagir && (
         <div className="space-y-2">
-          {/* Uma linha: Rejeitar (1/4), Suspeito (1/4), Dar moral (2/4). A
-              opção escolhida fica destacada e as outras, apagadas, mas ainda
-              tocáveis para trocar a reação até o prazo acabar. Nos botões
-              estreitos, o texto some quando não cabe e fica só o símbolo. */}
-          <div className="@container grid grid-cols-4 gap-2">
+          {/* Uma linha: Rejeitar (1/5) e Suspeito (1/5), só com o símbolo, e
+              Dar moral (3/5), com texto. A opção escolhida fica destacada e as
+              outras, apagadas, mas ainda tocáveis para trocar a reação até o
+              prazo acabar. */}
+          <div className="grid grid-cols-5 gap-2">
             <BotaoReacao
               tipo="Rejeitar"
               className="btn-danger"
@@ -239,7 +236,7 @@ export function ReacoesAtividade({
             <BotaoReacao
               tipo="Kudos"
               label="Dar moral"
-              className="btn-primary col-span-2"
+              className="btn-primary col-span-3"
               suaReacao={suaReacao}
               pending={registrar.isPending}
               onClick={() =>
@@ -349,7 +346,7 @@ export function ReacoesAtividade({
       <ConfirmDialog
         open={confirmandoRejeicao}
         title="Rejeitar atividade?"
-        message={`Isso pode fazer este treino de ${primeiroNome} deixar de contar na meta. Se você só tem dúvidas, prefira “Suspeito”.`}
+        message={`Isso pode fazer este treino de ${primeiroNome} deixar de contar na meta. Se você só tem dúvidas, prefira 🤨 “Suspeito”.`}
         confirmLabel="Rejeitar atividade"
         pending={registrar.isPending}
         error={registrar.isError ? getErrorMessage(registrar.error) : undefined}

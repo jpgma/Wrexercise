@@ -544,7 +544,7 @@ The system adds warnings to an activity. All members of the group see them, also
 
 - When a member records an activity, the system makes a list of reviewers. The list has all the active members of the group at that time, but not the author.
 - The list does not change when members enter or leave the group.
-- The author cannot react to his or her own activity.
+- The author cannot react to his or her own activity. The page does not show the reaction buttons to the author.
 - If the list is empty (the author is the only member):
   - An activity without evidence becomes `Verificada` immediately.
   - An activity with evidence becomes `Verificada` when the author attaches the first image.
@@ -554,7 +554,7 @@ The system adds warnings to an activity. All members of the group see them, also
 - Each reviewer can give one reaction: `Kudos`, `Suspeito` or `Rejeitar`.
 - The reaction window is 48 hours from the time when the author recorded the activity.
 - A reviewer can change his or her reaction while the window is open. A reviewer cannot remove a reaction.
-- The activity page shows the reactions in one row, from left to right: `Rejeitar` (1/4 of the width), `Suspeito` (1/4) and "Dar moral" (2/4). If the text of `Rejeitar` or `Suspeito` does not fit, the button shows only the symbol. After a reaction, its button is highlighted and the other buttons are faded. A faded button still changes the reaction.
+- The activity page shows the reactions in one row, from left to right: `Rejeitar` (1/5 of the width), `Suspeito` (1/5) and "Dar moral" (3/5). The `Rejeitar` and `Suspeito` buttons show only the symbol. Screen readers read their names. After a reaction, its button is highlighted and the other buttons are faded. A faded button still changes the reaction.
 - The list of reactions shows the reaction of the user as "Você deu moral", "Você marcou como suspeito" or "Você rejeitou". The page does not show the reaction of the user in a separate card.
 - The `Rejeitar` reaction asks for a confirmation.
 - The number of rejections necessary to reject an activity is:
