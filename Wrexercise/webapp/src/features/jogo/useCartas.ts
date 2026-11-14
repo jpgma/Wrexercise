@@ -138,6 +138,8 @@ export function useResponderJogada(grupoId: string) {
         queryClient.invalidateQueries({ queryKey: jogadasKey(grupoId) }),
         queryClient.invalidateQueries({ queryKey: notificacoesKey }),
         queryClient.invalidateQueries({ queryKey: lojaKey }),
+        // Recusar pode dar FADIGA.
+        queryClient.invalidateQueries({ queryKey: energiaKey }),
       ]);
     },
   });

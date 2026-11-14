@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
 import { MesaJogadas } from "./MesaJogadas";
 import { SaldoEnergia } from "./SaldoEnergia";
+import { useAvisoFadiga } from "./useEnergia";
 import {
   getBloqueioJogada,
   getLimiteEnvio,
@@ -186,6 +187,7 @@ export function MaoJogo({
 }) {
   const loja = useLoja();
   const jogadas = useJogadas(grupoId);
+  useAvisoFadiga();
   // A Mão remonta a cada Foco: o instante da abertura basta para o limite de 24 horas.
   const [agora] = useState(() => Date.now());
   const mao = loja.data?.mao ?? [];

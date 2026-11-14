@@ -12,16 +12,18 @@ internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool 
 /// <param name="Aposta">Se quem recebeu aceitou com a APOSTA.</param>
 internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false);
 
+/// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo (decisão 0059).</param>
 internal sealed record EnergiaGanha(
-    int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0, int Rivais = 0)
+    int Atividades, int Bonus, int Metas, int Sequencias, int Desafios, int Jogadas = 0, int Rivais = 0, int Fadiga = 0)
 {
-    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais;
+    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga;
 }
 
 /// <summary>
 /// Energia ganha, calculada na leitura (docs/gamificacao.md §5 e decisões 0033 e 0034).
 /// Só cresce: créditos dependem de atividades <c>Verificada</c>, que é final, e os qualificadores
-/// seguem a ordem de registro, então uma atividade nova nunca toma o bônus de outra.
+/// seguem a ordem de registro, então uma atividade nova nunca toma o bônus de outra. A FADIGA só reduz dias
+/// verificados depois dela (<see cref="Fadiga"/>).
 /// </summary>
 internal static class CalculoEnergia
 {
@@ -51,11 +53,13 @@ internal static class CalculoEnergia
     /// <param name="rivaisVencidos">
     /// Quantas vezes a pessoa venceu o Rival que escolheu. Cada grupo conta à parte (decisão 0038).
     /// </param>
+    /// <param name="diasComFadiga">Os dias pagos que rendem só metade da base (<see cref="Fadiga"/>).</param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
         IReadOnlyList<DesafioDaPessoa> desafios,
         IReadOnlyList<RecompensaJogada>? jogadas = null,
-        int rivaisVencidos = 0)
+        int rivaisVencidos = 0,
+        int diasComFadiga = 0)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -69,7 +73,8 @@ internal static class CalculoEnergia
             MarcosSequencia.Where(m => melhorSequencia >= m.Semanas).Sum(m => m.Energia),
             desafios.Count(d => d.IsConcluido()) * PorDesafioConcluido,
             (jogadas ?? []).Sum(GetRecompensa),
-            rivaisVencidos * ResultadoRival.Energia);
+            rivaisVencidos * ResultadoRival.Energia,
+            -diasComFadiga * Fadiga.Desconto);
     }
 
     /// <summary>

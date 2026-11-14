@@ -21,7 +21,15 @@ internal static class ObterEnergia
             new EnergiaResponse(
                 estado.Saldo,
                 new EnergiaDetalhamentoResponse(
-                    ganha.Atividades, ganha.Bonus, ganha.Metas, ganha.Sequencias, ganha.Desafios, ganha.Jogadas, ganha.Rivais)),
+                    ganha.Atividades,
+                    ganha.Bonus,
+                    ganha.Metas,
+                    ganha.Sequencias,
+                    ganha.Desafios,
+                    ganha.Jogadas,
+                    ganha.Rivais,
+                    ganha.Fadiga),
+                estado.FadigaRestante),
             AppJsonContext.Default.EnergiaResponse);
     }
 }

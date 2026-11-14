@@ -12,6 +12,7 @@ internal sealed record MembroCenaResponse(
 internal sealed record CenaResponse(Guid GrupoId, IReadOnlyList<MembroCenaResponse> Membros);
 
 /// <summary>A Energia ganha por origem. A soma é a Energia ganha total.</summary>
+/// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo ou zero.</param>
 internal sealed record EnergiaDetalhamentoResponse(
     int Atividades,
     int Bonus,
@@ -19,9 +20,11 @@ internal sealed record EnergiaDetalhamentoResponse(
     int Sequencias,
     int Desafios,
     int Jogadas,
-    int Rivais);
+    int Rivais,
+    int Fadiga = 0);
 
-internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento);
+/// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (0 a 3).</param>
+internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento, int FadigaRestante = 0);
 
 internal sealed record CartaCatalogoResponse(string Codigo, string Nome, string Tipo, int Preco, string Efeito);
 

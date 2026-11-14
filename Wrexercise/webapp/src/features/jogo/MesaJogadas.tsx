@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Dialog } from "@/components/Dialog";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
@@ -19,6 +20,11 @@ import {
   useLoja,
   useResponderJogada,
 } from "./useCartas";
+import {
+  avisoFadigaAplicada,
+  marcarFadigaVista,
+  useEnergia,
+} from "./useEnergia";
 
 const avisoResposta: Record<CodigoResposta, string> = {
   DesafioDuplo: "Carta aceita e devolvida. Agora são dois desafios!",
@@ -154,7 +160,11 @@ function DetalheJogada({
 }) {
   const responder = useResponderJogada(grupoId);
   const loja = useLoja();
+  const energia = useEnergia();
   const { showToast } = useToast();
+  const [confirmandoRecusa, setConfirmandoRecusa] = useState(false);
+  // FADIGA não acumula nem renova: com ela ativa, recusar não muda nada (decisão 0059).
+  const comFadiga = (energia.data?.fadigaRestante ?? 0) > 0;
   const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
   const pendente = jogada.recebida && jogada.situacao === "Enviada";
   const encerrada = encerradas.includes(jogada.situacao);
@@ -169,14 +179,22 @@ function DetalheJogada({
     responder.mutate(
       { id: jogada.id, resposta, ...extra },
       {
-        onSuccess: () =>
+        onSuccess: () => {
+          setConfirmandoRecusa(false);
+          if (resposta === "Recusada" && !comFadiga) {
+            // O aviso já aparece aqui: o da mudança da FADIGA não deve repetir.
+            marcarFadigaVista(3);
+          }
           showToast(
             codigoResposta
               ? avisoResposta[codigoResposta]
               : resposta === "Aceita"
                 ? "Carta aceita. Bora treinar!"
-                : "Carta recusada, sem problema.",
-          ),
+                : comFadiga
+                  ? "Carta recusada. Você já está com FADIGA, então nada muda."
+                  : avisoFadigaAplicada,
+          );
+        },
       },
     );
   };
@@ -229,7 +247,7 @@ function DetalheJogada({
               type="button"
               className="btn-ghost border-2 border-border"
               disabled={responder.isPending}
-              onClick={() => enviar("Recusada")}
+              onClick={() => setConfirmandoRecusa(true)}
             >
               Recusar
             </button>
@@ -242,10 +260,39 @@ function DetalheJogada({
               Aceitar
             </button>
           </div>
-          <p className="mt-2 text-xs text-muted">
-            Aceitar e recusar são de graça. Cumprindo, você ganha{" "}
-            {jogada.carta.preco} EN.
-          </p>
+          <ul className="mt-2 space-y-0.5 text-xs text-muted">
+            <li>
+              Cumprir:{" "}
+              <span className="font-semibold text-game">
+                +{jogada.carta.preco} EN
+              </span>
+            </li>
+            <li>
+              Recusar ou falhar:{" "}
+              <span className="font-semibold text-foreground">
+                FADIGA — 3 treinos com −50% EN
+              </span>
+            </li>
+          </ul>
+          <ConfirmDialog
+            open={confirmandoRecusa}
+            title="Recusar a carta?"
+            message={
+              comFadiga
+                ? "Você já está com FADIGA. Ela não acumula nem renova: recusar não muda nada. A carta volta para quem enviou."
+                : "Você fica com FADIGA: seus próximos 3 treinos verificados rendem metade da EN. A Energia que você já tem não muda, e o treino conta normalmente no desafio."
+            }
+            confirmLabel="Recusar"
+            pending={responder.isPending}
+            error={
+              responder.isError ? getErrorMessage(responder.error) : undefined
+            }
+            onConfirm={() => enviar("Recusada")}
+            onCancel={() => {
+              responder.reset();
+              setConfirmandoRecusa(false);
+            }}
+          />
           <AceitarComResposta
             jogada={jogada}
             pendente={responder.isPending}

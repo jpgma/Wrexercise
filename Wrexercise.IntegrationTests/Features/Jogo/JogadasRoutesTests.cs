@@ -183,6 +183,9 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(SituacaoJogada.Concluida, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
         Assert.Equal(35, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
         Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
+        // Cumprir não dá FADIGA a ninguém.
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).FadigaRestante);
+        Assert.Equal(0, (await GetEnergiaAsync(ana)).FadigaRestante);
         Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
         Assert.Equal(0, await ContarNotificacoesAsync(bia, "JogadaConcluida"));

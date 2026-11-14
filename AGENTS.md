@@ -44,7 +44,9 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`.
+
+`Fadiga` (ADR 0059): debuff de quem recusa ou deixa expirar uma Provocação recebida. Os próximos 3 dias verificados rendem metade da base de Energia. Na interface, aparece como "FADIGA".
 
 Tipos de `Aviso` (ADR 0052, 0058): `FotoForaDoPeriodo`, `FotoSemData`, `FotoParecida`, `RegistroTardio`, `VideoParado`. Os nomes `Foto*` valem também para vídeos.
 

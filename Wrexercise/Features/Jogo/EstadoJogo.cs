@@ -10,11 +10,13 @@ internal sealed record CartaComprada(Guid Id, string Codigo, int Preco, DateTime
 /// A Energia, as cartas e as Jogadas de uma pessoa, tudo calculado na leitura (docs/gamificacao.md §5.3).
 /// Dentro de uma transação que travou a linha do usuário, o saldo fica estável até o fim dela.
 /// </summary>
+/// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (decisão 0059).</param>
 internal sealed record EstadoJogo(
     Guid UsuarioId,
     EnergiaGanha Ganha,
     IReadOnlyList<CartaComprada> Cartas,
-    IReadOnlyList<JogadaCarregada> Jogadas)
+    IReadOnlyList<JogadaCarregada> Jogadas,
+    int FadigaRestante = 0)
 {
     /// <summary>Usar uma carta não muda o saldo: o custo entrou na compra.</summary>
     public int Saldo => Ganha.Total - Cartas.Sum(c => c.Preco);
@@ -67,6 +69,10 @@ internal sealed record EstadoJogo(
         var cartas = await LoadCartasAsync(connection, transaction, usuarioId, cancellationToken);
         var rivais = await Rivais.LoadAsync(connection, transaction, usuarioId, null, cancellationToken);
         var rivaisVencidos = rivais.Count(r => r.EscolhedorId == usuarioId && r.Situacao == ResultadoRival.Venceu);
+        var dias = await LoadDiasVerificadosAsync(connection, transaction, usuarioId, cancellationToken);
+        var fadiga = Fadiga.Calcular(
+            jogadas.Select(j => Fadiga.GetGatilho(j, usuarioId)).OfType<DateTimeOffset>(),
+            dias);
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
@@ -76,7 +82,8 @@ internal sealed record EstadoJogo(
                 j.CodigoResposta == CodigoCarta.Aposta))
             .ToList();
 
-        return new EstadoJogo(usuarioId, CalculoEnergia.Calcular(atividades, desafios, recompensas, rivaisVencidos), cartas, jogadas);
+        var ganha = CalculoEnergia.Calcular(atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga);
+        return new EstadoJogo(usuarioId, ganha, cartas, jogadas, fadiga.Restantes);
     }
 
     private static async Task<List<CartaComprada>> LoadCartasAsync(
@@ -135,5 +142,42 @@ internal sealed record EstadoJogo(
         }
 
         return atividades;
+    }
+
+    /// <summary>
+    /// Cada dia com atividade verificada, por grupo, no <c>verified_at</c> da primeira verificada. Inclui as
+    /// anuladas depois de verificadas (o <c>verified_at</c> fica): o dia gasta a carga de FADIGA, mas só rende
+    /// se ainda tiver uma atividade <c>Verificada</c>.
+    /// </summary>
+    private static async Task<List<DiaVerificado>> LoadDiasVerificadosAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            SELECT a.grupo_id, (a.started_at AT TIME ZONE g.fuso_horario)::date, min(a.verified_at),
+                bool_or(a.situacao_verificacao = 'Verificada')
+            FROM atividades a
+            JOIN grupos g ON g.id = a.grupo_id
+            WHERE a.usuario_id = $1
+              AND a.verified_at IS NOT NULL
+              AND a.situacao_verificacao IN ('Verificada', 'Anulada')
+            GROUP BY 1, 2
+            """, connection, transaction);
+        command.Parameters.AddWithValue(usuarioId);
+
+        var dias = new List<DiaVerificado>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            dias.Add(new DiaVerificado(
+                reader.GetGuid(0),
+                reader.GetFieldValue<DateOnly>(1),
+                TimestampLeitura.FromReader(reader, 2),
+                reader.GetBoolean(3)));
+        }
+
+        return dias;
     }
 }

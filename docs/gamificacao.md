@@ -12,9 +12,9 @@ No Jogo, os membros do grupo aparecem como avatares em pixel-art, numa praça. O
 
 1. **A meta oficial vem primeiro.** O Jogo nunca altera a verificação, as metas, a classificação nem as sequências.
 2. **Recompensa constância.** O único critério de desempenho é a duração relativa à meta do grupo, e só em cartas opcionais (+10 MIN e +20 MIN).
-3. **Ninguém prejudica ninguém.** Nenhuma interação remove Energia de outra pessoa, invalida atividades ou dificulta a meta de outra pessoa.
+3. **Ninguém prejudica ninguém.** Nenhuma interação remove Energia de outra pessoa, invalida atividades ou dificulta a meta de outra pessoa. A FADIGA (§5.4) só reduz a Energia futura de quem recusou, deixou expirar ou não cumpriu uma carta, nunca a já ganha.
 4. **Simples e discreto.** Nada de missões diárias nem lembretes. A única aposta é a carta APOSTA, que só arrisca a Energia de quem a joga.
-5. **Toda carta faz algo que não dá para fazer de graça.** Recusar uma carta é sempre grátis e não tem consequência.
+5. **Toda carta faz algo que não dá para fazer de graça.** Recusar uma carta não custa Energia, mas dá FADIGA a quem recusa: os próximos 3 treinos rendem metade da base (§5.4, `decisoes/0059-fadiga.md`).
 6. **Tudo calculado no servidor**, a partir dos dados que já existem sempre que possível.
 7. **A classificação continua igual.** A Energia não aparece no ranking e não existe ranking de Energia.
 
@@ -276,8 +276,22 @@ Regras que garantem um saldo estável:
 - Por isso a Energia ganha **só cresce**, e o saldo nunca fica negativo se cada compra verificar `saldo >= preço`.
 - Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação devolvida à Mão (§6.2) também não muda o saldo, porque continua comprada.
 - Atividades de grupos que a pessoa deixou continuam valendo, como as conquistas.
+- A FADIGA (§5.4) só reduz dias verificados **depois** do gatilho, então também não tira Energia já ganha.
 
 A regra fica numa função pura (`CalculoEnergia`), que recebe as atividades de todos os grupos da pessoa, com testes unitários. Um dos testes simula uma semana típica: as fontes da G2 rendem 73 EN, e Missões, Rival e Jogadas completam o alvo de §5.1. Outro confere que o mesmo treino registrado em dois grupos não dobra os bônus nem a meta.
+
+### 5.4. FADIGA
+
+Recusar uma carta precisa ter uma consequência, sem tirar Energia já ganha e sem dificultar o treino (`decisoes/0059-fadiga.md`).
+
+- **Quando aparece:** para quem **recebeu** uma Provocação, quando a Jogada fica `Recusada` ou `Expirada`. Vale para a recusa, para a carta que expira sem resposta e para a carta aceita que não foi cumprida no prazo. Quem enviou nunca recebe FADIGA.
+- **Efeito:** os próximos **3 dias com atividade verificada**, em cada grupo, rendem metade da base: 5 EN em vez de 10 (metade, arredondada para baixo). Cada dia gasta uma carga, qualquer que seja a Energia dele. Depois da terceira, a FADIGA some.
+- **Não acumula nem renova:** um gatilho com a FADIGA ativa não muda nada. Não expira com o tempo: só treinos verificados a removem.
+- **Não muda:** bônus por atividade, meta semanal, sequências, desafios, recompensas de Jogada, Rival, progresso oficial, classificação e estatísticas. A Energia já ganha também não diminui.
+- **Cálculo na leitura**, como o resto da Energia, numa função pura (`Fadiga`): os gatilhos (`respondida_em` da recusa, `expira_em` da expiração ou da falha) e os dias verificados, cada um no `verified_at` da primeira atividade verificada dele, seguem em ordem de tempo. Um dia só tem FADIGA se foi verificado depois do gatilho, então nenhuma leitura anterior pagou a base inteira a ele. Não há coluna nova, e repetir requisições não aplica a FADIGA duas vezes.
+- Um dia verificado e depois anulado gasta a carga dele, sem render. Assim, a carga não passa para outro dia já pago.
+- Recusas e expirações de antes de `Fadiga.Inicio` (13/11/2026) não contam.
+- **Na interface:** um selo `FADIGA` com uma bateria fraca e os treinos restantes, ao lado do saldo. Recusar pede confirmação e explica a consequência. A carta recebida mostra os dois resultados: "Cumprir: +N EN" e "Recusar ou falhar: FADIGA — 3 treinos com −50% EN". Quando a FADIGA muda, a tela do Jogo mostra um aviso ("+5 EN · FADIGA: 2 treinos restantes", "FADIGA REMOVIDA!"). O último valor visto fica num cookie comum (`wx_fadiga`).
 
 ## 6. Loja e cartas
 
@@ -321,7 +335,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - Diante de uma Provocação, o destinatário pode:
   - **Aceitar**, de graça;
   - **Aceitar com uma Resposta** da própria Mão (DESAFIO DUPLO, APOSTA, PRAZO EXTRA ou MUDANÇA DE PLANOS), no máximo uma por Jogada;
-  - **Recusar**, de graça e sem consequência.
+  - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito.
 - Uma Jogada criada por DESAFIO DUPLO não aceita outro DESAFIO DUPLO. Não existem cadeias de contra-ataque.
 
 **Limites**, conferidos na mesma transação que bloqueia a linha do remetente:
@@ -360,6 +374,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo (enviada num domingo, vale até o domingo seguinte). ANTES DAS 8 vale até as 08:00 do segundo dia depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
 - **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente ganha 0,5 × o preço, arredondado para baixo. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
 - **Custo para quem enviou:** só uma Jogada `Concluida` gasta a Provocação. Com a recompensa de 0,5 ×, uma carta concluída custa na prática metade do preço. Uma carta recusada ou expirada volta para a Mão (§6.2).
+- **Custo para quem recebeu:** uma Jogada `Recusada` ou `Expirada` dá FADIGA a quem recebeu (§5.4).
 
 ## 7. Missões semanais
 
