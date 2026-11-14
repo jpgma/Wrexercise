@@ -32,4 +32,4 @@ Na praça do modo Jogo (`gamificacao.md` §3), quem não treina fica `parado`, i
 
 - `ObterCena` ganha uma subconsulta por membro (o índice `atividades_usuario_started` serve).
 - A validação da folha (`ValidacaoFolhaAvatar`) aceita as duas alturas. O navegador mede a altura de cada folha e escala o fundo só pela largura, que é a mesma nos dois formatos.
-- Nada muda na verificação, nas metas, na classificação nem na Energia.
+- Nada muda nas metas, na classificação nem na Energia. Na verificação, a ADR 0062 passou a usar a mesma regra: quem dorme não revisa atividades novas.

@@ -1,3 +1,5 @@
+using Wrexercise.Infrastructure.Database;
+
 namespace Wrexercise.Features.Jogo;
 
 /// <summary>Poses do Avatar na cena do grupo (ver docs/gamificacao.md §3.2).</summary>
@@ -9,7 +11,7 @@ internal static class PoseAvatar
     public const string Dormindo = "dormindo";
 
     /// <summary>Sem atividade no grupo por este tempo, o Avatar dorme.</summary>
-    public static readonly TimeSpan TempoParaDormir = TimeSpan.FromHours(48);
+    public static readonly TimeSpan TempoParaDormir = MembrosDormindo.TempoParaDormir;
 
     /// <summary>Treinar vence comemorar, que vence dormir, que vence ficar parado.</summary>
     public static string Calcular(bool temAtividadePendente, bool metaCumprida, bool dormindo)

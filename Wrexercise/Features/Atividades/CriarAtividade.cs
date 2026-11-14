@@ -5,6 +5,7 @@ using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
+using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Atividades;
@@ -158,11 +159,14 @@ internal static class CriarAtividade
                 connection, transaction, id, TipoAviso.RegistroTardio, null, null, cancellationToken);
         }
 
-        await using (var revisores = new NpgsqlCommand("""
+        // Quem dorme no grupo não revisa (decisão 0062). Sem ninguém acordado, a atividade não tem revisores
+        // e é verificada logo abaixo ou ao receber a evidência.
+        await using (var revisores = new NpgsqlCommand($"""
             INSERT INTO revisores_atividade (atividade_id, usuario_id)
             SELECT $1, m.usuario_id
             FROM membros_grupo m
             WHERE m.grupo_id = $2 AND m.removed_at IS NULL AND m.usuario_id <> $3
+              AND {MembrosDormindo.AcordadoSql("m")}
             """, connection, transaction))
         {
             revisores.Parameters.AddWithValue(id);

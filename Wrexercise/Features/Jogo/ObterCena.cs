@@ -63,15 +63,10 @@ internal static class ObterCena
         Guid grupoId,
         CancellationToken cancellationToken)
     {
-        await using var command = new NpgsqlCommand("""
+        await using var command = new NpgsqlCommand($"""
             SELECT m.usuario_id, u.nome_exibicao, (m.joined_at AT TIME ZONE g.fuso_horario)::date,
                 u.modo_inicio = 'Jogo',
-                GREATEST(m.joined_at, (
-                    SELECT max(a.started_at)
-                    FROM atividades a
-                    WHERE a.grupo_id = m.grupo_id
-                      AND a.usuario_id = m.usuario_id
-                      AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')))
+                {MembrosDormindo.AcordadoEmSql("m")}
             FROM membros_grupo m
             JOIN grupos g ON g.id = m.grupo_id
             JOIN usuarios u ON u.id = m.usuario_id

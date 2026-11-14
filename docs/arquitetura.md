@@ -798,6 +798,8 @@ Uma atividade poderá contribuir para mais de um desafio ativo do mesmo grupo, d
 
 Cada atividade terá uma lista de revisores elegíveis, definida no momento da submissão.
 
+Quem está dormindo no grupo (48 horas sem atividade válida ali, ADR 0057) não entra na lista. Se todos os outros dormem, a lista fica vazia e a atividade é verificada na hora (ADR 0062).
+
 O autor não poderá reagir à própria atividade.
 
 A lista de revisores deverá ser preservada mesmo que a composição do grupo mude posteriormente.

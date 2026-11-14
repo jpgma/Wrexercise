@@ -32,6 +32,66 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Create_RevisorDormindo_NaoRevisa()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        var caio = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Caio");
+        await AdormecerAsync(grupoId, caio);
+
+        var criada = await PostAtividadeAsync(ana, grupoId);
+        var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+        Assert.Equal(Situacao.AguardandoFeedback, atividade!.SituacaoVerificacao);
+
+        // Quem dorme só vê (decisão 0062).
+        await ApiTestHost.AssertProblemAsync(
+            await PutReacaoAsync(caio, atividade.Id, TipoReacao.Kudos),
+            HttpStatusCode.Forbidden,
+            "NAO_REVISOR");
+
+        // O único acordado basta para verificar.
+        (await PutReacaoAsync(bia, atividade.Id, TipoReacao.Kudos)).EnsureSuccessStatusCode();
+        Assert.Equal(Situacao.Verificada, await SituacaoAsync(ana, atividade.Id));
+    }
+
+    [Fact]
+    public async Task Create_TodosDormindo_VerificadaImediata()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        await AdormecerAsync(grupoId, bia);
+
+        var criada = await PostAtividadeAsync(ana, grupoId);
+        var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+
+        Assert.Equal(Situacao.Verificada, atividade!.SituacaoVerificacao);
+        Assert.Equal(0, await _host.CountAsync(
+            $"SELECT count(*) FROM revisores_atividade WHERE atividade_id = '{atividade.Id}'"));
+    }
+
+    [Fact]
+    public async Task Create_DormindoComAtividadeRecente_Revisa()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Membro, "Bia");
+        await AdormecerAsync(grupoId, bia);
+
+        // Bia treina e acorda (Ana também dorme, então a atividade de Bia não tem revisores nem entra na fila).
+        await AdormecerAsync(grupoId, ana);
+        (await PostAtividadeAsync(bia, grupoId)).EnsureSuccessStatusCode();
+
+        var criada = await PostAtividadeAsync(ana, grupoId);
+        var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+
+        Assert.Equal(Situacao.AguardandoFeedback, atividade!.SituacaoVerificacao);
+        Assert.Equal(1, await _host.CountAsync(
+            $"SELECT count(*) FROM revisores_atividade WHERE atividade_id = '{atividade.Id}' AND usuario_id = '{bia.Id}'"));
+    }
+
+    [Fact]
     public async Task PutReacao_AutorRecebe403()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
@@ -337,6 +397,13 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
         var admin = await _host.AddMembroAsync(grupoId, PapelMembro.Administrador, "Admin");
         return (dono, atividadeId, revisores, admin);
     }
+
+    /// <summary>Entrou há 3 dias e não tem atividade no grupo: dorme (decisão 0057).</summary>
+    private Task AdormecerAsync(Guid grupoId, TestUsuario usuario) =>
+        _host.ExecuteAsync($"""
+            UPDATE membros_grupo SET joined_at = now() - interval '3 days'
+            WHERE grupo_id = '{grupoId}' AND usuario_id = '{usuario.Id}'
+            """);
 
     private static async Task<string> SituacaoAsync(TestUsuario usuario, Guid atividadeId)
     {

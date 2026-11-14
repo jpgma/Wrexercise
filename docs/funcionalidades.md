@@ -543,9 +543,10 @@ The system adds warnings to an activity. All members of the group see them, also
 ### 8.1. Reviewers
 
 - When a member records an activity, the system makes a list of reviewers. The list has all the active members of the group at that time, but not the author.
-- The list does not change when members enter or leave the group.
+- The list does not have members that are `dormindo` in the group (ADR 0062). A member is `dormindo` when the member has no activity of the group that starts in the last 48 hours (activities with the state `Rejeitada` or `Anulada` do not count) and joined the group 48 hours ago or more. A member that is `dormindo` can see the activity but cannot react to it (403 `NAO_REVISOR`). The activity is not in the review queue of this member.
+- The list does not change when members enter or leave the group, or when they go to sleep or wake up.
 - The author cannot react to his or her own activity. The page does not show the reaction buttons to the author.
-- If the list is empty (the author is the only member):
+- If the list is empty (the author is the only member, or all the other members are `dormindo`):
   - An activity without evidence becomes `Verificada` immediately.
   - An activity with evidence becomes `Verificada` when the author attaches the first image.
 
