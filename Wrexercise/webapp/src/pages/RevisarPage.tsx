@@ -151,7 +151,13 @@ function EtapaAvaliacao({
 }
 
 /** Fim da fila vindo do registro: o formulário está liberado. */
-function Liberado({ grupoId }: { grupoId: string }) {
+function Liberado({
+  grupoId,
+  rascunhoId,
+}: {
+  grupoId: string;
+  rascunhoId: string | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -186,7 +192,7 @@ function Liberado({ grupoId }: { grupoId: string }) {
         Valeu por avaliar a galera. Agora é a sua vez.
       </p>
       <Link
-        to={`/grupos/${grupoId}/atividades/nova`}
+        to={`/grupos/${grupoId}/atividades/nova${rascunhoId ? `?rascunho=${rascunhoId}` : ""}`}
         replace
         className="btn-primary mt-5 w-full"
       >
@@ -206,8 +212,10 @@ export function RevisarPage() {
   const depoisRegistrar = busca.get("depois") === "registrar";
   // Tamanho da fila quando a pessoa começou, para mostrar "Avaliação X de N".
   const totalInicial = Number(busca.get("total")) || 0;
+  // ADR 0065: o treino importado do app segue junto até o formulário.
+  const rascunhoId = busca.get("rascunho");
   const sufixo = depoisRegistrar
-    ? `?depois=registrar&total=${totalInicial}`
+    ? `?depois=registrar&total=${totalInicial}${rascunhoId ? `&rascunho=${rascunhoId}` : ""}`
     : "";
   // Só avança sozinho depois de uma reação feita nesta tela, não ao abrir uma já avaliada.
   const [reagidaAqui, setReagidaAqui] = useState<string | null>(null);
@@ -339,7 +347,7 @@ export function RevisarPage() {
             </Link>
           )
         ) : depoisRegistrar ? (
-          <Liberado grupoId={grupoId} />
+          <Liberado grupoId={grupoId} rascunhoId={rascunhoId} />
         ) : (
           <div className="card mt-5">
             <EmptyState

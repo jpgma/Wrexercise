@@ -167,7 +167,25 @@ export const router = createBrowserRouter([
                   return { Component: AtividadePage };
                 },
               },
+              {
+                // ADR 0065: o link que o Movr abre ao postar um treino.
+                path: "/importar/:id",
+                lazy: async () => {
+                  const { ImportarRascunhoPage } =
+                    await import("@/pages/ImportarRascunhoPage");
+                  return { Component: ImportarRascunhoPage };
+                },
+              },
             ],
+          },
+          {
+            // Sem as abas: a tela de consentimento é uma só decisão.
+            path: "/integracoes/movr/autorizar",
+            lazy: async () => {
+              const { IntegracaoAutorizarPage } =
+                await import("@/pages/IntegracaoAutorizarPage");
+              return { Component: IntegracaoAutorizarPage };
+            },
           },
         ],
       },

@@ -22,6 +22,7 @@ internal enum AtividadeOperacaoStatus
     EvidenciaJaAnexada,
     ChaveIdempotenciaReutilizada,
     ExclusaoNaoPermitida,
+    RascunhoNaoEncontrado,
 }
 
 internal static class TipoEvidencia
@@ -102,6 +103,10 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "EXCLUSAO_NAO_PERMITIDA",
             "Só dá para apagar nos primeiros 15 minutos, antes de alguém contestar."),
+        AtividadeOperacaoStatus.RascunhoNaoEncontrado => ApiProblem.Create(
+            StatusCodes.Status404NotFound,
+            "RASCUNHO_NAO_ENCONTRADO",
+            "O rascunho expirou ou já virou uma atividade."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

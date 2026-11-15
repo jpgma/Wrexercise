@@ -4,6 +4,7 @@ import {
   BellOff,
   Download,
   KeyRound,
+  Link2,
   LogOut,
   Shield,
   Smartphone,
@@ -23,6 +24,12 @@ import {
   useSair,
   useSessao,
 } from "@/features/autenticacao";
+import {
+  appIntegracaoLabels,
+  useAppsConectados,
+  useDesconectarApp,
+  type AppConectado,
+} from "@/features/integracoes";
 import { getErrorMessage } from "@/services/api";
 import {
   getModoInstalacao,
@@ -340,6 +347,59 @@ function NotificacoesAparelho() {
   );
 }
 
+/** ADR 0065: os apps que preparam rascunhos de treino. Some quando não há nenhum. */
+function AppsConectados() {
+  const apps = useAppsConectados();
+  const desconectar = useDesconectarApp();
+  const [confirmando, setConfirmando] = useState<AppConectado | null>(null);
+
+  if (!apps.data || apps.data.length === 0) return null;
+
+  return (
+    <>
+      <SectionTitle>Apps conectados</SectionTitle>
+      <ul className="card divide-y divide-border">
+        {apps.data.map((app) => (
+          <li key={app.id} className="flex items-center gap-3 p-4">
+            <Link2 aria-hidden="true" className="size-5 shrink-0 text-link" />
+            <div className="min-w-0 flex-1 text-sm">
+              <p className="font-semibold">{appIntegracaoLabels[app.app]}</p>
+              <p className="text-muted">Prepara rascunhos dos seus treinos</p>
+            </div>
+            <button
+              type="button"
+              className="btn-ghost h-11 shrink-0 px-3 text-danger"
+              onClick={() => setConfirmando(app)}
+            >
+              Desconectar
+            </button>
+          </li>
+        ))}
+      </ul>
+      <ConfirmDialog
+        open={confirmando !== null}
+        title={`Desconectar o ${confirmando ? appIntegracaoLabels[confirmando.app] : ""}?`}
+        message="O app para de preparar rascunhos. Suas atividades continuam como estão."
+        confirmLabel="Desconectar"
+        pending={desconectar.isPending}
+        error={
+          desconectar.isError ? getErrorMessage(desconectar.error) : undefined
+        }
+        onConfirm={() =>
+          confirmando &&
+          desconectar.mutate(confirmando.id, {
+            onSuccess: () => setConfirmando(null),
+          })
+        }
+        onCancel={() => {
+          desconectar.reset();
+          setConfirmando(null);
+        }}
+      />
+    </>
+  );
+}
+
 export function ConfiguracoesPage() {
   const { data: usuario } = useSessao();
   const sair = useSair();
@@ -361,6 +421,8 @@ export function ConfiguracoesPage() {
       <NotificacoesAparelho />
 
       <Instalacao />
+
+      <AppsConectados />
 
       <SectionTitle>Privacidade</SectionTitle>
       <div className="card flex gap-3 p-4 text-sm text-muted">

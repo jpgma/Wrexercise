@@ -6,6 +6,7 @@ using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Database;
+using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Atividades;
@@ -17,6 +18,7 @@ internal static class CriarAtividade
         CriarAtividadeRequest request,
         HttpContext context,
         NpgsqlDataSource dataSource,
+        ArmazenamentoEvidencias armazenamento,
         CancellationToken cancellationToken)
     {
         if (!IsValidRequest(request))
@@ -35,13 +37,33 @@ internal static class CriarAtividade
         }
 
         var usuarioId = context.GetSessaoAtual().UsuarioId;
-        var (status, atividadeId, repetida) = await ExecutarAsync(
-            dataSource,
-            grupoId,
-            usuarioId,
-            request,
-            idempotencyKey,
-            cancellationToken);
+        var copias = new List<string>();
+        AtividadeOperacaoStatus status;
+        Guid atividadeId;
+        bool repetida;
+        try
+        {
+            (status, atividadeId, repetida) = await ExecutarAsync(
+                dataSource,
+                armazenamento,
+                grupoId,
+                usuarioId,
+                request,
+                idempotencyKey,
+                copias,
+                cancellationToken);
+        }
+        catch
+        {
+            EvidenciaRascunho.ExcluirCopias(armazenamento, copias);
+            throw;
+        }
+
+        if (status != AtividadeOperacaoStatus.Concluida || repetida)
+        {
+            // A transação não gravou as cópias da imagem do rascunho: elas não ficam órfãs no disco.
+            EvidenciaRascunho.ExcluirCopias(armazenamento, copias);
+        }
 
         if (status != AtividadeOperacaoStatus.Concluida)
         {
@@ -85,14 +107,18 @@ internal static class CriarAtividade
         && TipoComprovacao.IsValid(request.TipoComprovacao)
         && ValidacaoAtividade.IsValidDuracao(request.DuracaoSegundos)
         && ValidacaoAtividade.IsValidDescricao(request.Descricao)
-        && ValidacaoAtividade.IsValidStartedAt(request.StartedAt);
+        && ValidacaoAtividade.IsValidStartedAt(request.StartedAt)
+        // A imagem do rascunho é uma evidência: o registro precisa aceitar fotos.
+        && (request.RascunhoId is null || request.TipoComprovacao == TipoComprovacao.Fotografia);
 
     private static async Task<(AtividadeOperacaoStatus Status, Guid Id, bool Repetida)> ExecutarAsync(
         NpgsqlDataSource dataSource,
+        ArmazenamentoEvidencias armazenamento,
         Guid grupoId,
         Guid usuarioId,
         CriarAtividadeRequest request,
         Guid? idempotencyKey,
+        List<string> copias,
         CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -153,6 +179,28 @@ internal static class CriarAtividade
             submittedAt = reader.GetFieldValue<DateTimeOffset>(1);
         }
 
+        // ADR 0065: o rascunho do app vira a primeira evidência, na mesma transação.
+        var temEvidenciaRascunho = false;
+        if (request.RascunhoId is { } rascunhoId)
+        {
+            if (!await EvidenciaRascunho.AnexarAsync(
+                    connection,
+                    transaction,
+                    armazenamento,
+                    id,
+                    usuarioId,
+                    rascunhoId,
+                    request.StartedAt.Value,
+                    request.DuracaoSegundos.Value,
+                    copias,
+                    cancellationToken))
+            {
+                return (AtividadeOperacaoStatus.RascunhoNaoEncontrado, default, false);
+            }
+
+            temEvidenciaRascunho = true;
+        }
+
         if (AvisosEvidencia.IsRegistroTardio(request.StartedAt.Value, request.DuracaoSegundos.Value, submittedAt))
         {
             await ConsultasAtividade.InserirAvisoAsync(
@@ -179,11 +227,13 @@ internal static class CriarAtividade
             UPDATE atividades
             SET situacao_verificacao = 'Verificada', verified_at = now()
             WHERE id = $1
-              AND tipo_comprovacao = 'RegistroManual'
+              AND (tipo_comprovacao = 'RegistroManual' OR $2)
               AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = $1)
             """, connection, transaction))
         {
             verificar.Parameters.AddWithValue(id);
+            // Com a evidência do rascunho já anexada, vale o mesmo que a primeira foto em AnexarEvidencia.
+            verificar.Parameters.AddWithValue(temEvidenciaRascunho);
             if (await verificar.ExecuteNonQueryAsync(cancellationToken) > 0)
             {
                 await JogadasConcluidas.NotificarAsync(connection, transaction, id, cancellationToken);

@@ -6,6 +6,7 @@ using Wrexercise.Features.Convites;
 using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Grupos;
 using Wrexercise.Features.Health;
+using Wrexercise.Features.Integracoes;
 using Wrexercise.Features.Jogo;
 using Wrexercise.Features.Notificacoes;
 using Wrexercise.Features.Progresso;
@@ -22,6 +23,13 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(AlterarPapelRequest))]
 [JsonSerializable(typeof(AlterarSenhaRequest))]
 [JsonSerializable(typeof(AtividadeResponse))]
+[JsonSerializable(typeof(AppsConectadosResponse))]
+[JsonSerializable(typeof(AutorizarAppRequest))]
+[JsonSerializable(typeof(AutorizarAppResponse))]
+[JsonSerializable(typeof(RascunhoResponse))]
+[JsonSerializable(typeof(RascunhoSituacaoResponse))]
+[JsonSerializable(typeof(TrocarCodigoRequest))]
+[JsonSerializable(typeof(TrocarCodigoResponse))]
 [JsonSerializable(typeof(PushConfiguracaoResponse))]
 [JsonSerializable(typeof(PushMensagem))]
 [JsonSerializable(typeof(PushSubscriptionRequest))]

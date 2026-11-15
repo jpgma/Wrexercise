@@ -45,11 +45,18 @@ public class AvisosEvidenciaTests
         Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Print));
 
     [Theory]
+    [InlineData(30, null)]
+    [InlineData((13 * 60) + 1, TipoAviso.FotoForaDoPeriodo)]
+    public void Integracao_ValeComoExif(int minutosDoInicio, string? esperado) =>
+        Assert.Equal(esperado, Aviso(Inicio.AddMinutes(minutosDoInicio), OrigemDataCaptura.Integracao));
+
+    [Theory]
     [InlineData("Exif", true)]
     [InlineData("Print", true)]
     [InlineData("Arquivo", true)]
     [InlineData("Camera", true)]
     [InlineData("camera", false)]
+    [InlineData("Integracao", false)]
     [InlineData("", false)]
     public void TryParseOrigem_AceitaSoAsOrigensConhecidas(string valor, bool esperado) =>
         Assert.Equal(esperado, AvisosEvidencia.TryParseOrigem(valor, out _));

@@ -47,8 +47,17 @@ function SessaoGate({ allow, redirectTo }: GateProps) {
 
   const isLogado = usuario !== null;
   if (isLogado !== (allow === "logado")) {
+    // Sem sessão, guarda o destino: o link do Movr (ou de uma notificação) volta para ele depois de entrar.
+    const state =
+      allow === "logado"
+        ? { redirectTo: `${location.pathname}${location.search}` }
+        : undefined;
     return (
-      <Navigate to={getStateRedirect(location.state) ?? redirectTo} replace />
+      <Navigate
+        to={getStateRedirect(location.state) ?? redirectTo}
+        state={state}
+        replace
+      />
     );
   }
 
@@ -69,7 +78,7 @@ function SessaoGate({ allow, redirectTo }: GateProps) {
   return <Outlet />;
 }
 
-/** Quem veio de um convite volta para ele depois de entrar. */
+/** Quem veio de um convite ou de um link protegido volta para ele depois de entrar. */
 function getStateRedirect(state: unknown): string | undefined {
   const target = (state as { redirectTo?: unknown } | null)?.redirectTo;
   // Só caminhos internos: "//site" seria interpretado como outro domínio.

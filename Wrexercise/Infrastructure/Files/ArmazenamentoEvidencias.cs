@@ -155,6 +155,20 @@ internal sealed class ArmazenamentoEvidencias(IOptions<EvidenciasOptions> option
         return completoNormalizado;
     }
 
+    /// <summary>Copia um arquivo já validado para um nome novo, na pasta do mês atual.</summary>
+    /// <returns>O caminho relativo da cópia.</returns>
+    public string Copiar(string caminhoRelativo)
+    {
+        var origem = ResolverCaminhoCompleto(caminhoRelativo);
+        var agora = DateTimeOffset.UtcNow;
+        var subpasta = Path.Combine(agora.Year.ToString("D4"), agora.Month.ToString("D2"));
+        Directory.CreateDirectory(Path.Combine(_diretorioRaiz, subpasta));
+
+        var nome = $"{Guid.NewGuid():N}{Path.GetExtension(origem)}";
+        File.Copy(origem, Path.Combine(_diretorioRaiz, subpasta, nome));
+        return Path.Combine(subpasta, nome).Replace('\\', '/');
+    }
+
     public void ExcluirSeExistir(string caminhoRelativo)
     {
         var caminhoCompleto = Path.Combine(_diretorioRaiz, caminhoRelativo.Replace('/', Path.DirectorySeparatorChar));

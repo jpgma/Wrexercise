@@ -17,6 +17,12 @@ internal static class OrigemDataCaptura
     /// O nome não muda ao copiar o arquivo; ao contrário da data do arquivo, vale nos dois sentidos.
     /// </summary>
     public const string Print = "Print";
+
+    /// <summary>
+    /// A imagem do resumo de um treino que um app conectado preparou (ADR 0065), datada pelo fim do treino.
+    /// Só o servidor a atribui, ao postar o rascunho; o navegador não consegue informá-la.
+    /// </summary>
+    public const string Integracao = "Integracao";
 }
 
 /// <summary>
@@ -68,9 +74,11 @@ internal static class AvisosEvidencia
 
         return origem switch
         {
-            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print when instante > fim
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print
+                or OrigemDataCaptura.Integracao when instante > fim
                 => TipoAviso.FotoForaDoPeriodo,
-            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print => null,
+            OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print
+                or OrigemDataCaptura.Integracao => null,
             // A data do arquivo dentro ou depois da janela não diz nada sobre quando a foto foi tirada.
             _ => TipoAviso.FotoSemData,
         };

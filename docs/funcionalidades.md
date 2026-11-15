@@ -473,6 +473,25 @@ When the queue is not empty, the form page does not show the form. It shows only
 
 The form keeps a draft on the device, in IndexedDB (ADR 0058). The draft has the form fields, the prepared images and the `Idempotency-Key`. The form saves the draft when the user changes a field or an image, and before it sends the activity. Android can stop the application while the user is in the gallery. When the user opens the form again, the form loads the draft and shows "Recuperamos o registro que você não terminou." with the button "Descartar". The form deletes the draft when the activity is sent, when the user selects "Descartar", and when the user signs out (all drafts). A draft older than 48 hours is deleted. If the application stopped during the upload, the user sends the draft again: the same `Idempotency-Key` returns the same activity, and the images that arrived return `409 EVIDENCIA_JA_ANEXADA`.
 
+### 7.1.1. Activity from a connected app (`Integracao`)
+
+The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascunho`) of each workout. Movr never sends an activity. The user always sends it in the Wrexercise form.
+
+- Connect: Movr opens `/integracoes/movr/autorizar` with a PKCE challenge, a `state` and a return address. If the user is not logged in, the application shows the login page and then opens the same link again. The page "Conectar o Movr" lists what Movr can do and what Movr cannot do. "Permitir" gets a one-time code (5 minutes) and opens the return address with the code. The page also shows the button "Voltar ao Movr". "Agora não" goes to the home page.
+- The return address must be `movr://integracoes/wrexercise` or `http://127.0.0.1:{port}/wx-callback`. Other addresses get `400 DADOS_INVALIDOS`.
+- Movr changes the code for a token with the PKCE verifier (`POST /api/integracoes/token`). A wrong verifier, an expired code or a used code gets `400 CODIGO_INVALIDO`. A wrong verifier also makes the code unusable. A new connection revokes the previous connection of the same app.
+- The token has no expiry. It works only on `/api/integracoes/*` and only without the session cookie. Else the API returns `401 APP_NAO_AUTORIZADO`. Movr can revoke its own token (`DELETE /api/integracoes/token`).
+- Draft: Movr sends `PUT /api/integracoes/rascunhos/{externalId}` with the type, the duration, the start, the end, the summary image (image only, maximum 5 MB) and a JPEG thumbnail (maximum 100 KB). `externalId` is the workout ID in Movr. The same ID replaces the data and the image of the same draft. A start more than 48 hours in the past gets `400 ATIVIDADE_MUITO_ANTIGA`. A draft that is already an activity gets `409 RASCUNHO_JA_POSTADO`.
+- A draft expires 48 hours after its start. Each `PUT` deletes the expired drafts of the user that are not activities.
+- Movr reads the status with `GET /api/integracoes/rascunhos/{externalId}`: `Pendente`, `Postada` or `Expirada`, and the path to open (`/importar/{id}`, or `/atividades/{id}` when the draft is an activity).
+- Movr opens `/importar/{id}`. If the user has one group, the page opens the form of that group. If the user has more groups, the page "Postar em qual grupo?" lists them. If the draft is an activity, the page opens the activity. If the draft expired, the page shows "Esse treino passou do prazo".
+- The form (`?rascunho={id}`) fills the type, the duration (rounded to minutes) and the start from the draft. It shows "Treino importado do Movr." The summary image is the first evidence, with a lock and the label "Movr". The user cannot remove it. The user can add 2 more images or videos and change all the fields. The device draft of the form (see 7.1) has a separate key for each imported draft.
+- The form sends `rascunhoId` with `Fotografia`. In the same transaction, the server copies the image and the thumbnail of the draft to the activity, and adds the evidence with the origin `Integracao` and the end of the workout as the capture date. The server calculates the warnings as for `Exif` (see 7.5). The draft becomes `Postada`. A draft of another user, an expired draft or a draft that is already an activity gets `404 RASCUNHO_NAO_ENCONTRADO`, and the server does not make the activity.
+- If the author deletes the activity (see 7.6), the draft becomes `Pendente` again.
+- The browser cannot send the origin `Integracao`.
+- If the review queue is not empty, the button "Começar avaliação" keeps the draft until the form opens again.
+- The Settings page shows "Apps conectados" when there is an active connection. "Desconectar" revokes the token.
+
 ### 7.2. Evidence
 
 - The form has two buttons: "Câmera" and "Galeria".
@@ -817,6 +836,7 @@ The system makes a notification for these events:
 ### 13.1. Installation
 
 - The user can install the application on the home screen of the phone.
+- On Android, a link inside the application scope opens the installed application. When the application is already open, a new link opens in the same window (`launch_handler`, `navigate-existing`).
 - On Chromium and Android, the Settings page shows "Instalar aplicativo".
 - On iOS, the Settings page tells the user to use "Compartilhar" and "Adicionar à Tela de Início".
 - In the browser, a notice at the top of all pages also tells the user to install the application. On Chromium and Android, the notice has an "Instalar" button. On iOS, it shows the same instruction as the Settings page.
@@ -872,7 +892,7 @@ These functions are for the operator. They are not in the interface.
 - Each private operation makes sure that the user is logged in and is an active member of the group.
 - The application does not show e-mails to other users.
 - Invitation and password reset tokens are in the fragment of the URL (after `#`). The browser does not send the fragment to the server.
-- Write operations from a different origin fail.
+- Write operations from a different origin fail. Exception: the routes `/api/integracoes/*` without the session cookie, which use the token of a connected app (see 7.1.1).
 - The application does not load fonts, icons or code from external servers.
 - An error message never shows internal details. An internal error (`500 ERRO_INTERNO`) has `referencia`: 6 random letters and numbers. The application shows "Erro interno do servidor. Código: 7F3K2Q". The server log has the same code, and `erros.bat` finds it (see `docs/decisoes/0056-erros-recentes.md`).
 

@@ -9,11 +9,12 @@ import {
   Minus,
   Play,
   Plus,
+  Smartphone,
   Trash2,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import { z } from "zod";
 import { Avatar } from "@/components/Avatar";
 import { PageHeader } from "@/components/PageHeader";
@@ -57,6 +58,7 @@ import {
 } from "@/features/desafios";
 import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
+import { appIntegracaoLabels, useRascunho } from "@/features/integracoes";
 import { useResumoGrupo } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
 
@@ -180,9 +182,11 @@ function TreinoRegistrado({
 function AvisoFila({
   grupoId,
   pendentes,
+  rascunhoId,
 }: {
   grupoId: string;
   pendentes: AtividadeResumo[];
+  rascunhoId: string | null;
 }) {
   const autores = [
     ...new Map(pendentes.map((a) => [a.usuarioId, a.nomeExibicao])),
@@ -243,7 +247,7 @@ function AvisoFila({
         </li>
       </ol>
       <Link
-        to={`/grupos/${grupoId}/revisar/${pendentes[0]?.id}?depois=registrar&total=${total}`}
+        to={`/grupos/${grupoId}/revisar/${pendentes[0]?.id}?depois=registrar&total=${total}${rascunhoId ? `&rascunho=${rascunhoId}` : ""}`}
         replace
         className="btn-primary mt-6 w-full"
       >
@@ -255,6 +259,14 @@ function AvisoFila({
 
 export function RegistrarAtividadePage() {
   const { id: grupoId = "" } = useParams();
+  // ADR 0065: o treino que o Movr preparou preenche o formulário e traz a imagem do resumo.
+  const [busca] = useSearchParams();
+  const rascunhoId = busca.get("rascunho");
+  const importado = useRascunho(rascunhoId);
+  const importadoPendente =
+    importado.data?.situacao === "Pendente" ? importado.data : null;
+  // Cada importação tem seu próprio rascunho no aparelho: não se mistura com um registro comum.
+  const chaveLocal = rascunhoId ? `${grupoId}:rascunho:${rascunhoId}` : grupoId;
   const grupo = useGrupo(grupoId);
   const fila = useFilaAvaliacao(grupoId);
   const resumo = useResumoGrupo(grupoId);
@@ -299,6 +311,8 @@ export function RegistrarAtividadePage() {
     defaultValues: valoresPadrao(),
   });
   const valores = useWatch({ control });
+  // A imagem do app ocupa uma das vagas de comprovante.
+  const vagas = maximoDeEvidencias - (importadoPendente ? 1 : 0);
 
   const duracaoMinutos = useWatch({ control, name: "duracaoMinutos" });
   const tipoAtual = useWatch({ control, name: "tipo" });
@@ -315,14 +329,31 @@ export function RegistrarAtividadePage() {
   );
 
   // O Android pode encerrar o PWA enquanto a pessoa está na galeria: o rascunho traz tudo de volta (ADR 0058).
+  // Com um treino importado, espera a resposta: sem rascunho no aparelho, os dados do app preenchem o formulário.
+  const aguardandoImportado = rascunhoId !== null && importado.isPending;
   useEffect(() => {
-    if (!usuarioId || rascunhoLido.current) return;
+    if (!usuarioId || rascunhoLido.current || aguardandoImportado) return;
     let cancelado = false;
-    void lerRascunhoRegistro<Partial<FormData>>(usuarioId, grupoId).then(
+    void lerRascunhoRegistro<Partial<FormData>>(usuarioId, chaveLocal).then(
       (rascunho) => {
         if (cancelado) return;
         rascunhoLido.current = true;
-        if (!rascunho) return;
+        if (!rascunho) {
+          if (importadoPendente) {
+            reset({
+              ...valoresPadrao(),
+              tipo: importadoPendente.tipo,
+              duracaoMinutos: Math.max(
+                1,
+                Math.round(importadoPendente.duracaoSegundos / 60),
+              ),
+              startedAt: toLocalInputValue(
+                new Date(importadoPendente.startedAt),
+              ),
+            });
+          }
+          return;
+        }
         reset({ ...valoresPadrao(), ...rascunho.valores });
         setAnexos(rascunho.evidencias.map(criarAnexo));
         envio.current = rascunho.envio;
@@ -332,7 +363,7 @@ export function RegistrarAtividadePage() {
     return () => {
       cancelado = true;
     };
-  }, [usuarioId, grupoId, reset]);
+  }, [usuarioId, chaveLocal, reset, aguardandoImportado, importadoPendente]);
 
   useEffect(() => {
     if (!usuarioId || !rascunhoLido.current || registrada) return;
@@ -342,17 +373,17 @@ export function RegistrarAtividadePage() {
       (valores.descricao ?? "").trim() !== "";
     const espera = setTimeout(() => {
       if (temAlgo) {
-        void salvarRascunhoRegistro(usuarioId, grupoId, {
+        void salvarRascunhoRegistro(usuarioId, chaveLocal, {
           valores,
           evidencias: anexos.map(({ preparada }) => preparada),
           envio: envio.current,
         });
       } else {
-        void apagarRascunhoRegistro(usuarioId, grupoId);
+        void apagarRascunhoRegistro(usuarioId, chaveLocal);
       }
     }, 300);
     return () => clearTimeout(espera);
-  }, [valores, anexos, usuarioId, grupoId, registrada]);
+  }, [valores, anexos, usuarioId, chaveLocal, registrada]);
 
   // As atividades do mesmo dia se somam, em proporção ao mínimo de cada tipo (decisões 0040 e 0045). O dia do
   // campo é o do aparelho, que costuma ser o fuso do grupo.
@@ -375,7 +406,11 @@ export function RegistrarAtividadePage() {
       duracaoSegundos: data.duracaoMinutos * 60,
       startedAt: new Date(data.startedAt).toISOString(),
       descricao: data.descricao,
-      tipoComprovacao: anexos.length > 0 ? "Fotografia" : "RegistroManual",
+      tipoComprovacao:
+        anexos.length > 0 || importadoPendente
+          ? "Fotografia"
+          : "RegistroManual",
+      ...(importadoPendente ? { rascunhoId: importadoPendente.id } : {}),
     };
     // Uma nova tentativa com os mesmos dados repete a chave: se a primeira chegou ao servidor e a resposta
     // se perdeu, ele devolve a atividade já criada (ADR 0053). Dados diferentes geram outra chave.
@@ -385,7 +420,7 @@ export function RegistrarAtividadePage() {
     }
     // Se o aplicativo for encerrado no meio do envio, o rascunho repete a mesma chave.
     if (usuarioId) {
-      await salvarRascunhoRegistro(usuarioId, grupoId, {
+      await salvarRascunhoRegistro(usuarioId, chaveLocal, {
         valores: data,
         evidencias: anexos.map(({ preparada }) => preparada),
         envio: envio.current,
@@ -429,13 +464,15 @@ export function RegistrarAtividadePage() {
       }
     }
     setEnviando(null);
-    if (usuarioId) void apagarRascunhoRegistro(usuarioId, grupoId);
+    if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
 
+    // A imagem do app já entrou com a atividade, no servidor.
+    const doApp = importadoPendente ? 1 : 0;
     setRegistrada({
       id: atividade.id,
       faltaNoDia,
-      enviadas,
-      anexadas: anexos.length,
+      enviadas: enviadas + doApp,
+      anexadas: anexos.length + doApp,
       motivos: [...motivos],
     });
   };
@@ -443,7 +480,20 @@ export function RegistrarAtividadePage() {
   // Se a fila não carregar, o formulário aparece e a API decide.
   const pendentes = fila.data ?? [];
 
-  if (grupo.isPending || fila.isPending) return <SplashScreen />;
+  if (grupo.isPending || fila.isPending || aguardandoImportado) {
+    return <SplashScreen />;
+  }
+
+  // O treino já virou atividade (por exemplo, em outro grupo): abre ela em vez de registrar de novo.
+  if (
+    !registrada &&
+    importado.data?.situacao === "Postada" &&
+    importado.data.atividadeId
+  ) {
+    return (
+      <Navigate to={`/atividades/${importado.data.atividadeId}`} replace />
+    );
+  }
 
   if (grupo.isError) {
     return (
@@ -470,7 +520,11 @@ export function RegistrarAtividadePage() {
           title="Registrar atividade"
           back={`/grupos/${grupoId}/inicio`}
         />
-        <AvisoFila grupoId={grupoId} pendentes={pendentes} />
+        <AvisoFila
+          grupoId={grupoId}
+          pendentes={pendentes}
+          rascunhoId={rascunhoId}
+        />
       </div>
     );
   }
@@ -482,10 +536,7 @@ export function RegistrarAtividadePage() {
     capturadaNoApp?: { em: Date; local: LocalCaptura | null },
   ) => {
     if (!lista) return;
-    const escolhidos = Array.from(lista).slice(
-      0,
-      maximoDeEvidencias - anexos.length,
-    );
+    const escolhidos = Array.from(lista).slice(0, vagas - anexos.length);
     const ehVideo = (arquivo: File) => arquivo.type.startsWith("video/");
     const fotos = escolhidos.filter((arquivo) => !ehVideo(arquivo));
     const videos = escolhidos.filter(ehVideo);
@@ -595,7 +646,7 @@ export function RegistrarAtividadePage() {
     envio.current = null;
     setErroAnexo(null);
     setRascunhoRestaurado(false);
-    if (usuarioId) void apagarRascunhoRegistro(usuarioId, grupoId);
+    if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
   };
 
   const removerAnexo = ({ url }: Anexo) => {
@@ -616,6 +667,30 @@ export function RegistrarAtividadePage() {
         title="Registrar atividade"
         back={`/grupos/${grupoId}/inicio`}
       />
+
+      {importadoPendente && (
+        <div
+          role="status"
+          className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft"
+        >
+          <Smartphone aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <p>
+            Treino importado do {appIntegracaoLabels[importadoPendente.app]}.
+            Confira os dados, junte uma selfie ou vídeo se quiser e envie.
+          </p>
+        </div>
+      )}
+      {rascunhoId && importado.isError && (
+        <p role="alert" className="form-error mb-5">
+          Não deu para carregar o treino do app.{" "}
+          {getErrorMessage(importado.error)}
+        </p>
+      )}
+      {importado.data?.situacao === "Expirada" && (
+        <p role="alert" className="form-error mb-5">
+          O treino do app passou das 48 horas e não pode mais ser postado.
+        </p>
+      )}
 
       {rascunhoRestaurado && (
         <div
@@ -751,8 +826,21 @@ export function RegistrarAtividadePage() {
             });
           }}
         />
-        {anexos.length > 0 && (
+        {(anexos.length > 0 || importadoPendente) && (
           <ul className="mb-2 grid grid-cols-3 gap-2">
+            {importadoPendente && (
+              <li className="relative overflow-hidden rounded-2xl border-2 border-outline">
+                <img
+                  src={importadoPendente.imagemUrl}
+                  alt={`Resumo do treino no ${appIntegracaoLabels[importadoPendente.app]}`}
+                  className="aspect-square w-full object-cover object-top"
+                />
+                <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
+                  <Lock aria-hidden="true" className="size-3" />
+                  {appIntegracaoLabels[importadoPendente.app]}
+                </span>
+              </li>
+            )}
             {anexos.map((anexo, indice) => (
               <li
                 key={anexo.url}
@@ -828,7 +916,7 @@ export function RegistrarAtividadePage() {
             {erroAnexo}
           </p>
         )}
-        {anexos.length < maximoDeEvidencias && (
+        {anexos.length < vagas && (
           <div className="rounded-2xl border-2 border-dashed border-border-strong bg-surface p-3">
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -875,7 +963,7 @@ export function RegistrarAtividadePage() {
               <p className="mt-2 text-center text-xs text-muted">
                 {preparando
                   ? "Preparando…"
-                  : `Selfie, vídeo de até 1 minuto ou print do relógio (até ${maximoDeEvidencias})`}
+                  : `Selfie, vídeo de até 1 minuto ou print do relógio (até ${vagas})`}
               </p>
             )}
           </div>

@@ -101,4 +101,6 @@ export type CriarAtividadeData = {
   startedAt: string;
   descricao: string;
   tipoComprovacao: TipoComprovacao;
+  /** ADR 0065: o rascunho de um app conectado, cuja imagem vira a primeira evidência. */
+  rascunhoId?: string;
 };

@@ -5,7 +5,8 @@ internal sealed record CriarAtividadeRequest(
     int? DuracaoSegundos,
     DateTimeOffset? StartedAt,
     string? Descricao,
-    string? TipoComprovacao);
+    string? TipoComprovacao,
+    Guid? RascunhoId = null);
 
 /// <summary>
 /// <c>Tipo</c>: <c>Foto</c> ou <c>Video</c>; <c>DuracaoMs</c> só no vídeo. <c>GravadaNoApp</c>: a câmera do

@@ -136,7 +136,55 @@ Ver `decisoes/0011-atividades.md` e migração `006-create-atividades.sql`.
 | `sha256` | `text` | Hash do arquivo |
 | `ordem` | `smallint` | 1–3 por atividade |
 | `caminho_miniatura` | `text` | Opcional. JPEG gerado no navegador, sob o mesmo volume |
+| `origem_data_captura` | `text` | `Exif`, `Arquivo`, `Camera`, `Print` ou `Integracao` (só o servidor, ADR 0065) |
 | `created_at` | `timestamptz` | Padrão `now()` |
+
+## `codigos_integracao`
+
+Código de uso único da conexão de um app (ADR 0065). Ver migração `037-create-integracoes.sql`.
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `id` | `uuid` | Chave primária |
+| `usuario_id` | `uuid` | Quem autorizou; referencia `usuarios` |
+| `app` | `text` | `Movr` |
+| `code_hash` | `bytea` | SHA-256 do código; único |
+| `code_challenge` | `text` | Desafio PKCE S256 |
+| `redirect_uri` | `text` | Endereço de retorno da lista fechada |
+| `created_at` | `timestamptz` | Padrão `now()` |
+| `expires_at` | `timestamptz` | 5 minutos depois |
+| `used_at` | `timestamptz` | Vazia até a troca pelo token |
+
+## `apps_conectados`
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `id` | `uuid` | Chave primária |
+| `usuario_id` | `uuid` | Referencia `usuarios` |
+| `app` | `text` | `Movr` |
+| `token_hash` | `bytea` | SHA-256 do token; único |
+| `created_at` | `timestamptz` | Padrão `now()` |
+| `last_used_at` | `timestamptz` | Último uso do token |
+| `revoked_at` | `timestamptz` | Vazia enquanto ativo |
+
+## `rascunhos_atividade`
+
+Treino preparado por um app conectado. Único por (`usuario_id`, `app`, `external_id`).
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `id` | `uuid` | Chave primária |
+| `usuario_id` | `uuid` | Referencia `usuarios` |
+| `app` | `text` | `Movr` |
+| `external_id` | `text` | Identificador do treino no app |
+| `tipo` | `text` | Tipo de atividade |
+| `duracao_segundos` | `integer` | 60 a 86400 |
+| `started_at`, `ended_at` | `timestamptz` | Início e fim do treino |
+| `caminho_relativo`, `tipo_mime`, `tamanho_bytes`, `sha256` | | Imagem do resumo, no volume de evidências |
+| `caminho_miniatura` | `text` | JPEG |
+| `created_at`, `updated_at` | `timestamptz` | Padrão `now()` |
+| `expires_at` | `timestamptz` | `started_at` + 48 horas |
+| `atividade_id` | `uuid` | A atividade postada; `ON DELETE SET NULL` |
 
 ## `revisores_atividade`
 

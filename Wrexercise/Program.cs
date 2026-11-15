@@ -10,6 +10,7 @@ using Wrexercise.Features.Convites;
 using Wrexercise.Features.Desafios;
 using Wrexercise.Features.Grupos;
 using Wrexercise.Features.Health;
+using Wrexercise.Features.Integracoes;
 using Wrexercise.Features.Jogo;
 using Wrexercise.Features.Notificacoes;
 using Wrexercise.Features.Progresso;
@@ -70,6 +71,7 @@ builder.Services.AddAutenticacaoRateLimiter();
 builder.Services.AddAtividadesRateLimiter();
 builder.Services.AddReacoesRateLimiter();
 builder.Services.AddJogoRateLimiter();
+builder.Services.AddIntegracoesRateLimiter();
 builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 builder.Services.AddHostedService<LimpezaAvataresBackgroundService>();
 builder.Services.AddHostedService<EnvioPushBackgroundService>();
@@ -106,6 +108,7 @@ app.MapReacoesRoutes();
 app.MapUsuariosRoutes();
 app.MapNotificacoesRoutes();
 app.MapJogoRoutes();
+app.MapIntegracoesRoutes();
 
 // Rota de API inexistente responde 404 em JSON, nunca com o index.html da SPA.
 app.Map("/api/{**rest}", () =>
