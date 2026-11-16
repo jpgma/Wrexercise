@@ -172,6 +172,56 @@ where j.enviada_em >= now() - make_interval(days => :dias)
       select 1 from atividades a
       where a.usuario_id = j.destinatario_id
         and a.started_at between j.enviada_em - interval '7 days' and j.enviada_em);
+-- Quem compra o quê, e as cartas ficam paradas? "Nunca jogadas" são as que não entraram em nenhuma Jogada,
+-- nem como Resposta. Não é a Mão: a Provocação recusada ou expirada volta para a Mão, e a Jogada concluída
+-- gasta a carta, mas a conclusão é calculada no app (gamificação §6.2).
+select 'Cartas de ' || pessoa, sum(n) || ' compradas', sum(energia) || ' EN',
+       'nunca jogadas: ' || coalesce(string_agg(codigo || ' ' || paradas, ', ' order by codigo) filter (where paradas > 0), '-'),
+       sum(provocacoes) || ' em Jogadas', sum(respostas) || ' usadas como Resposta'
+from (
+    select usuario_id, pessoa, codigo, count(*) as n, sum(preco) as energia,
+           count(*) filter (where not provocacao and not resposta) as paradas,
+           count(*) filter (where provocacao) as provocacoes,
+           count(*) filter (where resposta) as respostas
+    from (
+        select c.usuario_id, split_part(u.nome_exibicao, ' ', 1) as pessoa, c.codigo, c.preco,
+               exists (select 1 from jogadas j where j.carta_id = c.id) as provocacao,
+               exists (select 1 from jogadas j where j.carta_resposta_id = c.id) as resposta
+        from cartas c
+        join usuarios u on u.id = c.usuario_id
+        where c.created_at >= now() - make_interval(days => :dias)
+    ) y
+    group by usuario_id, pessoa, codigo
+) x
+group by usuario_id, pessoa
+order by sum(n) desc, pessoa;
+-- As 30 Jogadas mais recentes, uma por linha. "Concluída" vem do aviso JogadaConcluida, que a limpeza das
+-- notificações antigas apaga: numa Jogada antiga, a falta do aviso não quer dizer que ela não foi cumprida.
+select 'Jogada ' || to_char(j.enviada_em at time zone g.fuso_horario, 'YYYY-MM-DD HH24:MI'),
+       split_part(r.nome_exibicao, ' ', 1) || ' para ' || split_part(d.nome_exibicao, ' ', 1),
+       c.codigo || coalesce(' (objetivo ' || j.codigo_objetivo || ')', '')
+           || case when j.origem_id is not null then ' (devolvida por DesafioDuplo)' else '' end,
+       case
+           when j.resposta = 'Recusada' then 'recusada'
+           when j.resposta = 'Aceita' then 'aceita' || coalesce(' com ' || cr.codigo, '')
+           when j.expira_em < now() then 'expirada sem resposta'
+           else 'aguardando resposta'
+       end,
+       case
+           when exists (select 1 from notificacoes n where n.jogada_id = j.id and n.tipo = 'JogadaConcluida') then 'concluída'
+           when j.resposta = 'Aceita' and j.expira_em >= now() then 'prazo até ' || to_char(j.expira_em at time zone g.fuso_horario, 'YYYY-MM-DD HH24:MI')
+           when j.resposta = 'Aceita' then 'sem aviso de conclusão'
+           else '-'
+       end
+from jogadas j
+join grupos g on g.id = j.grupo_id
+join cartas c on c.id = j.carta_id
+join usuarios r on r.id = j.remetente_id
+join usuarios d on d.id = j.destinatario_id
+left join cartas cr on cr.id = j.carta_resposta_id
+where j.enviada_em >= now() - make_interval(days => :dias)
+order by j.enviada_em desc
+limit 30;
 select 'Rivais escolhidos', count(*), count(distinct escolhedor_id) || ' pessoas escolheram'
 from rivais
 where created_at >= now() - make_interval(days => :dias);
