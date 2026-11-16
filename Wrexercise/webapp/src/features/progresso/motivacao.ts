@@ -1,3 +1,5 @@
+import type { ProximoClassificacao } from "./types";
+
 export type Motivacao = {
   /** Curto, cabe no título do cabeçalho. */
   titulo: string;
@@ -76,4 +78,38 @@ export function getMotivacao({
     titulo: `Faltam ${faltam}`,
     detalhe: `${diasTexto} pela frente. Ainda dá tempo!`,
   };
+}
+
+/** Texto da disputa na classificação, o 3º quadro do cabeçalho do modo `Jogo` (ADR 0066). */
+export function getDisputa({
+  tipo,
+  nomeExibicao,
+  quantidade,
+}: ProximoClassificacao): Motivacao {
+  const nome = nomeExibicao.trim().split(/\s+/)[0] ?? nomeExibicao;
+  switch (tipo) {
+    case "Lider":
+      return {
+        titulo: "Na liderança!",
+        detalhe:
+          quantidade > 0
+            ? `${plural(quantidade, "treino", "treinos")} à frente de ${nome}.`
+            : "Você está em 1º no desafio.",
+      };
+    case "Treinos":
+      return {
+        titulo: "Na cola!",
+        detalhe: `${quantidade === 1 ? "Falta" : "Faltam"} ${plural(quantidade, "treino", "treinos")} para passar ${nome}.`,
+      };
+    case "Meta":
+      return {
+        titulo: "Bata a meta!",
+        detalhe: `Feche a semana para encostar em ${nome}.`,
+      };
+    case "Semanas":
+      return {
+        titulo: "Na caçada",
+        detalhe: `${nome} tem ${plural(quantidade, "semana cumprida", "semanas cumpridas")} a mais.`,
+      };
+  }
 }

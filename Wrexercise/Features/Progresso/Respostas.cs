@@ -47,11 +47,16 @@ internal sealed record ClassificacaoResumoItemResponse(
     Guid UsuarioId,
     string NomeExibicao,
     int SemanasCumpridas,
-    int SessoesVerificadas);
+    int SessoesVerificadas,
+    int SequenciaSemanas,
+    int? PosicaoInicioSemana);
 
 internal sealed record ResumoGrupoResponse(
     Guid GrupoId,
     DesafioDestaqueResponse? Desafio,
     int? SessoesPorSemana,
     ProgressoResumoResponse? MeuProgresso,
-    IReadOnlyList<ClassificacaoResumoItemResponse> Classificacao);
+    IReadOnlyList<ClassificacaoResumoItemResponse> Classificacao,
+    ProximoClassificacaoResponse? Proximo);
+
+internal sealed record ProximoClassificacaoResponse(string Tipo, string NomeExibicao, int Quantidade);

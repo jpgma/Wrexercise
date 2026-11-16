@@ -24,7 +24,7 @@ internal static class ObterResumoGrupo
         var destacado = await DesafioDestaqueGrupo.LoadAsync(connection, grupoId, cancellationToken);
         if (destacado is null)
         {
-            return Results.Ok(new ResumoGrupoResponse(grupoId, null, null, null, []));
+            return Results.Ok(new ResumoGrupoResponse(grupoId, null, null, null, [], null));
         }
 
         var desafio = await ContagensDesafio.LoadDesafioAsync(connection, destacado.Id, usuarioId, cancellationToken);
@@ -44,12 +44,29 @@ internal static class ObterResumoGrupo
             desafio.Hoje,
             desafio.SessoesPorSemana);
 
-        var top = ranking.Take(3).Select((item, index) => new ClassificacaoResumoItemResponse(
+        // As setas do Placar só fazem sentido com o desafio em curso (ADR 0066).
+        var ativo = destacado.Situacao == SituacaoDesafio.Ativo;
+        var inicioSemana = ativo
+            ? ClassificacaoDesafio.CalcularRankingInicioSemana(
+                participantes,
+                matriz,
+                desafio.DataInicio,
+                desafio.DataFim,
+                desafio.Hoje,
+                desafio.SessoesPorSemana)
+            : null;
+        var posicaoAnterior = inicioSemana?
+            .Select((item, index) => (item.UsuarioId, Posicao: index + 1))
+            .ToDictionary(item => item.UsuarioId, item => item.Posicao);
+
+        var classificacao = ranking.Select((item, index) => new ClassificacaoResumoItemResponse(
             index + 1,
             item.UsuarioId,
             item.NomeExibicao,
             item.SemanasCumpridas,
-            item.SessoesVerificadas)).ToList();
+            item.SessoesVerificadas,
+            item.SequenciaSemanas,
+            posicaoAnterior?.GetValueOrDefault(item.UsuarioId))).ToList();
 
         ProgressoResumoResponse? meuProgresso = null;
         if (!desafio.Cancelado)
@@ -83,6 +100,9 @@ internal static class ObterResumoGrupo
                 destacado.DuracaoMinimaSegundos),
             desafio.SessoesPorSemana,
             meuProgresso,
-            top));
+            classificacao,
+            ativo && ClassificacaoDesafio.GetProximo(ranking, usuarioId, meuProgresso?.MetaCumprida ?? false) is { } proximo
+                ? new ProximoClassificacaoResponse(proximo.Tipo, proximo.NomeExibicao, proximo.Quantidade)
+                : null));
     }
 }

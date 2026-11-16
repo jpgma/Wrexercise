@@ -6,29 +6,36 @@ type Quadro = { linha: string; titulo: string };
 const intervaloMs = 4000;
 
 /**
- * Cabeçalho do modo `Jogo`: alterna entre a saudação e o progresso da semana.
- * Para o leitor de tela, os dois textos ficam fixos. Tocar troca o quadro e pausa a alternância;
- * com movimento reduzido, não alterna e mostra a saudação com o detalhe do progresso.
+ * Cabeçalho do modo `Jogo`: alterna entre a saudação, o progresso da semana e, se houver, a disputa
+ * na classificação (ADR 0066). Para o leitor de tela, os textos ficam fixos. Tocar troca o quadro e
+ * pausa a alternância; com movimento reduzido, não alterna e mostra a saudação com o detalhe do progresso.
  */
 export function SaudacaoAlternada({
   saudacao,
   progresso,
+  disputa,
 }: {
   saudacao: Quadro;
   progresso: Quadro;
+  disputa?: Quadro;
 }) {
   const reduzido = useMovimentoReduzido();
   const [indice, setIndice] = useState(0);
   const [pausado, setPausado] = useState(false);
+  const quadros = disputa
+    ? [saudacao, progresso, disputa]
+    : [saudacao, progresso];
+  const total = quadros.length;
+  const atual = indice % total;
 
   useEffect(() => {
     if (reduzido || pausado) return;
     const timer = window.setInterval(
-      () => setIndice((i) => (i + 1) % 2),
+      () => setIndice((i) => (i + 1) % total),
       intervaloMs,
     );
     return () => window.clearInterval(timer);
-  }, [reduzido, pausado]);
+  }, [reduzido, pausado, total]);
 
   if (reduzido) {
     return (
@@ -36,6 +43,11 @@ export function SaudacaoAlternada({
         <p className="truncate text-sm text-muted">{progresso.linha}</p>
         <h1 className="truncate text-3xl uppercase">{saudacao.titulo}</h1>
         <p className="sr-only">{progresso.titulo}</p>
+        {disputa && (
+          <p className="sr-only">
+            {disputa.titulo} {disputa.linha}
+          </p>
+        )}
       </div>
     );
   }
@@ -46,21 +58,26 @@ export function SaudacaoAlternada({
       <p className="sr-only">
         {progresso.titulo} {progresso.linha}
       </p>
+      {disputa && (
+        <p className="sr-only">
+          {disputa.titulo} {disputa.linha}
+        </p>
+      )}
       <div
         aria-hidden="true"
         className="h-[3.5rem] cursor-pointer overflow-hidden select-none"
         onClick={() => {
           setPausado(true);
-          setIndice((i) => (i + 1) % 2);
+          setIndice((i) => (i + 1) % total);
         }}
         onMouseEnter={() => setPausado(true)}
         onMouseLeave={() => setPausado(false)}
       >
         <div
           className="transition-transform duration-350 ease-out"
-          style={{ transform: `translateY(${-indice * 3.5}rem)` }}
+          style={{ transform: `translateY(${-atual * 3.5}rem)` }}
         >
-          {[saudacao, progresso].map((quadro, i) => (
+          {quadros.map((quadro, i) => (
             <div key={i} className="h-[3.5rem]">
               <p className="truncate text-sm text-muted first-letter:uppercase">
                 {quadro.linha}

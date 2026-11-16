@@ -28,6 +28,7 @@ import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { PainelFoco } from "./PainelFoco";
+import { type PlacarCena, PlacarJogo } from "./PlacarJogo";
 import { getTipoCutucada } from "./textosCutucada";
 import { getBloqueioJogada, primeiroNome } from "./textosCartas";
 import {
@@ -467,17 +468,15 @@ function useFatorDeEncaixe() {
   return { ref: setElemento, fator };
 }
 
-/** O pódio do desafio em destaque: até 3 pessoas, cada uma com a sua posição. */
-export type PodioCena = { usuarioId: string; posicao: number }[];
-
 export function CenaGrupo({
   grupoId,
   usuarioId,
-  podio = [],
+  placar,
 }: {
   grupoId: string;
   usuarioId: string;
-  podio?: PodioCena;
+  /** A classificação do desafio em destaque; sem ela, nem Placar nem medalhas. */
+  placar?: PlacarCena;
 }) {
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
@@ -501,7 +500,7 @@ export function CenaGrupo({
       grupoId={grupoId}
       usuarioId={usuarioId}
       reduzido={reduzido}
-      podio={podio}
+      placar={placar}
     />
   );
 }
@@ -558,19 +557,25 @@ function Praca({
   grupoId,
   usuarioId,
   reduzido,
-  podio,
+  placar,
 }: {
   cena: Cena;
   grupoId: string;
   usuarioId: string;
   reduzido: boolean;
-  podio: PodioCena;
+  placar: PlacarCena | undefined;
 }) {
   const { ref, fator } = useFatorDeEncaixe();
   const { showToast } = useToast();
+  // Medalhas só para os 3 primeiros que já têm atividade verificada.
   const posicaoNoPodio = useMemo(
-    () => new Map(podio.map((p) => [p.usuarioId, p.posicao])),
-    [podio],
+    () =>
+      new Map(
+        (placar?.itens ?? [])
+          .filter((p) => p.posicao <= 3 && p.sessoesVerificadas > 0)
+          .map((p) => [p.usuarioId, p.posicao]),
+      ),
+    [placar],
   );
   const jogadas = useJogadas(grupoId);
   const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
@@ -874,6 +879,17 @@ function Praca({
             >
               VS
             </span>
+          )}
+          {placar && (
+            <PlacarJogo
+              placar={placar}
+              usuarioId={usuarioId}
+              dormindo={dormindo}
+              oculto={emFoco || entrada.ativa || encenacao.ativa}
+              onToque={(id) => {
+                if (!emAcao) foco.abrir(id);
+              }}
+            />
           )}
           {alvo && (
             <PainelFoco

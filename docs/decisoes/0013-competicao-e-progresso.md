@@ -48,7 +48,7 @@ A semana corrente entra nas contagens como as demais (meta só com verificadas).
 |---|---|---|
 | GET | `/api/desafios/{id}/classificacao` | Ranking e estatísticas por participante |
 | GET | `/api/desafios/{id}/historico` | Histórico semanal do usuário autenticado |
-| GET | `/api/grupos/{grupoId}/resumo` | Desafio em destaque, progresso da semana do usuário, top 3 |
+| GET | `/api/grupos/{grupoId}/resumo` | Desafio em destaque, progresso da semana do usuário, classificação (top 3 até a ADR 0066, que passou a trazer todos) |
 
 Permissões: qualquer membro ativo do grupo (404 se não membro ou desafio/grupo inexistente, como nas rotas de desafio).
 

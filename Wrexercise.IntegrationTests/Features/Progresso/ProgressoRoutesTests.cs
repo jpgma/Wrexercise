@@ -261,6 +261,44 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ResumoGrupo_TrazTodosComAPosicaoDoInicioDaSemanaEADisputa()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var caio = await _host.AddMembroAsync(grupoId, nome: "Caio");
+        await _host.AddMembroAsync(grupoId, nome: "Duda");
+        var desafioId = await CreateDesafioAsync(ana, grupoId);
+        await IniciarAsync(desafioId);
+        // O desafio começou na semana passada: esta é a segunda.
+        await _host.ExecuteAsync($"""
+            UPDATE desafios SET data_inicio = {SegundaDaSemana} - 7, data_fim = {SegundaDaSemana} + 20
+            WHERE id = '{desafioId}'
+            """);
+
+        // Bia treinou na semana passada e Ana nesta: empatadas, Ana passa na frente pelo nome.
+        await PostAtividadeAsync(bia, grupoId, 3600);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET started_at = started_at - interval '7 days'
+            WHERE grupo_id = '{grupoId}'
+            """);
+        await PostAtividadeAsync(ana, grupoId, 3600);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
+            WHERE grupo_id = '{grupoId}'
+            """);
+
+        var resumo = await GetResumoAsync(caio, grupoId);
+
+        Assert.Equal(["Ana", "Bia", "Caio", "Duda"], resumo.Classificacao.Select(c => c.NomeExibicao));
+        Assert.Equal([2, 1, 3, 4], resumo.Classificacao.Select(c => c.PosicaoInicioSemana));
+        Assert.Equal(new ProximoClassificacaoResponse("Treinos", "Bia", 2), resumo.Proximo);
+        Assert.Equal(
+            new ProximoClassificacaoResponse("Lider", "Bia", 0),
+            (await GetResumoAsync(ana, grupoId)).Proximo);
+    }
+
+    [Fact]
     public async Task Classificacao_Retorna404ParaQuemNaoEMembro()
     {
         var ana = await _host.CreateUsuarioAsync();

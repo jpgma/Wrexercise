@@ -22,6 +22,7 @@ import { useGrupo } from "@/features/grupos";
 import { CenaGrupo, ConviteJogo, SaudacaoAlternada } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
+  getDisputa,
   getMotivacao,
   LinhaParticipante,
   useResumoGrupo,
@@ -221,19 +222,23 @@ function InicioJogo({
 }) {
   // Com meta, o progresso fica no cabeçalho (anel no avatar e saudação alternada).
   const temMeta = !!(resumo?.meuProgresso && resumo.sessoesPorSemana);
-  // Medalhas só com o desafio em curso ou encerrado, e só para quem já tem atividade verificada:
-  // no começo, com todos zerados, a ordem seria só alfabética.
+  // Placar e medalhas só com o desafio em curso ou encerrado, e só quando alguém já tem atividade
+  // verificada: no começo, com todos zerados, a ordem seria só alfabética (ADR 0066).
   const comClassificacao =
     resumo?.desafio &&
     resumo.desafio.situacao !== "Agendado" &&
-    resumo.desafio.situacao !== "Cancelado";
-  const podio = comClassificacao
-    ? resumo.classificacao.filter((c) => c.sessoesVerificadas > 0)
+    resumo.desafio.situacao !== "Cancelado" &&
+    resumo.classificacao.some((c) => c.sessoesVerificadas > 0);
+  const placar = comClassificacao
+    ? {
+        itens: resumo.classificacao,
+        encerrado: resumo.desafio?.situacao === "Encerrado",
+      }
     : undefined;
 
   return (
     <div className="mt-6 space-y-4">
-      <CenaGrupo grupoId={grupoId} usuarioId={usuarioId} podio={podio} />
+      <CenaGrupo grupoId={grupoId} usuarioId={usuarioId} placar={placar} />
       {!temMeta && resumo && (
         <p className="card p-4 text-sm text-muted">
           {!resumo.desafio
@@ -323,6 +328,12 @@ export function InicioPage() {
                 contaNestaSemana: progresso.contaNestaSemana,
               });
               return { linha: m.detalhe, titulo: m.titulo };
+            })()}
+            disputa={(() => {
+              const proximo = resumo.data?.proximo;
+              if (!proximo) return undefined;
+              const d = getDisputa(proximo);
+              return { linha: d.detalhe, titulo: d.titulo };
             })()}
           />
         ) : (
