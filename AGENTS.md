@@ -62,7 +62,7 @@ Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 
-`Placar` (ADR 0066): a faixa no alto da praça do modo `Jogo` com a Classificacao de todos os participantes. Na interface, os itens mostram posição, retrato, primeiro nome e semanas cumpridas (★).
+`Placar` (ADR 0066, 0067): a faixa no alto da praça do modo `Jogo` com a Classificacao de todos os participantes. Quando os itens não cabem, ela corre sozinha como um letreiro. Na interface, os itens mostram posição, retrato, primeiro nome e semanas cumpridas (★).
 
 Modos da tela inicial: `App`, `Jogo` (ver `docs/gamificacao.md`). A tela do modo `Jogo` mostra a `Cena` do grupo; tocar num colega abre o `Foco`, a câmera aproximada nele. A `Mao` fica logo abaixo da praça, com a `Mesa` (as Jogadas de quem vê) embaixo das cartas.
 
