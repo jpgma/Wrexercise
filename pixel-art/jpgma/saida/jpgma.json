@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 4656,
+  "altura": 6192,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -94,6 +94,30 @@
       "quadros": 4,
       "ms": 200,
       "origem": "parado"
+    },
+    "dormindo": {
+      "linha": 97,
+      "quadros": 4,
+      "ms": 350,
+      "origem": "Gemini"
+    },
+    "adormecer": {
+      "linha": 105,
+      "quadros": 8,
+      "ms": 140,
+      "origem": "Gemini"
+    },
+    "acordar": {
+      "linha": 113,
+      "quadros": 5,
+      "ms": 110,
+      "origem": "Gemini"
+    },
+    "levantar": {
+      "linha": 121,
+      "quadros": 8,
+      "ms": 120,
+      "origem": "Gemini"
     }
   },
   "paleta": [
@@ -116,5 +140,5 @@
     "#e74647",
     "#702623"
   ],
-  "sha256": "2bf093bfab82b1b0db1234d658b274da8311377f5783602815a30558609e7a3b"
+  "sha256": "b74a788d3eeaa29f148f7c59c16069d52a04de1ae315fe2071d0ceeaf93d296b"
 }

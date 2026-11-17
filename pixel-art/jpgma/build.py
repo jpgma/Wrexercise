@@ -1,7 +1,7 @@
 """Avatar `jpgma` em 8 direções (docs/decisoes/0039-avatar-em-8-direcoes.md, proposta).
 
 A fonte da verdade é fonte/jpgma.aseprite, editado à mão no Aseprite: um quadro de 48×48 por célula
-da folha, na ordem da tabela ANIMACOES (a `rotacao`, depois cada animação × 8 direções, uma tag
+da folha, na ordem de ANIMACOES e depois de DORMIR (a `rotacao`, depois cada animação × 8 direções, uma tag
 `animacao-direcao` por trecho). O build só lê esse arquivo, confere o formato e a paleta e monta a
 folha; ele nunca escreve no .aseprite.
 
@@ -9,9 +9,12 @@ Origem do desenho: duas exportações do PixelLab (`rotations`, Walking, Running
 Taking_Punch), com o ruído de cor levado para a paleta e recortadas de 64×64 para 48×48 sem reamostrar.
 O `parado` (respiração) foi desenhado sobre a `rotacao`. Desde 2026-11-09, tudo se edita no .aseprite.
 
+As 4 animações de dormir (DORMIR) vêm do Gemini: o gemini.py reduz as folhas de fonte/gemini/ e o
+dormir.py acrescentou os quadros ao fim do .aseprite, uma vez (prompts em prompts-gemini.md).
+
 Desde 2026-11-10, a folha padrão do aplicativo é o base masculino (pixel-art/base-masculino/). A folha
 do `jpgma` fica fora do bundle: saida/jpgma-importar.png é a mesma folha em PNG indexado, no formato de
-97 linhas, pronta para importar em /perfil/avatar. As animações que o `jpgma` não tem repetem as linhas
+129 linhas, pronta para importar em /perfil/avatar. As animações que o `jpgma` não tem repetem as linhas
 de outra (EMPRESTADAS), como o aplicativo fazia quando ela era a padrão.
 
 Uso: python build.py   (exige Pillow e o pixel-plugin configurado; ver docs/avatar-kit.md §6)
@@ -58,7 +61,15 @@ EMPRESTADAS = [
     ("recusar", "parado"),
     ("provocar", "parado"),
 ]
-TOTAL = len(DIRECOES) * (1 + sum(qt for _, qt, _ in ANIMACOES))
+# As animações de dormir (docs/decisoes/0057-avatar-dormindo.md), no fim do .aseprite e da folha, depois
+# das EMPRESTADAS: (nome, quadros por direção, tempo por quadro em ms).
+DORMIR = [
+    ("dormindo", 4, 350),
+    ("adormecer", 8, 140),
+    ("acordar", 5, 110),
+    ("levantar", 8, 120),
+]
+TOTAL = len(DIRECOES) * (1 + sum(qt for _, qt, _ in ANIMACOES + DORMIR))
 
 # As 16 cores do PixelLab e os dois vermelhos da boca.
 PALETA = [
@@ -127,6 +138,11 @@ def montar(quadros: list[dict]) -> tuple[list[list[dict]], dict]:
         info = meta["animacoes"][origem]
         meta["animacoes"][nome] = {**info, "linha": len(linhas), "origem": origem}
         linhas.extend(linhas[info["linha"]:info["linha"] + len(DIRECOES)])
+    for nome, qt, ms in DORMIR:
+        meta["animacoes"][nome] = {"linha": len(linhas), "quadros": qt, "ms": ms, "origem": "Gemini"}
+        for _ in DIRECOES:
+            linhas.append(quadros[i:i + qt])
+            i += qt
     return linhas, meta
 
 
