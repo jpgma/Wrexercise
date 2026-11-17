@@ -709,6 +709,88 @@
     }
   }
 
+  /*
+   * Fusão (decisão 0070): as duas cartas recuam, batem uma na outra e tremem. --lado vale 1 na carta
+   * da esquerda e -1 na da direita: o recuo afasta do par, e a batida entra nele.
+   */
+  .fusao-colisao {
+    animation: fusao-colisao 620ms cubic-bezier(0.3, 0, 0.2, 1) both;
+  }
+
+  @keyframes fusao-colisao {
+    from {
+      transform: none;
+    }
+    28% {
+      transform: translateX(calc(var(--lado) * -22px))
+        rotate(calc(var(--lado) * -12deg));
+    }
+    46% {
+      transform: translateX(calc(var(--lado) * 9px)) scale(1.14);
+    }
+    58% {
+      transform: translate(calc(var(--lado) * -4px), -2px) scale(1.04);
+    }
+    70% {
+      transform: translate(calc(var(--lado) * 3px), 1px);
+    }
+    82% {
+      transform: translate(calc(var(--lado) * -2px), -1px);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /* Depois da batida, o par fundido brilha devagar. */
+  .fusao-pulso {
+    animation: fusao-pulso 900ms ease-in-out 620ms infinite alternate;
+  }
+
+  @keyframes fusao-pulso {
+    from {
+      filter: drop-shadow(0 0 0 transparent);
+    }
+    to {
+      filter: drop-shadow(0 0 5px var(--color-reward)) brightness(1.08);
+    }
+  }
+
+  /* As faíscas da batida: 6 quadros de 32 px (pixel-art/fusao), em 2×, uma vez só. */
+  .fusao-faiscas {
+    width: 64px;
+    height: 64px;
+    /* Fora da animação, a folha fica à esquerda do quadro: nada aparece antes da batida nem depois. */
+    background: url(/fusao.png) -384px 0 / 384px 64px no-repeat;
+    image-rendering: pixelated;
+    animation: fusao-faiscas 420ms steps(6) 270ms;
+  }
+
+  @keyframes fusao-faiscas {
+    from {
+      background-position-x: 0;
+    }
+    to {
+      background-position-x: -384px;
+    }
+  }
+
+  /* O selo FUSÃO estoura sobre o par, no fim da batida. */
+  .fusao-selo {
+    animation: fusao-selo 360ms cubic-bezier(0.34, 1.56, 0.64, 1) 300ms both;
+  }
+
+  @keyframes fusao-selo {
+    from {
+      opacity: 0;
+      transform: scale(0.3) rotate(-14deg);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-6deg);
+    }
+  }
+
   /* O anel sob os pés de quem pode receber a carta escolhida. */
   .mira-alvo {
     animation: mira-alvo 900ms ease-in-out infinite alternate;
@@ -814,8 +896,20 @@
     .carta-distribuir,
     .mira-alvo,
     .mesa-pendente,
-    .camera-tremor {
+    .camera-tremor,
+    .fusao-colisao,
+    .fusao-pulso {
       animation: none;
+    }
+
+    /* Sem movimento, o par aparece já fundido: sem faíscas, com o selo no lugar. */
+    .fusao-faiscas {
+      display: none;
+    }
+
+    .fusao-selo {
+      animation: none;
+      transform: rotate(-6deg);
     }
 
     .foco-impacto {

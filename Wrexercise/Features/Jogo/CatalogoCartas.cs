@@ -50,6 +50,13 @@ internal static class CatalogoCartas
 
     public static bool IsDuracao(string codigo) => codigo is CodigoCarta.Mais10Min or CodigoCarta.Mais20Min;
 
+    /// <summary>O bônus de quem cumpre uma Fusão, em % da soma dos preços das duas cartas (decisão 0070).</summary>
+    public const int BonusFusaoPorCento = 20;
+
+    /// <summary>Uma Fusão junta duas Provocações diferentes numa Jogada só (decisão 0070).</summary>
+    public static bool PodeFundir(Carta a, Carta b) =>
+        a.Tipo == TipoCarta.Provocacao && b.Tipo == TipoCarta.Provocacao && a.Codigo != b.Codigo;
+
     /// <summary>
     /// Os objetivos que a MUDANÇA DE PLANOS pode pôr no lugar de uma Provocação: os da mesma faixa de preço
     /// (decisão 0036).

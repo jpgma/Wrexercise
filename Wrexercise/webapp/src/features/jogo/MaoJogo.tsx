@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
 import { MesaJogadas } from "./MesaJogadas";
@@ -7,7 +7,9 @@ import { SaldoEnergia } from "./SaldoEnergia";
 import { useAvisoFadiga } from "./useEnergia";
 import {
   getBloqueioJogada,
+  getEfeitoFusao,
   getLimiteEnvio,
+  podeFundir,
   primeiroNome,
 } from "./textosCartas";
 import { type CartaMao, useJogadas, useLoja } from "./useCartas";
@@ -21,12 +23,30 @@ const Folga = 8;
 /** Intervalo entre as cartas quando a Mão é distribuída. */
 const DistribuicaoMs = 40;
 
-/** A carta escolhida na Mão: uma Provocação ou, no Foco, a carta "VS" do Rival. */
-export type SelecaoMao = { tipo: "carta"; carta: CartaMao } | { tipo: "rival" };
+/** Metade da distância entre os centros das duas cartas de uma Fusão, já juntas. */
+const MeioDoPar = 20;
+
+/**
+ * A carta escolhida na Mão: uma Provocação ou, no Foco, a carta "VS" do Rival. No Foco, uma segunda
+ * Provocação pode se fundir à escolhida (`fusao`, decisão 0070).
+ */
+export type SelecaoMao =
+  { tipo: "carta"; carta: CartaMao; fusao?: CartaMao } | { tipo: "rival" };
+
+/** Como uma carta entra numa Fusão montada na Mão. */
+type FusaoNaMao = {
+  /** 1: a outra carta está à direita; -1: à esquerda. */
+  lado: 1 | -1;
+  /** Quanto a carta anda para encontrar a outra, em px. */
+  dx: number;
+  /** A carta escolhida primeiro: leva as faíscas e o selo do par. */
+  principal: boolean;
+};
 
 /**
  * Uma carta da Mão. Tocar seleciona; a selecionada sobe e balança. No Foco ela pode ser arrastada
- * para cima até sair da Mão. O botão "Arremessar" faz o mesmo para quem não arrasta.
+ * para cima até sair da Mão. O botão "Arremessar" faz o mesmo para quem não arrasta. Numa Fusão, as
+ * duas cartas recuam, batem uma na outra com faíscas e ficam juntas, brilhando.
  */
 function CartaDaMao({
   rotulo,
@@ -35,6 +55,7 @@ function CartaDaMao({
   jogavel,
   arrastavel,
   selo,
+  fusao,
   inclinacao,
   onSelecionar,
   onAcionar,
@@ -47,6 +68,7 @@ function CartaDaMao({
   jogavel: boolean;
   arrastavel: boolean;
   selo?: string;
+  fusao?: FusaoNaMao;
   inclinacao: number;
   onSelecionar: () => void;
   onAcionar: () => void;
@@ -85,61 +107,89 @@ function CartaDaMao({
   // A escolhida sobe por cima da linha do título: a Mão não reserva altura para ela.
   const subida = selecionada ? -12 + arrasto.y : Math.abs(inclinacao) * 1.5;
   // Arrastando, a carta acompanha o dedo de lado e se inclina para onde vai.
+  // Na Fusão parada, as duas cartas abrem em "V", cada uma para o seu lado.
   const giro = selecionada
-    ? Math.max(-8, Math.min(8, arrasto.x * 0.15))
+    ? fusao && !arrastando
+      ? fusao.lado * -6
+      : Math.max(-8, Math.min(8, arrasto.x * 0.15))
     : inclinacao;
   const escala = selecionada ? (pronta ? 1.18 : 1.1) : 1;
+  const desvio = (fusao?.dx ?? 0) + (selecionada ? arrasto.x * 0.5 : 0);
 
   return (
     <li
       className="relative max-w-16 min-w-0 flex-1"
       style={{
-        transform: `translate(${selecionada ? arrasto.x * 0.5 : 0}px, ${subida}px) rotate(${giro}deg) scale(${escala})`,
+        transform: `translate(${desvio}px, ${subida}px) rotate(${giro}deg) scale(${escala})`,
         transition: arrastando
           ? "none"
           : "transform 220ms cubic-bezier(.34,1.56,.64,1)",
-        zIndex: selecionada ? 2 : 1,
+        zIndex: fusao?.principal ? 3 : selecionada ? 2 : 1,
       }}
     >
       <div
         className="carta-distribuir"
         style={{ animationDelay: `${indice * DistribuicaoMs}ms` }}
       >
-        <button
-          type="button"
-          aria-pressed={selecionada}
-          aria-label={rotulo}
-          disabled={!jogavel}
-          className={`block w-full rounded-md select-none focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none disabled:cursor-not-allowed ${selecionada ? `ring-3 ring-game ${arrastavel ? "touch-none" : ""} ${arrastando ? "" : "carta-balanca"}` : "tap"}`}
-          onClick={() => {
-            if (ignorarClique.current) {
-              ignorarClique.current = false;
-              return;
-            }
-            onSelecionar();
-          }}
-          onPointerDown={(e) => {
-            if (!selecionada || !arrastavel) return;
-            e.currentTarget.setPointerCapture(e.pointerId);
-            inicio.current = { x: e.clientX, y: e.clientY, t: e.timeStamp };
-            setArrastando(true);
-          }}
-          onPointerMove={(e) => {
-            if (!inicio.current) return;
-            const y = Math.min(0, e.clientY - inicio.current.y);
-            setArrasto({ x: e.clientX - inicio.current.x, y });
-            onArrasto(Math.min(1, -y / ArrastoMinimo));
-          }}
-          onPointerUp={(e) => soltar(e.clientY, e.timeStamp)}
-          onPointerCancel={parar}
+        <div
+          className={fusao ? "fusao-colisao" : undefined}
+          style={fusao && ({ "--lado": fusao.lado } as CSSProperties)}
         >
-          {children}
-        </button>
+          <button
+            type="button"
+            aria-pressed={selecionada}
+            aria-label={rotulo}
+            disabled={!jogavel}
+            className={`block w-full rounded-md select-none focus-visible:ring-3 focus-visible:ring-game focus-visible:outline-none disabled:cursor-not-allowed ${selecionada ? `ring-3 ring-game ${arrastavel ? "touch-none" : ""} ${arrastando ? "" : fusao ? "fusao-pulso" : "carta-balanca"}` : "tap"}`}
+            onClick={() => {
+              if (ignorarClique.current) {
+                ignorarClique.current = false;
+                return;
+              }
+              onSelecionar();
+            }}
+            onPointerDown={(e) => {
+              if (!selecionada || !arrastavel) return;
+              e.currentTarget.setPointerCapture(e.pointerId);
+              inicio.current = { x: e.clientX, y: e.clientY, t: e.timeStamp };
+              setArrastando(true);
+            }}
+            onPointerMove={(e) => {
+              if (!inicio.current) return;
+              const y = Math.min(0, e.clientY - inicio.current.y);
+              setArrasto({ x: e.clientX - inicio.current.x, y });
+              onArrasto(Math.min(1, -y / ArrastoMinimo));
+            }}
+            onPointerUp={(e) => soltar(e.clientY, e.timeStamp)}
+            onPointerCancel={parar}
+          >
+            {children}
+          </button>
+        </div>
       </div>
       {selo && (
         <span className="chip pointer-events-none absolute inset-x-0 top-[3%] mx-auto w-fit px-1">
           {selo}
         </span>
+      )}
+      {fusao?.principal && !arrastando && (
+        // As faíscas e o selo ficam no meio do par, que está a MeioDoPar do centro desta carta.
+        <>
+          <span
+            aria-hidden="true"
+            className="fusao-faiscas pointer-events-none absolute top-1/2 -mt-8"
+            style={{
+              left: `calc(50% + ${fusao.lado * MeioDoPar - 32}px)`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="fusao-selo chip chip-game pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 px-1 uppercase"
+            style={{ marginLeft: fusao.lado * MeioDoPar }}
+          >
+            Fusão
+          </span>
+        </>
       )}
     </li>
   );
@@ -181,7 +231,8 @@ export function MaoJogo({
   recolhida: boolean;
   selecao: SelecaoMao | null;
   onSelecao: (selecao: SelecaoMao | null) => void;
-  onArremessar: (carta: CartaMao) => void;
+  /** Com `fusao`, as duas Provocações vão na mesma Jogada. */
+  onArremessar: (carta: CartaMao, fusao?: CartaMao) => void;
   onRival: () => void;
   onArrasto: (fracao: number) => void;
 }) {
@@ -214,29 +265,70 @@ export function MaoJogo({
   const abertura = alvo ? 4 : 2;
   const inclinacaoDe = (i: number) => (i - (total - 1) / 2) * abertura;
 
-  const acionar = (s: SelecaoMao) => {
-    onSelecao(null);
-    onArrasto(0);
-    if (s.tipo === "rival") onRival();
-    else onArremessar(s.carta);
-  };
-
   const escolhida =
     selecao?.tipo === "carta"
       ? livres.find((c) => c.id === selecao.carta.id && jogavel(c))
       : undefined;
+  // A Fusão só existe no Foco: fora dele, a escolha é de uma carta só.
+  const idFusao = selecao?.tipo === "carta" ? selecao.fusao?.id : undefined;
+  const fundida =
+    alvo && escolhida && idFusao
+      ? livres.find(
+          (c) => c.id === idFusao && jogavel(c) && podeFundir(escolhida, c),
+        )
+      : undefined;
   const rivalMarcado = comRival && selecao?.tipo === "rival";
-  const pronta = alvo ? (rivalMarcado ? selecao : escolhida && selecao) : null;
+  const pronta: SelecaoMao | null = !alvo
+    ? null
+    : rivalMarcado
+      ? { tipo: "rival" }
+      : escolhida
+        ? { tipo: "carta", carta: escolhida, fusao: fundida }
+        : null;
+
+  const acionar = (s: SelecaoMao) => {
+    onSelecao(null);
+    onArrasto(0);
+    if (s.tipo === "rival") onRival();
+    else onArremessar(s.carta, s.fusao);
+  };
+
+  /** A distância entre duas vagas vizinhas da Mão, medida ao montar a Fusão. */
+  const lista = useRef<HTMLUListElement>(null);
+  const [passo, setPasso] = useState(66);
+  const medirPasso = () => {
+    const [a, b] = lista.current?.children ?? [];
+    if (a instanceof HTMLElement && b instanceof HTMLElement)
+      setPasso(b.offsetLeft - a.offsetLeft);
+  };
+
+  /**
+   * Tocar numa carta livre. No Foco, com uma Provocação já escolhida, outra Provocação diferente se
+   * funde a ela; tocar numa das duas a tira do par.
+   */
+  const selecionar = (carta: CartaMao) => {
+    if (carta.id === escolhida?.id)
+      return onSelecao(fundida ? { tipo: "carta", carta: fundida } : null);
+    if (carta.id === fundida?.id && escolhida)
+      return onSelecao({ tipo: "carta", carta: escolhida });
+    if (alvo && escolhida && podeFundir(escolhida, carta)) {
+      medirPasso();
+      return onSelecao({ tipo: "carta", carta: escolhida, fusao: carta });
+    }
+    onSelecao({ tipo: "carta", carta });
+  };
 
   // Sem nada a dizer, a linha mostra o título; com algo, o texto toma o lugar dele.
   let contexto: string | null = null;
   if (rivalMarcado) {
     contexto =
       "Vence quem cumprir a meta da semana primeiro e ganha 15 EN. Vale até domingo.";
+  } else if (escolhida && fundida) {
+    contexto = getEfeitoFusao(escolhida, fundida);
   } else if (escolhida) {
-    contexto = alvo
-      ? escolhida.efeito
-      : `${escolhida.efeito} Toque num colega.`;
+    contexto = !alvo
+      ? `${escolhida.efeito} Toque num colega.`
+      : escolhida.efeito;
   } else if (!recebe) {
     contexto = `${nome} não recebe cartas.`;
   } else if (bloqueio && livres.length > 0) {
@@ -280,7 +372,11 @@ export function MaoJogo({
             className="btn-primary h-10 shrink-0 px-3 text-xs"
             onClick={() => acionar(pronta)}
           >
-            {pronta.tipo === "rival" ? "Escolher Rival" : "Arremessar"}
+            {pronta.tipo === "rival"
+              ? "Escolher Rival"
+              : pronta.fusao
+                ? "Jogar fusão"
+                : "Arremessar"}
           </button>
         ) : (
           <Link
@@ -292,7 +388,7 @@ export function MaoJogo({
           </Link>
         )}
       </div>
-      <ul className="flex items-end gap-1.5 pt-3 pb-1">
+      <ul ref={lista} className="flex items-end gap-1.5 pt-3 pb-1">
         {comRival && (
           <CartaDaMao
             rotulo={`Escolher ${nome} como Rival da semana`}
@@ -310,23 +406,60 @@ export function MaoJogo({
             <CartaVs />
           </CartaDaMao>
         )}
-        {livres.map((carta) => {
-          const marcada = escolhida?.id === carta.id;
+        {livres.map((carta, posicao) => {
+          const principal = escolhida?.id === carta.id;
+          const segunda = fundida?.id === carta.id;
+          const marcada = principal || segunda;
           const i = indice++;
+          // Na Fusão, cada carta anda metade do caminho até a outra e para a MeioDoPar do meio.
+          let fusao: FusaoNaMao | undefined;
+          if (escolhida && fundida && marcada) {
+            const outra = livres.indexOf(principal ? fundida : escolhida);
+            const lado = outra > posicao ? 1 : -1;
+            fusao = {
+              lado,
+              dx: lado * ((Math.abs(outra - posicao) * passo) / 2 - MeioDoPar),
+              principal,
+            };
+          }
+          const funde =
+            alvo !== null &&
+            !marcada &&
+            !fundida &&
+            escolhida !== undefined &&
+            jogavel(carta) &&
+            podeFundir(escolhida, carta);
           return (
             <CartaDaMao
               key={carta.id}
-              rotulo={carta.nome}
+              rotulo={
+                segunda && escolhida
+                  ? `${carta.nome}, fundida com ${escolhida.nome}`
+                  : funde && escolhida
+                    ? `${carta.nome}: fundir com ${escolhida.nome}`
+                    : carta.nome
+              }
               indice={i}
               selecionada={marcada}
               jogavel={jogavel(carta)}
               arrastavel={alvo !== null}
-              selo={carta.tipo === "Resposta" ? "Resposta" : undefined}
-              inclinacao={inclinacaoDe(i)}
-              onSelecionar={() =>
-                onSelecao(marcada ? null : { tipo: "carta", carta })
+              selo={
+                carta.tipo === "Resposta"
+                  ? "Resposta"
+                  : funde
+                    ? "Fundir"
+                    : undefined
               }
-              onAcionar={() => acionar({ tipo: "carta", carta })}
+              fusao={fusao}
+              inclinacao={inclinacaoDe(i)}
+              onSelecionar={() => selecionar(carta)}
+              onAcionar={() =>
+                acionar(
+                  escolhida && marcada
+                    ? { tipo: "carta", carta: escolhida, fusao: fundida }
+                    : { tipo: "carta", carta },
+                )
+              }
               onArrasto={onArrasto}
             >
               <CartaJogo carta={carta} apagada={!jogavel(carta)} compacta />

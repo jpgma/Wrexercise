@@ -359,6 +359,142 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             "CARTA_INVALIDA");
     }
 
+    [Fact]
+    public async Task Fusao_CumpridaNoMesmoTreino_PagaASomaComBonusEGastaAsDuasCartas()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var fimDeSemana = await JogoTestes.ComprarAsync(ana, CodigoCarta.FimDeSemana);
+
+        var jogadaId = await JogarAsync(ana, grupoId, variedade.Id, bia.Id, fimDeSemana.Id);
+
+        Assert.All((await JogoTestes.GetLojaAsync(ana)).Mao, c => Assert.True(c.EmJogo));
+        var recebida = Assert.Single(await GetJogadasAsync(bia, grupoId));
+        Assert.Equal(CodigoCarta.Variedade, recebida.Carta.Codigo);
+        Assert.Equal(CodigoCarta.FimDeSemana, recebida.CartaFusao?.Codigo);
+        // 35 + 35 = 70, mais 20%.
+        Assert.Equal(84, recebida.Recompensa);
+        Assert.Empty(recebida.ObjetivosEquivalentes);
+        Assert.Equal(1, await ContarNotificacoesAsync(bia, "CartaRecebida"));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+
+        // O treino vai para o meio do domingo em que a Jogada acaba: dentro do prazo e no fim de semana.
+        var atividade = await PostAtividadeAsync(bia, grupoId);
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET started_at = (SELECT expira_em - interval '12 hours' FROM jogadas WHERE id = '{jogadaId}') WHERE id = '{atividade.Id}'");
+        (await ana.Client.PutAsJsonAsync(
+            $"/api/atividades/{atividade.Id}/reacao",
+            new ReacaoRequest(TipoReacao.Kudos),
+            AppJsonContext.Default.ReacaoRequest,
+            Token)).EnsureSuccessStatusCode();
+
+        Assert.Equal(SituacaoJogada.Concluida, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(84, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
+        Assert.Equal(35, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
+        Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
+    }
+
+    [Fact]
+    public async Task Fusao_SoUmObjetivoCumprido_NaoConclui()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var fimDeSemana = await JogoTestes.ComprarAsync(ana, CodigoCarta.FimDeSemana);
+        var jogadaId = await JogarAsync(ana, grupoId, variedade.Id, bia.Id, fimDeSemana.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+
+        // Um treino na segunda-feira antes do domingo do prazo: cumpre a VARIEDADE, mas não o FIM DE SEMANA.
+        var atividade = await PostAtividadeAsync(bia, grupoId);
+        await _host.ExecuteAsync(
+            $"UPDATE jogadas SET enviada_em = expira_em - interval '8 days' WHERE id = '{jogadaId}'");
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET started_at = (SELECT expira_em - interval '6 days 12 hours' FROM jogadas WHERE id = '{jogadaId}') WHERE id = '{atividade.Id}'");
+        (await ana.Client.PutAsJsonAsync(
+            $"/api/atividades/{atividade.Id}/reacao",
+            new ReacaoRequest(TipoReacao.Kudos),
+            AppJsonContext.Default.ReacaoRequest,
+            Token)).EnsureSuccessStatusCode();
+
+        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
+        Assert.Equal(0, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
+    }
+
+    [Fact]
+    public async Task Fusao_Invalida_Recusa()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var outraVariedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var aposta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Aposta);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostJogadaAsync(ana, grupoId, variedade.Id, bia.Id, outraVariedade.Id),
+            HttpStatusCode.BadRequest,
+            "FUSAO_INVALIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await PostJogadaAsync(ana, grupoId, variedade.Id, bia.Id, variedade.Id),
+            HttpStatusCode.BadRequest,
+            "FUSAO_INVALIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await PostJogadaAsync(ana, grupoId, variedade.Id, bia.Id, aposta.Id),
+            HttpStatusCode.BadRequest,
+            "FUSAO_INVALIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await PostJogadaAsync(ana, grupoId, variedade.Id, bia.Id, Guid.NewGuid()),
+            HttpStatusCode.NotFound,
+            "CARTA_NAO_ENCONTRADA");
+        Assert.Empty(await GetJogadasAsync(bia, grupoId));
+    }
+
+    [Fact]
+    public async Task Fusao_Recusada_DevolveAsDuasCartas()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var antesDas8 = await JogoTestes.ComprarAsync(ana, CodigoCarta.AntesDas8);
+        var jogadaId = await JogarAsync(ana, grupoId, variedade.Id, bia.Id, antesDas8.Id);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
+
+        var mao = (await JogoTestes.GetLojaAsync(ana)).Mao;
+        Assert.Equal(2, mao.Count);
+        Assert.All(mao, c => Assert.False(c.EmJogo));
+        Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
+    }
+
+    [Fact]
+    public async Task Fusao_NaoAceitaMudancaDePlanos_MasODesafioDuploDevolveAsDuas()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 7);
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var antesDas8 = await JogoTestes.ComprarAsync(ana, CodigoCarta.AntesDas8);
+        var mudanca = await JogoTestes.ComprarAsync(bia, CodigoCarta.MudancaDePlanos);
+        var duplo = await JogoTestes.ComprarAsync(bia, CodigoCarta.DesafioDuplo);
+        var jogadaId = await JogarAsync(ana, grupoId, variedade.Id, bia.Id, antesDas8.Id);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PutRespostaAsync(bia, jogadaId, "Aceita", mudanca.Id, CodigoCarta.FimDeSemana),
+            HttpStatusCode.BadRequest,
+            "CARTA_INVALIDA");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita", duplo.Id)).StatusCode);
+
+        var devolvida = Assert.Single(await GetJogadasAsync(ana, grupoId), j => j.Recebida);
+        Assert.True(devolvida.DesafioDuplo);
+        Assert.Equal(CodigoCarta.Variedade, devolvida.Carta.Codigo);
+        Assert.Equal(CodigoCarta.AntesDas8, devolvida.CartaFusao?.Codigo);
+        // 35 + 40 = 75, mais 20%.
+        Assert.Equal(90, devolvida.Recompensa);
+        // As duas Provocações continuam na Mão da Ana, em jogo pela Jogada original.
+        Assert.All(
+            (await JogoTestes.GetLojaAsync(ana)).Mao.Where(c => c.Tipo == TipoCarta.Provocacao),
+            c => Assert.True(c.EmJogo));
+    }
+
     /// <summary>Ana e Bia no modo Jogo, num grupo só delas; Ana com Energia para algumas cartas.</summary>
     private async Task<(TestUsuario Ana, TestUsuario Bia, Guid GrupoId)> CriarParAsync()
     {
@@ -371,16 +507,26 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         return (ana, bia, grupoId);
     }
 
-    private static Task<HttpResponseMessage> PostJogadaAsync(TestUsuario remetente, Guid grupoId, Guid cartaId, Guid destinatarioId) =>
+    private static Task<HttpResponseMessage> PostJogadaAsync(
+        TestUsuario remetente,
+        Guid grupoId,
+        Guid cartaId,
+        Guid destinatarioId,
+        Guid? cartaFusaoId = null) =>
         remetente.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/jogadas",
-            new JogarCartaRequest(cartaId, destinatarioId),
+            new JogarCartaRequest(cartaId, destinatarioId, cartaFusaoId),
             AppJsonContext.Default.JogarCartaRequest,
             Token);
 
-    private static async Task<Guid> JogarAsync(TestUsuario remetente, Guid grupoId, Guid cartaId, Guid destinatarioId)
+    private static async Task<Guid> JogarAsync(
+        TestUsuario remetente,
+        Guid grupoId,
+        Guid cartaId,
+        Guid destinatarioId,
+        Guid? cartaFusaoId = null)
     {
-        var response = await PostJogadaAsync(remetente, grupoId, cartaId, destinatarioId);
+        var response = await PostJogadaAsync(remetente, grupoId, cartaId, destinatarioId, cartaFusaoId);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync(AppJsonContext.Default.JogadaCriadaResponse, Token))!.Id;
     }

@@ -7,10 +7,11 @@ namespace Wrexercise.Features.Jogo;
 internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool Verificada, Guid GrupoId = default);
 
 /// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
-/// <param name="Preco">O preço pago pela Provocação.</param>
+/// <param name="Preco">O preço pago pela Provocação; numa Fusão, a soma das duas.</param>
 /// <param name="ComoDestinatario">Se a pessoa cumpriu o objetivo; senão, foi quem enviou.</param>
 /// <param name="Aposta">Se quem recebeu aceitou com a APOSTA.</param>
-internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false);
+/// <param name="Fusao">Se a Jogada juntou duas Provocações (decisão 0070).</param>
+internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool Aposta = false, bool Fusao = false);
 
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo (decisão 0059).</param>
 /// <param name="Despertador">O que rendeu acordar colegas com a Cutucada (decisão 0063).</param>
@@ -95,14 +96,19 @@ internal static class CalculoEnergia
 
     /// <summary>
     /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou, metade, arredondada para baixo
-    /// (decisões 0033 e 0035).
+    /// (decisões 0033 e 0035). Numa Fusão, quem cumpriu ganha também o bônus sobre a soma, que a APOSTA não
+    /// dobra (decisão 0070).
     /// </summary>
-    public static int GetRecompensa(RecompensaJogada jogada) => jogada switch
+    public static int GetRecompensa(RecompensaJogada jogada)
     {
-        { ComoDestinatario: true, Aposta: true } => jogada.Preco * 2,
-        { ComoDestinatario: true } => jogada.Preco,
-        _ => jogada.Preco / 2,
-    };
+        var bonus = jogada.Fusao ? jogada.Preco * CatalogoCartas.BonusFusaoPorCento / 100 : 0;
+        return jogada switch
+        {
+            { ComoDestinatario: true, Aposta: true } => (jogada.Preco * 2) + bonus,
+            { ComoDestinatario: true } => jogada.Preco + bonus,
+            _ => jogada.Preco / 2,
+        };
+    }
 
     /// <summary>
     /// Toda atividade não rejeitada ocupa a sua posição, mas só as verificadas recebem o crédito.

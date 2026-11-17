@@ -217,6 +217,7 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 | Objetos soltos da praça (barra de calistenia, caixotes, floreiras) e porta aberta | folha `praca-objetos.png`, recortes de tamanhos variados | 6 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 32×32 | 9 |
+| Faíscas da Fusão (folha `fusao.png`, `pixel-art/fusao/build.py`; §6.5) | 32×32 por quadro, mostrado em 2× | 6 quadros |
 | Enfeite (atlas `enfeites.png`: 4 quadros por linha, objeto apoiado na base da célula; o quadro 1 é o ícone) | 40×40 por quadro, mostrado em 2× | 19 linhas (§9.1) |
 
 ## 5. Energia
@@ -238,12 +239,14 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Despertador: colega cutucado (§3.5) que volta com uma atividade verificada, registrada depois da cutucada e iniciada até 24 horas depois dela | 5 por atividade que o acordou |
 | Jogada concluída, para quem recebeu (§6.4) | 1 × o preço da carta (2 × com APOSTA) |
 | Jogada concluída, para quem enviou (§6.4) | 0,5 × o preço da carta |
+| Fusão concluída, para quem recebeu (§6.5) | a soma dos dois preços + 20% (com APOSTA, 2 × a soma + 20% da soma) |
+| Fusão concluída, para quem enviou (§6.5) | 0,5 × a soma dos dois preços |
 
 - As sequências seguem a mesma regra das conquistas: a melhor sequência num único desafio, sem somar desafios. Cada marco paga **uma vez por pessoa**, então as sequências rendem no máximo 175 EN no total.
 - **Desafio concluído:** um desafio `Encerrado` com todas as semanas que contavam para a pessoa cumpridas. Paga uma vez por desafio.
 - **Vários grupos:** a base de 10 EN vale para cada dia com atividade verificada em cada grupo. Dividir um treino em várias atividades no mesmo dia não rende mais base (`decisoes/0040-meta-diaria.md`). A meta semanal paga uma vez por pessoa por semana, no primeiro grupo em que for cumprida. Os bônus de §5.2 também contam por pessoa. Assim, estar em mais grupos não multiplica a Energia. A exceção é o Rival da semana, que paga em cada grupo (§8).
 
-**Alvo do balanceamento:** quem cumpre a meta com regularidade ganha cerca de 90 a 110 EN por semana, o suficiente para 2 ou 3 cartas. É essa escassez que faz cada gasto importar.
+**Alvo do balanceamento:** quem cumpre a meta com regularidade ganha cerca de 90 a 110 EN por semana, o suficiente para 2 ou 3 cartas. É essa escassez que faz cada gasto importar. Uma Fusão cumprida vale de 78 a 102 EN, quase uma semana de renda: é a jogada grande do Jogo, e por isso é tudo ou nada (§6.5).
 
 ### 5.2. Bônus por atividade
 
@@ -327,7 +330,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - A compra roda numa transação que bloqueia a linha do usuário, recalcula o saldo e só grava se `saldo >= preço` e a Mão tiver espaço.
 - A linha de `cartas` guarda o preço pago. Mudar o catálogo depois não altera cartas já compradas.
 - **Quando uma carta é gasta**, calculado a partir das Jogadas, sem coluna de data de uso:
-  - uma Provocação só é gasta quando a Jogada fica `Concluida`. Se a Jogada ficar `Recusada` ou `Expirada`, a carta volta para a Mão de quem enviou e pode ser jogada de novo;
+  - uma Provocação só é gasta quando a Jogada fica `Concluida`. Se a Jogada ficar `Recusada` ou `Expirada`, a carta volta para a Mão de quem enviou e pode ser jogada de novo. Numa Fusão (§6.5), as duas Provocações são gastas ou voltam juntas;
   - uma Resposta é gasta quando é usada, aconteça o que acontecer com a Jogada.
 - Não há pacotes aleatórios, troca de cartas nem devolução.
 
@@ -359,7 +362,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 ### 6.4. Ciclo de vida de uma Jogada
 
-**Gravado:** remetente, destinatário, grupo, carta, `enviada_em`, `expira_em`, `resposta` (`Aceita` ou `Recusada`), `respondida_em`, carta de resposta usada, `origem_id` (a Jogada original, no DESAFIO DUPLO), o objetivo trocado pela MUDANÇA DE PLANOS (`codigo_objetivo`), o tipo-alvo da VARIEDADE (o tipo a evitar, fixado no envio), `vista_em` e `resultado_visto_em`.
+**Gravado:** remetente, destinatário, grupo, carta, a segunda carta de uma Fusão (`carta_fusao_id`, §6.5), `enviada_em`, `expira_em`, `resposta` (`Aceita` ou `Recusada`), `respondida_em`, carta de resposta usada, `origem_id` (a Jogada original, no DESAFIO DUPLO), o objetivo trocado pela MUDANÇA DE PLANOS (`codigo_objetivo`), o tipo-alvo da VARIEDADE (o tipo a evitar, fixado no envio), `vista_em` e `resultado_visto_em`.
 
 **Calculado na leitura**, sem tarefa agendada:
 
@@ -380,6 +383,28 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente ganha 0,5 × o preço, arredondado para baixo. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
 - **Custo para quem enviou:** só uma Jogada `Concluida` gasta a Provocação. Com a recompensa de 0,5 ×, uma carta concluída custa na prática metade do preço. Uma carta recusada ou expirada volta para a Mão (§6.2).
 - **Custo para quem recebeu:** uma Jogada `Recusada` ou `Expirada` dá FADIGA a quem recebeu (§5.4).
+
+### 6.5. Fusão
+
+Duas Provocações diferentes jogadas juntas, numa Jogada só (`decisoes/0070-fusao-de-provocacoes.md`).
+
+- **Pares:** quaisquer duas Provocações de códigos diferentes, 10 pares ao todo. Duas cartas iguais e cartas de Resposta não se fundem (`FUSAO_INVALIDA`).
+- **Objetivo:** um mesmo treino cumpre os dois objetivos. Duas atividades, cada uma cumprindo um, não concluem a Fusão.
+  - A duração de +10 MIN e +20 MIN, numa Fusão, é a dessa atividade: não se somam as atividades do dia.
+  - +10 MIN com +20 MIN pede a duração mínima do desafio + 30 minutos.
+  - A duração-alvo e o tipo a evitar são fixados no envio, como nas outras Jogadas (§6.1).
+- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e as duas cartas voltam para a Mão de quem enviou.
+- **Recompensa:** quem cumpre ganha a soma dos dois preços mais 20% da soma, arredondado para baixo. Quem enviou ganha metade da soma, arredondada para baixo. VARIEDADE (35) + ANTES DAS 8 (40): 90 EN e 37 EN.
+- **Prazo:** o maior entre os prazos das duas cartas (§6.4).
+- **Limites:** a Fusão ocupa uma vaga de Jogada, como qualquer outra (§6.3). Não há limite próprio.
+- **Respostas:**
+  - PRAZO EXTRA soma 24 horas, como sempre.
+  - APOSTA dobra a soma dos preços, não o bônus: 75 × 2 + 15 = 165 EN no exemplo.
+  - DESAFIO DUPLO devolve a Fusão inteira, com as duas Provocações, que continuam sendo de quem as comprou.
+  - MUDANÇA DE PLANOS não vale numa Fusão (`CARTA_INVALIDA`).
+- **Na Mão:** a Fusão é montada no Foco, na hora de jogar. Com uma Provocação escolhida, as outras que podem se fundir mostram o selo "Fundir". Tocar numa delas junta as duas; tocar numa das duas a tira do par. O texto mostra o prêmio e o objetivo combinado, e o botão vira "Jogar fusão". Fora do Foco, a escolha é de uma carta só.
+- **Animação:** as duas cartas recuam, batem uma na outra com um clarão e faíscas em pixel art (`fusao.png`), tremem e ficam juntas, brilhando, com o selo "FUSÃO". No arremesso, as duas voam juntas, e as faíscas estouram em quem recebe, com "FUSÃO!". Com movimento reduzido, o par aparece já fundido, sem faíscas.
+- **Na Mesa:** a mini-carta mostra os dois ícones. Os detalhes mostram os dois nomes, o selo "FUSÃO", o objetivo combinado e o aviso de tudo ou nada.
 
 ## 7. Missões semanais
 

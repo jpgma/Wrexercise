@@ -48,7 +48,8 @@ internal sealed record LojaResponse(
 
 internal sealed record ComprarCartaRequest(string? Codigo);
 
-internal sealed record JogarCartaRequest(Guid? CartaId, Guid? DestinatarioId);
+/// <param name="CartaFusaoId">A segunda Provocação da Mão, para jogar uma Fusão (decisão 0070).</param>
+internal sealed record JogarCartaRequest(Guid? CartaId, Guid? DestinatarioId, Guid? CartaFusaoId = null);
 
 /// <param name="CartaRespostaId">A Resposta da Mão usada para aceitar, se houver.</param>
 /// <param name="Objetivo">O objetivo novo, só com a MUDANÇA DE PLANOS.</param>
@@ -90,6 +91,8 @@ internal sealed record RivaisResponse(
 /// </param>
 /// <param name="Recebida">Se quem consulta é o destinatário.</param>
 /// <param name="Nova">Se quem consulta ainda não viu o que mudou: o envio (destinatário) ou a resposta (remetente).</param>
+/// <param name="CartaFusao">A segunda Provocação de uma Fusão, ou <c>null</c> (decisão 0070).</param>
+/// <param name="Recompensa">A Energia de quem cumpre, já com o bônus da Fusão e a APOSTA.</param>
 internal sealed record JogadaResponse(
     Guid Id,
     Guid GrupoId,
@@ -108,7 +111,9 @@ internal sealed record JogadaResponse(
     int? DuracaoAlvoSegundos,
     string? TipoEvitar,
     bool Recebida,
-    bool Nova);
+    bool Nova,
+    CartaCatalogoResponse? CartaFusao,
+    int Recompensa);
 
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
 

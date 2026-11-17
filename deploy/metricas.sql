@@ -160,7 +160,8 @@ select 'Jogadas', count(*) || ' enviadas',
        count(*) filter (where resposta = 'Aceita') || ' aceitas',
        count(*) filter (where resposta = 'Recusada') || ' recusadas',
        count(*) filter (where resposta is null and expira_em < now()) || ' expiradas',
-       count(*) filter (where resposta is null and expira_em >= now()) || ' aguardando'
+       count(*) filter (where resposta is null and expira_em >= now()) || ' aguardando',
+       count(*) filter (where carta_fusao_id is not null) || ' fusões'
 from jogadas
 where enviada_em >= now() - make_interval(days => :dias);
 -- Inativo: sem atividade registrada nos 7 dias antes do envio.
@@ -185,7 +186,7 @@ from (
            count(*) filter (where resposta) as respostas
     from (
         select c.usuario_id, split_part(u.nome_exibicao, ' ', 1) as pessoa, c.codigo, c.preco,
-               exists (select 1 from jogadas j where j.carta_id = c.id) as provocacao,
+               exists (select 1 from jogadas j where c.id in (j.carta_id, j.carta_fusao_id)) as provocacao,
                exists (select 1 from jogadas j where j.carta_resposta_id = c.id) as resposta
         from cartas c
         join usuarios u on u.id = c.usuario_id
@@ -199,7 +200,7 @@ order by sum(n) desc, pessoa;
 -- notificações antigas apaga: numa Jogada antiga, a falta do aviso não quer dizer que ela não foi cumprida.
 select 'Jogada ' || to_char(j.enviada_em at time zone g.fuso_horario, 'YYYY-MM-DD HH24:MI'),
        split_part(r.nome_exibicao, ' ', 1) || ' para ' || split_part(d.nome_exibicao, ' ', 1),
-       c.codigo || coalesce(' (objetivo ' || j.codigo_objetivo || ')', '')
+       c.codigo || coalesce(' + ' || cf.codigo || ' (FUSÃO)', '') || coalesce(' (objetivo ' || j.codigo_objetivo || ')', '')
            || case when j.origem_id is not null then ' (devolvida por DesafioDuplo)' else '' end,
        case
            when j.resposta = 'Recusada' then 'recusada'
@@ -219,6 +220,7 @@ join cartas c on c.id = j.carta_id
 join usuarios r on r.id = j.remetente_id
 join usuarios d on d.id = j.destinatario_id
 left join cartas cr on cr.id = j.carta_resposta_id
+left join cartas cf on cf.id = j.carta_fusao_id
 where j.enviada_em >= now() - make_interval(days => :dias)
 order by j.enviada_em desc
 limit 30;

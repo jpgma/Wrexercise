@@ -27,12 +27,13 @@ internal static class JogadasConcluidas
         await using (var command = new NpgsqlCommand($"""
             SELECT j.id, j.remetente_id, j.destinatario_id, {Jogadas.ObjetivoSql}, j.enviada_em, j.expira_em, j.resposta,
                 j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
-                o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos
+                o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos, cf.codigo
             FROM atividades x
             JOIN jogadas j ON j.destinatario_id = x.usuario_id AND j.grupo_id = x.grupo_id
                 AND j.resposta = 'Aceita'
                 AND x.started_at >= j.enviada_em AND x.started_at <= j.expira_em
             JOIN cartas c ON c.id = j.carta_id
+            LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades o ON o.usuario_id = j.destinatario_id AND o.grupo_id = j.grupo_id
                 AND o.situacao_verificacao = 'Verificada'
@@ -57,7 +58,8 @@ internal static class JogadasConcluidas
                             reader.GetString(6),
                             TimestampLeitura.FromReader(reader, 7),
                             reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                            reader.IsDBNull(9) ? null : reader.GetString(9)),
+                            reader.IsDBNull(9) ? null : reader.GetString(9),
+                            reader.IsDBNull(14) ? null : reader.GetString(14)),
                         []);
                     jogadas[jogadaId] = jogada;
                 }

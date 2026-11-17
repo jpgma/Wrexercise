@@ -6,6 +6,7 @@ import { getErrorMessage } from "@/services/api";
 import { IconeCarta } from "./CartaJogo";
 import {
   formatarPrazo,
+  getNomeJogada,
   getObjetivo,
   getSeloSituacao,
   objetivoCurto,
@@ -204,14 +205,24 @@ function DetalheJogada({
   return (
     <div>
       <div className="flex gap-3">
-        <span className="grid size-11 shrink-0 place-items-center self-start rounded-md bg-carta-giz">
-          <IconeCarta codigo={jogada.carta.codigo} />
+        <span className="flex shrink-0 gap-1 self-start">
+          <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
+            <IconeCarta codigo={jogada.carta.codigo} />
+          </span>
+          {jogada.cartaFusao && (
+            <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
+              <IconeCarta codigo={jogada.cartaFusao.codigo} />
+            </span>
+          )}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="font-display text-base leading-tight uppercase">
-              {jogada.carta.nome}
+              {getNomeJogada(jogada)}
             </p>
+            {jogada.cartaFusao && (
+              <span className="chip chip-game uppercase">Fusão</span>
+            )}
             <span className={`chip uppercase ${selo.classe}`}>
               {selo.texto}
             </span>
@@ -222,6 +233,11 @@ function DetalheJogada({
             )}
           </div>
           <p className="mt-0.5 text-sm text-muted">{getObjetivo(jogada)}</p>
+          {jogada.cartaFusao && !encerrada && (
+            <p className="mt-1 text-xs text-muted">
+              Tudo ou nada: os dois objetivos valem no mesmo treino.
+            </p>
+          )}
           {!encerrada && (
             <p className="mt-1 text-xs text-muted">
               {pendente ? "Responda até" : "Vale até"}{" "}
@@ -230,7 +246,7 @@ function DetalheJogada({
           )}
           {jogada.recebida && aposta && !encerrada && (
             <p className="mt-1 text-xs font-semibold text-game">
-              Apostado: cumprindo, você ganha {jogada.carta.preco * 2} EN.
+              Apostado: cumprindo, você ganha {jogada.recompensa} EN.
             </p>
           )}
         </div>
@@ -264,7 +280,7 @@ function DetalheJogada({
             <li>
               Cumprir:{" "}
               <span className="font-semibold text-game">
-                +{jogada.carta.preco} EN
+                +{jogada.recompensa} EN
               </span>
             </li>
             <li>
@@ -352,9 +368,21 @@ function PrazoCarta({
           />
         </svg>
       )}
-      <span className="grid size-6 place-items-center overflow-hidden rounded-sm bg-carta-giz [&>img]:size-6">
-        <IconeCarta codigo={jogada.carta.codigo} />
-      </span>
+      {jogada.cartaFusao ? (
+        // Fusão: os dois ícones, um sobre o outro em diagonal.
+        <span className="relative size-6 [&_img]:size-4">
+          <span className="absolute top-0 left-0 grid size-4 place-items-center overflow-hidden rounded-sm bg-carta-giz">
+            <IconeCarta codigo={jogada.carta.codigo} />
+          </span>
+          <span className="absolute right-0 bottom-0 grid size-4 place-items-center overflow-hidden rounded-sm bg-carta-giz ring-1 ring-carta-tinta">
+            <IconeCarta codigo={jogada.cartaFusao.codigo} />
+          </span>
+        </span>
+      ) : (
+        <span className="grid size-6 place-items-center overflow-hidden rounded-sm bg-carta-giz [&>img]:size-6">
+          <IconeCarta codigo={jogada.carta.codigo} />
+        </span>
+      )}
     </span>
   );
 }
@@ -415,7 +443,7 @@ export function MesaJogadas({
               <button
                 type="button"
                 aria-haspopup="dialog"
-                aria-label={`${getTitulo(jogada)}: ${jogada.carta.nome}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
+                aria-label={`${getTitulo(jogada)}: ${jogada.cartaFusao ? "fusão " : ""}${getNomeJogada(jogada)}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
                 onClick={() => setAbertaId(jogada.id)}
                 className={`flex min-h-11 items-center gap-2 rounded-lg border-2 bg-surface py-0.5 pr-3 pl-0.5 text-left tap ${pendente ? "mesa-pendente border-game" : "border-border"} ${encerrada ? "opacity-60" : ""}`}
               >

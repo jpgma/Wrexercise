@@ -75,7 +75,8 @@ DELETE FROM jogadas
 WHERE grupo_id IN (SELECT id FROM velhos_grupos)
    OR remetente_id IN (SELECT id FROM velhos_usuarios) OR destinatario_id IN (SELECT id FROM velhos_usuarios)
    OR carta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios))
-   OR carta_resposta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios));
+   OR carta_resposta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios))
+   OR carta_fusao_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios));
 
 DELETE FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios);
 

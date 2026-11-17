@@ -30,10 +30,10 @@ internal sealed record EstadoJogo(
     /// </summary>
     public bool IsGasta(Guid cartaId) =>
         Jogadas.Any(j => j.CartaRespostaId == cartaId
-            || (j.CartaId == cartaId && j.IsCartaDoRemetente && j.Situacao == SituacaoJogada.Concluida));
+            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && j.Situacao == SituacaoJogada.Concluida));
 
     public bool IsEmJogo(Guid cartaId) =>
-        Jogadas.Any(j => j.CartaId == cartaId && j.IsCartaDoRemetente && SituacaoJogada.IsAberta(j.Situacao));
+        Jogadas.Any(j => j.UsaCarta(cartaId) && j.IsCartaDoRemetente && SituacaoJogada.IsAberta(j.Situacao));
 
     /// <summary>
     /// Trava as linhas dos usuários até o fim da transação, sempre na mesma ordem, para evitar deadlock.
@@ -76,10 +76,7 @@ internal sealed record EstadoJogo(
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
-            .Select(j => new RecompensaJogada(
-                j.Preco,
-                j.DestinatarioId == usuarioId,
-                j.CodigoResposta == CodigoCarta.Aposta))
+            .Select(j => j.ToRecompensa(j.DestinatarioId == usuarioId))
             .ToList();
 
         var despertares = await LoadDespertaresAsync(connection, transaction, usuarioId, cancellationToken);

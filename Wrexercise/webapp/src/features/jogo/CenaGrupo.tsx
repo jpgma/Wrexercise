@@ -509,7 +509,11 @@ export function CenaGrupo({
 function CartaVoando({
   carta,
 }: {
-  carta: Pick<CartaEmCena, "efeito" | "de" | "para"> & { codigo: CodigoCarta };
+  carta: Pick<CartaEmCena, "efeito" | "de" | "para"> & {
+    codigo: CodigoCarta;
+    /** A segunda carta de uma Fusão: voa junto, atrás da primeira. */
+    codigoFusao?: CodigoCarta;
+  };
 }) {
   // A carta (40 px) fica na altura do peito, centrada no avatar.
   const acima = 13 * escala + 20;
@@ -529,6 +533,11 @@ function CartaVoando({
         } as CSSProperties
       }
     >
+      {carta.codigoFusao && (
+        <span className="absolute -top-1.5 -right-2.5 -z-10 grid size-10 rotate-12 place-items-center rounded-md border-2 border-carta-tinta bg-carta-giz">
+          <IconeCarta codigo={carta.codigoFusao} />
+        </span>
+      )}
       <IconeCarta codigo={carta.codigo} />
     </span>
   );
@@ -537,6 +546,29 @@ function CartaVoando({
 /** O nome da carta estoura sobre quem recebe. O "VS" do Rival fica fora da câmera, no alto da praça. */
 function ImpactoNoFoco({ efeito }: { efeito: EfeitoFoco }) {
   if (efeito.tipo !== "impacto") return null;
+  return (
+    <>
+      {efeito.fusao && (
+        <span
+          aria-hidden="true"
+          className="fusao-faiscas pointer-events-none absolute"
+          style={{
+            left: efeito.ponto.x - 32,
+            top: efeito.ponto.y - 13 * escala - 32,
+            zIndex: 1001,
+          }}
+        />
+      )}
+      <ImpactoTexto efeito={efeito} />
+    </>
+  );
+}
+
+function ImpactoTexto({
+  efeito,
+}: {
+  efeito: Extract<EfeitoFoco, { tipo: "impacto" }>;
+}) {
   return (
     <span
       aria-hidden="true"
@@ -646,7 +678,9 @@ function Praca({
   if (alvoAnterior !== foco.alvoId) {
     setAlvoAnterior(foco.alvoId);
     setSelecao((s) =>
-      foco.alvoId && !focoProprio && s?.tipo === "carta" ? s : null,
+      foco.alvoId && !focoProprio && s?.tipo === "carta"
+        ? { tipo: "carta", carta: s.carta }
+        : null,
     );
     setArrasto(0);
   }
@@ -742,20 +776,26 @@ function Praca({
   const atuaNoFoco = (id: string) =>
     id === foco.alvoId || (emAcao && id === usuarioId);
 
-  const arremessar = (carta: CartaMao) => {
+  const arremessar = (carta: CartaMao, fusao?: CartaMao) => {
     if (!alvo) return;
     const nome = primeiroNome(alvo.nomeExibicao);
     const envio = jogar.mutateAsync({
       cartaId: carta.id,
       destinatarioId: alvo.usuarioId,
+      cartaFusaoId: fusao?.id,
     });
     void Promise.allSettled([
       envio,
-      foco.arremessar(carta.codigo, carta.nome, envio),
+      foco.arremessar(
+        carta.codigo,
+        fusao ? "Fusão" : carta.nome,
+        envio,
+        fusao?.codigo,
+      ),
     ]).then(([resultado]) =>
       showToast(
         resultado.status === "fulfilled"
-          ? `Carta entregue para ${nome}!`
+          ? `${fusao ? "Fusão" : "Carta"} entregue para ${nome}!`
           : getErrorMessage(resultado.reason),
       ),
     );
@@ -864,6 +904,7 @@ function Praca({
                   carta={{
                     ...encenacao.carta,
                     codigo: encenacao.carta.jogada.carta.codigo,
+                    codigoFusao: encenacao.carta.jogada.cartaFusao?.codigo,
                   }}
                 />
               )}

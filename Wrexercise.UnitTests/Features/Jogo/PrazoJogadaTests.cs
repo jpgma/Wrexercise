@@ -44,4 +44,13 @@ public class PrazoJogadaTests
         Assert.Equal(
             Em(7, 0),
             PrazoJogada.ComMudanca(CodigoCarta.Mais10Min, Em(4, 21), Em(7, 0)));
+
+    [Fact]
+    public void Fusao_ValeOMaiorDosDoisPrazos()
+    {
+        // Enviada na segunda: ANTES DAS 8 iria até quarta às 08:00, e FIM DE SEMANA, até o fim do domingo.
+        Assert.Equal(Em(7, 0), PrazoJogada.Calcular(CodigoCarta.AntesDas8, CodigoCarta.FimDeSemana, Em(0, 15)));
+        Assert.Equal(Em(7, 0), PrazoJogada.Calcular(CodigoCarta.FimDeSemana, CodigoCarta.AntesDas8, Em(0, 15)));
+        Assert.Equal(Em(2, 15), PrazoJogada.Calcular(CodigoCarta.Variedade, null, Em(0, 15)));
+    }
 }

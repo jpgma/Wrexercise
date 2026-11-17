@@ -21,6 +21,10 @@ internal static class PrazoJogada
         return novo > expiraLocalAtual ? novo : expiraLocalAtual;
     }
 
+    /// <summary>Numa Fusão, o maior dos prazos das duas cartas (decisão 0070).</summary>
+    public static DateTime Calcular(string codigo, string? codigoFusao, DateTime enviadaLocal) =>
+        codigoFusao is null ? Calcular(codigo, enviadaLocal) : ComMudanca(codigoFusao, enviadaLocal, Calcular(codigo, enviadaLocal));
+
     public static DateTime Calcular(string codigo, DateTime enviadaLocal) => codigo switch
     {
         // Até o fim do primeiro domingo depois do dia do envio: enviada num domingo, vale até o seguinte.

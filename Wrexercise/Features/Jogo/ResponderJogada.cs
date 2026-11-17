@@ -69,6 +69,8 @@ internal static class ResponderJogada
                 CodigoCarta.DesafioDuplo =>
                     await DevolverAsync(connection, transaction, jogada, usuarioId, remetenteId, cancellationToken),
                 CodigoCarta.PrazoExtra => (mudanca with { ExpiraLocal = jogada.ExpiraLocal + PrazoJogada.Extra }, null),
+                // A MUDANÇA DE PLANOS não vale numa Fusão (decisão 0070).
+                CodigoCarta.MudancaDePlanos when jogada.CodigoFusao is not null => (null, ErrosJogo.CartaInvalida()),
                 CodigoCarta.MudancaDePlanos =>
                     await TrocarObjetivoAsync(connection, transaction, jogada, request.Objetivo, usuarioId, cancellationToken),
                 // APOSTA: basta registrar a carta; a recompensa dobra na leitura.
@@ -144,29 +146,21 @@ internal static class ResponderJogada
         }
 
         // A duração-alvo é copiada; o tipo a evitar da VARIEDADE é o da última atividade de quem vai cumprir.
-        ParametrosObjetivo parametros;
-        if (CatalogoCartas.IsDuracao(jogada.Codigo))
-        {
-            parametros = new ParametrosObjetivo(jogada.DuracaoAlvoSegundos, null);
-        }
-        else
-        {
-            var (fixados, erro) = await Jogadas.FixarObjetivoAsync(
-                connection, transaction, jogada.Codigo, jogada.GrupoId, remetenteId, cancellationToken);
-            if (erro is not null)
-            {
-                return (null, erro);
-            }
-
-            parametros = fixados!;
-        }
+        // Uma Fusão volta inteira, com as duas Provocações (decisão 0070).
+        var temVariedade = jogada.Codigo == CodigoCarta.Variedade || jogada.CodigoFusao == CodigoCarta.Variedade;
+        var parametros = new ParametrosObjetivo(
+            jogada.DuracaoAlvoSegundos,
+            temVariedade
+                ? await Jogadas.LoadUltimoTipoVerificadoAsync(
+                    connection, transaction, jogada.GrupoId, remetenteId, cancellationToken)
+                : null);
 
         var agora = await Jogadas.LoadAgoraAsync(connection, transaction, jogada.GrupoId, cancellationToken);
         var (devolvidaId, _) = await Jogadas.InsertAsync(
             connection,
             transaction,
             new NovaJogada(jogada.GrupoId, usuarioId, remetenteId, jogada.CartaId, jogada.Id, agora.Utc,
-                PrazoJogada.Calcular(jogada.Codigo, agora.Local), parametros),
+                PrazoJogada.Calcular(jogada.Codigo, jogada.CodigoFusao, agora.Local), parametros, jogada.CartaFusaoId),
             cancellationToken);
 
         await NotificacoesJogada.NotificarAsync(
@@ -239,9 +233,11 @@ internal static class ResponderJogada
         await using var command = new NpgsqlCommand($"""
             SELECT j.grupo_id, j.resposta IS NULL AND j.expira_em > now(), j.origem_id, j.carta_id,
                 {Jogadas.ObjetivoSql}, j.duracao_alvo_segundos,
-                j.enviada_em AT TIME ZONE g.fuso_horario, j.expira_em AT TIME ZONE g.fuso_horario
+                j.enviada_em AT TIME ZONE g.fuso_horario, j.expira_em AT TIME ZONE g.fuso_horario,
+                j.carta_fusao_id, cf.codigo
             FROM jogadas j
             JOIN cartas c ON c.id = j.carta_id
+            LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             JOIN grupos g ON g.id = j.grupo_id
             WHERE j.id = $1
             FOR UPDATE OF j
@@ -258,7 +254,9 @@ internal static class ResponderJogada
             reader.GetString(4),
             reader.IsDBNull(5) ? null : reader.GetInt32(5),
             reader.GetDateTime(6),
-            reader.GetDateTime(7));
+            reader.GetDateTime(7),
+            reader.IsDBNull(8) ? null : reader.GetGuid(8),
+            reader.IsDBNull(9) ? null : reader.GetString(9));
     }
 
     private static async Task UpdateAsync(
@@ -306,7 +304,9 @@ internal static class ResponderJogada
         string Codigo,
         int? DuracaoAlvoSegundos,
         DateTime EnviadaLocal,
-        DateTime ExpiraLocal);
+        DateTime ExpiraLocal,
+        Guid? CartaFusaoId,
+        string? CodigoFusao);
 
     /// <summary>O que a Resposta muda na Jogada. Nulo: fica como está.</summary>
     private sealed record MudancaJogada(DateTime? ExpiraLocal, string? Objetivo, ParametrosObjetivo? Parametros);

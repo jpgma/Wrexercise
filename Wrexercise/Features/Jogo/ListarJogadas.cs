@@ -53,7 +53,9 @@ internal static class ListarJogadas
                     ? ErrosJogo.ToResponse(CatalogoCartas.Find(codigoResposta)!)
                     : null,
                 x.Jogada.OrigemId is not null,
+                // A MUDANÇA DE PLANOS não vale numa Fusão (decisão 0070).
                 x.Jogada.DestinatarioId == usuarioId && x.Jogada.Situacao == SituacaoJogada.Enviada
+                    && x.Jogada.Estado.CodigoFusao is null
                     ? CatalogoCartas.GetEquivalentes(x.Jogada.Estado.Codigo)
                         .Where(c => temDesafioAtivo || !CatalogoCartas.IsDuracao(c))
                         .ToList()
@@ -64,7 +66,11 @@ internal static class ListarJogadas
                 x.Jogada.Estado.DuracaoAlvoSegundos,
                 x.Jogada.Estado.TipoEvitar,
                 x.Jogada.DestinatarioId == usuarioId,
-                x.Nova))
+                x.Nova,
+                x.Jogada.Estado.CodigoFusao is { } codigoFusao
+                    ? ErrosJogo.ToResponse(CatalogoCartas.Find(codigoFusao)! with { Preco = x.Jogada.PrecoFusao })
+                    : null,
+                CalculoEnergia.GetRecompensa(x.Jogada.ToRecompensa(comoDestinatario: true))))
             .ToList();
 
         return Results.Json(new JogadasResponse(resposta), AppJsonContext.Default.JogadasResponse);

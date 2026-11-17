@@ -25,9 +25,21 @@ internal sealed record JogadaCarregada(
     JogadaEstado Estado,
     DateTimeOffset? VistaEm,
     DateTimeOffset? ResultadoVistoEm,
-    string Situacao)
+    string Situacao,
+    Guid? CartaFusaoId = null,
+    int PrecoFusao = 0)
 {
     public JogadaLimite ToLimite() => new(RemetenteId, DestinatarioId, Estado.EnviadaEm, Situacao);
+
+    /// <summary>Se a carta é uma das Provocações desta Jogada: a jogada ou a segunda de uma Fusão.</summary>
+    public bool UsaCarta(Guid cartaId) => CartaId == cartaId || CartaFusaoId == cartaId;
+
+    /// <summary>A recompensa desta Jogada, se concluída, para quem cumpre ou para quem enviou.</summary>
+    public RecompensaJogada ToRecompensa(bool comoDestinatario) => new(
+        Preco + PrecoFusao,
+        comoDestinatario,
+        CodigoResposta == Jogo.CodigoCarta.Aposta,
+        CartaFusaoId is not null);
 
     /// <summary>
     /// Se a Provocação desta Jogada é de quem enviou. Na Jogada do DESAFIO DUPLO, a carta é a da Jogada original
@@ -41,6 +53,7 @@ internal sealed record ParametrosObjetivo(int? DuracaoAlvoSegundos, string? Tipo
 
 /// <param name="OrigemId">A Jogada original, na devolução do DESAFIO DUPLO.</param>
 /// <param name="ExpiraLocal">O prazo no horário local do grupo.</param>
+/// <param name="CartaFusaoId">A segunda Provocação, numa Fusão.</param>
 internal sealed record NovaJogada(
     Guid GrupoId,
     Guid RemetenteId,
@@ -49,7 +62,8 @@ internal sealed record NovaJogada(
     Guid? OrigemId,
     DateTimeOffset EnviadaEm,
     DateTime ExpiraLocal,
-    ParametrosObjetivo Parametros);
+    ParametrosObjetivo Parametros,
+    Guid? CartaFusaoId = null);
 
 /// <summary>SQL compartilhado: as Jogadas e as atividades que podem cumpri-las.</summary>
 internal static class Jogadas
@@ -70,16 +84,19 @@ internal static class Jogadas
     {
         var linhas = new List<(Guid Id, Guid GrupoId, Guid RemetenteId, Guid DestinatarioId, Guid CartaId,
             string CodigoCarta, int Preco, Guid? CartaRespostaId, string? CodigoResposta, Guid? OrigemId,
-            JogadaEstado Estado, DateTimeOffset? VistaEm, DateTimeOffset? ResultadoVistoEm)>();
+            JogadaEstado Estado, DateTimeOffset? VistaEm, DateTimeOffset? ResultadoVistoEm,
+            Guid? CartaFusaoId, int PrecoFusao)>();
         DateTimeOffset agora;
 
         await using (var command = new NpgsqlCommand($"""
             SELECT j.id, j.grupo_id, j.remetente_id, j.destinatario_id, j.carta_id, c.preco, {ObjetivoSql},
                 j.enviada_em, j.expira_em, j.resposta, j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
-                j.vista_em, j.resultado_visto_em, now(), c.codigo, j.carta_resposta_id, cr.codigo, j.origem_id
+                j.vista_em, j.resultado_visto_em, now(), c.codigo, j.carta_resposta_id, cr.codigo, j.origem_id,
+                j.carta_fusao_id, cf.codigo, cf.preco
             FROM jogadas j
             JOIN cartas c ON c.id = j.carta_id
             LEFT JOIN cartas cr ON cr.id = j.carta_resposta_id
+            LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             WHERE $1 IN (j.remetente_id, j.destinatario_id) OR $2 IN (j.remetente_id, j.destinatario_id)
             ORDER BY j.enviada_em DESC, j.id
             """, connection, transaction))
@@ -109,9 +126,12 @@ internal static class Jogadas
                         reader.IsDBNull(9) ? null : reader.GetString(9),
                         reader.IsDBNull(10) ? null : TimestampLeitura.FromReader(reader, 10),
                         reader.IsDBNull(11) ? null : reader.GetInt32(11),
-                        reader.IsDBNull(12) ? null : reader.GetString(12)),
+                        reader.IsDBNull(12) ? null : reader.GetString(12),
+                        reader.IsDBNull(21) ? null : reader.GetString(21)),
                     reader.IsDBNull(13) ? null : TimestampLeitura.FromReader(reader, 13),
-                    reader.IsDBNull(14) ? null : TimestampLeitura.FromReader(reader, 14)));
+                    reader.IsDBNull(14) ? null : TimestampLeitura.FromReader(reader, 14),
+                    reader.IsDBNull(20) ? null : reader.GetGuid(20),
+                    reader.IsDBNull(22) ? 0 : reader.GetInt32(22)));
             }
         }
 
@@ -135,7 +155,9 @@ internal static class Jogadas
                 SituacaoJogada.Calcular(
                     l.Estado,
                     atividades.TryGetValue(l.Id, out var candidatas) ? candidatas : [],
-                    agora)))
+                    agora),
+                l.CartaFusaoId,
+                l.PrecoFusao))
             .ToList();
     }
 
@@ -201,8 +223,9 @@ internal static class Jogadas
     /// <summary>
     /// Fixa o objetivo para quem vai cumpri-lo (decisão 0035): +10 MIN e +20 MIN guardam a duração mínima do
     /// desafio <c>Ativo</c> mais os minutos da carta; a VARIEDADE guarda o tipo da última atividade verificada
-    /// do destinatário neste grupo.
+    /// do destinatário neste grupo. Numa Fusão, os minutos das duas cartas se somam (decisão 0070).
     /// </summary>
+    /// <param name="codigoFusao">A segunda Provocação, numa Fusão.</param>
     /// <returns>Os parâmetros, ou o erro <c>SEM_DESAFIO_ATIVO</c> numa carta de duração.</returns>
     public static async Task<(ParametrosObjetivo? Parametros, IResult? Erro)> FixarObjetivoAsync(
         NpgsqlConnection connection,
@@ -210,20 +233,22 @@ internal static class Jogadas
         string codigo,
         Guid grupoId,
         Guid destinatarioId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? codigoFusao = null)
     {
         int? duracaoAlvo = null;
-        if (CatalogoCartas.IsDuracao(codigo))
+        var minutos = CatalogoCartas.GetMinutosExtras(codigo)
+            + (codigoFusao is null ? 0 : CatalogoCartas.GetMinutosExtras(codigoFusao));
+        if (minutos > 0)
         {
-            duracaoAlvo = await LoadDuracaoMinimaAtivaAsync(connection, grupoId, cancellationToken)
-                + (CatalogoCartas.GetMinutosExtras(codigo) * 60);
+            duracaoAlvo = await LoadDuracaoMinimaAtivaAsync(connection, grupoId, cancellationToken) + (minutos * 60);
             if (duracaoAlvo is null)
             {
                 return (null, SemDesafioAtivo());
             }
         }
 
-        var tipoEvitar = codigo == CodigoCarta.Variedade
+        var tipoEvitar = codigo == CodigoCarta.Variedade || codigoFusao == CodigoCarta.Variedade
             ? await LoadUltimoTipoVerificadoAsync(connection, transaction, grupoId, destinatarioId, cancellationToken)
             : null;
 
@@ -277,8 +302,8 @@ internal static class Jogadas
         await using var insert = new NpgsqlCommand("""
             INSERT INTO jogadas (
                 grupo_id, remetente_id, destinatario_id, carta_id, origem_id, enviada_em, expira_em,
-                duracao_alvo_segundos, tipo_evitar)
-            SELECT g.id, $2, $3, $4, $5, $6, $7 AT TIME ZONE g.fuso_horario, $8, $9
+                duracao_alvo_segundos, tipo_evitar, carta_fusao_id)
+            SELECT g.id, $2, $3, $4, $5, $6, $7 AT TIME ZONE g.fuso_horario, $8, $9, $10
             FROM grupos g
             WHERE g.id = $1
             RETURNING id, expira_em
@@ -293,13 +318,14 @@ internal static class Jogadas
         insert.Parameters.AddWithValue(
             NpgsqlDbType.Integer, (object?)jogada.Parametros.DuracaoAlvoSegundos ?? DBNull.Value);
         insert.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)jogada.Parametros.TipoEvitar ?? DBNull.Value);
+        insert.Parameters.AddWithValue(NpgsqlDbType.Uuid, (object?)jogada.CartaFusaoId ?? DBNull.Value);
         await using var reader = await insert.ExecuteReaderAsync(cancellationToken);
         await reader.ReadAsync(cancellationToken);
         return (reader.GetGuid(0), TimestampLeitura.FromReader(reader, 1));
     }
 
     /// <summary>O tipo da última atividade verificada do destinatário neste grupo, fixado na VARIEDADE.</summary>
-    private static async Task<string?> LoadUltimoTipoVerificadoAsync(
+    public static async Task<string?> LoadUltimoTipoVerificadoAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid grupoId,

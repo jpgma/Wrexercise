@@ -14,8 +14,9 @@ public class SituacaoJogadaTests
         string? resposta = null,
         DateTimeOffset? respondidaEm = null,
         int? alvo = null,
-        string? evitar = "Corrida") =>
-        new(codigo, Envio, Prazo, resposta, resposta is null ? null : respondidaEm ?? Antes, alvo, evitar);
+        string? evitar = "Corrida",
+        string? fusao = null) =>
+        new(codigo, Envio, Prazo, resposta, resposta is null ? null : respondidaEm ?? Antes, alvo, evitar, fusao);
 
     // Dias de novembro de 2026: 6 é sexta, 7 é sábado, 8 é domingo e 9 é segunda.
     private static AtividadeJogada Atividade(
@@ -135,4 +136,55 @@ public class SituacaoJogadaTests
     [InlineData(8, false)]
     public void AntesDas8_NoHorarioLocal(int hora, bool cumpre) =>
         Assert.Equal(cumpre, ObjetivoCarta.Cumpre(Jogada(CodigoCarta.AntesDas8), Atividade(hora: hora)));
+
+    [Theory]
+    [InlineData("Musculacao", 7, true)]
+    [InlineData("Corrida", 7, false)]
+    [InlineData("Musculacao", 9, false)]
+    public void Fusao_OMesmoTreinoCumpreOsDois(string tipo, int hora, bool cumpre) =>
+        Assert.Equal(
+            cumpre,
+            ObjetivoCarta.Cumpre(
+                Jogada(CodigoCarta.AntesDas8, fusao: CodigoCarta.Variedade),
+                Atividade(tipo: tipo, hora: hora)));
+
+    [Fact]
+    public void Fusao_TreinosDiferentesNaoCumprem() =>
+        Assert.Equal(
+            SituacaoJogada.Aceita,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.AntesDas8, "Aceita", fusao: CodigoCarta.Variedade),
+                [Atividade(tipo: "Corrida", hora: 7), Atividade(tipo: "Musculacao", hora: 12)],
+                Antes));
+
+    [Fact]
+    public void Fusao_ComOsDoisNoMesmoTreinoVerificado_Concluida() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.Variedade, "Aceita", fusao: CodigoCarta.FimDeSemana),
+                [Atividade(dia: 7)],
+                Antes));
+
+    [Fact]
+    public void Fusao_ComDuracao_NaoSomaODia()
+    {
+        // +10 MIN com +20 MIN: o alvo já é a duração mínima + 30 minutos, num treino só.
+        var jogada = Jogada(CodigoCarta.Mais10Min, "Aceita", alvo: 5400, fusao: CodigoCarta.Mais20Min);
+
+        Assert.Equal(
+            SituacaoJogada.Aceita,
+            SituacaoJogada.Calcular(jogada, [Atividade(duracao: 2700, hora: 8), Atividade(duracao: 2700, hora: 18)], Antes));
+        Assert.Equal(SituacaoJogada.Concluida, SituacaoJogada.Calcular(jogada, [Atividade(duracao: 5400)], Antes));
+    }
+
+    [Fact]
+    public void Fusao_DuracaoComOutraCarta_PedeTudoNoMesmoTreino()
+    {
+        var jogada = Jogada(CodigoCarta.FimDeSemana, alvo: 4200, fusao: CodigoCarta.Mais10Min);
+
+        Assert.True(ObjetivoCarta.Cumpre(jogada, Atividade(duracao: 4200, dia: 7)));
+        Assert.False(ObjetivoCarta.Cumpre(jogada, Atividade(duracao: 4199, dia: 7)));
+        Assert.False(ObjetivoCarta.Cumpre(jogada, Atividade(duracao: 4200, dia: 6)));
+    }
 }

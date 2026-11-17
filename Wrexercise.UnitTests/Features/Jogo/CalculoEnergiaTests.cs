@@ -70,6 +70,15 @@ public class CalculoEnergiaTests
         Assert.Equal(70 + 17, ganha.Jogadas);
     }
 
+    // VARIEDADE (35) + ANTES DAS 8 (40) = 75: o bônus da Fusão é 20% da soma, e a APOSTA não o dobra.
+    [Theory]
+    [InlineData(true, false, 90)]
+    [InlineData(true, true, 165)]
+    [InlineData(false, false, 37)]
+    [InlineData(false, true, 37)]
+    public void Jogadas_FusaoPagaASomaMaisOBonus(bool comoDestinatario, bool aposta, int esperado) =>
+        Assert.Equal(esperado, CalculoEnergia.GetRecompensa(new(75, comoDestinatario, aposta, Fusao: true)));
+
     [Fact]
     public void SemanaTipica_RendeSetentaETresDasFontesDaG2()
     {

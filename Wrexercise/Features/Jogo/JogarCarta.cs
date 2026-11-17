@@ -75,10 +75,29 @@ internal static class JogarCarta
 
         if (estado.IsEmJogo(comprada.Id))
         {
-            return ApiProblem.Create(
-                StatusCodes.Status409Conflict,
-                "CARTA_EM_JOGO",
-                "Esta carta já está numa Jogada aberta.");
+            return ErrosJogo.CartaEmJogo();
+        }
+
+        // Fusão (decisão 0070): a segunda Provocação da Mão vai na mesma Jogada.
+        Carta? fusao = null;
+        if (request.CartaFusaoId is { } cartaFusaoId)
+        {
+            var segunda = estado.Cartas.FirstOrDefault(c => c.Id == cartaFusaoId);
+            if (segunda is null || estado.IsGasta(segunda.Id))
+            {
+                return ErrosJogo.CartaNaoEncontrada();
+            }
+
+            fusao = CatalogoCartas.Find(segunda.Codigo)!;
+            if (!CatalogoCartas.PodeFundir(carta, fusao))
+            {
+                return ErrosJogo.FusaoInvalida();
+            }
+
+            if (estado.IsEmJogo(segunda.Id))
+            {
+                return ErrosJogo.CartaEmJogo();
+            }
         }
 
         var jogadas = await Jogadas.LoadAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
@@ -90,7 +109,7 @@ internal static class JogarCarta
         }
 
         var (parametros, erro) = await Jogadas.FixarObjetivoAsync(
-            connection, transaction, carta.Codigo, grupoId, destinatarioId, cancellationToken);
+            connection, transaction, carta.Codigo, grupoId, destinatarioId, cancellationToken, fusao?.Codigo);
         if (erro is not null)
         {
             return erro;
@@ -100,7 +119,8 @@ internal static class JogarCarta
             connection,
             transaction,
             new NovaJogada(grupoId, remetenteId, destinatarioId, cartaId, null, agora.Utc,
-                PrazoJogada.Calcular(carta.Codigo, agora.Local), parametros!),
+                PrazoJogada.Calcular(carta.Codigo, fusao?.Codigo, agora.Local), parametros!,
+                fusao is null ? null : request.CartaFusaoId),
             cancellationToken);
 
         await NotificacoesJogada.NotificarAsync(

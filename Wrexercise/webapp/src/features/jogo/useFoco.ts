@@ -22,13 +22,16 @@ export type FaseFoco = "aberto" | "arremessando" | "rivalizando";
 /** A carta do Foco: voa de quem joga até o alvo ou cai, quando o envio falha. */
 export type CartaNoFoco = {
   codigo: CodigoCarta;
+  /** A segunda carta de uma Fusão: as duas voam juntas. */
+  codigoFusao?: CodigoCarta;
   efeito: "voo" | "sai";
   de: Ponto;
   para: Ponto;
 };
 
 export type EfeitoFoco =
-  { tipo: "impacto"; texto: string; ponto: Ponto } | { tipo: "vs" };
+  | { tipo: "impacto"; texto: string; ponto: Ponto; fusao?: boolean }
+  | { tipo: "vs" };
 
 const parametro = "foco";
 const semCamera: Camera = { x: 0, y: 0, zoom: 1, ms: 0 };
@@ -261,7 +264,12 @@ export function useFoco({
    * servidor responder. Falhando, a carta cai e o avatar faz `recusar`. Termina no impacto.
    */
   const arremessar = useCallback(
-    async (codigo: CodigoCarta, texto: string, envio: Promise<unknown>) => {
+    async (
+      codigo: CodigoCarta,
+      texto: string,
+      envio: Promise<unknown>,
+      codigoFusao?: CodigoCarta,
+    ) => {
       const resultado = envio.then(
         () => true,
         () => false,
@@ -329,7 +337,7 @@ export function useFoco({
       if (!vivo()) return;
 
       if (!ok) {
-        setCarta({ codigo, efeito: "sai", de: eu, para: eu });
+        setCarta({ codigo, codigoFusao, efeito: "sai", de: eu, para: eu });
         atuar(usuarioId, pose("recusar", "sul"));
         await esperar(900);
         if (!vivo()) return;
@@ -342,7 +350,7 @@ export function useFoco({
       }
 
       // A câmera acompanha a carta até o alvo, que começa o `receber` antes do fim do voo.
-      setCarta({ codigo, efeito: "voo", de: eu, para: alvo });
+      setCarta({ codigo, codigoFusao, efeito: "voo", de: eu, para: alvo });
       setCameraAcao(mirar(alvo, ZoomAcao, MiraAcao, VooMs));
       const impactoMs = quadroRecebe * animacoes[recebe].ms;
       await esperar(VooMs - impactoMs);
@@ -352,7 +360,12 @@ export function useFoco({
       if (!vivo()) return;
       setCarta(null);
       setTremor(true);
-      setEfeito({ tipo: "impacto", texto, ponto: alvo });
+      setEfeito({
+        tipo: "impacto",
+        texto,
+        ponto: alvo,
+        fusao: codigoFusao !== undefined,
+      });
       if ("vibrate" in navigator) navigator.vibrate(30);
       if (euDurmo) voltarADormir();
       else atuar(usuarioId, null);

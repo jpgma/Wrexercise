@@ -31,4 +31,16 @@ public class CatalogoCartasTests
     [Fact]
     public void MudancaDePlanos_RespostasNaoTemEquivalentes() =>
         Assert.Empty(CatalogoCartas.GetEquivalentes(CodigoCarta.Aposta));
+
+    [Theory]
+    [InlineData(CodigoCarta.AntesDas8, CodigoCarta.Variedade, true)]
+    [InlineData(CodigoCarta.Mais10Min, CodigoCarta.Mais20Min, true)]
+    [InlineData(CodigoCarta.Variedade, CodigoCarta.Variedade, false)]
+    [InlineData(CodigoCarta.Variedade, CodigoCarta.Aposta, false)]
+    [InlineData(CodigoCarta.PrazoExtra, CodigoCarta.Aposta, false)]
+    public void Fusao_SoDuasProvocacoesDiferentes(string a, string b, bool pode)
+    {
+        Assert.Equal(pode, CatalogoCartas.PodeFundir(CatalogoCartas.Find(a)!, CatalogoCartas.Find(b)!));
+        Assert.Equal(pode, CatalogoCartas.PodeFundir(CatalogoCartas.Find(b)!, CatalogoCartas.Find(a)!));
+    }
 }

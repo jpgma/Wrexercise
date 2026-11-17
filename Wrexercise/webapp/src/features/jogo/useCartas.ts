@@ -60,6 +60,10 @@ export type Jogada = {
   recebida: boolean;
   /** Quem consulta ainda não viu a carta chegar (destinatário) ou a resposta (remetente). */
   nova: boolean;
+  /** A segunda Provocação de uma Fusão, ou `null` (decisão 0070). */
+  cartaFusao: Carta | null;
+  /** A Energia de quem cumpre, já com o bônus da Fusão e a APOSTA. */
+  recompensa: number;
 };
 
 const lojaKey = ["jogo", "loja"] as const;
@@ -105,7 +109,12 @@ export function useJogadas(grupoId: string) {
 export function useJogarCarta(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dados: { cartaId: string; destinatarioId: string }) =>
+    mutationFn: (dados: {
+      cartaId: string;
+      destinatarioId: string;
+      /** A segunda Provocação, para jogar uma Fusão. */
+      cartaFusaoId?: string;
+    }) =>
       postJson<{ id: string; expiraEm: string }>(
         `/api/grupos/${grupoId}/jogadas`,
         dados,
