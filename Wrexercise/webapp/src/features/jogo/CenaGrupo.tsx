@@ -865,7 +865,14 @@ function Praca({
                   atuacao={getAtuacao(membro.usuarioId)}
                   nomeVisivel={!emFoco && emEncenacao(membro.usuarioId)}
                   posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
-                  apagado={emFoco && !atuaNoFoco(membro.usuarioId)}
+                  apagado={
+                    (emFoco && !atuaNoFoco(membro.usuarioId)) ||
+                    // Com uma carta escolhida, quem não pode recebê-la agora fica apagado.
+                    (cartaEscolhida &&
+                      !emAcao &&
+                      membro.usuarioId !== usuarioId &&
+                      getMira(membro) === null)
+                  }
                   mira={getMira(membro)}
                   rival={
                     membro.usuarioId === usuarioId

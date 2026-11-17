@@ -61,43 +61,10 @@ internal static class JogarCarta
         }
 
         var estado = await EstadoJogo.LoadAsync(connection, transaction, remetenteId, cancellationToken);
-        var comprada = estado.Cartas.FirstOrDefault(c => c.Id == cartaId);
-        if (comprada is null || estado.IsGasta(comprada.Id))
+        var (carta, fusao, _, erroCartas) = ResolverCartas(estado, cartaId, request.CartaFusaoId);
+        if (erroCartas is not null)
         {
-            return ErrosJogo.CartaNaoEncontrada();
-        }
-
-        var carta = CatalogoCartas.Find(comprada.Codigo)!;
-        if (carta.Tipo != TipoCarta.Provocacao)
-        {
-            return ErrosJogo.CartaInvalida();
-        }
-
-        if (estado.IsEmJogo(comprada.Id))
-        {
-            return ErrosJogo.CartaEmJogo();
-        }
-
-        // Fusão (decisão 0070): a segunda Provocação da Mão vai na mesma Jogada.
-        Carta? fusao = null;
-        if (request.CartaFusaoId is { } cartaFusaoId)
-        {
-            var segunda = estado.Cartas.FirstOrDefault(c => c.Id == cartaFusaoId);
-            if (segunda is null || estado.IsGasta(segunda.Id))
-            {
-                return ErrosJogo.CartaNaoEncontrada();
-            }
-
-            fusao = CatalogoCartas.Find(segunda.Codigo)!;
-            if (!CatalogoCartas.PodeFundir(carta, fusao))
-            {
-                return ErrosJogo.FusaoInvalida();
-            }
-
-            if (estado.IsEmJogo(segunda.Id))
-            {
-                return ErrosJogo.CartaEmJogo();
-            }
+            return erroCartas;
         }
 
         var jogadas = await Jogadas.LoadAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
@@ -109,7 +76,7 @@ internal static class JogarCarta
         }
 
         var (parametros, erro) = await Jogadas.FixarObjetivoAsync(
-            connection, transaction, carta.Codigo, grupoId, destinatarioId, remetenteId, cancellationToken, fusao?.Codigo);
+            connection, transaction, carta!.Codigo, grupoId, destinatarioId, remetenteId, cancellationToken, fusao?.Codigo);
         if (erro is not null)
         {
             return erro;
@@ -139,7 +106,56 @@ internal static class JogarCarta
             statusCode: StatusCodes.Status201Created);
     }
 
-    private static IResult DestinatarioInvalido() => ApiProblem.Create(
+    /// <summary>
+    /// As Provocações de um arremesso, conferidas na Mão de quem joga: a carta e, numa Fusão (decisão 0070), a
+    /// segunda. A prévia (<see cref="PreverJogada"/>) usa a mesma conferência.
+    /// </summary>
+    /// <returns>As cartas e a soma dos preços pagos, ou o erro.</returns>
+    public static (Carta? Carta, Carta? Fusao, int Preco, IResult? Erro) ResolverCartas(
+        EstadoJogo estado,
+        Guid cartaId,
+        Guid? cartaFusaoId)
+    {
+        var comprada = estado.Cartas.FirstOrDefault(c => c.Id == cartaId);
+        if (comprada is null || estado.IsGasta(comprada.Id))
+        {
+            return (null, null, 0, ErrosJogo.CartaNaoEncontrada());
+        }
+
+        var carta = CatalogoCartas.Find(comprada.Codigo)!;
+        if (carta.Tipo != TipoCarta.Provocacao)
+        {
+            return (null, null, 0, ErrosJogo.CartaInvalida());
+        }
+
+        if (estado.IsEmJogo(comprada.Id))
+        {
+            return (null, null, 0, ErrosJogo.CartaEmJogo());
+        }
+
+        if (cartaFusaoId is not { } fusaoId)
+        {
+            return (carta, null, comprada.Preco, null);
+        }
+
+        var segunda = estado.Cartas.FirstOrDefault(c => c.Id == fusaoId);
+        if (segunda is null || estado.IsGasta(segunda.Id))
+        {
+            return (null, null, 0, ErrosJogo.CartaNaoEncontrada());
+        }
+
+        var fusao = CatalogoCartas.Find(segunda.Codigo)!;
+        if (!CatalogoCartas.PodeFundir(carta, fusao))
+        {
+            return (null, null, 0, ErrosJogo.FusaoInvalida());
+        }
+
+        return estado.IsEmJogo(segunda.Id)
+            ? (null, null, 0, ErrosJogo.CartaEmJogo())
+            : (carta, fusao, comprada.Preco + segunda.Preco, null);
+    }
+
+    public static IResult DestinatarioInvalido() => ApiProblem.Create(
         StatusCodes.Status400BadRequest,
         "DESTINATARIO_INVALIDO",
         "Escolha outro membro do grupo para receber a carta.");

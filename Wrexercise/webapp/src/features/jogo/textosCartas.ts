@@ -8,6 +8,7 @@ import type {
   CodigoCarta,
   CodigoProvocacao,
   Jogada,
+  PreviaJogada,
   SituacaoJogada,
 } from "./useCartas";
 
@@ -68,36 +69,109 @@ export function getEfeitoFusao(a: Carta, b: Carta): string {
   return `FUSÃO · ${getPremioFusao(a, b)} EN: um mesmo treino ${partes.join(" e ")}.`;
 }
 
-/** O objetivo de uma Jogada, já com o que foi fixado no envio ou no aceite. */
-export function getObjetivo(jogada: Jogada): string {
-  if (jogada.cartaFusao) {
-    const partes = partesDaFusao([jogada.objetivo, jogada.cartaFusao.codigo], {
-      duracao: jogada.duracaoAlvoSegundos
-        ? `de ${formatarDuracao(jogada.duracaoAlvoSegundos)} ou mais`
+/** O que define um objetivo: os códigos e o que o servidor fixa no envio ou no aceite. */
+type DadosObjetivo = {
+  objetivo: CodigoProvocacao;
+  fusao: CodigoCarta | null;
+  duracaoAlvoSegundos: number | null;
+  tipoEvitar: string | null;
+};
+
+/** O objetivo por extenso, igual para a Jogada e para a prévia antes do arremesso. */
+function getObjetivoDe(dados: DadosObjetivo): string {
+  const outroTipo = dados.tipoEvitar
+    ? `que não seja ${tipoAtividadeLabels[dados.tipoEvitar as TipoAtividade] ?? dados.tipoEvitar}`
+    : "de qualquer tipo";
+  if (dados.fusao) {
+    const partes = partesDaFusao([dados.objetivo, dados.fusao], {
+      duracao: dados.duracaoAlvoSegundos
+        ? `de ${formatarDuracao(dados.duracaoAlvoSegundos)} ou mais`
         : null,
-      tipo: jogada.tipoEvitar
-        ? `que não seja ${tipoAtividadeLabels[jogada.tipoEvitar as TipoAtividade] ?? jogada.tipoEvitar}`
-        : "de qualquer tipo",
+      tipo: outroTipo,
       dia: "no sábado ou no domingo",
       hora: "que comece antes das 8h",
     });
     return `Um mesmo treino ${partes.join(" e ")}`;
   }
-  switch (jogada.objetivo) {
+  switch (dados.objetivo) {
     case "Mais10Min":
     case "Mais20Min":
-      return jogada.duracaoAlvoSegundos
-        ? `Somar ${formatarDuracao(jogada.duracaoAlvoSegundos)} ou mais num mesmo dia`
-        : objetivoCurto[jogada.objetivo];
+      return dados.duracaoAlvoSegundos
+        ? `Somar ${formatarDuracao(dados.duracaoAlvoSegundos)} ou mais num mesmo dia`
+        : objetivoCurto[dados.objetivo];
     case "Variedade":
-      return jogada.tipoEvitar
-        ? `Um treino que não seja ${tipoAtividadeLabels[jogada.tipoEvitar as TipoAtividade] ?? jogada.tipoEvitar}`
-        : "Um treino de qualquer tipo";
+      return `Um treino ${outroTipo}`;
     case "FimDeSemana":
       return "Um treino no sábado ou no domingo";
     case "AntesDas8":
       return "Um treino que comece antes das 8h";
   }
+}
+
+/** O objetivo de uma Jogada, já com o que foi fixado no envio ou no aceite. */
+export function getObjetivo(jogada: Jogada): string {
+  return getObjetivoDe({
+    objetivo: jogada.objetivo,
+    fusao: jogada.cartaFusao?.codigo ?? null,
+    duracaoAlvoSegundos: jogada.duracaoAlvoSegundos,
+    tipoEvitar: jogada.tipoEvitar,
+  });
+}
+
+/** O objetivo no meio de uma frase: "treino que não seja Ciclismo". */
+export function getObjetivoCurto(jogada: Jogada): string {
+  const texto = getObjetivo(jogada).replace(/^Um /, "");
+  return texto.charAt(0).toLowerCase() + texto.slice(1);
+}
+
+/**
+ * O que a carta vai pedir ao colega, antes do arremesso, com o que cada um ganha e o prazo. Repete o
+ * nome em vez de um pronome: o aplicativo não sabe o gênero de ninguém.
+ */
+export function getPrevia(
+  nome: string,
+  carta: Carta,
+  fusao: Carta | undefined,
+  previa: PreviaJogada,
+): string {
+  const objetivo = getObjetivoDe({
+    objetivo: carta.codigo as CodigoProvocacao,
+    fusao: fusao?.codigo ?? null,
+    duracaoAlvoSegundos: previa.duracaoAlvoSegundos,
+    tipoEvitar: previa.tipoEvitar,
+  });
+  const pedido = objetivo.startsWith("Um ")
+    ? `de um ${objetivo.slice(3)}`
+    : objetivo.charAt(0).toLowerCase() + objetivo.slice(1);
+  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}`;
+}
+
+/** A linha da Mão com uma carta escolhida e ainda sem prévia: o nome, que a carta pequena não mostra, e o efeito. */
+export function getEfeitoComNome(carta: Carta): string {
+  return `${carta.nome} · ${carta.efeito}`;
+}
+
+const formatadorDia = new Intl.DateTimeFormat("pt-BR", { weekday: "short" });
+
+/**
+ * O dia em que o prazo acaba, abreviado ("qui"). Um prazo à meia-noite é o fim do dia anterior: o
+ * FIM DE SEMANA acaba no domingo, e não na segunda.
+ */
+export function formatarDiaDoPrazo(iso: string): string {
+  const fim = new Date(iso);
+  const meiaNoite = fim.getHours() === 0 && fim.getMinutes() === 0;
+  return formatadorDia
+    .format(meiaNoite ? new Date(fim.getTime() - 60_000) : fim)
+    .replace(".", "");
+}
+
+/** O prazo em poucas letras: "qui, 20h", "qui, 20h30" ou "fim de dom". */
+export function formatarPrazoCurto(iso: string): string {
+  const fim = new Date(iso);
+  const dia = formatarDiaDoPrazo(iso);
+  if (fim.getHours() === 0 && fim.getMinutes() === 0) return `fim de ${dia}`;
+  const minutos = fim.getMinutes();
+  return `${dia}, ${fim.getHours()}h${minutos ? String(minutos).padStart(2, "0") : ""}`;
 }
 
 const formatadorPrazo = new Intl.DateTimeFormat("pt-BR", {

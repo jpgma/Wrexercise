@@ -77,6 +77,7 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(CartaMaoResponse))]
 [JsonSerializable(typeof(ComprarCartaRequest))]
 [JsonSerializable(typeof(JogadaCriadaResponse))]
+[JsonSerializable(typeof(PreviaJogadaResponse))]
 [JsonSerializable(typeof(JogadaResponse))]
 [JsonSerializable(typeof(JogadasResponse))]
 [JsonSerializable(typeof(JogarCartaRequest))]

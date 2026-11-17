@@ -106,6 +106,43 @@ export function useJogadas(grupoId: string) {
   });
 }
 
+/** O que o arremesso fixaria agora: objetivo, prazo e recompensas (`PreverJogada.cs`). */
+export type PreviaJogada = {
+  duracaoAlvoSegundos: number | null;
+  tipoEvitar: string | null;
+  expiraEm: string;
+  recompensaDestinatario: number;
+  recompensaRemetente: number;
+};
+
+/**
+ * A prévia de uma carta para um colega, pedida só com os dois escolhidos. A chave fica sob a das
+ * Jogadas do grupo: o que renova as Jogadas renova a prévia.
+ */
+export function usePreviaJogada(
+  grupoId: string,
+  destinatarioId: string | undefined,
+  cartaId: string | undefined,
+  cartaFusaoId: string | undefined,
+) {
+  return useQuery({
+    queryKey: [
+      ...jogadasKey(grupoId),
+      "previa",
+      destinatarioId,
+      cartaId,
+      cartaFusaoId ?? null,
+    ],
+    queryFn: ({ signal }) =>
+      getJson<PreviaJogada>(
+        `/api/grupos/${grupoId}/jogadas/previa?destinatarioId=${destinatarioId}&cartaId=${cartaId}${cartaFusaoId ? `&cartaFusaoId=${cartaFusaoId}` : ""}`,
+        signal,
+      ),
+    enabled: destinatarioId !== undefined && cartaId !== undefined,
+    retry: shouldRetry,
+  });
+}
+
 export function useJogarCarta(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({

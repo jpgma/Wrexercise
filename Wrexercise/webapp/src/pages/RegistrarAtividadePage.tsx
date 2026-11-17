@@ -59,6 +59,7 @@ import {
 import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
 import { appIntegracaoLabels, useRascunho } from "@/features/integracoes";
+import { AvisoCartaNoTreino } from "@/features/jogo";
 import { useResumoGrupo } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
 
@@ -274,7 +275,8 @@ export function RegistrarAtividadePage() {
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
   const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
-  const usuarioId = useSessao().data?.id;
+  const sessao = useSessao().data;
+  const usuarioId = sessao?.id;
   // A câmera aberta fica no histórico, como a galeria: o Voltar do celular a fecha.
   const camera = useGaleria("camera-registro");
   const seletor = useRef<HTMLInputElement>(null);
@@ -752,6 +754,14 @@ export function RegistrarAtividadePage() {
             })}
           </div>
           {errors.tipo && <p className="input-error">{errors.tipo.message}</p>}
+          {sessao?.modoInicio === "Jogo" && (
+            <AvisoCartaNoTreino
+              grupoId={grupoId}
+              tipo={tipoAtual}
+              startedAt={startedAt}
+              duracaoSegundos={(duracaoMinutos || 0) * 60}
+            />
+          )}
         </fieldset>
 
         <p className="mt-6 mb-2 text-sm font-semibold">Duração</p>

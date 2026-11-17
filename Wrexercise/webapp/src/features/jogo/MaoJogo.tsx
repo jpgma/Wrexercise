@@ -7,12 +7,19 @@ import { SaldoEnergia } from "./SaldoEnergia";
 import { useAvisoFadiga } from "./useEnergia";
 import {
   getBloqueioJogada,
+  getEfeitoComNome,
   getEfeitoFusao,
   getLimiteEnvio,
+  getPrevia,
   podeFundir,
   primeiroNome,
 } from "./textosCartas";
-import { type CartaMao, useJogadas, useLoja } from "./useCartas";
+import {
+  type CartaMao,
+  useJogadas,
+  useLoja,
+  usePreviaJogada,
+} from "./useCartas";
 import type { MembroCena } from "./useCena";
 
 /** Arrastar a carta para cima além disto, ou rápido o bastante, arremessa. */
@@ -278,6 +285,13 @@ export function MaoJogo({
         )
       : undefined;
   const rivalMarcado = comRival && selecao?.tipo === "rival";
+  // No Foco, com a carta escolhida: o que ela vai pedir a este colega, já com o que o servidor fixaria.
+  const previa = usePreviaJogada(
+    grupoId,
+    escolhida ? alvo?.usuarioId : undefined,
+    escolhida?.id,
+    fundida?.id,
+  );
   const pronta: SelecaoMao | null = !alvo
     ? null
     : rivalMarcado
@@ -323,12 +337,14 @@ export function MaoJogo({
   if (rivalMarcado) {
     contexto =
       "Vence quem cumprir a meta da semana primeiro e ganha 15 EN. Vale até domingo.";
+  } else if (escolhida && previa.data) {
+    contexto = getPrevia(nome, escolhida, fundida, previa.data);
   } else if (escolhida && fundida) {
     contexto = getEfeitoFusao(escolhida, fundida);
   } else if (escolhida) {
     contexto = !alvo
-      ? `${escolhida.efeito} Toque num colega.`
-      : escolhida.efeito;
+      ? `${getEfeitoComNome(escolhida)} Toque num colega.`
+      : getEfeitoComNome(escolhida);
   } else if (!recebe) {
     contexto = `${nome} não recebe cartas.`;
   } else if (bloqueio && livres.length > 0) {
@@ -360,7 +376,7 @@ export function MaoJogo({
           aria-live="polite"
           className={
             contexto
-              ? "line-clamp-2 min-w-0 flex-1 text-xs text-muted"
+              ? "line-clamp-3 min-w-0 flex-1 text-xs text-muted"
               : "sr-only"
           }
         >

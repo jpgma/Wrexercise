@@ -586,6 +586,75 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(TipoAtividade.Yoga, trocada.TipoEvitar);
     }
 
+    [Fact]
+    public async Task Previa_DevolveOQueOArremessoFixa()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", horasAtras: 5);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, "AguardandoFeedback", horasAtras: 1, moralDe: ana);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+
+        var previa = await GetPreviaAsync(ana, grupoId, bia.Id, carta.Id);
+
+        Assert.Equal(TipoAtividade.Ciclismo, previa.TipoEvitar);
+        Assert.Null(previa.DuracaoAlvoSegundos);
+        Assert.Equal(35, previa.RecompensaDestinatario);
+        Assert.Equal(17, previa.RecompensaRemetente);
+        // A prévia não grava nada.
+        Assert.Empty(await GetJogadasAsync(bia, grupoId));
+
+        await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        var jogada = Assert.Single(await GetJogadasAsync(bia, grupoId));
+        Assert.Equal(previa.TipoEvitar, jogada.TipoEvitar);
+        Assert.Equal(previa.RecompensaDestinatario, jogada.Recompensa);
+        Assert.InRange((jogada.ExpiraEm - previa.ExpiraEm).Duration(), TimeSpan.Zero, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task Previa_DeFusao_SomaOsPrecosEOBonus()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var antesDas8 = await JogoTestes.ComprarAsync(ana, CodigoCarta.AntesDas8);
+
+        var previa = await GetPreviaAsync(ana, grupoId, bia.Id, variedade.Id, antesDas8.Id);
+
+        // 35 + 40 = 75, mais 20% para quem cumpre; metade da soma para quem joga.
+        Assert.Equal(90, previa.RecompensaDestinatario);
+        Assert.Equal(37, previa.RecompensaRemetente);
+        Assert.Null(previa.TipoEvitar);
+    }
+
+    [Fact]
+    public async Task Previa_ConfereOGrupoEAsCartasComoOArremesso()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var cara = await _host.CreateUsuarioAsync();
+        var duracao = await JogoTestes.ComprarAsync(ana, CodigoCarta.Mais10Min);
+        var resposta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Aposta);
+
+        await ApiTestHost.AssertProblemAsync(
+            await cara.Client.GetAsync(PreviaUrl(grupoId, bia.Id, duracao.Id), Token),
+            HttpStatusCode.NotFound,
+            "GRUPO_NAO_ENCONTRADO");
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.GetAsync(PreviaUrl(grupoId, cara.Id, duracao.Id), Token),
+            HttpStatusCode.BadRequest,
+            "DESTINATARIO_INVALIDO");
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.GetAsync(PreviaUrl(grupoId, bia.Id, Guid.NewGuid()), Token),
+            HttpStatusCode.NotFound,
+            "CARTA_NAO_ENCONTRADA");
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.GetAsync(PreviaUrl(grupoId, bia.Id, resposta.Id), Token),
+            HttpStatusCode.BadRequest,
+            "CARTA_INVALIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.GetAsync(PreviaUrl(grupoId, bia.Id, duracao.Id), Token),
+            HttpStatusCode.Conflict,
+            "SEM_DESAFIO_ATIVO");
+    }
+
     /// <summary>Ana e Bia no modo Jogo, num grupo só delas; Ana com Energia para algumas cartas.</summary>
     private async Task<(TestUsuario Ana, TestUsuario Bia, Guid GrupoId)> CriarParAsync()
     {
@@ -633,6 +702,21 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
                 $"INSERT INTO reacoes_atividade (atividade_id, usuario_id, tipo) VALUES ('{id}', '{moralDe.Id}', 'Kudos')");
         }
     }
+
+    private static string PreviaUrl(Guid grupoId, Guid destinatarioId, Guid cartaId, Guid? cartaFusaoId = null) =>
+        $"/api/grupos/{grupoId}/jogadas/previa?destinatarioId={destinatarioId}&cartaId={cartaId}"
+        + (cartaFusaoId is null ? "" : $"&cartaFusaoId={cartaFusaoId}");
+
+    private static async Task<PreviaJogadaResponse> GetPreviaAsync(
+        TestUsuario remetente,
+        Guid grupoId,
+        Guid destinatarioId,
+        Guid cartaId,
+        Guid? cartaFusaoId = null) =>
+        (await remetente.Client.GetFromJsonAsync(
+            PreviaUrl(grupoId, destinatarioId, cartaId, cartaFusaoId),
+            AppJsonContext.Default.PreviaJogadaResponse,
+            Token))!;
 
     private static Task<HttpResponseMessage> PostJogadaAsync(
         TestUsuario remetente,

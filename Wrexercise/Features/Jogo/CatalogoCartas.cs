@@ -21,29 +21,32 @@ internal static class CodigoCarta
 
 internal sealed record Carta(string Codigo, string Nome, string Tipo, int Preco, string Efeito);
 
-/// <summary>O catálogo fica no código, sem tabela (docs/gamificacao.md §6.1).</summary>
+/// <summary>
+/// O catálogo fica no código, sem tabela (docs/gamificacao.md §6.1). O efeito é o texto curto que a interface
+/// mostra; a regra exata de cada carta está na documentação.
+/// </summary>
 internal static class CatalogoCartas
 {
     public static readonly IReadOnlyList<Carta> Todas =
     [
         new(CodigoCarta.Mais10Min, "+10 MIN", TipoCarta.Provocacao, 30,
-            "Somar num mesmo dia pelo menos a duração mínima do desafio + 10 minutos."),
+            "Num mesmo dia, treinar 10 min a mais que o mínimo do desafio."),
         new(CodigoCarta.Mais20Min, "+20 MIN", TipoCarta.Provocacao, 45,
-            "Somar num mesmo dia pelo menos a duração mínima do desafio + 20 minutos."),
+            "Num mesmo dia, treinar 20 min a mais que o mínimo do desafio."),
         new(CodigoCarta.Variedade, "VARIEDADE", TipoCarta.Provocacao, 35,
-            "Uma atividade de tipo diferente da última atividade verificada."),
+            "Um treino de outro tipo: não vale repetir o do último treino."),
         new(CodigoCarta.FimDeSemana, "FIM DE SEMANA", TipoCarta.Provocacao, 35,
-            "Uma atividade que comece no sábado ou no domingo."),
+            "Um treino no sábado ou no domingo."),
         new(CodigoCarta.AntesDas8, "ANTES DAS 8", TipoCarta.Provocacao, 40,
-            "Uma atividade que comece antes das 08:00."),
+            "Um treino que comece antes das 8h."),
         new(CodigoCarta.DesafioDuplo, "DESAFIO DUPLO", TipoCarta.Resposta, 40,
-            "Aceita a Provocação e devolve o mesmo objetivo para quem enviou."),
+            "Você aceita e devolve o mesmo desafio pra quem mandou."),
         new(CodigoCarta.Aposta, "APOSTA", TipoCarta.Resposta, 25,
-            "Aceita a Provocação. Se cumprir, a recompensa dobra. Se não, a carta está perdida."),
+            "Você aceita valendo o dobro. Se não cumprir, a APOSTA se perde."),
         new(CodigoCarta.PrazoExtra, "PRAZO EXTRA", TipoCarta.Resposta, 20,
-            "Aceita a Provocação com 24 horas a mais de prazo."),
+            "Você aceita com 24 horas a mais de prazo."),
         new(CodigoCarta.MudancaDePlanos, "MUDANÇA DE PLANOS", TipoCarta.Resposta, 25,
-            "Aceita a Provocação trocando o objetivo por um equivalente."),
+            "Você aceita, mas troca o objetivo por outro do mesmo nível."),
     ];
 
     public static Carta? Find(string? codigo) => Todas.FirstOrDefault(c => c.Codigo == codigo);

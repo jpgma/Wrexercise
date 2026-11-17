@@ -23,6 +23,7 @@ internal static class JogoRoutes
         grupos.MapGet("/{grupoId:guid}/cena", ObterCena.HandleAsync);
         grupos.MapGet("/{grupoId:guid}/jogadas", ListarJogadas.HandleAsync);
         grupos.MapPost("/{grupoId:guid}/jogadas", JogarCarta.HandleAsync);
+        grupos.MapGet("/{grupoId:guid}/jogadas/previa", PreverJogada.HandleAsync);
         grupos.MapPost("/{grupoId:guid}/jogadas/vistas", MarcarJogadasVistas.HandleAsync);
         grupos.MapGet("/{grupoId:guid}/rivais", ListarRivais.HandleAsync);
         grupos.MapPost("/{grupoId:guid}/rivais", EscolherRival.HandleAsync);

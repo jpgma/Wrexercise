@@ -5,9 +5,12 @@ import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
 import { IconeCarta } from "./CartaJogo";
 import {
+  formatarDiaDoPrazo,
   formatarPrazo,
+  formatarPrazoCurto,
   getNomeJogada,
   getObjetivo,
+  getObjetivoCurto,
   getSeloSituacao,
   objetivoCurto,
   primeiroNome,
@@ -435,6 +438,12 @@ export function MesaJogadas({
           const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
           const pendente = jogada.recebida && jogada.situacao === "Enviada";
           const encerrada = encerradas.includes(jogada.situacao);
+          // O que fazer agora, sem abrir o detalhe: responder, ou o que falta e até quando.
+          const resumo = pendente
+            ? `Responda até ${formatarPrazoCurto(jogada.expiraEm)}`
+            : jogada.situacao === "Aceita"
+              ? `Falta: ${getObjetivoCurto(jogada)} · até ${formatarDiaDoPrazo(jogada.expiraEm)}`
+              : selo.texto;
           const outro = primeiroNome(
             jogada.recebida ? jogada.remetenteNome : jogada.destinatarioNome,
           );
@@ -443,7 +452,7 @@ export function MesaJogadas({
               <button
                 type="button"
                 aria-haspopup="dialog"
-                aria-label={`${getTitulo(jogada)}: ${jogada.cartaFusao ? "fusão " : ""}${getNomeJogada(jogada)}, ${selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
+                aria-label={`${getTitulo(jogada)}: ${jogada.cartaFusao ? "fusão " : ""}${getNomeJogada(jogada)}, ${jogada.situacao === "Aceita" ? `falta ${getObjetivoCurto(jogada)}` : selo.texto}${encerrada ? "" : `, até ${formatarPrazo(jogada.expiraEm)}`}`}
                 onClick={() => setAbertaId(jogada.id)}
                 className={`flex min-h-11 items-center gap-2 rounded-lg border-2 bg-surface py-0.5 pr-3 pl-0.5 text-left tap ${pendente ? "mesa-pendente border-game" : "border-border"} ${encerrada ? "opacity-60" : ""}`}
               >
@@ -456,9 +465,9 @@ export function MesaJogadas({
                     {jogada.recebida ? `De ${outro}` : `Para ${outro}`}
                   </span>
                   <span
-                    className={`block text-2xs whitespace-nowrap ${pendente ? "font-semibold text-game" : "text-muted"}`}
+                    className={`block max-w-56 truncate text-2xs ${pendente ? "font-semibold text-game" : "text-muted"}`}
                   >
-                    {selo.texto}
+                    {resumo}
                   </span>
                 </span>
               </button>
