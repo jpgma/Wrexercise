@@ -128,7 +128,11 @@ export function LojaCartas() {
       <p className="mt-3 text-sm text-muted">
         {maoCheia
           ? "A sua Mão está cheia. Jogue uma carta para abrir espaço."
-          : "Compre uma Provocação e jogue para um colega na praça. Se ele cumprir, os dois ganham Energia."}
+          : "Compre uma Provocação e jogue num colega na praça. Se a pessoa cumprir, os dois ganham Energia."}
+      </p>
+      <p className="mt-1 text-sm text-muted">
+        Você ganha EN com treinos verificados, metas da semana e cartas
+        cumpridas.
       </p>
 
       <SecaoLoja

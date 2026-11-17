@@ -2,8 +2,10 @@ import { Plus } from "lucide-react";
 import { type CSSProperties, type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
 import { CartaJogo, IconeCarta } from "./CartaJogo";
+import { ComoJogar } from "./ComoJogar";
 import { MesaJogadas } from "./MesaJogadas";
-import { SaldoEnergia } from "./SaldoEnergia";
+import { getProximoPasso } from "./proximoPasso";
+import { FadigaExplicada, SaldoEnergia } from "./SaldoEnergia";
 import { useAvisoFadiga } from "./useEnergia";
 import {
   getBloqueioJogada,
@@ -350,6 +352,12 @@ export function MaoJogo({
   } else if (bloqueio && livres.length > 0) {
     contexto = bloqueio;
   }
+  // Fora do Foco e sem nada escolhido, a linha sugere o próximo passo; a contagem vira um selo.
+  const proximoPasso =
+    contexto === null && !alvo && loja.data && jogadas.data
+      ? getProximoPasso(jogadas.data, loja.data)
+      : null;
+  contexto ??= proximoPasso;
 
   let indice = 0;
 
@@ -358,7 +366,7 @@ export function MaoJogo({
       aria-labelledby="mao-titulo"
       className={`card mt-2 p-3 transition-[opacity,translate] duration-300 ${recolhida ? "pointer-events-none translate-y-2 opacity-0" : alvo ? "animate-slide-up" : ""}`}
     >
-      <div className="flex min-h-11 items-center gap-3">
+      <div className="flex min-h-11 items-center gap-2">
         <h2
           id="mao-titulo"
           className={
@@ -395,13 +403,23 @@ export function MaoJogo({
                 : "Arremessar"}
           </button>
         ) : (
-          <Link
-            to="/jogo/loja"
-            aria-label="Energia e Loja"
-            className="shrink-0 tap"
-          >
-            <SaldoEnergia />
-          </Link>
+          <>
+            {proximoPasso && (
+              <span className="chip font-score font-normal">
+                <span className="sr-only">Cartas na Mão: </span>
+                {mao.length}/{limite}
+              </span>
+            )}
+            <ComoJogar />
+            <FadigaExplicada />
+            <Link
+              to="/jogo/loja"
+              aria-label="Energia e Loja"
+              className="shrink-0 tap"
+            >
+              <SaldoEnergia />
+            </Link>
+          </>
         )}
       </div>
       <ul ref={lista} className="flex items-end gap-1.5 pt-3 pb-1">

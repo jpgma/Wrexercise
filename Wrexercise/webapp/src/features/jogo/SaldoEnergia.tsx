@@ -1,20 +1,53 @@
 import { Zap } from "lucide-react";
+import { useState } from "react";
+import { Dialog } from "@/components/Dialog";
 import { SectionTitle } from "@/components/PageHeader";
 import { getErrorMessage } from "@/services/api";
 import { type DetalhamentoEnergia, useEnergia } from "./useEnergia";
 
 const formatador = new Intl.NumberFormat("pt-BR");
 
-/** Selo com o saldo, como placar, e a FADIGA, se houver. Some enquanto carrega ou se a consulta falhar. */
+/** Selo com o saldo, como placar. Some enquanto carrega ou se a consulta falhar. */
 export function SaldoEnergia() {
   const energia = useEnergia();
   if (!energia.data) return null;
+  return <SeloEnergia saldo={energia.data.saldo} />;
+}
+
+/**
+ * O selo da FADIGA como botão: tocar explica o que ela é e de onde vem. Fica fora do link do saldo,
+ * que leva à Loja. Sem FADIGA, não aparece.
+ */
+export function FadigaExplicada() {
+  const energia = useEnergia();
+  const [aberta, setAberta] = useState(false);
+  const restante = energia.data?.fadigaRestante ?? 0;
+  if (restante <= 0) return null;
+  const treinos =
+    restante === 1
+      ? "próximo treino verificado rende"
+      : `próximos ${restante} treinos verificados rendem`;
 
   return (
-    <span className="flex items-center gap-1.5">
-      <SeloFadiga restante={energia.data.fadigaRestante} />
-      <SeloEnergia saldo={energia.data.saldo} />
-    </span>
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        className="grid min-h-11 shrink-0 place-items-center tap"
+        onClick={() => setAberta(true)}
+      >
+        <SeloFadiga restante={restante} />
+      </button>
+      <Dialog open={aberta} title="Fadiga" onClose={() => setAberta(false)}>
+        <p className="text-sm">
+          Seu {treinos} metade da EN. A Energia que você já tem não muda, e o
+          treino conta normalmente no desafio.
+        </p>
+        <p className="mt-3 text-sm text-muted">
+          A FADIGA vem de recusar uma carta ou deixar o prazo vencer.
+        </p>
+      </Dialog>
+    </>
   );
 }
 

@@ -421,7 +421,13 @@ export function MesaJogadas({
     .sort((a, b) => ordem(a) - ordem(b));
   const aberta = jogadas.data?.find((j) => j.id === abertaId);
 
-  if (lista.length === 0) return null;
+  // No Foco, sem Jogadas, a Mesa some para não gastar altura; fora dele, diz para que serve.
+  if (lista.length === 0)
+    return filtro || !jogadas.data ? null : (
+      <p className="mt-1 border-t-2 border-border pt-2 text-2xs text-muted">
+        Nada na mesa ainda. As cartas que você jogar ou receber aparecem aqui.
+      </p>
+    );
 
   return (
     <section
