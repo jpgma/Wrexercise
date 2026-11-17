@@ -340,7 +340,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
   - **Aceitar**, de graça;
   - **Aceitar com uma Resposta** da própria Mão (DESAFIO DUPLO, APOSTA, PRAZO EXTRA ou MUDANÇA DE PLANOS), no máximo uma por Jogada;
   - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito.
-- Uma Jogada criada por DESAFIO DUPLO não aceita outro DESAFIO DUPLO. Não existem cadeias de contra-ataque.
+- Uma Jogada criada por DESAFIO DUPLO não aceita outro DESAFIO DUPLO.
+- **Revide** (`decisoes/0069-revide-limite-por-sentido.md`): quem recebeu uma Provocação pode jogar uma carta da própria Mão em quem a enviou, mesmo com a primeira Jogada aberta. Cada sentido tem uma vaga só, então a cadeia para no revide.
 
 **Limites**, conferidos na mesma transação que bloqueia a linha do remetente:
 
@@ -349,7 +350,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | Cartas na Mão | 5 |
 | Jogadas recebidas ativas | 2 |
 | Jogadas enviadas ativas | 2 |
-| Jogada ativa por par de pessoas | 1 |
+| Jogada ativa de uma pessoa para outra (por sentido) | 1 |
 | Jogada nova para a mesma pessoa | 1 a cada 24 horas |
 
 - **Jogada ativa**, para esses limites: `Enviada` ou `Aceita`. Uma Jogada `AguardandoVerificacao` libera a vaga, mesmo com a atividade em `EmRevisao`.
@@ -556,7 +557,7 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 | Toca aqui | Sem Energia e sem escolha. A cena já tem interação com as cartas. |
 | Desafio extra | As Provocações fazem o mesmo, com mais variedade. |
 | Pegadinhas e efeitos sobre outros jogadores | Contrariam "ninguém prejudica ninguém". |
-| Cadeias de contra-ataque, troca de cartas, pacotes aleatórios | Complexidade e sorte sem ganho para a constância. |
+| Cadeias de contra-ataque sem fim, troca de cartas, pacotes aleatórios | Complexidade e sorte sem ganho para a constância. O revide, limitado a uma Jogada por sentido, existe (`decisoes/0069-revide-limite-por-sentido.md`). |
 | Duelos com aposta entre pessoas | A APOSTA só arrisca a própria Energia. Apostar contra outra pessoa traz perda e pressão. |
 | Missões diárias | Pedem abrir o aplicativo todo dia e distraem do objetivo. |
 | Ranking de Energia | Mistura jogo com desempenho e cria uma segunda classificação. |

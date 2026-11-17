@@ -98,13 +98,9 @@ export function getBloqueioJogada(
   nome: string,
   agora: number,
 ): string | null {
-  if (
-    jogadas.some(
-      (j) =>
-        ativa(j) && (j.remetenteId === alvoId || j.destinatarioId === alvoId),
-    )
-  )
-    return `Já existe uma carta aberta entre você e ${nome}.`;
+  // Por sentido: uma carta aberta do alvo para quem vê não impede o revide (decisão 0069).
+  if (jogadas.some((j) => ativa(j) && j.destinatarioId === alvoId))
+    return `Você já tem uma carta aberta com ${nome}.`;
   if (
     jogadas.some(
       (j) =>

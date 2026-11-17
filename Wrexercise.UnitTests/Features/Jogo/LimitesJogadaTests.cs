@@ -20,11 +20,14 @@ public class LimitesJogadaTests
     [Theory]
     [InlineData(SituacaoJogada.Enviada)]
     [InlineData(SituacaoJogada.Aceita)]
-    public void JogadaAtivaNoPar_EmQualquerDirecao_Bloqueia(string situacao)
-    {
+    public void JogadaAtivaNoMesmoSentido_Bloqueia(string situacao) =>
         Assert.Equal(LimitesJogada.ErroPar, Verificar(Jogada(Ana, Bia, situacao)));
-        Assert.Equal(LimitesJogada.ErroPar, Verificar(Jogada(Bia, Ana, situacao)));
-    }
+
+    [Theory]
+    [InlineData(SituacaoJogada.Enviada)]
+    [InlineData(SituacaoJogada.Aceita)]
+    public void JogadaAtivaNoSentidoContrario_PermiteORevide(string situacao) =>
+        Assert.Null(Verificar(Jogada(Bia, Ana, situacao)));
 
     [Fact]
     public void AguardandoVerificacao_LiberaAVaga() =>

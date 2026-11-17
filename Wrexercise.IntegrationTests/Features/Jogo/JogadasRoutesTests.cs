@@ -100,6 +100,23 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Jogar_EmQuemJaJogouEmVoce_Revida()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 12);
+        var revide = await JogoTestes.ComprarAsync(bia, CodigoCarta.FimDeSemana);
+        await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        await JogarAsync(bia, grupoId, revide.Id, ana.Id);
+
+        var jogadas = await GetJogadasAsync(bia, grupoId);
+        Assert.Equal(2, jogadas.Count);
+        Assert.Single(jogadas, j => j.Recebida);
+        Assert.Single(jogadas, j => !j.Recebida);
+    }
+
+    [Fact]
     public async Task Recusar_DevolveACartaEAvisaQuemEnviou()
     {
         var (ana, bia, grupoId) = await CriarParAsync();

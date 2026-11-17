@@ -50,7 +50,7 @@ internal static class ErrosJogo
         codigo,
         codigo switch
         {
-            LimitesJogada.ErroPar => "Já existe uma Jogada aberta entre vocês dois.",
+            LimitesJogada.ErroPar => "Você já tem uma carta aberta com esta pessoa.",
             LimitesJogada.ErroRecente => "Você já enviou uma carta para esta pessoa nas últimas 24 horas.",
             LimitesJogada.ErroEnviadas => "Você já tem 2 cartas enviadas esperando resposta ou atividade.",
             LimitesJogada.ErroRecebidas => "Esta pessoa já tem 2 cartas recebidas em aberto.",

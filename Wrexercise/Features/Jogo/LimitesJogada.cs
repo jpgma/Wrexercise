@@ -28,7 +28,8 @@ internal static class LimitesJogada
     {
         var ativas = jogadas.Where(j => SituacaoJogada.IsAtiva(j.Situacao)).ToList();
 
-        if (ativas.Any(j => IsPar(j, remetenteId, destinatarioId)))
+        // Por sentido (decisão 0069): uma Jogada ativa de lá para cá não impede o revide.
+        if (ativas.Any(j => j.RemetenteId == remetenteId && j.DestinatarioId == destinatarioId))
         {
             return ErroPar;
         }
@@ -52,8 +53,4 @@ internal static class LimitesJogada
 
         return null;
     }
-
-    private static bool IsPar(JogadaLimite jogada, Guid a, Guid b) =>
-        (jogada.RemetenteId == a && jogada.DestinatarioId == b)
-        || (jogada.RemetenteId == b && jogada.DestinatarioId == a);
 }
