@@ -1,12 +1,14 @@
 import { CalendarCheck, Dumbbell, Flame, Moon, Swords, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
-import { useVitrine } from "@/components/folhaAvatar";
+import { Dialog } from "@/components/Dialog";
+import { type Enfeite, useVitrine } from "@/components/folhaAvatar";
 import { formatarDuracao } from "@/features/atividades";
 import { usePerfilMembro } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
 import { EnfeiteIcone } from "./EnfeiteIcone";
 import { primeiroNome } from "./textosCartas";
+import { useMeuAvatar } from "./useAvatares";
 import {
   type CodigoCutucada,
   contarCaracteres,
@@ -41,6 +43,67 @@ function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
       </span>
       {children}
     </li>
+  );
+}
+
+/**
+ * Os Enfeites da Vitrine de quem está em Foco, num botão só: tocar abre o nome de cada um e, para
+ * os que quem vê ainda não tem, o que falta para liberar.
+ */
+function VitrineDoColega({
+  vitrine,
+  titulo,
+  proprio,
+}: {
+  vitrine: Enfeite[];
+  titulo: string;
+  proprio: boolean;
+}) {
+  const [aberta, setAberta] = useState(false);
+  const meu = useMeuAvatar().data;
+  const situacao = (enfeite: Enfeite) => {
+    if (proprio || !meu) return null;
+    if (meu.liberados.some((e) => e.codigo === enfeite.codigo))
+      return "Você também tem esse.";
+    const falta = meu.bloqueados.find(
+      (e) => e.codigo === enfeite.codigo,
+    )?.falta;
+    return falta ? `Você ainda não tem. ${falta}.` : "Você ainda não tem.";
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        aria-label={`${titulo}: ${vitrine.map((e) => e.nome).join(", ")}`}
+        onClick={() => setAberta(true)}
+        className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg tap"
+      >
+        {vitrine.map((enfeite) => (
+          <EnfeiteIcone
+            key={enfeite.codigo}
+            conquista={enfeite.conquista}
+            tamanho={32}
+          />
+        ))}
+      </button>
+      <Dialog open={aberta} title={titulo} onClose={() => setAberta(false)}>
+        <ul className="space-y-3">
+          {vitrine.map((enfeite) => (
+            <li key={enfeite.codigo} className="flex items-center gap-3">
+              <EnfeiteIcone conquista={enfeite.conquista} tamanho={48} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">{enfeite.nome}</p>
+                {situacao(enfeite) && (
+                  <p className="text-xs text-muted">{situacao(enfeite)}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Dialog>
+    </>
   );
 }
 
@@ -118,14 +181,11 @@ export function PainelFoco({
           )}
         </div>
         {vitrine.length > 0 && (
-          <ul aria-label="Vitrine" className="flex gap-1">
-            {vitrine.map((enfeite) => (
-              <li key={enfeite.codigo} title={enfeite.nome}>
-                <EnfeiteIcone conquista={enfeite.conquista} tamanho={32} />
-                <span className="sr-only">{enfeite.nome}</span>
-              </li>
-            ))}
-          </ul>
+          <VitrineDoColega
+            vitrine={vitrine}
+            titulo={proprio ? "Sua Vitrine" : `Vitrine de ${nome}`}
+            proprio={proprio}
+          />
         )}
         <button
           type="button"

@@ -96,4 +96,32 @@ public class ConquistasUsuarioTests
     [InlineData(3, 0)]
     public void GetSequenciaAtual_ParaNaPrimeiraFalha(int indiceRecente, int esperado) =>
         Assert.Equal(esperado, CalculoSemanaDesafio.GetSequenciaAtual([true, true, true, false], indiceRecente));
+
+    [Theory]
+    [InlineData(8, "Faltam 2 treinos no fim de semana")]
+    [InlineData(9, "Falta 1 treino no fim de semana")]
+    [InlineData(10, null)]
+    [InlineData(25, null)]
+    public void Listar_DizOQueFalta_NoSingularENoPlural(int treinosNoFimDeSemana, string? esperado)
+    {
+        var conquistas = ConquistasUsuario.Listar(
+            new EstatisticasConquistas(0, 0, 0, TreinosFimDeSemana: treinosNoFimDeSemana));
+
+        Assert.Equal(esperado, conquistas.Single(c => c.Codigo == ConquistasUsuario.FimDeSemana).Falta);
+    }
+
+    [Fact]
+    public void Listar_OQueFaltaUsaAUnidadeDeCadaConquista()
+    {
+        var falta = ConquistasUsuario.Listar(new EstatisticasConquistas(0, 3, 0, DiasComTreino: 9))
+            .ToDictionary(c => c.Codigo, c => c.Falta);
+
+        Assert.Equal("Falta 1 semana seguida com a meta batida", falta["Sequencia4"]);
+        Assert.Equal("Falta 1 dia com treino", falta["Treinos10"]);
+        Assert.Equal("Falta 1 desafio completo", falta["DesafioCompleto"]);
+        Assert.Equal("Faltam 10 treinos de corrida", falta["Corredor"]);
+        Assert.Equal("Faltam 10 treinos antes das 7h", falta["Madrugador"]);
+        Assert.Equal("Faltam 10 treinos a partir das 20h", falta["Noturno"]);
+        Assert.Equal("Faltam 5 tipos de treino diferentes", falta["Ecletico"]);
+    }
 }

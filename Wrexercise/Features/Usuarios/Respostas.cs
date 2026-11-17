@@ -1,13 +1,15 @@
 namespace Wrexercise.Features.Usuarios;
 
 /// <param name="Atual">O progresso da pessoa, limitado a <paramref name="Alvo"/>.</param>
+/// <param name="Falta">O que falta para liberar, por extenso ("Faltam 2 treinos no fim de semana"); nulo se liberada.</param>
 internal sealed record ConquistaResponse(
     string Codigo,
     string Titulo,
     string Descricao,
     int Atual,
     int Alvo,
-    bool Liberada);
+    bool Liberada,
+    string? Falta = null);
 
 internal sealed record SemanaConsistenciaResponse(DateOnly Inicio, int SessoesVerificadas, int SessoesProvisorias);
 

@@ -57,6 +57,17 @@ export type EnfeiteBloqueado = Enfeite & {
   tituloConquista: string;
   atual: number;
   alvo: number;
+  /** O que falta para liberar, por extenso: "Faltam 2 treinos no fim de semana". */
+  falta: string | null;
+};
+
+/** Uma conquista que a pessoa ainda não comemorou, com o Enfeite que ela liberou ou evoluiu. */
+export type ConquistaNova = {
+  conquista: string;
+  titulo: string;
+  /** O código do Enfeite. */
+  enfeite: string;
+  nomeEnfeite: string;
 };
 
 export type MeuAvatar = {
@@ -66,6 +77,7 @@ export type MeuAvatar = {
   /** Códigos dos Enfeites que a pessoa ainda não viu. */
   novos: string[];
   bloqueados: EnfeiteBloqueado[];
+  conquistasNovas: ConquistaNova[];
 };
 
 export function useMeuAvatar() {

@@ -27,6 +27,7 @@ import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
+import { CelebracaoConquista } from "./CelebracaoConquista";
 import { PainelFoco } from "./PainelFoco";
 import { type PlacarCena, PlacarJogo } from "./PlacarJogo";
 import { getTipoCutucada } from "./textosCutucada";
@@ -963,6 +964,10 @@ function Praca({
           )}
         </section>
       </div>
+      <CelebracaoConquista
+        pronto={!aguardar && !encenacao.ativa}
+        onVerVitrine={() => foco.abrir(usuarioId)}
+      />
       {focoProprio ? (
         <VitrineFoco />
       ) : (

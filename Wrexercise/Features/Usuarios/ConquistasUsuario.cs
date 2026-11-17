@@ -73,7 +73,8 @@ internal static class ConquistasUsuario
                 $"{marco} semanas seguidas",
                 "Meta batida sem falhar em um desafio",
                 estatisticas.MelhorSequencia,
-                marco));
+                marco,
+                ("semana seguida com a meta batida", "semanas seguidas com a meta batida")));
         }
 
         foreach (var marco in MarcosTreinos)
@@ -83,7 +84,8 @@ internal static class ConquistasUsuario
                 $"{marco} treinos",
                 "Dias com treino verificado pelos amigos",
                 estatisticas.DiasComTreino,
-                marco));
+                marco,
+                ("dia com treino", "dias com treino")));
         }
 
         conquistas.Add(Criar(
@@ -91,7 +93,8 @@ internal static class ConquistasUsuario
             "Desafio completo",
             "Todas as semanas de um desafio com a meta cumprida",
             estatisticas.DesafiosCompletos,
-            1));
+            1,
+            ("desafio completo", "desafios completos")));
 
         var porTipo = estatisticas.TreinosPorTipo;
         foreach (var (tipo, codigo, titulo) in ConquistasDeTipo)
@@ -102,7 +105,8 @@ internal static class ConquistasUsuario
                 titulo,
                 $"{TreinosPorTipoMarco} treinos verificados de {NomeDoTipo(tipo)}",
                 total,
-                TreinosPorTipoMarco));
+                TreinosPorTipoMarco,
+                ($"treino de {NomeDoTipo(tipo)}", $"treinos de {NomeDoTipo(tipo)}")));
         }
 
         conquistas.Add(Criar(
@@ -110,28 +114,32 @@ internal static class ConquistasUsuario
             "Madrugador",
             $"{TreinosMadrugador} treinos verificados antes das 7h",
             estatisticas.TreinosAntesDas7,
-            TreinosMadrugador));
+            TreinosMadrugador,
+            ("treino antes das 7h", "treinos antes das 7h")));
 
         conquistas.Add(Criar(
             Noturno,
             "Noturno",
             $"{TreinosNoturno} treinos verificados a partir das {HoraNoturno}h",
             estatisticas.TreinosNoturnos,
-            TreinosNoturno));
+            TreinosNoturno,
+            ($"treino a partir das {HoraNoturno}h", $"treinos a partir das {HoraNoturno}h")));
 
         conquistas.Add(Criar(
             FimDeSemana,
             "Fim de semana",
             $"{TreinosDeFimDeSemana} treinos verificados no sábado ou no domingo",
             estatisticas.TreinosFimDeSemana,
-            TreinosDeFimDeSemana));
+            TreinosDeFimDeSemana,
+            ("treino no fim de semana", "treinos no fim de semana")));
 
         conquistas.Add(Criar(
             Ecletico,
             "Eclético",
             $"Treinos verificados de {TiposEcletico} tipos diferentes",
             porTipo?.Count(par => par.Key != Tipos.Outro && par.Value > 0) ?? 0,
-            TiposEcletico));
+            TiposEcletico,
+            ("tipo de treino diferente", "tipos de treino diferentes")));
 
         return conquistas;
     }
@@ -152,8 +160,26 @@ internal static class ConquistasUsuario
     /// <summary>Os níveis de uma família só diferem pelo número no fim do código (<c>Sequencia4</c>, <c>Sequencia8</c>).</summary>
     private static string Familia(ConquistaResponse conquista) => conquista.Codigo.TrimEnd("0123456789".ToCharArray());
 
-    private static ConquistaResponse Criar(string codigo, string titulo, string descricao, int atual, int alvo) =>
-        new(codigo, titulo, descricao, Math.Min(Math.Max(atual, 0), alvo), alvo, atual >= alvo);
+    /// <param name="unidade">O que se conta, no singular e no plural, para dizer o que falta.</param>
+    private static ConquistaResponse Criar(
+        string codigo,
+        string titulo,
+        string descricao,
+        int atual,
+        int alvo,
+        (string Singular, string Plural) unidade)
+    {
+        var progresso = Math.Min(Math.Max(atual, 0), alvo);
+        return new(codigo, titulo, descricao, progresso, alvo, atual >= alvo, DescreverFalta(alvo - progresso, unidade));
+    }
+
+    /// <summary>"Falta 1 treino no fim de semana", "Faltam 2 treinos no fim de semana"; nulo quando nada falta.</summary>
+    private static string? DescreverFalta(int falta, (string Singular, string Plural) unidade) => falta switch
+    {
+        <= 0 => null,
+        1 => $"Falta 1 {unidade.Singular}",
+        _ => $"Faltam {falta} {unidade.Plural}",
+    };
 
     private static string NomeDoTipo(string tipo) => tipo switch
     {

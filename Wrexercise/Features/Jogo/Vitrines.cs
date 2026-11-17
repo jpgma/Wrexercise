@@ -25,7 +25,8 @@ internal static class Vitrines
         IReadOnlyList<EnfeiteLiberado> Liberados,
         IReadOnlyList<string> Vitrine,
         IReadOnlyList<string> Novos,
-        IReadOnlyList<EnfeiteBloqueado> Bloqueados);
+        IReadOnlyList<EnfeiteBloqueado> Bloqueados,
+        IReadOnlyList<ConquistaNovaResponse> ConquistasNovas);
 
     /// <summary>Os Enfeites liberados, a vitrine em vigor, o que a pessoa ainda não viu e o que falta liberar.</summary>
     public static async Task<EstadoVitrine> LoadEstadoAsync(
@@ -37,10 +38,14 @@ internal static class Vitrines
         var liberados = Enfeites.Liberados(progresso.Where(c => c.Liberada).Select(c => c.Codigo));
         var (guardada, vistos) = await LoadGuardadaAsync(connection, usuarioId, cancellationToken);
         var (vitrine, novos) = Enfeites.Resolver(liberados, guardada, vistos);
-        return new EstadoVitrine(liberados, vitrine, novos, Enfeites.Bloqueados(progresso));
+        var titulos = progresso.ToDictionary(c => c.Codigo, c => c.Titulo, StringComparer.Ordinal);
+        var conquistasNovas = Enfeites.ConquistasNovas(liberados, vistos)
+            .Select(e => new ConquistaNovaResponse(e.Conquista, titulos[e.Conquista], e.Codigo, e.Nome))
+            .ToList();
+        return new EstadoVitrine(liberados, vitrine, novos, Enfeites.Bloqueados(progresso), conquistasNovas);
     }
 
-    /// <summary>Guarda a vitrine e marca todos os Enfeites liberados como vistos.</summary>
+    /// <summary>Guarda a vitrine e marca todos os Enfeites liberados, e o nível de cada um, como vistos.</summary>
     public static async Task SalvarAsync(
         NpgsqlConnection connection,
         Guid usuarioId,
@@ -57,7 +62,7 @@ internal static class Vitrines
         command.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text, vitrine.ToArray());
         command.Parameters.AddWithValue(
             NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text,
-            liberados.Select(e => e.Codigo).ToArray());
+            Enfeites.Vistos(liberados));
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
@@ -65,7 +70,14 @@ internal static class Vitrines
         new(enfeite.Codigo, enfeite.Conquista, enfeite.Nome);
 
     public static EnfeiteBloqueadoResponse ToResponse(EnfeiteBloqueado enfeite) =>
-        new(enfeite.Codigo, enfeite.Conquista, enfeite.Nome, enfeite.TituloConquista, enfeite.Atual, enfeite.Alvo);
+        new(
+            enfeite.Codigo,
+            enfeite.Conquista,
+            enfeite.Nome,
+            enfeite.TituloConquista,
+            enfeite.Atual,
+            enfeite.Alvo,
+            enfeite.Falta);
 
     public static IReadOnlyList<EnfeiteResponse> ToResponses(
         IReadOnlyList<EnfeiteLiberado> liberados,

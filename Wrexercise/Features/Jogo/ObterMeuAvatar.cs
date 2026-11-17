@@ -29,7 +29,8 @@ internal static class ObterMeuAvatar
                 Vitrines.ToResponses(estado.Liberados, estado.Vitrine),
                 estado.Liberados.Select(Vitrines.ToResponse).ToList(),
                 estado.Novos,
-                estado.Bloqueados.Select(Vitrines.ToResponse).ToList()),
+                estado.Bloqueados.Select(Vitrines.ToResponse).ToList(),
+                estado.ConquistasNovas),
             AppJsonContext.Default.MeuAvatarResponse);
     }
 }

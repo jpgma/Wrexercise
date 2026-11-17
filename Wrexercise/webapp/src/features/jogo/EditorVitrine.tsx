@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Dialog } from "@/components/Dialog";
 import { ProgressBar } from "@/components/ProgressBar";
 import { getErrorMessage } from "@/services/api";
 import { EnfeiteBloqueadoIcone } from "./EnfeiteBloqueadoIcone";
@@ -12,27 +13,64 @@ import {
 
 export const maxVitrine = 3;
 
-/** Um Enfeite que ainda falta: não é botão, porque não pode entrar na vitrine. */
+/** Um Enfeite que ainda falta: tocar abre o que falta para liberar. Ele não entra na vitrine. */
 export function Bloqueado({ enfeite }: { enfeite: EnfeiteBloqueado }) {
+  const [aberto, setAberto] = useState(false);
   return (
-    <li className="flex flex-col items-center gap-1 rounded-lg p-2 text-center">
-      <EnfeiteBloqueadoIcone conquista={enfeite.conquista} tamanho={64} />
-      <span className="text-2xs">
-        {enfeite.nome}
-        <span className="sr-only"> (bloqueado)</span>
-      </span>
-      <span className="text-2xs text-muted">
-        Libera com {enfeite.tituloConquista}
-      </span>
-      <ProgressBar
-        label={`Progresso para liberar ${enfeite.nome}`}
-        valor={enfeite.atual}
-        max={enfeite.alvo}
-        className="mt-1 w-full"
-      />
-      <span aria-hidden="true" className="text-2xs text-muted tabular-nums">
-        {enfeite.atual}/{enfeite.alvo}
-      </span>
+    <li>
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={() => setAberto(true)}
+        className="flex w-full flex-col items-center gap-1 rounded-lg p-2 text-center tap"
+      >
+        <EnfeiteBloqueadoIcone conquista={enfeite.conquista} tamanho={64} />
+        <span className="text-2xs">
+          {enfeite.nome}
+          <span className="sr-only"> (bloqueado)</span>
+        </span>
+        <span className="text-2xs text-muted">
+          {enfeite.falta ?? `Libera com ${enfeite.tituloConquista}`}
+        </span>
+        <ProgressBar
+          label={`Progresso para liberar ${enfeite.nome}`}
+          valor={enfeite.atual}
+          max={enfeite.alvo}
+          className="mt-1 w-full"
+        />
+        <span aria-hidden="true" className="text-2xs text-muted tabular-nums">
+          {enfeite.atual}/{enfeite.alvo}
+        </span>
+      </button>
+      <Dialog
+        open={aberto}
+        title={enfeite.nome}
+        onClose={() => setAberto(false)}
+      >
+        <div className="flex items-center gap-4">
+          <EnfeiteBloqueadoIcone conquista={enfeite.conquista} tamanho={64} />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{enfeite.falta ?? "Falta pouco"}</p>
+            <p className="text-sm text-muted">
+              Libera com a conquista {enfeite.tituloConquista}.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <ProgressBar
+            label={`Progresso para liberar ${enfeite.nome}`}
+            valor={enfeite.atual}
+            max={enfeite.alvo}
+            className="flex-1"
+          />
+          <span aria-hidden="true" className="text-xs text-muted tabular-nums">
+            {enfeite.atual}/{enfeite.alvo}
+          </span>
+        </div>
+        <p className="mt-3 text-xs text-muted">
+          Só treino verificado pelo grupo conta.
+        </p>
+      </Dialog>
     </li>
   );
 }

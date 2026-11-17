@@ -4,7 +4,14 @@ using Wrexercise.Features.Progresso.Contracts;
 namespace Wrexercise.Features.Usuarios.Contracts;
 
 /// <summary>Uma conquista, liberada ou não, com o progresso da pessoa (<c>Atual</c> de <c>Alvo</c>).</summary>
-internal readonly record struct ProgressoConquista(string Codigo, string Titulo, int Atual, int Alvo, bool Liberada);
+/// <param name="Falta">O que falta para liberar, por extenso; nulo se liberada.</param>
+internal readonly record struct ProgressoConquista(
+    string Codigo,
+    string Titulo,
+    int Atual,
+    int Alvo,
+    bool Liberada,
+    string? Falta = null);
 
 /// <summary>
 /// As conquistas de uma pessoa, calculadas na leitura sobre as atividades <c>Verificada</c> de todos os
@@ -21,7 +28,7 @@ internal static class ConquistasDoUsuario
     {
         var estatisticas = await LoadEstatisticasAsync(connection, usuarioId, cancellationToken);
         return ConquistasUsuario.Listar(estatisticas)
-            .Select(c => new ProgressoConquista(c.Codigo, c.Titulo, c.Atual, c.Alvo, c.Liberada))
+            .Select(c => new ProgressoConquista(c.Codigo, c.Titulo, c.Atual, c.Alvo, c.Liberada, c.Falta))
             .ToList();
     }
 

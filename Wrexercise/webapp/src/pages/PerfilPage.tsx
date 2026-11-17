@@ -56,6 +56,9 @@ function ConquistaBloqueada({ conquista }: { conquista: Conquista }) {
           <span className="sr-only"> (bloqueada)</span>
         </p>
         <p className="text-xs text-muted">{conquista.descricao}</p>
+        {conquista.falta && (
+          <p className="text-xs font-semibold">{conquista.falta}</p>
+        )}
         <div className="mt-2 flex items-center gap-2">
           <ProgressBar
             label={`Progresso em ${conquista.titulo}`}

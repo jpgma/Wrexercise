@@ -10,6 +10,8 @@ export type Conquista = {
   atual: number;
   alvo: number;
   liberada: boolean;
+  /** O que falta para liberar, por extenso; nulo se liberada. */
+  falta: string | null;
 };
 
 export type MeuPerfil = {

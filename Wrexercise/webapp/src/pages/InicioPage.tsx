@@ -19,7 +19,12 @@ import {
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import { useGrupo } from "@/features/grupos";
-import { CenaGrupo, ConviteJogo, SaudacaoAlternada } from "@/features/jogo";
+import {
+  CelebracaoConquista,
+  CenaGrupo,
+  ConviteJogo,
+  SaudacaoAlternada,
+} from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
   getDisputa,
@@ -384,6 +389,7 @@ function InicioApp({
   return (
     <>
       <ConviteJogo />
+      <CelebracaoConquista />
 
       <div className="mt-6">
         {resumo.isError && (

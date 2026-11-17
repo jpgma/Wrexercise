@@ -490,7 +490,8 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 - Tocar no avatar abre o Foco, cujo painel mostra a vitrine inteira, junto do acesso à página do membro e às cartas.
 - Um Enfeite novo entra sozinho na vitrine se houver espaço. A pessoa reorganiza ou tira Enfeites no próprio Foco (§3.5) ou em `/perfil/avatar`.
 - Um Enfeite que evolui troca de nível no mesmo lugar da vitrine.
-- Em `/perfil/avatar`, os Enfeites que ainda faltam aparecem cinza, com cadeado, a conquista que os libera e o progresso. Eles não podem entrar na vitrine.
+- Em `/perfil/avatar` e no próprio Foco, os Enfeites que ainda faltam aparecem cinza, com cadeado, o que falta ("Faltam 2 treinos no fim de semana") e o progresso. Eles não podem entrar na vitrine; tocar num deles abre o que falta e a conquista que o libera. No Foco de um colega, tocar na vitrine dele mostra cada Enfeite e, para os que quem vê não tem, o que falta.
+- **Conquista nova:** uma janela "Conquista liberada!" aparece uma vez, com o Enfeite novo ou que subiu de nível e o atalho para a vitrine. No modo App, a janela mostra só a conquista e leva ao Perfil. Depois de postar um treino, a tela de "registrado" diz de qual Enfeite ele aproxima a pessoa (`decisoes/0072-comemoracao-de-conquista.md`).
 - Só aparecem Enfeites de quem está no modo Jogo. Quem está no modo App não expõe nada.
 - **Enfeite novo:** na próxima visita à cena, o avatar faz `comemorando` e o Enfeite cai no chão com o mesmo brilho em CSS da missão (§3.3). Os colegas veem o Enfeite já no lugar, sem encenação.
 

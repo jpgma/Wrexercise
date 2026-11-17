@@ -124,13 +124,21 @@ internal sealed record EnfeiteResponse(string Codigo, string Conquista, string N
 
 /// <param name="TituloConquista">A conquista que libera o Enfeite, como o Perfil a mostra.</param>
 /// <param name="Atual">O progresso da pessoa na conquista, de <paramref name="Alvo"/>.</param>
+/// <param name="Falta">O que falta para liberar, por extenso ("Faltam 2 treinos no fim de semana").</param>
 internal sealed record EnfeiteBloqueadoResponse(
     string Codigo,
     string Conquista,
     string Nome,
     string TituloConquista,
     int Atual,
-    int Alvo);
+    int Alvo,
+    string? Falta);
+
+/// <summary>Uma conquista que a pessoa ainda não comemorou, com o Enfeite que ela liberou ou evoluiu.</summary>
+/// <param name="Conquista">O código da conquista; define o desenho do Enfeite.</param>
+/// <param name="Titulo">O título da conquista, como o Perfil a mostra.</param>
+/// <param name="Enfeite">O código do Enfeite (a família).</param>
+internal sealed record ConquistaNovaResponse(string Conquista, string Titulo, string Enfeite, string NomeEnfeite);
 
 /// <param name="Folha">O endereço da folha importada; sem ela vale a folha padrão.</param>
 /// <param name="Vitrine">Os Enfeites da vitrine; vazia para quem está no modo <c>App</c>.</param>
@@ -141,7 +149,8 @@ internal sealed record MeuAvatarResponse(
     IReadOnlyList<EnfeiteResponse> Vitrine,
     IReadOnlyList<EnfeiteResponse> Liberados,
     IReadOnlyList<string> Novos,
-    IReadOnlyList<EnfeiteBloqueadoResponse> Bloqueados);
+    IReadOnlyList<EnfeiteBloqueadoResponse> Bloqueados,
+    IReadOnlyList<ConquistaNovaResponse> ConquistasNovas);
 
 internal sealed record AvataresResponse(IReadOnlyList<AvatarMembroResponse> Avatares);
 

@@ -8,13 +8,15 @@ internal readonly record struct EnfeiteLiberado(string Codigo, string Conquista,
 
 /// <param name="Conquista">A conquista do primeiro nível, que libera o Enfeite; define o desenho.</param>
 /// <param name="Atual">O progresso da pessoa na conquista, de <paramref name="Alvo"/>.</param>
+/// <param name="Falta">O que falta para liberar, por extenso ("Faltam 2 treinos no fim de semana").</param>
 internal readonly record struct EnfeiteBloqueado(
     string Codigo,
     string Conquista,
     string Nome,
     string TituloConquista,
     int Atual,
-    int Alvo);
+    int Alvo,
+    string? Falta = null);
 
 /// <summary>
 /// Os Enfeites liberados pelas conquistas e a vitrine (docs/gamificacao.md §9). A vitrine guarda o código do
@@ -81,7 +83,7 @@ internal static class Enfeites
             }
 
             bloqueados.Add(new EnfeiteBloqueado(
-                codigo, primeira.Codigo, niveis[0].Nome, primeira.Titulo, primeira.Atual, primeira.Alvo));
+                codigo, primeira.Codigo, niveis[0].Nome, primeira.Titulo, primeira.Atual, primeira.Alvo, primeira.Falta));
         }
 
         return bloqueados;
@@ -120,6 +122,32 @@ internal static class Enfeites
 
         return (vitrine, novos);
     }
+
+    /// <summary>
+    /// O que guardar em <c>enfeites_vistos</c>: o código de cada Enfeite liberado e a conquista do seu nível
+    /// (decisão 0072). O código diz que a pessoa já viu o Enfeite; a conquista, que já viu este nível.
+    /// </summary>
+    public static string[] Vistos(IReadOnlyList<EnfeiteLiberado> liberados) =>
+        liberados.SelectMany(e => new[] { e.Codigo, e.Conquista }).ToArray();
+
+    /// <summary>
+    /// Os Enfeites cuja conquista a pessoa ainda não comemorou: um Enfeite que ela nunca viu, ou um que subiu
+    /// de nível. Um Enfeite visto antes da decisão 0072, sem nível guardado, conta como comemorado: ninguém
+    /// recebe de uma vez as comemorações de tudo o que já tinha.
+    /// </summary>
+    public static IReadOnlyList<EnfeiteLiberado> ConquistasNovas(
+        IReadOnlyList<EnfeiteLiberado> liberados,
+        IEnumerable<string> vistos)
+    {
+        var jaVistos = vistos.ToHashSet(StringComparer.Ordinal);
+        return liberados
+            .Where(e => !jaVistos.Contains(e.Conquista)
+                && (!jaVistos.Contains(e.Codigo) || NiveisDe(e.Codigo).Any(jaVistos.Contains)))
+            .ToList();
+    }
+
+    private static IEnumerable<string> NiveisDe(string codigo) =>
+        Catalogo.First(c => c.Codigo == codigo).Niveis.Select(n => n.Conquista);
 
     /// <summary>Se a lista é uma vitrine válida: até 3 Enfeites, sem repetir, todos liberados.</summary>
     public static bool IsVitrineValida(IReadOnlyList<EnfeiteLiberado> liberados, IReadOnlyList<string> vitrine) =>

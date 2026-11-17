@@ -319,12 +319,14 @@ The user cannot change the e-mail.
 - The scene puts the `Enfeite` items of each `Avatar` on the floor, near the `Avatar` and out of the ellipse: behind the `Avatar` at the back, to the side of the `Avatar` at the front. The number of items for each member depends on the number of members: up to 3 members, 3 items; 4 or 5 members, 2 items; 6 or more members, 1 item. The items come in the order of the `Vitrine`.
 - No `Enfeite` stands in the centre of the ellipse (the inner 80 percent of it). Card events use this area.
 - An `Enfeite` never hides the head or the body of an `Avatar` in front of it. At least half of an `Enfeite` behind an `Avatar` stays visible. Two `Enfeite` items never stand on the same area of floor. The path from the door, the pull-up bar, the boxes and the planters stay clear. When there is no free floor, the scene does not show the item.
-- When the focus view opens on a member, the other `Enfeite` items of the `Vitrine` of that member drop onto the floor. The panel of the focus view shows the full `Vitrine`.
+- When the focus view opens on a member, the other `Enfeite` items of the `Vitrine` of that member drop onto the floor. The panel of the focus view shows the full `Vitrine`. The `Vitrine` in the panel is a button. A tap opens a dialog with the name of each `Enfeite`. For another member, each line also tells "Você também tem esse." or "Você ainda não tem. Faltam 2 treinos no fim de semana.".
 - Each `Enfeite` shows its animation at a different time from the others. With reduced motion, it shows the first frame only. The pigeon does not land on an `Enfeite`.
 - Only users in the mode `Jogo` show a `Vitrine`. It is visible to the people who share an active group with the user. A user in the mode `App` shows nothing.
 - When a new `Enfeite` exists, the next visit to the scene plays an animation for the user only: the `Avatar` does `comemorando` and the `Enfeite` drops onto the floor and glows, also when the number of members hides it at other times. The animation counts in the limit of 3 per visit. It does not play with reduced motion. Then the system marks the `Enfeite` as seen. Other members see the `Enfeite` in place, with no animation.
 - The profile page shows the `Enfeite` image on each achievement.
-- On the page `/perfil/avatar`, the user also sees the locked `Enfeite` items. A locked `Enfeite` is an `Enfeite` with no level unlocked. Each one shows a gray, faded image with a lock, the achievement that unlocks it ("Libera com …") and a progress bar with `atual/alvo`. The user cannot select a locked `Enfeite`. `GET /api/jogo/avatar` returns them in `bloqueados`. A `Vitrine` with a locked `Enfeite` gives the error `VITRINE_INVALIDA`.
+- New achievement. `GET /api/jogo/avatar` returns `conquistasNovas`: the achievements that the user did not see yet, each with `conquista`, `titulo`, `enfeite` and `nomeEnfeite`. An achievement is new when its `Enfeite` is new or when the `Enfeite` went up one level. `POST /api/jogo/enfeites/vistos` records the `Enfeite` codes and the achievement codes of their levels in `enfeites_vistos`. An `Enfeite` that the user saw before this rule is not new.
+- The home screen shows the dialog "Conquista liberada!" one time for the new achievements, in the two modes. In the mode `Jogo`, the dialog shows after the entry and the animations of the plaza. It shows "Você ganhou o Enfeite …", and "Já está na sua Vitrine." when applicable. Its button "Ver na Vitrine" or "Pôr na Vitrine" opens the own focus view. In the mode `App`, the dialog shows only the achievement, and its button is "Ver no Perfil". When the user closes the dialog, the app marks the achievements as seen.
+- On the page `/perfil/avatar`, the user also sees the locked `Enfeite` items. A locked `Enfeite` is an `Enfeite` with no level unlocked. Each one shows a gray, faded image with a lock, what is missing (`falta`, for example "Faltam 2 treinos no fim de semana") and a progress bar with `atual/alvo`. The user cannot select a locked `Enfeite`. A tap on a locked `Enfeite` opens a dialog with what is missing, the progress, the achievement that unlocks it ("Libera com a conquista …") and the text "Só treino verificado pelo grupo conta.". The own focus view shows the same locked items. `GET /api/jogo/avatar` returns them in `bloqueados`. A `Vitrine` with a locked `Enfeite` gives the error `VITRINE_INVALIDA`.
 
 ### 3.3.7. Weekly rival (`Rival`)
 
@@ -776,6 +778,8 @@ The profile shows the data of the current user in all his or her groups:
 
 The system calculates the achievements each time. It does not keep them in the database.
 
+Each locked achievement has the text `falta`, which tells what is missing: "Falta 1 treino no fim de semana", "Faltam 3 dias com treino", "Faltam 2 semanas seguidas com a meta batida". The profile page shows this text on the locked achievements. The home screen celebrates a new achievement (see 3.3.6).
+
 | Achievement | Condition |
 |---|---|
 | Streak of 4, 8 and 12 weeks | The best streak in one challenge. The system does not add streaks from different challenges. |
@@ -876,6 +880,7 @@ The system makes a notification for these events:
 - The application has a light theme and a dark theme. It uses the theme of the system.
 - When the user completes the weekly goal, the progress ring changes to green and shows a short burst one time. This is also true for the segmented ring around the avatar.
 - After the user records an activity, the page shows "Boa! Tá registrado." and a short burst.
+- If the activity moves the user nearer to a locked achievement, the same page shows one line with the nearest one: "Caixa de som: 9/10 quando o grupo verificar esse treino.", or "Caixa de som: libera quando o grupo verificar esse treino!" for the last one. If the activity is already `Verificada`, the line has no condition. The mode `Jogo` uses the name of the `Enfeite`. The mode `App` uses the title of the achievement. The line counts only the achievements of one activity: the activity type, `FimDeSemana`, `Madrugador` and `Noturno`. It is a hint that the browser calculates with the time zone of the device.
 - When the user has reduced motion on in the system, the application does not show these animations.
 
 ## 13. PWA and offline use

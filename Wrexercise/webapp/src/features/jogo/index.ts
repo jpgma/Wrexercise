@@ -1,4 +1,6 @@
 export { AvisoCartaNoTreino } from "./AvisoCartaNoTreino";
+export { useAvancoEnfeite } from "./avancoEnfeite";
+export { CelebracaoConquista } from "./CelebracaoConquista";
 export { CenaGrupo } from "./CenaGrupo";
 export { ConviteJogo } from "./ConviteJogo";
 export { EnergiaPerfil } from "./SaldoEnergia";

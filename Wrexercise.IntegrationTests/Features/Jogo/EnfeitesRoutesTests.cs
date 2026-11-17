@@ -129,4 +129,49 @@ public sealed class EnfeitesRoutesTests : IAsyncLifetime
         Assert.DoesNotContain(depois, a => a.UsuarioId == ana.Id);
         Assert.Contains(depois, a => a.UsuarioId == bia.Id);
     }
+
+    [Fact]
+    public async Task ConquistasNovas_ComemoramOEnfeiteNovoEDepoisAEvolucao()
+    {
+        var (ana, grupoId) = await CriarAnaComKettlebellAsync();
+
+        var nova = Assert.Single((await GetMeuAsync(ana)).ConquistasNovas);
+        Assert.Equal(
+            new ConquistaNovaResponse("Treinos10", "10 treinos", "kettlebell", "Kettlebell de bronze"),
+            nova);
+
+        (await ana.Client.PostAsync("/api/jogo/enfeites/vistos", null, Token)).EnsureSuccessStatusCode();
+        Assert.Empty((await GetMeuAsync(ana)).ConquistasNovas);
+
+        // Mais 40 treinos: o kettlebell vira de prata. O Enfeite não é novo, mas a conquista é.
+        // (Tantos treinos seguidos liberam também outros Enfeites, que não interessam aqui.)
+        await JogoTestes.DarEnergiaAsync(_host, ana, grupoId, 40);
+
+        var meu = await GetMeuAsync(ana);
+        Assert.DoesNotContain("kettlebell", meu.Novos);
+        Assert.Equal("Treinos50", meu.ConquistasNovas.Single(c => c.Enfeite == "kettlebell").Conquista);
+
+        (await ana.Client.PostAsync("/api/jogo/enfeites/vistos", null, Token)).EnsureSuccessStatusCode();
+        Assert.Empty((await GetMeuAsync(ana)).ConquistasNovas);
+    }
+
+    [Fact]
+    public async Task ConquistasNovas_EnfeiteVistoAntesDosNiveis_NaoComemora()
+    {
+        var (ana, _) = await CriarAnaComKettlebellAsync();
+        await _host.ExecuteAsync(
+            $"INSERT INTO avatares (usuario_id, vitrine, enfeites_vistos) VALUES ('{ana.Id}', '{{kettlebell}}', '{{kettlebell}}')");
+
+        Assert.Empty((await GetMeuAsync(ana)).ConquistasNovas);
+    }
+
+    [Fact]
+    public async Task Bloqueados_DizemOQueFalta()
+    {
+        var (ana, _) = await CriarAnaComKettlebellAsync();
+
+        var galo = (await GetMeuAsync(ana)).Bloqueados.Single(e => e.Codigo == "galo");
+
+        Assert.Equal("Faltam 10 treinos antes das 7h", galo.Falta);
+    }
 }

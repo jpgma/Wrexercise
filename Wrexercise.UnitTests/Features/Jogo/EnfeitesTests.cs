@@ -93,4 +93,29 @@ public sealed class EnfeitesTests
         Assert.False(Enfeites.IsVitrineValida(liberados, ["golzinho"]));
         Assert.False(Enfeites.IsVitrineValida(liberados, ["kettlebell", "largada", "tapete", "poste"]));
     }
+
+    [Fact]
+    public void Bloqueados_LevamOQueFaltaDaConquista()
+    {
+        ProgressoConquista[] progresso = [new("FimDeSemana", "Fim de semana", 8, 10, false, "Faltam 2 treinos no fim de semana")];
+
+        Assert.Equal("Faltam 2 treinos no fim de semana", Assert.Single(Enfeites.Bloqueados(progresso)).Falta);
+    }
+
+    [Fact]
+    public void Vistos_GuardamOEnfeiteEONivel() =>
+        Assert.Equal(["kettlebell", "Treinos50", "largada", "Corredor"], Enfeites.Vistos(Enfeites.Liberados(["Treinos50", "Corredor"])));
+
+    [Theory]
+    // Um Enfeite que a pessoa nunca viu.
+    [InlineData(new string[0], new[] { "Treinos50" })]
+    // O Enfeite subiu de nível desde a última vez.
+    [InlineData(new[] { "kettlebell", "Treinos10" }, new[] { "Treinos50" })]
+    // Visto antes de os níveis serem guardados: conta como comemorado.
+    [InlineData(new[] { "kettlebell" }, new string[0])]
+    [InlineData(new[] { "kettlebell", "Treinos50" }, new string[0])]
+    public void ConquistasNovas_SaoOEnfeiteNovoEOQueSubiuDeNivel(string[] vistos, string[] esperadas) =>
+        Assert.Equal(
+            esperadas,
+            Enfeites.ConquistasNovas(Enfeites.Liberados(["Treinos50"]), vistos).Select(e => e.Conquista));
 }

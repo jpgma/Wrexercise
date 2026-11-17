@@ -59,7 +59,7 @@ import {
 import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
 import { appIntegracaoLabels, useRascunho } from "@/features/integracoes";
-import { AvisoCartaNoTreino } from "@/features/jogo";
+import { AvisoCartaNoTreino, useAvancoEnfeite } from "@/features/jogo";
 import { useResumoGrupo } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
 
@@ -124,6 +124,8 @@ type Registrada = {
   anexadas: number;
   /** Motivos das imagens recusadas, sem repetição (ex.: foto já usada). */
   motivos: string[];
+  /** O avanço rumo a uma conquista (e ao Enfeite dela, no modo Jogo), se houver. */
+  avanco: string | null;
 };
 
 function TreinoRegistrado({
@@ -150,6 +152,11 @@ function TreinoRegistrado({
       {registrada.faltaNoDia && (
         <p className="mt-2 text-muted">
           Registramos. {registrada.faltaNoDia} para o dia contar na meta.
+        </p>
+      )}
+      {registrada.avanco && (
+        <p className="chip chip-game mt-4 whitespace-normal">
+          {registrada.avanco}
         </p>
       )}
       {faltaram > 0 && (
@@ -277,6 +284,7 @@ export function RegistrarAtividadePage() {
   const criar = useCriarAtividade(grupoId);
   const sessao = useSessao().data;
   const usuarioId = sessao?.id;
+  const getAvanco = useAvancoEnfeite(sessao?.modoInicio === "Jogo");
   // A câmera aberta fica no histórico, como a galeria: o Voltar do celular a fecha.
   const camera = useGaleria("camera-registro");
   const seletor = useRef<HTMLInputElement>(null);
@@ -476,6 +484,11 @@ export function RegistrarAtividadePage() {
       enviadas: enviadas + doApp,
       anexadas: anexos.length + doApp,
       motivos: [...motivos],
+      avanco: getAvanco({
+        tipo: data.tipo,
+        inicio: new Date(data.startedAt),
+        verificado: atividade.situacaoVerificacao === "Verificada",
+      }),
     });
   };
 
