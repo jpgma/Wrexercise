@@ -185,7 +185,7 @@ The user cannot change the e-mail.
 ### 3.3.3. Energy (`Energia`)
 
 - Energy (EN) is the currency of the game. Each user has one balance for all groups. All users get Energy, also in the mode `App`.
-- The server calculates the Energy at each read. There is no wallet table. Energy that the user earned never decreases. Fatigue (`Fadiga`, below) does not decrease it.
+- The server calculates the Energy at each read. There is no wallet table. Energy that the user earned never decreases, with one exception: an administrator corrects the duration of an activity (see 7.7). Fatigue (`Fadiga`, below) does not decrease it.
 - The balance is the earned Energy minus the prices of all the cards that the user bought (see 3.3.4).
 - `GET /api/jogo/energia` returns the balance of the current user and the Energy for each source: `{ "saldo": 73, "detalhamento": { "atividades": 30, "bonus": 23, "metas": 20, "sequencias": 0, "desafios": 0, "jogadas": 0, "rivais": 0, "fadiga": 0, "despertador": 0 }, "fadigaRestante": 0 }`. `despertador` is the Energy from the wake-up bonus (see 3.3.8). `fadiga` is the Energy that fatigue removed, as zero or a negative number. `fadigaRestante` is the number of next verified days with fatigue (0 to 3). A user without a session gets 401.
 - Sources of Energy:
@@ -602,6 +602,21 @@ The system adds warnings to an activity. All members of the group see them, also
 - The activity response has `exclusaoPermitidaAte`: the time limit for the author, or `null`. The activity page shows "Registrou errado? Dá para apagar até HH:MM" and the button "Apagar" to the author. The button asks for a confirmation. After the deletion, the page shows "Atividade apagada." and opens the group feed.
 - A push notification that the system already sent stays on the device.
 
+### 7.7. Correct the duration of an activity
+
+- The owner and the administrators can change the duration of an activity of a different member (ADR 0068). There is no time limit.
+- `PUT /api/atividades/{id}/duracao` with `duracaoSegundos` (60 to 86400) and `justificativa` (1 to 500 characters). The API returns the updated activity.
+- A member that is not the owner or an administrator gets `403 ACESSO_NEGADO`.
+- Nobody can correct his or her own activity. The API returns `403 CORRECAO_PROPRIA_NAO_PERMITIDA`. A different administrator must do it.
+- The status can be `AguardandoFeedback`, `EmRevisao`, `Contestada` or `Verificada`. For `Rejeitada` and `Anulada`, the API returns `409 CORRECAO_NAO_PERMITIDA`.
+- A missing justification, a duration out of the limits or a duration equal to the current duration gives `400 DADOS_INVALIDOS`.
+- Only the duration changes. The status, the reactions, the comments, the reviewers and the review window stay the same.
+- The system does not calculate the warnings again (see 7.5). The system does not send a notification to the author.
+- The system keeps a record of each correction in `correcoes_duracao`: the person, the old duration, the new duration, the justification and the date. Nobody can change or delete a record.
+- The activity response has `correcaoPermitida` and `correcoes`. All members of the group see the corrections on the activity page: "[name] corrigiu a duração de 3h para 1h 41min · [date]" and the justification.
+- When `correcaoPermitida` is true, the activity page shows "Duração errada?" and the button "Corrigir duração". The form has the fields "Duração em minutos" (1 to 1440) and "Justificativa", and the buttons "Salvar duração" and "Cancelar". After the correction, the page shows "Duração corrigida."
+- The goals, the progress, the ranking, the Energy, the plays, the rival and the profile use the new duration immediately. If a day no longer meets the goal, the user loses the Energy that came from it. The Energy balance can become negative. In that case, the user cannot buy cards until the balance is sufficient.
+
 ## 8. Community verification
 
 ### 8.1. Reviewers
@@ -909,7 +924,7 @@ These functions are for the operator. They are not in the interface.
 
 These features are not in the application. Some are out of scope in `docs/arquitetura.md` §19.
 
-- Edit an activity, evidence or comment. Delete a comment. Delete an activity after 15 minutes or after a negative reaction.
+- Edit the type, the start or the description of an activity. The author cannot edit the duration (an administrator can, see 7.7). Edit an evidence or a comment. Delete a comment. Delete an activity after 15 minutes or after a negative reaction.
 - Edit the goal or the dates of a challenge.
 - Change the name or the time zone of a group. Delete a group.
 - Change the e-mail of an account. Delete an account.

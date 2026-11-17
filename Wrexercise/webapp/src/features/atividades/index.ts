@@ -33,6 +33,7 @@ export {
   salvarRascunhoRegistro,
 } from "./rascunhoRegistro";
 export { ExcluirAtividade } from "./ExcluirAtividade";
+export { CorrigirDuracao } from "./CorrigirDuracao";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";
 export { SituacaoBadge } from "./SituacaoBadge";

@@ -1,6 +1,6 @@
 # 0054 — Correção de atividade: o autor apaga, o administrador anula
 
-**Status:** DECIDIDA. Complementa `0011-atividades.md`, `0015-reacoes-em-revisao.md` e `0053-chave-de-idempotencia.md`.
+**Status:** DECIDIDA. Complementa `0011-atividades.md`, `0015-reacoes-em-revisao.md` e `0053-chave-de-idempotencia.md`. A `0068-correcao-da-duracao.md` acrescenta a correção da duração pelo administrador, também depois de verificada.
 
 ## Contexto
 

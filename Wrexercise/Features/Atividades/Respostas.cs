@@ -72,6 +72,16 @@ internal sealed record AtividadeResponse(
     bool Voce,
     IReadOnlyList<EvidenciaResponse> Evidencias,
     IReadOnlyList<AvisoResponse> Avisos,
-    DateTimeOffset? ExclusaoPermitidaAte);
+    DateTimeOffset? ExclusaoPermitidaAte,
+    bool CorrecaoPermitida,
+    IReadOnlyList<CorrecaoDuracaoResponse> Correcoes);
+
+/// <summary>Uma correção da duração feita por um administrador (ADR 0068). Todo o grupo vê.</summary>
+internal sealed record CorrecaoDuracaoResponse(
+    string ResponsavelNome,
+    int DuracaoAnteriorSegundos,
+    int DuracaoNovaSegundos,
+    string Justificativa,
+    DateTimeOffset CriadaEm);
 
 internal sealed record EvidenciaCriadaResponse(Guid Id, int Ordem, string Url);

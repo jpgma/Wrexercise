@@ -32,7 +32,8 @@ internal sealed record EnergiaGanha(
 /// Energia ganha, calculada na leitura (docs/gamificacao.md §5 e decisões 0033 e 0034).
 /// Só cresce: créditos dependem de atividades <c>Verificada</c>, que é final, e os qualificadores
 /// seguem a ordem de registro, então uma atividade nova nunca toma o bônus de outra. A FADIGA só reduz dias
-/// verificados depois dela (<see cref="Fadiga"/>).
+/// verificados depois dela (<see cref="Fadiga"/>). A exceção é a correção da duração por um administrador
+/// (decisão 0068): se o dia deixa de alcançar a meta, a Energia que dependia dele sai, e o saldo pode ficar negativo.
 /// </summary>
 internal static class CalculoEnergia
 {

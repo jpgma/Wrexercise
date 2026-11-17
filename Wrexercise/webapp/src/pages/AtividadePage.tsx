@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
   AvisosAtividade,
+  CorrigirDuracao,
   EvidenciasAtividade,
   ExcluirAtividade,
   formatarDataRelativa,
@@ -62,6 +63,8 @@ export function AtividadePage() {
     evidencias,
     avisos,
     exclusaoPermitidaAte,
+    correcaoPermitida,
+    correcoes,
   } = atividade.data;
 
   return (
@@ -126,6 +129,13 @@ export function AtividadePage() {
                 permitidaAte={exclusaoPermitidaAte}
               />
             )}
+            <CorrigirDuracao
+              atividadeId={id}
+              grupoId={grupoId}
+              duracaoSegundos={duracaoSegundos}
+              permitida={correcaoPermitida}
+              correcoes={correcoes}
+            />
           </div>
         </div>
 

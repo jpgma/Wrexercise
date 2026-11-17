@@ -221,6 +221,20 @@ Auditoria de decisões administrativas.
 | `justificativa` | `text` | Obrigatória |
 | `created_at` | `timestamptz` | Padrão `now()` |
 
+## `correcoes_duracao`
+
+Correções da duração de uma atividade feitas pelo proprietário ou por um administrador. Todo o grupo as vê na atividade. Ver `decisoes/0068-correcao-da-duracao.md`.
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `id` | `uuid` | Chave primária |
+| `atividade_id` | `uuid` | Referencia `atividades`; sai junto com a atividade |
+| `responsavel_id` | `uuid` | Referencia `usuarios` |
+| `duracao_anterior_segundos` | `integer` | Maior que zero |
+| `duracao_nova_segundos` | `integer` | Maior que zero e diferente da anterior |
+| `justificativa` | `text` | Obrigatória, até 500 caracteres |
+| `created_at` | `timestamptz` | Padrão `now()` |
+
 ## `comentarios`
 
 Conversa sobre uma atividade. Membros ativos do grupo escrevem a qualquer momento, e os comentários não podem ser editados nem removidos. Ver `decisoes/0042-comentarios-sempre-abertos.md`.

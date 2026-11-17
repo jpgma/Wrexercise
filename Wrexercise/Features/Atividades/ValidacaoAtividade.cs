@@ -1,3 +1,5 @@
+using Wrexercise.Features.Grupos.Contracts;
+
 namespace Wrexercise.Features.Atividades;
 
 internal static class TipoComprovacao
@@ -76,6 +78,27 @@ internal static class ValidacaoAtividade
 
     public static int NormalizeLimite(int? limite) =>
         limite is > 0 and <= LimiteFeedMaximo ? limite.Value : LimiteFeedPadrao;
+}
+
+/// <summary>
+/// ADR 0068: o proprietário ou um administrador corrige a duração da atividade de outra pessoa, também
+/// depois de verificada. Rejeitada e Anulada não contam para nada, então não há o que corrigir.
+/// </summary>
+internal static class CorrecaoDuracao
+{
+    private const int MaxJustificativaLength = 500;
+
+    public static bool Permitida(bool autor, string? papel, string situacao) =>
+        !autor && PodeCorrigir(papel) && SituacaoPermite(situacao);
+
+    public static bool PodeCorrigir(string? papel) =>
+        papel is PapelMembro.Proprietario or PapelMembro.Administrador;
+
+    public static bool SituacaoPermite(string situacao) =>
+        situacao is not (SituacaoVerificacao.Rejeitada or SituacaoVerificacao.Anulada);
+
+    public static bool IsValidJustificativa(string? justificativa) =>
+        justificativa?.Trim().Length is >= 1 and <= MaxJustificativaLength;
 }
 
 /// <summary>

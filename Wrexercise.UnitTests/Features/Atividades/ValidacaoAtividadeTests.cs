@@ -76,4 +76,31 @@ public sealed class ValidacaoAtividadeTests
 
         Assert.Equal(permitida ? registrada.AddMinutes(15) : null, ate);
     }
+
+    [Theory]
+    [InlineData(false, "Proprietario", SituacaoVerificacao.Verificada, true)]
+    [InlineData(false, "Administrador", SituacaoVerificacao.AguardandoFeedback, true)]
+    [InlineData(false, "Administrador", SituacaoVerificacao.EmRevisao, true)]
+    [InlineData(false, "Administrador", SituacaoVerificacao.Rejeitada, false)]
+    [InlineData(false, "Administrador", SituacaoVerificacao.Anulada, false)]
+    [InlineData(false, "Membro", SituacaoVerificacao.Verificada, false)]
+    [InlineData(false, null, SituacaoVerificacao.Verificada, false)]
+    [InlineData(true, "Proprietario", SituacaoVerificacao.Verificada, false)]
+    public void CorrecaoDuracao_SoAdministradorNaAtividadeDeOutraPessoaQueAindaConta(
+        bool autor,
+        string? papel,
+        string situacao,
+        bool permitida) =>
+        Assert.Equal(permitida, CorrecaoDuracao.Permitida(autor, papel, situacao));
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("   ", false)]
+    [InlineData("Era 1h41 no relógio.", true)]
+    public void CorrecaoDuracao_ExigeJustificativa(string? justificativa, bool valida) =>
+        Assert.Equal(valida, CorrecaoDuracao.IsValidJustificativa(justificativa));
+
+    [Fact]
+    public void CorrecaoDuracao_JustificativaTemLimiteDe500() =>
+        Assert.False(CorrecaoDuracao.IsValidJustificativa(new string('a', 501)));
 }

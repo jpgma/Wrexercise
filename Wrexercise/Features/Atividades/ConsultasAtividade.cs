@@ -112,7 +112,7 @@ internal static class ConsultasAtividade
         await using var atividade = new NpgsqlCommand("""
             SELECT a.id, a.grupo_id, g.nome, a.usuario_id, u.nome_exibicao, a.tipo,
                 a.duracao_segundos, a.started_at, a.descricao, a.tipo_comprovacao,
-                a.situacao_verificacao, a.submitted_at
+                a.situacao_verificacao, a.submitted_at, m.papel
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
             JOIN usuarios u ON u.id = a.usuario_id
@@ -134,6 +134,7 @@ internal static class ConsultasAtividade
         string tipoComprovacao;
         string situacao;
         DateTimeOffset submittedAt;
+        string papel;
 
         await using (var reader = await atividade.ExecuteReaderAsync(cancellationToken))
         {
@@ -154,6 +155,7 @@ internal static class ConsultasAtividade
             tipoComprovacao = reader.GetString(9);
             situacao = reader.GetString(10);
             submittedAt = reader.GetFieldValue<DateTimeOffset>(11);
+            papel = reader.GetString(12);
         }
 
         var evidencias = new List<EvidenciaResponse>();
@@ -209,6 +211,28 @@ internal static class ConsultasAtividade
             }
         }
 
+        var correcoes = new List<CorrecaoDuracaoResponse>();
+        await using (var lista = new NpgsqlCommand("""
+            SELECT u.nome_exibicao, c.duracao_anterior_segundos, c.duracao_nova_segundos, c.justificativa, c.created_at
+            FROM correcoes_duracao c
+            JOIN usuarios u ON u.id = c.responsavel_id
+            WHERE c.atividade_id = $1
+            ORDER BY c.created_at, c.id
+            """, connection))
+        {
+            lista.Parameters.AddWithValue(atividadeId);
+            await using var reader = await lista.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                correcoes.Add(new CorrecaoDuracaoResponse(
+                    reader.GetString(0),
+                    reader.GetInt32(1),
+                    reader.GetInt32(2),
+                    reader.GetString(3),
+                    reader.GetFieldValue<DateTimeOffset>(4)));
+            }
+        }
+
         return new AtividadeResponse(
             id,
             grupoId,
@@ -225,6 +249,8 @@ internal static class ConsultasAtividade
             autorId == usuarioId,
             evidencias,
             avisos,
-            ExclusaoAtividade.PermitidaAte(autorId == usuarioId, situacao, submittedAt, DateTimeOffset.UtcNow));
+            ExclusaoAtividade.PermitidaAte(autorId == usuarioId, situacao, submittedAt, DateTimeOffset.UtcNow),
+            CorrecaoDuracao.Permitida(autorId == usuarioId, papel, situacao),
+            correcoes);
     }
 }

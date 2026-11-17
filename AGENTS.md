@@ -44,7 +44,9 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`.
+
+`Correcao` (ADR 0068): o proprietário ou um administrador corrige a duração da atividade de outra pessoa, com justificativa. Vale também para atividade `Verificada`; não vale para `Rejeitada` nem `Anulada`. Todo o grupo vê a correção na atividade. Na interface, o botão é "Corrigir duração".
 
 `Fadiga` (ADR 0059): debuff de quem recusa ou deixa expirar uma Provocação recebida. Os próximos 3 dias verificados rendem metade da base de Energia. Na interface, aparece como "FADIGA".
 

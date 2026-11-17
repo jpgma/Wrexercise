@@ -32,6 +32,7 @@ internal static class AtividadesRoutes
         var atividade = routes.MapGroup("/api/atividades/{id:guid}").RequireSessao();
         atividade.MapGet("/", ObterAtividade.HandleAsync);
         atividade.MapDelete("/", ExcluirAtividade.HandleAsync);
+        atividade.MapPut("/duracao", CorrigirDuracao.HandleAsync);
 
         var upload = atividade.MapGroup("");
         upload.MapPost("/evidencias", AnexarEvidencia.HandleAsync)

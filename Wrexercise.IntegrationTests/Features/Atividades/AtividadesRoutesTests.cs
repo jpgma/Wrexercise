@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
 using Wrexercise.Features.Atividades.Contracts;
+using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Infrastructure.Json;
 using Wrexercise.IntegrationTests.Infrastructure;
 
@@ -977,6 +978,84 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var parecida = Assert.Single((await ObterAsync(ana, segunda)).Avisos, a => a.Tipo == TipoAviso.FotoParecida);
         Assert.Null(parecida.AtividadeRelacionadaId);
     }
+
+    [Fact]
+    public async Task CorrigirDuracao_AdministradorNaVerificada_MudaADuracaoERegistra()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, PapelMembro.Administrador, "Bia");
+        var caio = await _host.AddMembroAsync(grupoId, nome: "Caio");
+        var id = await CriarManualAsync(caio, grupoId);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now() WHERE id = '{id}'");
+
+        Assert.True((await ObterAsync(bia, id)).CorrecaoPermitida);
+        Assert.False((await ObterAsync(caio, id)).CorrecaoPermitida);
+
+        var response = await PutDuracaoAsync(bia, id, 6060, "  Era 1h41 no relógio.  ");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var corrigida = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+        Assert.Equal(6060, corrigida!.DuracaoSegundos);
+        Assert.Equal(SituacaoVerificacao.Verificada, corrigida.SituacaoVerificacao);
+        // Todo o grupo vê quem corrigiu, de quanto para quanto e por quê.
+        var correcao = Assert.Single((await ObterAsync(caio, id)).Correcoes);
+        Assert.Equal("Bia", correcao.ResponsavelNome);
+        Assert.Equal(3600, correcao.DuracaoAnteriorSegundos);
+        Assert.Equal(6060, correcao.DuracaoNovaSegundos);
+        Assert.Equal("Era 1h41 no relógio.", correcao.Justificativa);
+        Assert.Equal(6060, Assert.Single(await ListarAsync(ana, grupoId)).DuracaoSegundos);
+    }
+
+    [Fact]
+    public async Task CorrigirDuracao_SemPermissao_Recusada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var deFora = await _host.CreateUsuarioAsync("Zeca");
+        var daAna = await CriarManualAsync(ana, grupoId);
+        // Verificada, para não entrar na fila de avaliação da Bia antes de ela registrar.
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now() WHERE id = '{daAna}'");
+        var daBia = await CriarManualAsync(bia, grupoId);
+        var anulada = await CriarManualAsync(bia, grupoId);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Anulada' WHERE id = '{anulada}'");
+
+        await ApiTestHost.AssertProblemAsync(
+            await PutDuracaoAsync(bia, daAna, 1800, "Motivo"), HttpStatusCode.Forbidden, "ACESSO_NEGADO");
+        await ApiTestHost.AssertProblemAsync(
+            await PutDuracaoAsync(deFora, daAna, 1800, "Motivo"), HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
+        // Nem o proprietário corrige a própria atividade.
+        Assert.False((await ObterAsync(ana, daAna)).CorrecaoPermitida);
+        await ApiTestHost.AssertProblemAsync(
+            await PutDuracaoAsync(ana, daAna, 1800, "Motivo"),
+            HttpStatusCode.Forbidden,
+            "CORRECAO_PROPRIA_NAO_PERMITIDA");
+        await ApiTestHost.AssertProblemAsync(
+            await PutDuracaoAsync(ana, anulada, 1800, "Motivo"), HttpStatusCode.Conflict, "CORRECAO_NAO_PERMITIDA");
+
+        // Dados inválidos: sem justificativa, fora dos limites, ou a mesma duração.
+        foreach (var (duracao, justificativa) in new (int?, string?)[]
+            { (1800, " "), (1800, null), (30, "Motivo"), (86401, "Motivo"), (null, "Motivo"), (3600, "Motivo") })
+        {
+            await ApiTestHost.AssertProblemAsync(
+                await PutDuracaoAsync(ana, daBia, duracao, justificativa), HttpStatusCode.BadRequest, "DADOS_INVALIDOS");
+        }
+
+        Assert.Equal(0L, await _host.ScalarAsync<long>("SELECT count(*) FROM correcoes_duracao"));
+        Assert.Equal(3600, (await ObterAsync(ana, daBia)).DuracaoSegundos);
+    }
+
+    private static Task<HttpResponseMessage> PutDuracaoAsync(
+        TestUsuario usuario,
+        Guid atividadeId,
+        int? duracaoSegundos,
+        string? justificativa) =>
+        usuario.Client.PutAsJsonAsync(
+            $"/api/atividades/{atividadeId}/duracao",
+            new CorrigirDuracaoRequest(duracaoSegundos, justificativa),
+            AppJsonContext.Default.CorrigirDuracaoRequest,
+            Token);
 
     private static Task<HttpResponseMessage> PostAtividadeComChaveAsync(TestUsuario usuario, Guid grupoId, Guid chave)
     {

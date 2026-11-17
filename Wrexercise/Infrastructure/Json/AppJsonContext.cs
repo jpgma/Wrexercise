@@ -35,6 +35,7 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(PushSubscriptionRequest))]
 [JsonSerializable(typeof(AtividadesPaginadasResponse))]
 [JsonSerializable(typeof(CriarAtividadeRequest))]
+[JsonSerializable(typeof(CorrigirDuracaoRequest))]
 [JsonSerializable(typeof(EvidenciaCriadaResponse))]
 [JsonSerializable(typeof(ComentarioRequest))]
 [JsonSerializable(typeof(ComentarioResponse))]

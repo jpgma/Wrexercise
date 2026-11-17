@@ -277,6 +277,7 @@ Regras que garantem um saldo estável:
 - Os qualificadores ("primeira da semana", "dia novo", "tipo novo") e os bônus de horário são calculados sobre as atividades **não rejeitadas**, em **ordem de registro** (`created_at`, `id`), e não de `started_at`: assim uma atividade registrada com data passada nunca toma o bônus de outra já verificada (`decisoes/0034-ordem-dos-bonus-de-energia.md`). Uma atividade pendente já ocupa sua posição. Se ela for rejeitada, a seguinte pode ganhar o bônus, mas nenhum crédito é perdido.
 - Uma Jogada só rende Energia quando fica `Concluida`, e isso depende de uma atividade `Verificada`. Esse crédito também nunca desaparece.
 - Por isso a Energia ganha **só cresce**, e o saldo nunca fica negativo se cada compra verificar `saldo >= preço`.
+- Exceção (decisão 0068): quando um administrador corrige a duração de uma atividade e o dia deixa de alcançar a meta, a Energia que dependia dele sai, e o saldo pode ficar negativo até a pessoa ganhar mais.
 - Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação devolvida à Mão (§6.2) também não muda o saldo, porque continua comprada.
 - Atividades de grupos que a pessoa deixou continuam valendo, como as conquistas.
 - A FADIGA (§5.4) só reduz dias verificados **depois** do gatilho, então também não tira Energia já ganha.

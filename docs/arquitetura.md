@@ -835,6 +835,7 @@ Regras:
 - As reações continuam abertas em EmRevisao até o fim do prazo e podem ser trocadas, sem remoção. A situação é recalculada a cada reação: atingir o limite leva a Rejeitada, e retirar a única reação negativa devolve a atividade a AguardandoFeedback (ou a Verificada, se todos os revisores já tiverem reagido).
 - Verificada, Rejeitada e Anulada são finais. Depois do prazo, EmRevisao só muda por revisão manual. Ver `decisoes/0015-reacoes-em-revisao.md`.
 - O administrador anula um registro errado ou em dobro (Anulada) enquanto a atividade não foi decidida; o autor pode apagá-la nos primeiros 15 minutos, antes de alguém contestar. Ver `decisoes/0054-correcao-de-atividade.md`.
+- O administrador corrige a duração da atividade de outra pessoa, também depois de verificada, com justificativa visível ao grupo. Ver `decisoes/0068-correcao-da-duracao.md`.
 
 A revisão manual deve registrar responsável, data e justificativa.
 
@@ -894,6 +895,7 @@ evidencias_atividade
 revisores_atividade
 reacoes_atividade
 historico_revisao
+correcoes_duracao
 ```
 
 ### 9.2. Restrições importantes

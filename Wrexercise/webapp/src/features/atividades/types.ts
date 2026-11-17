@@ -93,6 +93,18 @@ export type Atividade = Omit<
   avisos: Aviso[];
   /** Até quando o autor pode apagar (ADR 0054); `null` quando não pode. */
   exclusaoPermitidaAte: string | null;
+  /** Se quem vê pode corrigir a duração (ADR 0068): administrador, na atividade de outra pessoa. */
+  correcaoPermitida: boolean;
+  correcoes: CorrecaoDuracao[];
+};
+
+/** Uma correção da duração feita por um administrador (ADR 0068). */
+export type CorrecaoDuracao = {
+  responsavelNome: string;
+  duracaoAnteriorSegundos: number;
+  duracaoNovaSegundos: number;
+  justificativa: string;
+  criadaEm: string;
 };
 
 export type CriarAtividadeData = {

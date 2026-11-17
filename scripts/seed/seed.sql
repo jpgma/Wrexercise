@@ -85,6 +85,8 @@ DELETE FROM comentarios
 WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR usuario_id IN (SELECT id FROM velhos_usuarios);
 DELETE FROM historico_revisao
 WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR responsavel_id IN (SELECT id FROM velhos_usuarios);
+DELETE FROM correcoes_duracao
+WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR responsavel_id IN (SELECT id FROM velhos_usuarios);
 DELETE FROM revisores_atividade
 WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR usuario_id IN (SELECT id FROM velhos_usuarios);
 -- Os arquivos das evidências ficam no disco sem referência; o seed não cria evidências.

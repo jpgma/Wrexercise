@@ -11,6 +11,7 @@ import {
   getJson,
   postFormDataComProgresso,
   postJson,
+  putJson,
 } from "@/services/api";
 import type { EvidenciaPreparada } from "./comprimirImagem";
 import type {
@@ -120,6 +121,28 @@ export function useExcluirAtividade(id: string, grupoId: string) {
       void queryClient.invalidateQueries({
         queryKey: [...atividadesKey, "recentes"],
       });
+      void queryClient.invalidateQueries({ queryKey: ["desafios"] });
+      void queryClient.invalidateQueries({ queryKey: gruposKey });
+      void queryClient.invalidateQueries({ queryKey: ["jogo"] });
+    },
+  });
+}
+
+/** O administrador corrige a duração da atividade de outra pessoa (ADR 0068). */
+export function useCorrigirDuracao(id: string, grupoId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { duracaoSegundos: number; justificativa: string }) =>
+      putJson<Atividade>(`/api/atividades/${id}/duracao`, data),
+    onSuccess: (atividade) => {
+      queryClient.setQueryData(atividadeKey(id), atividade);
+      void queryClient.invalidateQueries({
+        queryKey: atividadesDoGrupoKey(grupoId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [...atividadesKey, "recentes"],
+      });
+      // A duração muda a meta do dia, o progresso, o perfil e o Jogo.
       void queryClient.invalidateQueries({ queryKey: ["desafios"] });
       void queryClient.invalidateQueries({ queryKey: gruposKey });
       void queryClient.invalidateQueries({ queryKey: ["jogo"] });

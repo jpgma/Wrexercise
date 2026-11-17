@@ -23,6 +23,8 @@ internal enum AtividadeOperacaoStatus
     ChaveIdempotenciaReutilizada,
     ExclusaoNaoPermitida,
     RascunhoNaoEncontrado,
+    CorrecaoPropria,
+    CorrecaoNaoPermitida,
 }
 
 internal static class TipoEvidencia
@@ -107,6 +109,14 @@ internal static class OperacaoAtividade
             StatusCodes.Status404NotFound,
             "RASCUNHO_NAO_ENCONTRADO",
             "O rascunho expirou ou já virou uma atividade."),
+        AtividadeOperacaoStatus.CorrecaoPropria => ApiProblem.Create(
+            StatusCodes.Status403Forbidden,
+            "CORRECAO_PROPRIA_NAO_PERMITIDA",
+            "Você não pode corrigir a sua própria atividade. Peça a outro administrador."),
+        AtividadeOperacaoStatus.CorrecaoNaoPermitida => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "CORRECAO_NAO_PERMITIDA",
+            "Esta atividade não conta mais, então não dá para corrigir a duração."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 
