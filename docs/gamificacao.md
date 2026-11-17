@@ -310,7 +310,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 |---|---|---:|---|
 | +10 MIN | `Provocacao` | 30 | Somar num mesmo dia pelo menos a duração mínima do desafio + 10 minutos. |
 | +20 MIN | `Provocacao` | 45 | Somar num mesmo dia pelo menos a duração mínima do desafio + 20 minutos. |
-| VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente da última atividade do destinatário, neste grupo, já verificada no momento do envio. |
+| VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente do treino de referência do destinatário neste grupo, no momento do envio: o mais recente entre os já verificados e os que quem joga aprovou com "Dar moral" (`decisoes/0071-referencia-da-variedade.md`). |
 | FIM DE SEMANA | `Provocacao` | 35 | Uma atividade que comece no sábado ou no domingo. |
 | ANTES DAS 8 | `Provocacao` | 40 | Uma atividade que comece antes das 08:00. |
 | DESAFIO DUPLO | `Resposta` | 40 | Aceita a Provocação e devolve o mesmo objetivo para o remetente, como uma Jogada nova. |
@@ -318,9 +318,9 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | PRAZO EXTRA | `Resposta` | 20 | Aceita a Provocação com 24 horas a mais de prazo. |
 | MUDANÇA DE PLANOS | `Resposta` | 25 | Aceita a Provocação trocando o objetivo por um equivalente da mesma faixa de preço, à escolha de quem aceita. |
 
-- **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
-- **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que continua sendo de quem a comprou. A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o de quem vai cumprir e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
-- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. Em +10 MIN e +20 MIN, somam-se as atividades de um mesmo dia dentro do prazo da Jogada.
+- **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite; na VARIEDADE, vale o último treino de quem responde que não esteja rejeitado nem anulado. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
+- **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que continua sendo de quem a comprou. A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o do treino de referência de quem vai cumprir (aqui, conta o "Dar moral" de quem devolve) e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
+- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. O treino de referência da VARIEDADE é o que começou por último entre os `Verificada` do destinatário e os que quem joga aprovou com `Kudos` e não estão `Rejeitada` nem `Anulada`; sem nenhum, qualquer tipo vale. Em +10 MIN e +20 MIN, somam-se as atividades de um mesmo dia dentro do prazo da Jogada.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 

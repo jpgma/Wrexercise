@@ -222,9 +222,11 @@ internal static class Jogadas
 
     /// <summary>
     /// Fixa o objetivo para quem vai cumpri-lo (decisão 0035): +10 MIN e +20 MIN guardam a duração mínima do
-    /// desafio <c>Ativo</c> mais os minutos da carta; a VARIEDADE guarda o tipo da última atividade verificada
-    /// do destinatário neste grupo. Numa Fusão, os minutos das duas cartas se somam (decisão 0070).
+    /// desafio <c>Ativo</c> mais os minutos da carta; a VARIEDADE guarda o tipo do último treino do destinatário
+    /// que o observador já viu aprovado (decisão 0071). Numa Fusão, os minutos das duas cartas se somam
+    /// (decisão 0070).
     /// </summary>
+    /// <param name="observadorId">Quem joga a carta: o seu "dar moral" também faz um treino contar na VARIEDADE.</param>
     /// <param name="codigoFusao">A segunda Provocação, numa Fusão.</param>
     /// <returns>Os parâmetros, ou o erro <c>SEM_DESAFIO_ATIVO</c> numa carta de duração.</returns>
     public static async Task<(ParametrosObjetivo? Parametros, IResult? Erro)> FixarObjetivoAsync(
@@ -233,6 +235,7 @@ internal static class Jogadas
         string codigo,
         Guid grupoId,
         Guid destinatarioId,
+        Guid observadorId,
         CancellationToken cancellationToken,
         string? codigoFusao = null)
     {
@@ -249,7 +252,7 @@ internal static class Jogadas
         }
 
         var tipoEvitar = codigo == CodigoCarta.Variedade || codigoFusao == CodigoCarta.Variedade
-            ? await LoadUltimoTipoVerificadoAsync(connection, transaction, grupoId, destinatarioId, cancellationToken)
+            ? await LoadTipoEvitarAsync(connection, transaction, grupoId, destinatarioId, observadorId, cancellationToken)
             : null;
 
         return (new ParametrosObjetivo(duracaoAlvo, tipoEvitar), null);
@@ -324,23 +327,35 @@ internal static class Jogadas
         return (reader.GetGuid(0), TimestampLeitura.FromReader(reader, 1));
     }
 
-    /// <summary>O tipo da última atividade verificada do destinatário neste grupo, fixado na VARIEDADE.</summary>
-    public static async Task<string?> LoadUltimoTipoVerificadoAsync(
+    /// <summary>
+    /// O tipo a evitar na VARIEDADE (decisão 0071): o do treino mais recente do destinatário neste grupo que
+    /// esteja <c>Verificada</c>, ou que o observador tenha aprovado com <c>Kudos</c> e não esteja
+    /// <c>Rejeitada</c> nem <c>Anulada</c>. Quando o observador é o próprio destinatário (MUDANÇA DE PLANOS),
+    /// vale todo treino dele não rejeitado nem anulado.
+    /// </summary>
+    public static async Task<string?> LoadTipoEvitarAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid grupoId,
         Guid destinatarioId,
+        Guid observadorId,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT tipo
-            FROM atividades
-            WHERE grupo_id = $1 AND usuario_id = $2 AND situacao_verificacao = 'Verificada'
-            ORDER BY started_at DESC, created_at DESC, id
+            SELECT a.tipo
+            FROM atividades a
+            WHERE a.grupo_id = $1 AND a.usuario_id = $2
+              AND (a.situacao_verificacao = 'Verificada'
+                OR (a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+                  AND ($3 = $2 OR EXISTS (
+                    SELECT 1 FROM reacoes_atividade r
+                    WHERE r.atividade_id = a.id AND r.usuario_id = $3 AND r.tipo = 'Kudos'))))
+            ORDER BY a.started_at DESC, a.created_at DESC, a.id
             LIMIT 1
             """, connection, transaction);
         command.Parameters.AddWithValue(grupoId);
         command.Parameters.AddWithValue(destinatarioId);
+        command.Parameters.AddWithValue(observadorId);
         return (string?)await command.ExecuteScalarAsync(cancellationToken);
     }
 }

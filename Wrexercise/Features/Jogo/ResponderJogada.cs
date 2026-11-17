@@ -145,14 +145,15 @@ internal static class ResponderJogada
             return (null, ErrosJogo.DestinatarioForaDoJogo());
         }
 
-        // A duração-alvo é copiada; o tipo a evitar da VARIEDADE é o da última atividade de quem vai cumprir.
+        // A duração-alvo é copiada; o tipo a evitar da VARIEDADE é o do último treino de quem vai cumprir que
+        // quem devolve já viu aprovado (decisão 0071).
         // Uma Fusão volta inteira, com as duas Provocações (decisão 0070).
         var temVariedade = jogada.Codigo == CodigoCarta.Variedade || jogada.CodigoFusao == CodigoCarta.Variedade;
         var parametros = new ParametrosObjetivo(
             jogada.DuracaoAlvoSegundos,
             temVariedade
-                ? await Jogadas.LoadUltimoTipoVerificadoAsync(
-                    connection, transaction, jogada.GrupoId, remetenteId, cancellationToken)
+                ? await Jogadas.LoadTipoEvitarAsync(
+                    connection, transaction, jogada.GrupoId, remetenteId, usuarioId, cancellationToken)
                 : null);
 
         var agora = await Jogadas.LoadAgoraAsync(connection, transaction, jogada.GrupoId, cancellationToken);
@@ -196,7 +197,7 @@ internal static class ResponderJogada
         }
 
         var (parametros, erro) = await Jogadas.FixarObjetivoAsync(
-            connection, transaction, objetivo, jogada.GrupoId, usuarioId, cancellationToken);
+            connection, transaction, objetivo, jogada.GrupoId, usuarioId, usuarioId, cancellationToken);
         if (erro is not null)
         {
             return (null, erro);

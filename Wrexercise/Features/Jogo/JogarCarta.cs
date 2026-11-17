@@ -109,7 +109,7 @@ internal static class JogarCarta
         }
 
         var (parametros, erro) = await Jogadas.FixarObjetivoAsync(
-            connection, transaction, carta.Codigo, grupoId, destinatarioId, cancellationToken, fusao?.Codigo);
+            connection, transaction, carta.Codigo, grupoId, destinatarioId, remetenteId, cancellationToken, fusao?.Codigo);
         if (erro is not null)
         {
             return erro;

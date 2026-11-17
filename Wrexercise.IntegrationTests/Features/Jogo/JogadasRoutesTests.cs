@@ -495,6 +495,97 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             c => Assert.True(c.EmJogo));
     }
 
+    [Fact]
+    public async Task Variedade_EvitaOTipoDaUltimaVerificada_SemContarPendenteSemMoral()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", horasAtras: 5);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, "AguardandoFeedback", horasAtras: 1);
+
+        Assert.Equal(TipoAtividade.Corrida, await JogarVariedadeAsync(ana, bia, grupoId));
+    }
+
+    [Theory]
+    [InlineData("AguardandoFeedback")]
+    [InlineData("EmRevisao")]
+    [InlineData("Contestada")]
+    public async Task Variedade_ContaOTreinoPendenteEmQueQuemJogaDeuMoral(string situacao)
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", horasAtras: 5);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, situacao, horasAtras: 1, moralDe: ana);
+
+        Assert.Equal(TipoAtividade.Ciclismo, await JogarVariedadeAsync(ana, bia, grupoId));
+    }
+
+    [Theory]
+    [InlineData("Rejeitada")]
+    [InlineData("Anulada")]
+    public async Task Variedade_IgnoraTreinoRejeitadoOuAnuladoMesmoComMoral(string situacao)
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", horasAtras: 5);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, situacao, horasAtras: 1, moralDe: ana);
+
+        Assert.Equal(TipoAtividade.Corrida, await JogarVariedadeAsync(ana, bia, grupoId));
+    }
+
+    [Fact]
+    public async Task Variedade_EntreVerificadaEComMoral_ValeAQueComecouPorUltimo()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, "AguardandoFeedback", horasAtras: 5, moralDe: ana);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", horasAtras: 1);
+
+        Assert.Equal(TipoAtividade.Corrida, await JogarVariedadeAsync(ana, bia, grupoId));
+    }
+
+    [Fact]
+    public async Task Variedade_SemTreinoDeReferencia_NaoEvitaNenhumTipo()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Ciclismo, "AguardandoFeedback", horasAtras: 1);
+
+        Assert.Null(await JogarVariedadeAsync(ana, bia, grupoId));
+    }
+
+    [Fact]
+    public async Task DesafioDuplo_Variedade_UsaOTreinoQueQuemDevolveAprovou()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 4);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var duplo = await JogoTestes.ComprarAsync(bia, CodigoCarta.DesafioDuplo);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        // A Ana só tem treinos verificados do tipo Outro; a Bia deu moral numa Natação ainda pendente.
+        await InserirTreinoAsync(ana, grupoId, TipoAtividade.Natacao, "AguardandoFeedback", horasAtras: 1, moralDe: bia);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita", duplo.Id)).StatusCode);
+
+        var devolvida = Assert.Single(await GetJogadasAsync(ana, grupoId), j => j.Recebida);
+        Assert.Equal(TipoAtividade.Natacao, devolvida.TipoEvitar);
+    }
+
+    [Fact]
+    public async Task MudancaDePlanos_ParaVariedade_UsaOUltimoTreinoDeQuemResponde()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 3);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.FimDeSemana);
+        var mudanca = await JogoTestes.ComprarAsync(bia, CodigoCarta.MudancaDePlanos);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        // Pendente e sem moral de ninguém: a Bia conhece os próprios treinos, então ele já conta.
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Yoga, "AguardandoFeedback", horasAtras: 1);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await PutRespostaAsync(bia, jogadaId, "Aceita", mudanca.Id, CodigoCarta.Variedade)).StatusCode);
+
+        var trocada = Assert.Single(await GetJogadasAsync(bia, grupoId));
+        Assert.Equal(CodigoCarta.Variedade, trocada.Objetivo);
+        Assert.Equal(TipoAtividade.Yoga, trocada.TipoEvitar);
+    }
+
     /// <summary>Ana e Bia no modo Jogo, num grupo só delas; Ana com Energia para algumas cartas.</summary>
     private async Task<(TestUsuario Ana, TestUsuario Bia, Guid GrupoId)> CriarParAsync()
     {
@@ -505,6 +596,42 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         await JogoTestes.AtivarJogoAsync(_host, bia);
         await JogoTestes.DarEnergiaAsync(_host, ana, grupoId, 12);
         return (ana, bia, grupoId);
+    }
+
+    /// <summary>A Ana joga uma VARIEDADE na Bia e devolve o tipo a evitar que ficou na Jogada.</summary>
+    private static async Task<string?> JogarVariedadeAsync(TestUsuario ana, TestUsuario bia, Guid grupoId)
+    {
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        return Assert.Single(await GetJogadasAsync(bia, grupoId)).TipoEvitar;
+    }
+
+    /// <summary>
+    /// Um treino gravado direto no banco, já na situação pedida. <paramref name="moralDe"/> deixa um
+    /// <c>Kudos</c> sem passar pela regra que verificaria a atividade.
+    /// </summary>
+    private async Task InserirTreinoAsync(
+        TestUsuario autor,
+        Guid grupoId,
+        string tipo,
+        string situacao,
+        int horasAtras,
+        TestUsuario? moralDe = null)
+    {
+        var id = Guid.NewGuid();
+        await _host.ExecuteAsync($"""
+            INSERT INTO atividades (
+                id, grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
+                situacao_verificacao, verified_at)
+            VALUES (
+                '{id}', '{grupoId}', '{autor.Id}', '{tipo}', 1800, now() - interval '{horasAtras} hours',
+                'RegistroManual', '{situacao}', CASE WHEN '{situacao}' = 'Verificada' THEN now() END)
+            """);
+        if (moralDe is not null)
+        {
+            await _host.ExecuteAsync(
+                $"INSERT INTO reacoes_atividade (atividade_id, usuario_id, tipo) VALUES ('{id}', '{moralDe.Id}', 'Kudos')");
+        }
     }
 
     private static Task<HttpResponseMessage> PostJogadaAsync(

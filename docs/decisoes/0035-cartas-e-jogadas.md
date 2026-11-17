@@ -1,6 +1,6 @@
 # 0035 — Detalhes das cartas e Jogadas
 
-**Status:** DECIDIDA. Complementa `0033-regras-de-energia-e-jogadas.md`. Detalhes em `../gamificacao.md` §6.
+**Status:** DECIDIDA. Complementa `0033-regras-de-energia-e-jogadas.md`. Detalhes em `../gamificacao.md` §6. O treino de referência da VARIEDADE (item 2) mudou em `0071-referencia-da-variedade.md`; o tipo continua fixado no envio.
 
 ## Contexto
 

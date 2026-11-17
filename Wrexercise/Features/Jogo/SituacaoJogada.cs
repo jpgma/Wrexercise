@@ -109,7 +109,7 @@ internal static class ObjetivoCarta
         // Só na Fusão: o alvo já soma os minutos das duas cartas.
         CodigoCarta.Mais10Min or CodigoCarta.Mais20Min =>
             jogada.DuracaoAlvoSegundos is { } alvo && atividade.DuracaoSegundos >= alvo,
-        // Sem atividade verificada no envio, não há tipo a evitar: qualquer tipo vale.
+        // Sem treino de referência no envio (decisão 0071), não há tipo a evitar: qualquer tipo vale.
         CodigoCarta.Variedade => atividade.Tipo != jogada.TipoEvitar,
         CodigoCarta.FimDeSemana => atividade.InicioLocal.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
         CodigoCarta.AntesDas8 => atividade.InicioLocal.Hour < 8,
