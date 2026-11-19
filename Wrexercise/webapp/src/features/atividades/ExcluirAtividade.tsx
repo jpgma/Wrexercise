@@ -9,8 +9,9 @@ import { useExcluirAtividade } from "./useAtividades";
 const formatoHora = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short" });
 
 /**
- * O autor apaga um registro errado ou em dobro nos primeiros 15 minutos, antes de alguém contestar
- * (ADR 0054). O servidor decide o prazo; aqui só aparece enquanto `permitidaAte` não passou.
+ * O autor apaga um registro errado ou em dobro nos primeiros 15 minutos, mesmo com reações, enquanto o
+ * treino não foi verificado (ADR 0054, 0073). O servidor decide o prazo; aqui só aparece enquanto
+ * `permitidaAte` não passou.
  */
 export function ExcluirAtividade({
   atividadeId,

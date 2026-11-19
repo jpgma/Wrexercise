@@ -10,11 +10,14 @@ namespace Wrexercise.Features.Atividades;
 
 internal static class AnexarEvidencia
 {
+    private const string LoggerCategory = "Wrexercise.EvidenciaRecusada";
+
     public static async Task<IResult> HandleAsync(
         Guid id,
         HttpContext context,
         NpgsqlDataSource dataSource,
         ArmazenamentoEvidencias armazenamento,
+        ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         if (!context.Request.HasFormContentType)
@@ -94,9 +97,25 @@ internal static class AnexarEvidencia
         catch (EvidenciaInvalidaException ex)
         {
             ExcluirSalvos();
+
+            // A recusa é um 400 e não deixava rastro: sem isto, "o vídeo não foi" não tem como ser investigado
+            // (ADR 0073). Só o motivo, o tamanho e o tipo: nunca o nome do arquivo, o conteúdo ou o local.
+            loggerFactory.CreateLogger(LoggerCategory).LogWarning(
+                "Evidência recusada ({Codigo}) na atividade {AtividadeId}: {Motivo} {Bytes} bytes, {TipoInformado}.",
+                ex.Codigo ?? "EVIDENCIA_INVALIDA",
+                id,
+                ex.Message,
+                arquivo.Length,
+                TipoInformado(arquivo.ContentType));
             return OperacaoAtividade.EvidenciaInvalida(ex.Codigo);
         }
     }
+
+    /// <summary>O tipo que o navegador declarou, só para o log: curto e sem caracteres de controle.</summary>
+    private static string TipoInformado(string? contentType) =>
+        contentType is { Length: > 0 and <= 60 } tipo && tipo.All(c => char.IsAsciiLetterOrDigit(c) || c is '/' or '-' or '+' or '.')
+            ? tipo
+            : "tipo não informado";
 
     /// <summary>
     /// Sinais lidos pelo navegador antes de a compressão apagar o EXIF (ADR 0052). Todos opcionais:

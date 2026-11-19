@@ -1,11 +1,12 @@
 @echo off
 chcp 65001 >nul
-rem Mostra os erros recentes do Wrexercise no celular (Termux) por SSH, lidos de ~/wrexercise/log/app.log.
-rem   erros.bat                 os 10 erros mais recentes (Error e Critical), com o começo da exceção
+rem Mostra os erros e avisos recentes do Wrexercise no celular (Termux) por SSH, lidos de ~/wrexercise/log/app.log
+rem e do app.log guardado nos backups que ainda estão no celular (o backup diário esvazia o log).
+rem   erros.bat                 os 10 mais recentes (Warning, Error e Critical), com o começo da exceção
 rem   erros.bat 30              os 30 mais recentes (até 200)
 rem   erros.bat 7F3K2Q          as linhas da referência que o app mostrou ("Código: 7F3K2Q"), com a exceção inteira
 rem   erros.bat --perfil NOME   usa o perfil NOME em vez de a14 (combina com os outros)
-rem O horário é UTC. O log guarda o último 1 MB a cada reinício do app.
+rem O horário é UTC. O log guarda o último 1 MB a cada reinício do app; o celular guarda os 3 últimos backups.
 rem Usa o perfil SSH compartilhado com o Environment (%LOCALAPPDATA%\jpgma\a14.env), o mesmo do stats.bat.
 rem Se o perfil não existir ou o celular não responder, pergunta host, porta, usuário do Termux e chave.
 rem O trabalho roda no celular: deploy/remote-termux.sh erros. Somente leitura.

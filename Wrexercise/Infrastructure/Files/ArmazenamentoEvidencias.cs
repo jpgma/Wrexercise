@@ -41,7 +41,10 @@ internal sealed class ArmazenamentoEvidencias(IOptions<EvidenciasOptions> option
                 var video = LeitorMp4.Ler(leitura);
                 if (ValidacaoMidiaEvidencia.ValidarVideo(video) is { } erro)
                 {
-                    throw new EvidenciaInvalidaException("Vídeo fora das regras.", erro);
+                    // A mensagem só vai para o log; o cliente recebe o código.
+                    throw new EvidenciaInvalidaException(
+                        $"Vídeo fora das regras: {video.CodecVideo}/{video.CodecAudio ?? "sem áudio"}, {video.Largura}x{video.Altura}, {video.DuracaoMs} ms.",
+                        erro);
                 }
 
                 duracaoMs = video.DuracaoMs;

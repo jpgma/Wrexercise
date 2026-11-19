@@ -637,7 +637,7 @@ A participação deve exigir autenticação.
 
 ## Q029 — Qual será a política de retenção?
 
-**Status:** ABERTA. A exclusão de atividades já tem uma regra (`decisoes/0054-correcao-de-atividade.md`: o autor apaga nos primeiros 15 minutos). Continuam sem regra a exclusão de conta e de grupo, a retenção de evidências e os dados nos backups.
+**Status:** ABERTA. A exclusão de atividades já tem uma regra (`decisoes/0054-correcao-de-atividade.md` e `decisoes/0073-exclusao-com-reacoes-e-video-do-iphone.md`: o autor apaga nos primeiros 15 minutos, enquanto a atividade não foi verificada). Continuam sem regra a exclusão de conta e de grupo, a retenção de evidências e os dados nos backups.
 
 Definir:
 

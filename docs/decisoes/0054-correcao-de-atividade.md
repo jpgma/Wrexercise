@@ -1,6 +1,6 @@
 # 0054 — Correção de atividade: o autor apaga, o administrador anula
 
-**Status:** DECIDIDA. Complementa `0011-atividades.md`, `0015-reacoes-em-revisao.md` e `0053-chave-de-idempotencia.md`. A `0068-correcao-da-duracao.md` acrescenta a correção da duração pelo administrador, também depois de verificada.
+**Status:** DECIDIDA. Complementa `0011-atividades.md`, `0015-reacoes-em-revisao.md` e `0053-chave-de-idempotencia.md`. A `0068-correcao-da-duracao.md` acrescenta a correção da duração pelo administrador, também depois de verificada. A `0073-exclusao-com-reacoes-e-video-do-iphone.md` muda quando o autor apaga: nos 15 minutos, em qualquer situação menos `Verificada`.
 
 ## Contexto
 
@@ -20,7 +20,7 @@ A Energia do Jogo só cresce porque `Verificada` é final (`CalculoEnergia`), e 
 
 ### O autor apaga
 
-- `DELETE /api/atividades/{id}`. Só o autor, membro ativo do grupo, nos primeiros 15 minutos depois do registro (`submitted_at`), e só enquanto a atividade está em `AguardandoFeedback`. Um `Kudos` não impede; um `Suspeito` ou `Rejeitar` leva a `EmRevisao` e fecha a exclusão.
+- `DELETE /api/atividades/{id}`. Só o autor, membro ativo do grupo, nos primeiros 15 minutos depois do registro (`submitted_at`), e só enquanto a atividade está em `AguardandoFeedback`. Um `Kudos` não impede; um `Suspeito` ou `Rejeitar` leva a `EmRevisao` e fecha a exclusão. *(Mudou na 0073: só `Verificada` fecha a exclusão.)*
 - Fora disso: `409 EXCLUSAO_NAO_PERMITIDA`. Outra pessoa do grupo: `403 ACESSO_NEGADO`.
 - A exclusão é definitiva. Revisores, reações, comentários, notificações e histórico saem por `ON DELETE CASCADE`. Os avisos e as evidências da atividade saem na mesma transação, e os arquivos das fotos e miniaturas são apagados depois do commit.
 - O aviso `FotoParecida` de outra atividade que apontava para esta continua, sem o link (`atividade_relacionada_id = NULL`).

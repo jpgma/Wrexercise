@@ -919,7 +919,7 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         await _host.AddMembroAsync(grupoId, nome: "Caio");
         var id = await CriarComFotoAsync(ana, grupoId);
         (await PostEvidenciaAsync(ana, id, JpegVariante(1))).EnsureSuccessStatusCode();
-        // Um Kudos não impede: a exclusão só fecha quando alguém contesta.
+        // Um Kudos não impede: ainda falta o Caio, e a atividade não está verificada.
         await ReagirAsync(bia, id, "Kudos");
 
         Assert.NotNull((await ObterAsync(ana, id)).ExclusaoPermitidaAte);
@@ -940,7 +940,7 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Excluir_DepoisDe15MinutosOuContestada_Recusada()
+    public async Task Excluir_DepoisDe15MinutosOuVerificada_Recusada()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -948,18 +948,47 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var antiga = await CriarManualAsync(ana, grupoId);
         await _host.ExecuteAsync(
             $"UPDATE atividades SET submitted_at = now() - interval '16 minutes' WHERE id = '{antiga}'");
-        var contestada = await CriarManualAsync(ana, grupoId);
-        await ReagirAsync(bia, contestada, "Suspeito");
+        // A única revisora deu moral: a atividade já está verificada.
+        var verificada = await CriarManualAsync(ana, grupoId);
+        await ReagirAsync(bia, verificada, "Kudos");
 
         Assert.Null((await ObterAsync(ana, antiga)).ExclusaoPermitidaAte);
+        Assert.Null((await ObterAsync(ana, verificada)).ExclusaoPermitidaAte);
         await ApiTestHost.AssertProblemAsync(
             await ana.Client.DeleteAsync($"/api/atividades/{antiga}", Token),
             HttpStatusCode.Conflict,
             "EXCLUSAO_NAO_PERMITIDA");
         await ApiTestHost.AssertProblemAsync(
-            await ana.Client.DeleteAsync($"/api/atividades/{contestada}", Token),
+            await ana.Client.DeleteAsync($"/api/atividades/{verificada}", Token),
             HttpStatusCode.Conflict,
             "EXCLUSAO_NAO_PERMITIDA");
+    }
+
+    [Fact]
+    public async Task Excluir_ContestadaOuAnuladaNosPrimeirosMinutos_Apaga()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await _host.AddMembroAsync(grupoId, nome: "Caio");
+        // Um Suspeito leva a EmRevisao, e isso já não fecha a exclusão (ADR 0073).
+        var contestada = await CriarManualAsync(ana, grupoId);
+        await ReagirAsync(bia, contestada, "Suspeito");
+        var anulada = await CriarManualAsync(ana, grupoId);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Anulada' WHERE id = '{anulada}'");
+
+        Assert.Equal(SituacaoVerificacao.EmRevisao, (await ObterAsync(ana, contestada)).SituacaoVerificacao);
+        Assert.NotNull((await ObterAsync(ana, contestada)).ExclusaoPermitidaAte);
+        Assert.NotNull((await ObterAsync(ana, anulada)).ExclusaoPermitidaAte);
+
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await ana.Client.DeleteAsync($"/api/atividades/{contestada}", Token)).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await ana.Client.DeleteAsync($"/api/atividades/{anulada}", Token)).StatusCode);
+        Assert.Equal(0L, await _host.ScalarAsync<long>("SELECT count(*) FROM atividades"));
+        Assert.Equal(0L, await _host.ScalarAsync<long>("SELECT count(*) FROM reacoes_atividade"));
     }
 
     [Fact]

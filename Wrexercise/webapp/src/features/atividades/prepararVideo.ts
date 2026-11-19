@@ -183,6 +183,46 @@ async function converter(
   }
 }
 
+/**
+ * Copia as faixas do original para um MP4 comum, sem recodificar (ADR 0073). O Safari do iPhone grava MP4
+ * fragmentado, com a duração zerada no `mvhd`: o servidor lê só o `moov` e recusava o vídeo como curto demais.
+ * Serve quando o aparelho não converte (sem `AudioEncoder`, por exemplo). De quebra, o arquivo vai sem as
+ * etiquetas do original.
+ */
+async function reempacotar(arquivo: File): Promise<Blob | null> {
+  const { mb, input } = await abrir(arquivo);
+  try {
+    const temAudio = (await input.getPrimaryAudioTrack()) !== null;
+    const target = new mb.BufferTarget();
+    const output = new mb.Output({
+      format: new mb.Mp4OutputFormat({ fastStart: "in-memory" }),
+      target,
+    });
+    // Sem opções de vídeo e de áudio, a biblioteca copia os pacotes H.264 e AAC como estão.
+    const conversao = await mb.Conversion.init({
+      input,
+      output,
+      tracks: "primary",
+      showWarnings: false,
+      tags: {},
+    });
+    const usadas = conversao.utilizedTracks;
+    if (
+      !conversao.isValid ||
+      !usadas.some((t) => t.isVideoTrack()) ||
+      (temAudio && !usadas.some((t) => t.isAudioTrack()))
+    ) {
+      return null;
+    }
+    await conversao.execute();
+    return target.buffer
+      ? new Blob([target.buffer], { type: "video/mp4" })
+      : null;
+  } finally {
+    input.dispose();
+  }
+}
+
 /** Os quadros a 10%, 50% e 90%: o do meio vira a miniatura e o `dhash` (ADR 0058). */
 async function extrairQuadros(video: Blob) {
   const { mb, input } = await abrir(video);
@@ -261,7 +301,10 @@ export async function prepararVideo(
     }
   }
   const recortado = trecho.inicio > 0 || trecho.fim < analise.duracao - 0.5;
-  if (!video && analise.originalAceito && !recortado) video = arquivo;
+  if (!video && analise.originalAceito && !recortado) {
+    // Se nem copiar as faixas der certo, vai o original, como antes: o servidor decide.
+    video = (await reempacotar(arquivo).catch(() => null)) ?? arquivo;
+  }
   if (!video) {
     throw new VideoNaoProcessadoError(
       "Seu navegador não consegue preparar este vídeo. Envie fotos, ou um vídeo MP4 de até 1 minuto e 25 MB.",

@@ -109,6 +109,10 @@ internal static class ExclusaoAtividade
 {
     public static readonly TimeSpan Janela = TimeSpan.FromMinutes(15);
 
+    /// <summary>
+    /// Nos 15 minutos, só <c>Verificada</c> fecha a exclusão: ela já pode ter virado Energia e Jogada
+    /// concluída. Uma reação de qualquer tipo não impede (ADR 0073).
+    /// </summary>
     /// <returns>Até quando o autor pode apagar, ou <c>null</c> se não pode.</returns>
     public static DateTimeOffset? PermitidaAte(
         bool autor,
@@ -117,6 +121,6 @@ internal static class ExclusaoAtividade
         DateTimeOffset agora)
     {
         var limite = submittedAt + Janela;
-        return autor && situacao == SituacaoVerificacao.AguardandoFeedback && agora < limite ? limite : null;
+        return autor && situacao != SituacaoVerificacao.Verificada && agora < limite ? limite : null;
     }
 }

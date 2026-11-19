@@ -6,7 +6,7 @@ using Wrexercise.Infrastructure.Files;
 namespace Wrexercise.Features.Atividades;
 
 /// <summary>
-/// O autor apaga a própria atividade nos primeiros 15 minutos, enquanto ninguém a contestou (ADR 0054).
+/// O autor apaga a própria atividade nos primeiros 15 minutos, enquanto ela não foi verificada (ADR 0054, 0073).
 /// A exclusão é definitiva: reações, comentários, notificações, avisos e fotos saem junto.
 /// </summary>
 internal static class ExcluirAtividade

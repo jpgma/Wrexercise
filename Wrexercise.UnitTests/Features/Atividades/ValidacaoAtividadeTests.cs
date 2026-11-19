@@ -65,10 +65,14 @@ public sealed class ValidacaoAtividadeTests
     [Theory]
     [InlineData(true, SituacaoVerificacao.AguardandoFeedback, 14, true)]
     [InlineData(true, SituacaoVerificacao.AguardandoFeedback, 15, false)]
-    [InlineData(true, SituacaoVerificacao.EmRevisao, 1, false)]
+    [InlineData(true, SituacaoVerificacao.EmRevisao, 1, true)]
+    [InlineData(true, SituacaoVerificacao.EmRevisao, 15, false)]
+    [InlineData(true, SituacaoVerificacao.Rejeitada, 1, true)]
+    [InlineData(true, SituacaoVerificacao.Anulada, 1, true)]
     [InlineData(true, SituacaoVerificacao.Verificada, 1, false)]
     [InlineData(false, SituacaoVerificacao.AguardandoFeedback, 1, false)]
-    public void Exclusao_SoOAutorNos15MinutosSemContestacao(bool autor, string situacao, int minutos, bool permitida)
+    [InlineData(false, SituacaoVerificacao.EmRevisao, 1, false)]
+    public void Exclusao_SoOAutorNos15MinutosAntesDeVerificada(bool autor, string situacao, int minutos, bool permitida)
     {
         var registrada = new DateTimeOffset(2026, 11, 13, 12, 0, 0, TimeSpan.Zero);
 

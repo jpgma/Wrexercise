@@ -104,7 +104,7 @@ internal static class OperacaoAtividade
         AtividadeOperacaoStatus.ExclusaoNaoPermitida => ApiProblem.Create(
             StatusCodes.Status409Conflict,
             "EXCLUSAO_NAO_PERMITIDA",
-            "Só dá para apagar nos primeiros 15 minutos, antes de alguém contestar."),
+            "Só dá para apagar nos primeiros 15 minutos, antes de o treino ser verificado."),
         AtividadeOperacaoStatus.RascunhoNaoEncontrado => ApiProblem.Create(
             StatusCodes.Status404NotFound,
             "RASCUNHO_NAO_ENCONTRADO",

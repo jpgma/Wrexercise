@@ -1,6 +1,6 @@
 # 0056 — Erros recentes: referência no erro interno e erros.bat
 
-**Status:** DECIDIDA. Complementa `0029-implantacao-nativa-no-termux.md`, `0032-a14-como-producao.md` e `0055-questoes-resolvidas-pela-implementacao.md` (Q007).
+**Status:** DECIDIDA. A `0073-exclusao-com-reacoes-e-video-do-iphone.md` faz o comando ler também o log guardado nos backups do telefone e mostrar as linhas `Warning`. Complementa `0029-implantacao-nativa-no-termux.md`, `0032-a14-como-producao.md` e `0055-questoes-resolvidas-pela-implementacao.md` (Q007).
 
 ## Contexto
 

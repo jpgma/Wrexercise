@@ -108,7 +108,7 @@ export function useAtividade(id: string, enabled = true) {
   });
 }
 
-/** O autor apaga a própria atividade nos primeiros 15 minutos (ADR 0054). */
+/** O autor apaga a própria atividade nos primeiros 15 minutos (ADR 0054, 0073). */
 export function useExcluirAtividade(id: string, grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({

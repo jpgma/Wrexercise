@@ -304,16 +304,25 @@ SQL
   fi
 }
 
-# Erros recentes do app, para erros.bat. Lê log/app.log (JSON, uma entrada por linha); só leitura.
-#   erros            os 10 erros mais recentes (Error e Critical)
+# Erros e avisos recentes do app, para erros.bat. Lê log/app.log (JSON, uma entrada por linha) e o app.log
+# guardado nos backups que ainda estão no telefone: o backup diário esvazia o log (deploy/nuvem.sh), e sem
+# isso o erro de ontem sumia daqui. Só leitura.
+#   erros            os 10 erros e avisos mais recentes (Warning, Error e Critical)
 #   erros N          os N mais recentes, até 200
 #   erros CODIGO     as linhas com a referência que o app mostrou ("Código: 7F3K2Q"), com a exceção inteira
 erros() {
-  arquivo=$base/log/app.log
-  if [ ! -f "$arquivo" ]; then
-    echo "Sem log em $arquivo."
+  if [ ! -f "$base/log/app.log" ]; then
+    echo "Sem log em $base/log/app.log."
     return 0
   fi
+  # Do mais antigo ao mais recente: os backups locais e, por último, o log atual.
+  arquivo=$base/run/erros.$$.tmp
+  trap 'rm -f "$arquivo"' EXIT
+  : > "$arquivo"
+  for copia in $(ls -1tr "$dados"/backups/wrexercise-*.tar.gz 2>/dev/null); do
+    tar -xzOf "$copia" ./log/app.log >> "$arquivo" 2>/dev/null || true
+  done
+  cat "$base/log/app.log" >> "$arquivo"
   filtro=${1:-10}
   case $filtro in
     *[!0-9]*|'')
@@ -322,16 +331,16 @@ erros() {
       esac
       linhas=$(grep -iF -- "$filtro" "$arquivo" || true)
       limite_excecao=0
-      [ -n "$linhas" ] || { echo "Nenhuma linha com \"$filtro\" no log (ele guarda só o último 1 MB a cada reinício)."; return 0; } ;;
+      [ -n "$linhas" ] || { echo "Nenhuma linha com \"$filtro\" no log nem nos backups do telefone."; return 0; } ;;
     *)
       [ "$filtro" -gt 200 ] && filtro=200
       [ "$filtro" -lt 1 ] && filtro=1
-      total=$(grep -cE '"LogLevel":"(Error|Critical)"' "$arquivo" || true)
+      total=$(grep -cE '"LogLevel":"(Warning|Error|Critical)"' "$arquivo" || true)
       desde=$(grep -m1 -o '"Timestamp":"[^"]*"' "$arquivo" | cut -d'"' -f4)
-      echo "Erros no log: ${total:-0}${desde:+, desde $desde (UTC)}. Mostrando até $filtro, do mais antigo ao mais recente."
-      linhas=$(grep -E '"LogLevel":"(Error|Critical)"' "$arquivo" | tail -n "$filtro" || true)
+      echo "Erros e avisos no log: ${total:-0}${desde:+, desde $desde (UTC)}. Mostrando até $filtro, do mais antigo ao mais recente."
+      linhas=$(grep -E '"LogLevel":"(Warning|Error|Critical)"' "$arquivo" | tail -n "$filtro" || true)
       limite_excecao=8
-      [ -n "$linhas" ] || { echo "Nenhum erro."; return 0; } ;;
+      [ -n "$linhas" ] || { echo "Nenhum erro nem aviso."; return 0; } ;;
   esac
   printf '%s\n' "$linhas" | awk -v limite="$limite_excecao" '
     # Valor de um campo texto de primeiro nível, com os escapes do JSON desfeitos.

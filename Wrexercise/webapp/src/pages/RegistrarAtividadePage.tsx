@@ -9,6 +9,7 @@ import {
   Minus,
   Play,
   Plus,
+  RefreshCw,
   Smartphone,
   Trash2,
 } from "lucide-react";
@@ -116,14 +117,68 @@ function formatarDuracaoVideo(ms: number) {
   return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, "0")}`;
 }
 
-type Registrada = {
+type EnvioEvidencias = {
+  enviadas: number;
+  /** Motivos das imagens recusadas, sem repetição (ex.: foto já usada). */
+  motivos: string[];
+  /** As que falharam sem recusa do servidor (rede, limite de envios, erro interno): vale tentar de novo. */
+  pendentes: EvidenciaPreparada[];
+};
+
+/** Uma recusa do servidor (400, 409) se repete; falha de rede, limite de envios e erro interno, não. */
+function valeReenviar(error: unknown) {
+  return (
+    !(error instanceof ApiError) || error.status === 429 || error.status >= 500
+  );
+}
+
+/** Envia uma evidência por vez. Nunca lança: a atividade já existe, e o resumo diz o que faltou. */
+async function enviarEvidencias(
+  atividadeId: string,
+  preparadas: EvidenciaPreparada[],
+  mostrarLocalizacao: boolean,
+  onRotulo: (rotulo: string) => void,
+): Promise<EnvioEvidencias> {
+  let enviadas = 0;
+  const motivos = new Set<string>();
+  const pendentes: EvidenciaPreparada[] = [];
+  for (const [indice, preparada] of preparadas.entries()) {
+    const rotulo = `Enviando ${indice + 1} de ${preparadas.length}…`;
+    onRotulo(rotulo);
+    try {
+      await anexarEvidencia(
+        atividadeId,
+        preparada,
+        mostrarLocalizacao,
+        (fracao) => onRotulo(`${rotulo} ${Math.round(fracao * 100)}%`),
+      );
+      enviadas += 1;
+    } catch (error) {
+      // Na repetição, a foto que já tinha chegado conta como enviada.
+      if (error instanceof ApiError && error.code === "EVIDENCIA_JA_ANEXADA") {
+        enviadas += 1;
+      } else if (valeReenviar(error)) {
+        pendentes.push(preparada);
+      } else if (
+        // O resumo final mostra quantos faltaram; a foto já usada e o vídeo recusado têm motivo próprio.
+        error instanceof ApiError &&
+        (error.code === "EVIDENCIA_DUPLICADA" ||
+          error.code?.startsWith("VIDEO_") === true)
+      ) {
+        motivos.add(getErrorMessage(error));
+      }
+    }
+  }
+  return { enviadas, motivos: [...motivos], pendentes };
+}
+
+type Registrada = EnvioEvidencias & {
   id: string;
   /** O que ainda faltava no dia para contar na meta; nulo se já conta ou sem desafio. */
   faltaNoDia: string | null;
-  enviadas: number;
   anexadas: number;
-  /** Motivos das imagens recusadas, sem repetição (ex.: foto já usada). */
-  motivos: string[];
+  /** A escolha do autor no formulário: vale também para o reenvio (ADR 0061). */
+  mostrarLocalizacao: boolean;
   /** O avanço rumo a uma conquista (e ao Enfeite dela, no modo Jogo), se houver. */
   avanco: string | null;
 };
@@ -135,7 +190,26 @@ function TreinoRegistrado({
   registrada: Registrada;
   grupoId: string;
 }) {
-  const faltaram = registrada.anexadas - registrada.enviadas;
+  // O reenvio (ADR 0073) atualiza só o resumo dos comprovantes; o resto da tela não muda.
+  const [envio, setEnvio] = useState<EnvioEvidencias>(registrada);
+  const [reenviando, setReenviando] = useState<string | null>(null);
+  const faltaram = registrada.anexadas - envio.enviadas;
+  const reenviou = envio.enviadas > registrada.enviadas;
+
+  const reenviar = async () => {
+    const resultado = await enviarEvidencias(
+      registrada.id,
+      envio.pendentes,
+      registrada.mostrarLocalizacao,
+      setReenviando,
+    );
+    setReenviando(null);
+    setEnvio((atual) => ({
+      enviadas: atual.enviadas + resultado.enviadas,
+      motivos: [...new Set([...atual.motivos, ...resultado.motivos])],
+      pendentes: resultado.pendentes,
+    }));
+  };
 
   return (
     <div className="mx-auto flex max-w-md animate-fade-in flex-col items-center pt-16 text-center">
@@ -164,8 +238,29 @@ function TreinoRegistrado({
           {faltaram === 1
             ? "Um comprovante não pôde ser enviado."
             : `${faltaram} comprovantes não puderam ser enviados.`}
-          {registrada.motivos.map((motivo) => ` ${motivo}`)}
+          {envio.motivos.map((motivo) => ` ${motivo}`)}
+          {envio.pendentes.length > 0 &&
+            " Confira a conexão e tente de novo sem sair desta tela."}
         </p>
+      )}
+      {faltaram === 0 && reenviou && (
+        <p role="status" className="mt-4 text-sm text-muted">
+          Pronto, os comprovantes foram enviados.
+        </p>
+      )}
+      {envio.pendentes.length > 0 && (
+        <button
+          type="button"
+          className="btn-secondary mt-3 w-full"
+          disabled={reenviando !== null}
+          onClick={() => void reenviar()}
+        >
+          <RefreshCw
+            aria-hidden="true"
+            className={`size-4 ${reenviando ? "motion-safe:animate-spin" : ""}`}
+          />
+          <span aria-live="polite">{reenviando ?? "Tentar de novo"}</span>
+        </button>
       )}
       <div className="mt-8 w-full space-y-2">
         <Link
@@ -442,37 +537,12 @@ export function RegistrarAtividadePage() {
     });
 
     // A atividade já existe: uma imagem que falhe não pode fazer a pessoa registrar de novo.
-    let enviadas = 0;
-    const motivos = new Set<string>();
-    for (const [indice, { preparada }] of anexos.entries()) {
-      const rotulo = `Enviando ${indice + 1} de ${anexos.length}…`;
-      setEnviando(rotulo);
-      try {
-        await anexarEvidencia(
-          atividade.id,
-          preparada,
-          data.mostrarLocalizacao,
-          (fracao) => setEnviando(`${rotulo} ${Math.round(fracao * 100)}%`),
-        );
-        enviadas += 1;
-      } catch (error) {
-        // Na repetição, a foto que já tinha chegado conta como enviada.
-        if (
-          error instanceof ApiError &&
-          error.code === "EVIDENCIA_JA_ANEXADA"
-        ) {
-          enviadas += 1;
-        }
-        // O resumo final mostra quantos faltaram; a foto já usada e o vídeo recusado têm motivo próprio.
-        if (
-          error instanceof ApiError &&
-          (error.code === "EVIDENCIA_DUPLICADA" ||
-            error.code?.startsWith("VIDEO_") === true)
-        ) {
-          motivos.add(getErrorMessage(error));
-        }
-      }
-    }
+    const envioEvidencias = await enviarEvidencias(
+      atividade.id,
+      anexos.map(({ preparada }) => preparada),
+      data.mostrarLocalizacao,
+      setEnviando,
+    );
     setEnviando(null);
     if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
 
@@ -481,9 +551,10 @@ export function RegistrarAtividadePage() {
     setRegistrada({
       id: atividade.id,
       faltaNoDia,
-      enviadas: enviadas + doApp,
+      ...envioEvidencias,
+      enviadas: envioEvidencias.enviadas + doApp,
       anexadas: anexos.length + doApp,
-      motivos: [...motivos],
+      mostrarLocalizacao: data.mostrarLocalizacao,
       avanco: getAvanco({
         tipo: data.tipo,
         inicio: new Date(data.startedAt),

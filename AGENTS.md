@@ -62,7 +62,7 @@ Tipos de `Evidencia` (ADR 0058): `Foto`, `Video`. Origens da data da captura: `E
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 
-Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`, `Anulada` (ADR 0054: o administrador anula um registro errado; o autor pode apagar a própria atividade nos primeiros 15 minutos).
+Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`, `Anulada` (ADR 0054: o administrador anula um registro errado; o autor pode apagar a própria atividade nos primeiros 15 minutos, em qualquer situação menos `Verificada`, ADR 0073).
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 

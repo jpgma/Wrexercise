@@ -32,7 +32,7 @@
 - Formato guardado: MP4 com H.264 e áudio AAC. O navegador grava o `moov` antes do `mdat`; o servidor aceita os dois jeitos.
 - O navegador converte para 720p (lado maior 1280 px), 30 quadros por segundo, cerca de 1,2 Mbps, com áudio AAC mono a 64 kbps. Um minuto ocupa cerca de 9,5 MB.
 - Duração de 2 a 60 segundos. Um vídeo da galeria mais longo abre um recorte: a pessoa escolhe o trecho de 60 segundos.
-- Sem WebCodecs para H.264 ou AAC, o navegador envia o original se ele for MP4 ou MOV com H.264, de até 60 segundos e 25 MB. Senão, recusa.
+- Sem WebCodecs para H.264 ou AAC, o navegador envia o original se ele for MP4 ou MOV com H.264, de até 60 segundos e 25 MB. Senão, recusa. Antes de enviar, ele reempacota o original num MP4 comum, sem recodificar: o Safari do iPhone grava MP4 fragmentado, que o servidor recusava (`0073-exclusao-com-reacoes-e-video-do-iphone.md`).
 - Mistura livre: até 3 evidências por atividade, fotos ou vídeos.
 - A miniatura do vídeo é o quadro do meio, gerado no navegador como a das fotos. O `dhash` é o desse quadro: `FotoParecida` compara vídeos e fotos.
 - O navegador também envia `dhashInicio` e `dhashFim` (quadros a 10% e 90%). Se os três quadros quase não mudam, o servidor cria o aviso informativo `VideoParado`, que não impede a verificação automática: uma prancha filmada num tripé também parece parada.

@@ -92,7 +92,7 @@ Usa o perfil compartilhado `%LOCALAPPDATA%\jpgma\a14.env`; se faltar ou o telefo
 ### Erros
 
 ```powershell
-.\erros.bat           # os 10 erros mais recentes do app, com o começo da exceção
+.\erros.bat           # os 10 erros e avisos mais recentes do app (log atual e backups do celular), com o começo da exceção
 .\erros.bat 30        # os 30 mais recentes (até 200)
 .\erros.bat 7F3K2Q    # o erro da referência que o app mostrou ("Código: 7F3K2Q"), com a exceção inteira
 ```
