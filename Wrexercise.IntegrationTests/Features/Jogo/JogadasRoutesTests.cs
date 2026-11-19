@@ -91,8 +91,8 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         await ApiTestHost.AssertProblemAsync(
             await PostJogadaAsync(ana, grupoId, primeira.Id, bia.Id),
-            HttpStatusCode.Conflict,
-            "CARTA_EM_JOGO");
+            HttpStatusCode.NotFound,
+            "CARTA_NAO_ENCONTRADA");
         await ApiTestHost.AssertProblemAsync(
             await PostJogadaAsync(ana, grupoId, segunda.Id, bia.Id),
             HttpStatusCode.Conflict,
@@ -117,7 +117,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Recusar_DevolveACartaEAvisaQuemEnviou()
+    public async Task Recusar_NaoDevolveACartaEAvisaQuemEnviou()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
@@ -127,12 +127,13 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.True(recebida.Recebida);
         Assert.True(recebida.Nova);
         Assert.Equal(SituacaoJogada.Enviada, recebida.Situacao);
-        Assert.True(Assert.Single((await JogoTestes.GetLojaAsync(ana)).Mao).EmJogo);
+        // A carta sai da Mão no arremesso e não volta (decisão 0074).
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(1, await ContarNotificacoesAsync(bia, "CartaRecebida"));
 
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
 
-        Assert.False(Assert.Single((await JogoTestes.GetLojaAsync(ana)).Mao).EmJogo);
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "CartaRecusada"));
         var vista = Assert.Single(await GetJogadasAsync(ana, grupoId));
         Assert.Equal(SituacaoJogada.Recusada, vista.Situacao);
@@ -143,8 +144,8 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             "JOGADA_ENCERRADA");
         await ApiTestHost.AssertProblemAsync(
             await PostJogadaAsync(ana, grupoId, carta.Id, bia.Id),
-            HttpStatusCode.Conflict,
-            LimitesJogada.ErroRecente);
+            HttpStatusCode.NotFound,
+            "CARTA_NAO_ENCONTRADA");
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         Assert.Equal(SituacaoJogada.Concluida, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
         Assert.Equal(35, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
-        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
+        Assert.Equal(35, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
         // Cumprir não dá FADIGA a ninguém.
         Assert.Equal(0, (await GetEnergiaAsync(bia)).FadigaRestante);
         Assert.Equal(0, (await GetEnergiaAsync(ana)).FadigaRestante);
@@ -229,7 +230,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             Token)).EnsureSuccessStatusCode();
 
         Assert.Equal(70, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
-        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
+        Assert.Equal(35, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
     }
 
     [Fact]
@@ -303,8 +304,8 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "CartaRecebida"));
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "CartaAceita"));
         Assert.Empty((await JogoTestes.GetLojaAsync(bia)).Mao);
-        // A Provocação continua na Mão da Ana, em jogo pela Jogada original.
-        Assert.True((await JogoTestes.GetLojaAsync(ana)).Mao.Single(c => c.Id == carta.Id).EmJogo);
+        // A Provocação saiu da Mão da Ana no arremesso: a Jogada devolvida não a traz de volta.
+        Assert.DoesNotContain((await JogoTestes.GetLojaAsync(ana)).Mao, c => c.Id == carta.Id);
 
         await ApiTestHost.AssertProblemAsync(
             await PutRespostaAsync(ana, devolvida.Id, "Aceita", duploDaAna.Id),
@@ -368,7 +369,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         var jogadaId = await JogarAsync(ana, grupoId, variedade.Id, bia.Id, fimDeSemana.Id);
 
-        Assert.All((await JogoTestes.GetLojaAsync(ana)).Mao, c => Assert.True(c.EmJogo));
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         var recebida = Assert.Single(await GetJogadasAsync(bia, grupoId));
         Assert.Equal(CodigoCarta.Variedade, recebida.Carta.Codigo);
         Assert.Equal(CodigoCarta.FimDeSemana, recebida.CartaFusao?.Codigo);
@@ -391,7 +392,8 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         Assert.Equal(SituacaoJogada.Concluida, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
         Assert.Equal(84, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
-        Assert.Equal(35, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
+        // Quem enviou recebe a soma de volta, sem o bônus.
+        Assert.Equal(70, (await GetEnergiaAsync(ana)).Detalhamento.Jogadas);
         Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
     }
@@ -450,7 +452,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Fusao_Recusada_DevolveAsDuasCartas()
+    public async Task Fusao_Recusada_PerdeAsDuasCartas()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var variedade = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
@@ -459,9 +461,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
 
-        var mao = (await JogoTestes.GetLojaAsync(ana)).Mao;
-        Assert.Equal(2, mao.Count);
-        Assert.All(mao, c => Assert.False(c.EmJogo));
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
         Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
     }
 
@@ -489,10 +489,8 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(CodigoCarta.AntesDas8, devolvida.CartaFusao?.Codigo);
         // 35 + 40 = 75, mais 20%.
         Assert.Equal(90, devolvida.Recompensa);
-        // As duas Provocações continuam na Mão da Ana, em jogo pela Jogada original.
-        Assert.All(
-            (await JogoTestes.GetLojaAsync(ana)).Mao.Where(c => c.Tipo == TipoCarta.Provocacao),
-            c => Assert.True(c.EmJogo));
+        // As duas Provocações saíram da Mão da Ana no arremesso.
+        Assert.DoesNotContain((await JogoTestes.GetLojaAsync(ana)).Mao, c => c.Tipo == TipoCarta.Provocacao);
     }
 
     [Fact]
@@ -599,7 +597,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Assert.Equal(TipoAtividade.Ciclismo, previa.TipoEvitar);
         Assert.Null(previa.DuracaoAlvoSegundos);
         Assert.Equal(35, previa.RecompensaDestinatario);
-        Assert.Equal(17, previa.RecompensaRemetente);
+        Assert.Equal(35, previa.RecompensaRemetente);
         // A prévia não grava nada.
         Assert.Empty(await GetJogadasAsync(bia, grupoId));
 
@@ -621,7 +619,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         // 35 + 40 = 75, mais 20% para quem cumpre; metade da soma para quem joga.
         Assert.Equal(90, previa.RecompensaDestinatario);
-        Assert.Equal(37, previa.RecompensaRemetente);
+        Assert.Equal(75, previa.RecompensaRemetente);
         Assert.Null(previa.TipoEvitar);
     }
 

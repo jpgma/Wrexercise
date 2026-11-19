@@ -6,7 +6,7 @@ public class EstadoJogoTests
 {
     private static readonly Guid Eu = Guid.NewGuid();
     private static readonly Guid Colega = Guid.NewGuid();
-    private static readonly DateTimeOffset Envio = new(2026, 11, 2, 15, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Envio = new(2026, 12, 1, 15, 0, 0, TimeSpan.Zero);
 
     private static CartaComprada Carta(string codigo) => new(Guid.NewGuid(), codigo, 30, Envio);
 
@@ -17,7 +17,8 @@ public class EstadoJogoTests
         string situacao,
         Guid? cartaRespostaId = null,
         Guid? origemId = null,
-        Guid? cartaFusaoId = null) =>
+        Guid? cartaFusaoId = null,
+        DateTimeOffset? envio = null) =>
         new(
             Guid.NewGuid(),
             Guid.NewGuid(),
@@ -29,7 +30,14 @@ public class EstadoJogoTests
             cartaRespostaId,
             null,
             origemId,
-            new JogadaEstado(CodigoCarta.Variedade, Envio, Envio.AddHours(48), null, null, null, null),
+            new JogadaEstado(
+                CodigoCarta.Variedade,
+                envio ?? Envio,
+                (envio ?? Envio).AddHours(48),
+                situacao == SituacaoJogada.Recusada ? "Recusada" : null,
+                situacao == SituacaoJogada.Recusada ? (envio ?? Envio).AddHours(1) : null,
+                null,
+                null),
             null,
             null,
             situacao,
@@ -63,7 +71,7 @@ public class EstadoJogoTests
     }
 
     [Fact]
-    public void DesafioDuplo_ConcluidoNaoGastaAProvocacaoDeQuemEnviou()
+    public void DesafioDuplo_ACartaOriginalJaFoiGastaPelaJogadaOriginal()
     {
         // Eu enviei; o colega devolveu com DESAFIO DUPLO, e eu cumpri a devolvida.
         var minha = Carta(CodigoCarta.Variedade);
@@ -72,55 +80,66 @@ public class EstadoJogoTests
 
         var estado = Estado([minha], [devolvida, original]);
 
-        Assert.False(estado.IsGasta(minha.Id));
-        Assert.False(estado.IsEmJogo(minha.Id));
-        Assert.Single(estado.Mao);
+        Assert.True(estado.IsGasta(minha.Id));
+        Assert.Empty(estado.Mao);
     }
 
     [Fact]
-    public void DesafioDuplo_AbertaNaoDeixaACartaEmJogo()
+    public void DesafioDuplo_DevolvidaNaoGastaACartaDeQuemNaoEODono()
     {
+        // A Jogada devolvida sozinha não gasta nada: a carta é da Jogada original.
         var minha = Carta(CodigoCarta.Variedade);
-        var original = Jogada(Eu, Colega, minha.Id, SituacaoJogada.Recusada);
-        var devolvida = Jogada(Colega, Eu, minha.Id, SituacaoJogada.Aceita, origemId: original.Id);
+        var devolvida = Jogada(Colega, Eu, minha.Id, SituacaoJogada.Aceita, origemId: Guid.NewGuid());
 
-        Assert.False(Estado([minha], [devolvida, original]).IsEmJogo(minha.Id));
+        Assert.False(Estado([minha], [devolvida]).IsGasta(minha.Id));
     }
 
-    [Fact]
-    public void Provocacao_ConcluidaEGasta()
+    [Theory]
+    [InlineData(SituacaoJogada.Enviada)]
+    [InlineData(SituacaoJogada.Aceita)]
+    [InlineData(SituacaoJogada.AguardandoVerificacao)]
+    [InlineData(SituacaoJogada.Concluida)]
+    [InlineData(SituacaoJogada.Recusada)]
+    [InlineData(SituacaoJogada.Expirada)]
+    public void Provocacao_JogadaEGasta_SejaQualForOResultado(string situacao)
     {
         var minha = Carta(CodigoCarta.Variedade);
-        var estado = Estado([minha], [Jogada(Eu, Colega, minha.Id, SituacaoJogada.Concluida)]);
+        var estado = Estado([minha], [Jogada(Eu, Colega, minha.Id, situacao)]);
 
         Assert.True(estado.IsGasta(minha.Id));
-    }
-
-    [Fact]
-    public void Fusao_AsDuasCartasFicamEmJogoESaoGastasJuntas()
-    {
-        var primeira = Carta(CodigoCarta.Variedade);
-        var segunda = Carta(CodigoCarta.AntesDas8);
-
-        var aberta = Estado(
-            [primeira, segunda],
-            [Jogada(Eu, Colega, primeira.Id, SituacaoJogada.Aceita, cartaFusaoId: segunda.Id)]);
-        Assert.True(aberta.IsEmJogo(primeira.Id));
-        Assert.True(aberta.IsEmJogo(segunda.Id));
-        Assert.Equal(2, aberta.Mao.Count);
-
-        var concluida = Estado(
-            [primeira, segunda],
-            [Jogada(Eu, Colega, primeira.Id, SituacaoJogada.Concluida, cartaFusaoId: segunda.Id)]);
-        Assert.True(concluida.IsGasta(primeira.Id));
-        Assert.True(concluida.IsGasta(segunda.Id));
-        Assert.Empty(concluida.Mao);
+        Assert.Empty(estado.Mao);
     }
 
     [Theory]
     [InlineData(SituacaoJogada.Recusada)]
     [InlineData(SituacaoJogada.Expirada)]
-    public void Fusao_RecusadaOuExpirada_DevolveAsDuasCartas(string situacao)
+    public void Provocacao_RecusadaOuExpiradaAntesDoInicio_ContinuaNaMao(string situacao)
+    {
+        var minha = Carta(CodigoCarta.Variedade);
+        var antes = EstadoJogo.InicioCartaPermanente.AddDays(-7);
+        var estado = Estado([minha], [Jogada(Eu, Colega, minha.Id, situacao, envio: antes)]);
+
+        Assert.False(estado.IsGasta(minha.Id));
+        Assert.Single(estado.Mao);
+    }
+
+    [Fact]
+    public void Provocacao_AbertaNoInicio_SegueARegraNova()
+    {
+        // Enviada antes da mudança, mas o prazo acaba depois: a carta não volta.
+        var minha = Carta(CodigoCarta.Variedade);
+        var envio = EstadoJogo.InicioCartaPermanente.AddHours(-24);
+        var estado = Estado([minha], [Jogada(Eu, Colega, minha.Id, SituacaoJogada.Expirada, envio: envio)]);
+
+        Assert.True(estado.IsGasta(minha.Id));
+    }
+
+    [Theory]
+    [InlineData(SituacaoJogada.Aceita)]
+    [InlineData(SituacaoJogada.Concluida)]
+    [InlineData(SituacaoJogada.Recusada)]
+    [InlineData(SituacaoJogada.Expirada)]
+    public void Fusao_AsDuasCartasSaoGastasNoArremesso(string situacao)
     {
         var primeira = Carta(CodigoCarta.Variedade);
         var segunda = Carta(CodigoCarta.AntesDas8);
@@ -128,9 +147,9 @@ public class EstadoJogoTests
             [primeira, segunda],
             [Jogada(Eu, Colega, primeira.Id, situacao, cartaFusaoId: segunda.Id)]);
 
-        Assert.False(estado.IsEmJogo(segunda.Id));
-        Assert.False(estado.IsGasta(segunda.Id));
-        Assert.Equal(2, estado.Mao.Count);
+        Assert.True(estado.IsGasta(primeira.Id));
+        Assert.True(estado.IsGasta(segunda.Id));
+        Assert.Empty(estado.Mao);
     }
 
     [Fact]
@@ -138,8 +157,8 @@ public class EstadoJogoTests
     {
         var jogada = Jogada(Eu, Colega, Guid.NewGuid(), SituacaoJogada.Concluida, cartaFusaoId: Guid.NewGuid());
 
-        // 30 + 40 = 70: quem cumpre ganha a soma mais 20%; quem enviou, metade da soma.
+        // 30 + 40 = 70: quem cumpre ganha a soma mais 20%; quem enviou recebe a soma de volta, sem o bônus.
         Assert.Equal(84, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: true)));
-        Assert.Equal(35, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: false)));
+        Assert.Equal(70, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: false)));
     }
 }

@@ -61,7 +61,7 @@ internal static class ComprarCarta
 
         await transaction.CommitAsync(cancellationToken);
         return Results.Json(
-            ObterLoja.ToMaoResponse(comprada, emJogo: false),
+            ObterLoja.ToMaoResponse(comprada),
             AppJsonContext.Default.CartaMaoResponse,
             statusCode: StatusCodes.Status201Created);
     }

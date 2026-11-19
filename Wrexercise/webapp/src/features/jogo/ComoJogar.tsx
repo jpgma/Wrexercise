@@ -34,7 +34,7 @@ const passos: { titulo: string; texto: string; icone: ReactNode }[] = [
   {
     titulo: "Cumpriu, os dois ganham",
     texto:
-      "Quem cumpre leva o valor da carta, e quem jogou leva metade. Recusar ou deixar vencer dá FADIGA.",
+      "Quem cumpre leva o valor da carta, e quem jogou recebe o preço de volta. Recusar ou deixar vencer dá FADIGA, e quem jogou perde a carta.",
     icone: <IconeCarta codigo="Aposta" />,
   },
 ];
@@ -44,7 +44,7 @@ const resumo = [
   "Com EN você compra cartas na Loja.",
   "Provocação: você joga num colega e dá um objetivo com prazo.",
   "Resposta: você usa ao aceitar uma Provocação.",
-  "Cumpriu: os dois ganham EN. Recusou ou venceu o prazo: FADIGA.",
+  "Cumpriu: os dois ganham EN. Recusou ou venceu o prazo: FADIGA, e quem jogou perde a carta.",
 ];
 
 /**

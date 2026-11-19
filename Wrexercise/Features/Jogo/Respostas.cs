@@ -37,8 +37,7 @@ internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse De
 
 internal sealed record CartaCatalogoResponse(string Codigo, string Nome, string Tipo, int Preco, string Efeito);
 
-/// <param name="EmJogo">Se a carta está numa Jogada aberta: continua na Mão, mas não pode ser jogada.</param>
-internal sealed record CartaMaoResponse(Guid Id, string Codigo, string Nome, string Tipo, int Preco, string Efeito, bool EmJogo);
+internal sealed record CartaMaoResponse(Guid Id, string Codigo, string Nome, string Tipo, int Preco, string Efeito);
 
 internal sealed record LojaResponse(
     int Saldo,

@@ -30,11 +30,6 @@ internal static class ErrosJogo
         "CARTA_INVALIDA",
         "Esta carta não está disponível.");
 
-    public static IResult CartaEmJogo() => ApiProblem.Create(
-        StatusCodes.Status409Conflict,
-        "CARTA_EM_JOGO",
-        "Esta carta já está numa Jogada aberta.");
-
     public static IResult FusaoInvalida() => ApiProblem.Create(
         StatusCodes.Status400BadRequest,
         "FUSAO_INVALIDA",

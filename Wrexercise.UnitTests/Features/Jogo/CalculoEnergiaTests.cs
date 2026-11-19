@@ -51,12 +51,12 @@ public class CalculoEnergiaTests
     }
 
     [Fact]
-    public void Jogadas_DestinatarioGanhaOPrecoERemetenteAMetadeParaBaixo()
+    public void Jogadas_DestinatarioGanhaOPrecoERemetenteRecebeOPrecoDeVolta()
     {
         var ganha = CalculoEnergia.Calcular([], [], [new(45, ComoDestinatario: true), new(45, ComoDestinatario: false)]);
 
-        Assert.Equal(45 + 22, ganha.Jogadas);
-        Assert.Equal(67, ganha.Total);
+        Assert.Equal(45 + 45, ganha.Jogadas);
+        Assert.Equal(90, ganha.Total);
     }
 
     [Fact]
@@ -67,15 +67,15 @@ public class CalculoEnergiaTests
             [],
             [new(35, ComoDestinatario: true, Aposta: true), new(35, ComoDestinatario: false, Aposta: true)]);
 
-        Assert.Equal(70 + 17, ganha.Jogadas);
+        Assert.Equal(70 + 35, ganha.Jogadas);
     }
 
     // VARIEDADE (35) + ANTES DAS 8 (40) = 75: o bônus da Fusão é 20% da soma, e a APOSTA não o dobra.
     [Theory]
     [InlineData(true, false, 90)]
     [InlineData(true, true, 165)]
-    [InlineData(false, false, 37)]
-    [InlineData(false, true, 37)]
+    [InlineData(false, false, 75)]
+    [InlineData(false, true, 75)]
     public void Jogadas_FusaoPagaASomaMaisOBonus(bool comoDestinatario, bool aposta, int esperado) =>
         Assert.Equal(esperado, CalculoEnergia.GetRecompensa(new(75, comoDestinatario, aposta, Fusao: true)));
 

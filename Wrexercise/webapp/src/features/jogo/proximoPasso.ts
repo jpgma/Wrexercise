@@ -25,8 +25,7 @@ export function getProximoPasso(jogadas: Jogada[], loja: Loja): string | null {
     return `Treine pra cumprir a carta de ${primeiroNome(valendo.remetenteNome)}: ${getObjetivoCurto(valendo)}.`;
 
   const podeJogar =
-    !getLimiteEnvio(jogadas) &&
-    loja.mao.some((c) => !c.emJogo && c.tipo === "Provocacao");
+    !getLimiteEnvio(jogadas) && loja.mao.some((c) => c.tipo === "Provocacao");
   if (podeJogar) return "Toque num colega pra jogar uma carta.";
 
   if (loja.mao.length >= loja.limiteMao) return null;

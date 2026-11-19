@@ -247,6 +247,14 @@ function DetalheJogada({
               {formatarPrazo(jogada.expiraEm)}
             </p>
           )}
+          {!jogada.recebida &&
+            !jogada.desafioDuplo &&
+            encerrada &&
+            jogada.situacao !== "Concluida" && (
+              <p className="mt-1 text-xs text-muted">
+                Carta perdida: ela não volta para a Mão.
+              </p>
+            )}
           {jogada.recebida && aposta && !encerrada && (
             <p className="mt-1 text-xs font-semibold text-game">
               Apostado: cumprindo, você ganha {jogada.recompensa} EN.
@@ -298,8 +306,8 @@ function DetalheJogada({
             title="Recusar a carta?"
             message={
               comFadiga
-                ? "Você já está com FADIGA. Ela não acumula nem renova: recusar não muda nada. A carta volta para quem enviou."
-                : "Você fica com FADIGA: seus próximos 3 treinos verificados rendem metade da EN. A Energia que você já tem não muda, e o treino conta normalmente no desafio."
+                ? "Você já está com FADIGA. Ela não acumula nem renova: recusar não muda nada para você. Quem enviou perde a carta."
+                : "Você fica com FADIGA: seus próximos 3 treinos verificados rendem metade da EN. A Energia que você já tem não muda, e o treino conta normalmente no desafio. Quem enviou perde a carta."
             }
             confirmLabel="Recusar"
             pending={responder.isPending}

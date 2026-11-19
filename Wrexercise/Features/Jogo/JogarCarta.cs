@@ -128,11 +128,6 @@ internal static class JogarCarta
             return (null, null, 0, ErrosJogo.CartaInvalida());
         }
 
-        if (estado.IsEmJogo(comprada.Id))
-        {
-            return (null, null, 0, ErrosJogo.CartaEmJogo());
-        }
-
         if (cartaFusaoId is not { } fusaoId)
         {
             return (carta, null, comprada.Preco, null);
@@ -150,9 +145,7 @@ internal static class JogarCarta
             return (null, null, 0, ErrosJogo.FusaoInvalida());
         }
 
-        return estado.IsEmJogo(segunda.Id)
-            ? (null, null, 0, ErrosJogo.CartaEmJogo())
-            : (carta, fusao, comprada.Preco + segunda.Preco, null);
+        return (carta, fusao, comprada.Preco + segunda.Preco, null);
     }
 
     public static IResult DestinatarioInvalido() => ApiProblem.Create(

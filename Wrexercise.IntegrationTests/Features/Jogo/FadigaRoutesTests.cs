@@ -29,8 +29,8 @@ public sealed class FadigaRoutesTests : IAsyncLifetime
 
         Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
         Assert.Equal(0, (await GetEnergiaAsync(ana)).FadigaRestante);
-        // A carta continua voltando para a Mão de quem enviou.
-        Assert.False(Assert.Single((await JogoTestes.GetLojaAsync(ana)).Mao).EmJogo);
+        // Quem enviou perde a carta (decisão 0074).
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
     }
 
     [Fact]

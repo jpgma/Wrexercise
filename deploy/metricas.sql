@@ -174,8 +174,8 @@ where j.enviada_em >= now() - make_interval(days => :dias)
       where a.usuario_id = j.destinatario_id
         and a.started_at between j.enviada_em - interval '7 days' and j.enviada_em);
 -- Quem compra o quê, e as cartas ficam paradas? "Nunca jogadas" são as que não entraram em nenhuma Jogada,
--- nem como Resposta. Não é a Mão: a Provocação recusada ou expirada volta para a Mão, e a Jogada concluída
--- gasta a carta, mas a conclusão é calculada no app (gamificação §6.2).
+-- nem como Resposta. Desde a decisão 0074 a Provocação jogada não volta: "nunca jogadas" é a Mão, fora as
+-- Provocações que voltaram de Jogadas recusadas ou expiradas antes de 19/11/2026 (gamificação §6.2).
 select 'Cartas de ' || pessoa, sum(n) || ' compradas', sum(energia) || ' EN',
        'nunca jogadas: ' || coalesce(string_agg(codigo || ' ' || paradas, ', ' order by codigo) filter (where paradas > 0), '-'),
        sum(provocacoes) || ' em Jogadas', sum(respostas) || ' usadas como Resposta'

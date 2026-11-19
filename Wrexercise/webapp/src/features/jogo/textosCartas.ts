@@ -143,7 +143,7 @@ export function getPrevia(
   const pedido = objetivo.startsWith("Um ")
     ? `de um ${objetivo.slice(3)}`
     : objetivo.charAt(0).toLowerCase() + objetivo.slice(1);
-  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}`;
+  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}. Se não, você perde ${fusao ? "as cartas" : "a carta"}.`;
 }
 
 /** A linha da Mão com uma carta escolhida e ainda sem prévia: o nome, que a carta pequena não mostra, e o efeito. */

@@ -95,9 +95,8 @@ internal static class CalculoEnergia
     }
 
     /// <summary>
-    /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou, metade, arredondada para baixo
-    /// (decisões 0033 e 0035). Numa Fusão, quem cumpriu ganha também o bônus sobre a soma, que a APOSTA não
-    /// dobra (decisão 0070).
+    /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou recebe o preço de volta (decisão 0074).
+    /// Numa Fusão, só quem cumpriu ganha o bônus sobre a soma, que a APOSTA não dobra (decisão 0070).
     /// </summary>
     public static int GetRecompensa(RecompensaJogada jogada)
     {
@@ -106,7 +105,7 @@ internal static class CalculoEnergia
         {
             { ComoDestinatario: true, Aposta: true } => (jogada.Preco * 2) + bonus,
             { ComoDestinatario: true } => jogada.Preco + bonus,
-            _ => jogada.Preco / 2,
+            _ => jogada.Preco,
         };
     }
 

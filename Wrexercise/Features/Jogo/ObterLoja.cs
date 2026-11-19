@@ -20,14 +20,14 @@ internal static class ObterLoja
                 estado.Saldo,
                 LimitesJogada.CartasNaMao,
                 CatalogoCartas.Todas.Select(ErrosJogo.ToResponse).ToList(),
-                estado.Mao.Select(c => ToMaoResponse(c, estado.IsEmJogo(c.Id))).ToList()),
+                estado.Mao.Select(ToMaoResponse).ToList()),
             AppJsonContext.Default.LojaResponse);
     }
 
-    public static CartaMaoResponse ToMaoResponse(CartaComprada comprada, bool emJogo)
+    public static CartaMaoResponse ToMaoResponse(CartaComprada comprada)
     {
         var carta = CatalogoCartas.Find(comprada.Codigo)!;
         // O preço pago fica na carta: mudar o catálogo não altera o que já foi comprado.
-        return new CartaMaoResponse(comprada.Id, carta.Codigo, carta.Nome, carta.Tipo, comprada.Preco, carta.Efeito, emJogo);
+        return new CartaMaoResponse(comprada.Id, carta.Codigo, carta.Nome, carta.Tipo, comprada.Preco, carta.Efeito);
     }
 }

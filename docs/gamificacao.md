@@ -144,7 +144,7 @@ Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria 
 - **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. Para quem dorme, mostra "Dormindo há N dias". As Jogadas entre os dois ficam na Mesa.
 - **Cutucada** (`decisoes/0063-cutucada.md`): no Foco de um colega que dorme, o botão "👉 Cutucar Nome" abre as 6 mensagens prontas (`textosCutucada.ts`) e "✍️ Escrever a minha", um texto de até 80 caracteres que só o colega lê (`decisoes/0064-cutucada-com-texto.md`). Tocar numa mensagem pronta, ou em "Enviar", manda a cutucada, grátis. Quem dorme leva um susto (`acordar`) e volta a dormir, e o painel passa a mostrar "Você já cutucou Nome hoje." por 24 horas. O colega recebe a notificação `Cutucada`, com push. Na praça, quem dorme e foi cutucado nas últimas 24 horas mostra uma bolha com o emoji da última cutucada (💬 para a escrita, sem o texto) e "×N" quando há mais de uma, vista por todos. Se o colega voltar a treinar, quem cutucou ganha o bônus Despertador (§5.1).
 - **Mão:** uma só, logo abaixo da praça, dentro e fora do Foco. Ao abrir o Foco, ela sobe até ficar sob o painel e as cartas são distribuídas uma a uma, em leque. As cartas em Jogadas abertas ficam na Mesa e deixam na Mão uma vaga reservada, tracejada. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto. Durante o arrasto, um anel de mira pulsa sob os pés do alvo. Antes do arremesso, a Mão confere os limites de §6.3 que as Jogadas do grupo mostram (Jogada aberta entre os dois, carta para a mesma pessoa em 24 horas, 2 enviadas em aberto): as cartas ficam apagadas e o texto diz o motivo. O servidor confere tudo de novo.
-- **Prévia:** no Foco, com uma carta escolhida, a linha da Mão diz o que ela vai pedir a este colega, o que cada um ganha e o prazo: "Ana vai precisar de um treino que não seja Ciclismo. Se cumprir: Ana +35 EN, você +17 EN · até qui, 20h". O texto repete o primeiro nome, sem pronome. O servidor calcula a prévia com as mesmas funções do arremesso (`GET /api/grupos/{id}/jogadas/previa`); por isso não há passo de confirmação. A carta pequena da Mão não mostra o nome: ele abre a linha quando a carta é escolhida ("VARIEDADE · …").
+- **Prévia:** no Foco, com uma carta escolhida, a linha da Mão diz o que ela vai pedir a este colega, o que cada um ganha e o prazo: "Ana vai precisar de um treino que não seja Ciclismo. Se cumprir: Ana +35 EN, você +35 EN · até qui, 20h. Se não, você perde a carta." (decisão `0074`). O texto repete o primeiro nome, sem pronome. O servidor calcula a prévia com as mesmas funções do arremesso (`GET /api/grupos/{id}/jogadas/previa`); por isso não há passo de confirmação. A carta pequena da Mão não mostra o nome: ele abre a linha quando a carta é escolhida ("VARIEDADE · …").
 - **Guia:** o botão "?" da Mão abre "Como jogar", com as regras em 5 linhas. Na primeira vez no aparelho, um passeio de 3 passos abre sozinho (cookie comum `wx_tutorial_jogo`); dá para pular e rever. Fora do Foco e sem carta escolhida, a linha da Mão sugere o próximo passo (responder uma carta, treinar para cumprir, jogar, comprar ou treinar para ganhar Energia) e a contagem vira um selo. A Mesa vazia diz para que serve, e o selo FADIGA abre a explicação dela.
 - **Carta primeiro:** fora do Foco, escolher uma Provocação faz um anel pulsar sob os colegas que podem recebê-la agora, e os demais ficam apagados. Tocar num deles abre o Foco com a carta já escolhida. Um toque no chão ou de novo na carta desfaz a escolha.
 - **Mesa:** dentro da Mão, abaixo das cartas, uma fileira de mini-cartas com as Jogadas de quem vê no grupo: ícone com um anel do prazo que resta, o outro nome e uma linha que diz o que fazer agora ("Responda até qui, 20h" ou "Falta: treino que não seja Ciclismo · até qui") ou, nas demais, a situação. As que pedem resposta vêm primeiro e pulsam; as encerradas, no fim e apagadas. O rótulo "Na mesa" fica à esquerda da fileira. No Foco, só as Jogadas com o alvo, com o rótulo "Entre vocês"; sem Jogadas, a Mesa some no Foco e, fora dele, mostra uma linha que diz para que ela serve.
@@ -240,9 +240,9 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Rival da semana vencido (§8), em cada grupo | 15 |
 | Despertador: colega cutucado (§3.5) que volta com uma atividade verificada, registrada depois da cutucada e iniciada até 24 horas depois dela | 5 por atividade que o acordou |
 | Jogada concluída, para quem recebeu (§6.4) | 1 × o preço da carta (2 × com APOSTA) |
-| Jogada concluída, para quem enviou (§6.4) | 0,5 × o preço da carta |
+| Jogada concluída, para quem enviou (§6.4) | 1 × o preço da carta |
 | Fusão concluída, para quem recebeu (§6.5) | a soma dos dois preços + 20% (com APOSTA, 2 × a soma + 20% da soma) |
-| Fusão concluída, para quem enviou (§6.5) | 0,5 × a soma dos dois preços |
+| Fusão concluída, para quem enviou (§6.5) | 1 × a soma dos dois preços, sem o bônus |
 
 - As sequências seguem a mesma regra das conquistas: a melhor sequência num único desafio, sem somar desafios. Cada marco paga **uma vez por pessoa**, então as sequências rendem no máximo 175 EN no total.
 - **Desafio concluído:** um desafio `Encerrado` com todas as semanas que contavam para a pessoa cumpridas. Paga uma vez por desafio.
@@ -283,7 +283,7 @@ Regras que garantem um saldo estável:
 - Uma Jogada só rende Energia quando fica `Concluida`, e isso depende de uma atividade `Verificada`. Esse crédito também nunca desaparece.
 - Por isso a Energia ganha **só cresce**, e o saldo nunca fica negativo se cada compra verificar `saldo >= preço`.
 - Exceção (decisão 0068): quando um administrador corrige a duração de uma atividade e o dia deixa de alcançar a meta, a Energia que dependia dele sai, e o saldo pode ficar negativo até a pessoa ganhar mais.
-- Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação devolvida à Mão (§6.2) também não muda o saldo, porque continua comprada.
+- Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação perdida numa Jogada recusada ou expirada (§6.2) também não muda o saldo: o preço já tinha saído na compra e não volta.
 - Atividades de grupos que a pessoa deixou continuam valendo, como as conquistas.
 - A FADIGA (§5.4) só reduz dias verificados **depois** do gatilho, então também não tira Energia já ganha.
 
@@ -321,18 +321,19 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | MUDANÇA DE PLANOS | `Resposta` | 25 | Aceita a Provocação trocando o objetivo por um equivalente da mesma faixa de preço, à escolha de quem aceita. |
 
 - **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite; na VARIEDADE, vale o último treino de quem responde que não esteja rejeitado nem anulado. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
-- **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que continua sendo de quem a comprou. A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o do treino de referência de quem vai cumprir (aqui, conta o "Dar moral" de quem devolve) e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
+- **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que a Jogada original já gastou (§6.2). A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o do treino de referência de quem vai cumprir (aqui, conta o "Dar moral" de quem devolve) e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
 - Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. O treino de referência da VARIEDADE é o que começou por último entre os `Verificada` do destinatário e os que quem joga aprovou com `Kudos` e não estão `Rejeitada` nem `Anulada`; sem nenhum, qualquer tipo vale. Em +10 MIN e +20 MIN, somam-se as atividades de um mesmo dia dentro do prazo da Jogada.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 
 ### 6.2. Compra e Mão
 
-- A **Mão** é por pessoa, com no máximo **5 cartas**, e vale em qualquer grupo. O limite conta as cartas não gastas, inclusive as que estão em Jogadas abertas, para que uma carta devolvida nunca passe de 5.
+- A **Mão** é por pessoa, com no máximo **5 cartas**, e vale em qualquer grupo. O limite conta as cartas não gastas. Uma Provocação jogada sai da Mão na hora e libera a vaga (`decisoes/0074-carta-jogada-nao-volta.md`).
 - A compra roda numa transação que bloqueia a linha do usuário, recalcula o saldo e só grava se `saldo >= preço` e a Mão tiver espaço.
 - A linha de `cartas` guarda o preço pago. Mudar o catálogo depois não altera cartas já compradas.
 - **Quando uma carta é gasta**, calculado a partir das Jogadas, sem coluna de data de uso:
-  - uma Provocação só é gasta quando a Jogada fica `Concluida`. Se a Jogada ficar `Recusada` ou `Expirada`, a carta volta para a Mão de quem enviou e pode ser jogada de novo. Numa Fusão (§6.5), as duas Provocações são gastas ou voltam juntas;
+  - uma Provocação é gasta ao ser jogada, seja qual for o resultado: `Concluida`, `Recusada` ou `Expirada`, a carta não volta para a Mão (`decisoes/0074-carta-jogada-nao-volta.md`). Numa Fusão (§6.5), as duas Provocações são gastas juntas;
+  - exceção de transição: a Provocação de uma Jogada recusada ou expirada antes de `EstadoJogo.InicioCartaPermanente` (19/11/2026, 10:00) já tinha voltado para a Mão e continua lá. As Jogadas que estavam abertas nesse instante seguem a regra nova;
   - uma Resposta é gasta quando é usada, aconteça o que acontecer com a Jogada.
 - Não há pacotes aleatórios, troca de cartas nem devolução.
 
@@ -382,8 +383,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - A verificação pode acontecer depois de `expira_em`: o que importa é o `started_at`.
 - A mesma atividade pode concluir várias Jogadas e missões.
 - **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo (enviada num domingo, vale até o domingo seguinte). ANTES DAS 8 vale até as 08:00 do segundo dia depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
-- **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente ganha 0,5 × o preço, arredondado para baixo. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
-- **Custo para quem enviou:** só uma Jogada `Concluida` gasta a Provocação. Com a recompensa de 0,5 ×, uma carta concluída custa na prática metade do preço. Uma carta recusada ou expirada volta para a Mão (§6.2).
+- **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente recebe 1 × o preço de volta (`decisoes/0074-carta-jogada-nao-volta.md`). A regra vale também para as Jogadas concluídas antes da mudança, porque a Energia é calculada na leitura. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
+- **Custo para quem enviou:** a Provocação é gasta ao ser jogada (§6.2). Se a Jogada fica `Concluida`, a recompensa de 1 × devolve o preço e a carta sai de graça. Se fica `Recusada` ou `Expirada`, quem enviou perde a carta e o preço dela (30 a 45 EN). Se a atividade for rejeitada ou anulada depois da conclusão, a Jogada deixa de estar `Concluida` e a recompensa some; a carta não volta. Quem enviou não recebe notificação da expiração: a Mesa mostra "Carta perdida: ela não volta para a Mão.".
 - **Custo para quem recebeu:** uma Jogada `Recusada` ou `Expirada` dá FADIGA a quem recebeu (§5.4).
 
 ### 6.5. Fusão
@@ -395,14 +396,14 @@ Duas Provocações diferentes jogadas juntas, numa Jogada só (`decisoes/0070-fu
   - A duração de +10 MIN e +20 MIN, numa Fusão, é a dessa atividade: não se somam as atividades do dia.
   - +10 MIN com +20 MIN pede a duração mínima do desafio + 30 minutos.
   - A duração-alvo e o tipo a evitar são fixados no envio, como nas outras Jogadas (§6.1).
-- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e as duas cartas voltam para a Mão de quem enviou.
-- **Recompensa:** quem cumpre ganha a soma dos dois preços mais 20% da soma, arredondado para baixo. Quem enviou ganha metade da soma, arredondada para baixo. VARIEDADE (35) + ANTES DAS 8 (40): 90 EN e 37 EN.
+- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e quem enviou perde as duas cartas (§6.2).
+- **Recompensa:** quem cumpre ganha a soma dos dois preços mais 20% da soma, arredondado para baixo. Quem enviou recebe a soma de volta, sem o bônus. VARIEDADE (35) + ANTES DAS 8 (40): 90 EN e 75 EN.
 - **Prazo:** o maior entre os prazos das duas cartas (§6.4).
 - **Limites:** a Fusão ocupa uma vaga de Jogada, como qualquer outra (§6.3). Não há limite próprio.
 - **Respostas:**
   - PRAZO EXTRA soma 24 horas, como sempre.
   - APOSTA dobra a soma dos preços, não o bônus: 75 × 2 + 15 = 165 EN no exemplo.
-  - DESAFIO DUPLO devolve a Fusão inteira, com as duas Provocações, que continuam sendo de quem as comprou.
+  - DESAFIO DUPLO devolve a Fusão inteira, com as duas Provocações, que a Jogada original já gastou.
   - MUDANÇA DE PLANOS não vale numa Fusão (`CARTA_INVALIDA`).
 - **Na Mão:** a Fusão é montada no Foco, na hora de jogar. Com uma Provocação escolhida, as outras que podem se fundir mostram o selo "Fundir". Tocar numa delas junta as duas; tocar numa das duas a tira do par. O texto mostra o prêmio e o objetivo combinado, e o botão vira "Jogar fusão". Fora do Foco, a escolha é de uma carta só.
 - **Animação:** as duas cartas recuam, batem uma na outra com um clarão e faíscas em pixel art (`fusao.png`), tremem e ficam juntas, brilhando, com o selo "FUSÃO". No arremesso, as duas voam juntas, e as faíscas estouram em quem recebe, com "FUSÃO!". Com movimento reduzido, o par aparece já fundido, sem faíscas.

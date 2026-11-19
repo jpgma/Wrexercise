@@ -21,19 +21,30 @@ internal sealed record EstadoJogo(
     /// <summary>Usar uma carta não muda o saldo: o custo entrou na compra.</summary>
     public int Saldo => Ganha.Total - Cartas.Sum(c => c.Preco);
 
-    /// <summary>As cartas não gastas, inclusive as que estão em Jogadas abertas (docs/gamificacao.md §6.2).</summary>
+    /// <summary>
+    /// Desde quando a carta jogada não volta (decisão 0074). A Provocação recusada ou expirada antes disso
+    /// já tinha voltado para a Mão e continua lá.
+    /// </summary>
+    public static readonly DateTimeOffset InicioCartaPermanente = new(2026, 11, 19, 10, 0, 0, TimeSpan.FromHours(-3));
+
+    /// <summary>As cartas não gastas: as que ainda não foram jogadas nem usadas (docs/gamificacao.md §6.2).</summary>
     public IReadOnlyList<CartaComprada> Mao => Cartas.Where(c => !IsGasta(c.Id)).ToList();
 
     /// <summary>
-    /// Uma Provocação só é gasta quando a Jogada fica <c>Concluida</c>; uma Resposta, quando é usada
-    /// (docs/gamificacao.md §6.2). A Jogada devolvida pelo DESAFIO DUPLO usa a Provocação original, mas não a gasta.
+    /// Uma Provocação é gasta ao ser jogada, seja qual for o resultado (decisão 0074); uma Resposta, quando é
+    /// usada (docs/gamificacao.md §6.2). A Jogada devolvida pelo DESAFIO DUPLO usa a Provocação original, que a
+    /// Jogada original já gastou.
     /// </summary>
     public bool IsGasta(Guid cartaId) =>
         Jogadas.Any(j => j.CartaRespostaId == cartaId
-            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && j.Situacao == SituacaoJogada.Concluida));
+            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && !VoltouPelaRegraAntiga(j)));
 
-    public bool IsEmJogo(Guid cartaId) =>
-        Jogadas.Any(j => j.UsaCarta(cartaId) && j.IsCartaDoRemetente && SituacaoJogada.IsAberta(j.Situacao));
+    private static bool VoltouPelaRegraAntiga(JogadaCarregada jogada) => jogada.Situacao switch
+    {
+        SituacaoJogada.Recusada => jogada.Estado.RespondidaEm < InicioCartaPermanente,
+        SituacaoJogada.Expirada => jogada.Estado.ExpiraEm < InicioCartaPermanente,
+        _ => false,
+    };
 
     /// <summary>
     /// Trava as linhas dos usuários até o fim da transação, sempre na mesma ordem, para evitar deadlock.

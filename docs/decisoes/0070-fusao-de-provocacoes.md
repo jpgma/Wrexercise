@@ -1,6 +1,6 @@
 # 0070 — Fusão de Provocações
 
-**Status:** DECIDIDA. Acrescenta uma mecânica às cartas de `0024`, `0033`, `0035` e `0036`. A FADIGA (`0059`) e os limites de envio (`0069`) continuam os mesmos.
+**Status:** DECIDIDA. Acrescenta uma mecânica às cartas de `0024`, `0033`, `0035` e `0036`. A FADIGA (`0059`) e os limites de envio (`0069`) continuam os mesmos. A `0074-carta-jogada-nao-volta.md` muda o que acontece com as duas cartas e a recompensa de quem enviou.
 
 ## Contexto
 

@@ -50,7 +50,7 @@ public sealed class LojaRoutesTests : IAsyncLifetime
         var loja = await JogoTestes.GetLojaAsync(ana);
         Assert.Equal(antes - 35, loja.Saldo);
         Assert.Equal(35, carta.Preco);
-        Assert.False(Assert.Single(loja.Mao).EmJogo);
+        Assert.Single(loja.Mao);
         var energia = await ana.Client.GetFromJsonAsync("/api/jogo/energia", AppJsonContext.Default.EnergiaResponse, Token);
         Assert.Equal(antes - 35, energia!.Saldo);
     }
@@ -81,6 +81,33 @@ public sealed class LojaRoutesTests : IAsyncLifetime
             await JogoTestes.PostCompraAsync(ana, CodigoCarta.Mais10Min),
             HttpStatusCode.Conflict,
             "MAO_CHEIA");
+    }
+
+    [Fact]
+    public async Task Comprar_DepoisDeJogarComAMaoCheia_AVagaJaEstaLivre()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        await JogoTestes.AtivarJogoAsync(_host, ana);
+        await JogoTestes.AtivarJogoAsync(_host, bia);
+        await JogoTestes.DarEnergiaAsync(_host, ana, grupoId, 25);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        for (var i = 1; i < LimitesJogada.CartasNaMao; i++)
+        {
+            await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        }
+
+        var jogada = await ana.Client.PostAsJsonAsync(
+            $"/api/grupos/{grupoId}/jogadas",
+            new JogarCartaRequest(carta.Id, bia.Id),
+            AppJsonContext.Default.JogarCartaRequest,
+            Token);
+        Assert.Equal(HttpStatusCode.Created, jogada.StatusCode);
+
+        // A carta jogada sai da Mão na hora (decisão 0074): a compra seguinte já cabe.
+        await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        Assert.Equal(LimitesJogada.CartasNaMao, (await JogoTestes.GetLojaAsync(ana)).Mao.Count);
     }
 
     [Fact]

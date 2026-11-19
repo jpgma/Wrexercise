@@ -1,6 +1,6 @@
 # 0033 — Regras de Energia e Jogadas antes da implementação
 
-**Status:** DECIDIDA. Complementa e substitui partes de `0024-cartas-e-avatar-importado.md` (recompensas das Jogadas e notificações). Detalhes em `../gamificacao.md` §5 e §6. A `0059-fadiga.md` dá consequência à recusa e à expiração para quem recebeu.
+**Status:** DECIDIDA. Complementa e substitui partes de `0024-cartas-e-avatar-importado.md` (recompensas das Jogadas e notificações). Detalhes em `../gamificacao.md` §5 e §6. A `0059-fadiga.md` dá consequência à recusa e à expiração para quem recebeu. A `0074-carta-jogada-nao-volta.md` substitui "a carta volta para a Mão" e a recompensa de 0,5 × de quem enviou.
 
 ## Contexto
 

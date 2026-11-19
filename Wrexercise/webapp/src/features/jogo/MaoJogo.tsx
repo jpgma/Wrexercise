@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { type CSSProperties, type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
-import { CartaJogo, IconeCarta } from "./CartaJogo";
+import { CartaJogo } from "./CartaJogo";
 import { ComoJogar } from "./ComoJogar";
 import { MesaJogadas } from "./MesaJogadas";
 import { getProximoPasso } from "./proximoPasso";
@@ -217,7 +217,7 @@ function CartaVs() {
 /**
  * A Mão de quem vê a praça, logo abaixo dela, com a Mesa embaixo (docs/gamificacao.md §3.5). Fora
  * do Foco, escolher uma Provocação faz os colegas que recebem cartas brilharem; no Foco, a carta
- * escolhida é arremessada no alvo. As cartas em jogo ficam na Mesa e deixam a vaga reservada.
+ * escolhida é arremessada no alvo. A carta jogada sai da Mão e não volta (decisão 0074): a Jogada fica na Mesa.
  * Compacta para caber com a praça numa tela de 390×844: o texto de contexto toma o lugar do título
  * só quando há o que dizer, e a carta escolhida sobe por cima dele.
  */
@@ -252,8 +252,6 @@ export function MaoJogo({
   const [agora] = useState(() => Date.now());
   const mao = loja.data?.mao ?? [];
   const limite = loja.data?.limiteMao ?? 0;
-  const livres = mao.filter((c) => !c.emJogo);
-  const reservadas = mao.filter((c) => c.emJogo);
   const comRival = alvo !== null && podeRival;
   const recebe = alvo?.recebeCartas ?? true;
   const nome = alvo ? primeiroNome(alvo.nomeExibicao) : "";
@@ -265,24 +263,20 @@ export function MaoJogo({
       : null;
   const jogavel = (c: CartaMao) =>
     recebe && !bloqueio && c.tipo === "Provocacao";
-  const total =
-    livres.length +
-    reservadas.length +
-    (comRival ? 1 : 0) +
-    (mao.length < limite ? 1 : 0);
+  const total = mao.length + (comRival ? 1 : 0) + (mao.length < limite ? 1 : 0);
   // Fora do Foco o leque é mais fechado: a Mão está guardada, não em jogo.
   const abertura = alvo ? 4 : 2;
   const inclinacaoDe = (i: number) => (i - (total - 1) / 2) * abertura;
 
   const escolhida =
     selecao?.tipo === "carta"
-      ? livres.find((c) => c.id === selecao.carta.id && jogavel(c))
+      ? mao.find((c) => c.id === selecao.carta.id && jogavel(c))
       : undefined;
   // A Fusão só existe no Foco: fora dele, a escolha é de uma carta só.
   const idFusao = selecao?.tipo === "carta" ? selecao.fusao?.id : undefined;
   const fundida =
     alvo && escolhida && idFusao
-      ? livres.find(
+      ? mao.find(
           (c) => c.id === idFusao && jogavel(c) && podeFundir(escolhida, c),
         )
       : undefined;
@@ -342,14 +336,14 @@ export function MaoJogo({
   } else if (escolhida && previa.data) {
     contexto = getPrevia(nome, escolhida, fundida, previa.data);
   } else if (escolhida && fundida) {
-    contexto = getEfeitoFusao(escolhida, fundida);
+    contexto = `${getEfeitoFusao(escolhida, fundida)} As cartas não voltam.`;
   } else if (escolhida) {
     contexto = !alvo
       ? `${getEfeitoComNome(escolhida)} Toque num colega.`
-      : getEfeitoComNome(escolhida);
+      : `${getEfeitoComNome(escolhida)} A carta não volta.`;
   } else if (!recebe) {
     contexto = `${nome} não recebe cartas.`;
-  } else if (bloqueio && livres.length > 0) {
+  } else if (bloqueio && mao.length > 0) {
     contexto = bloqueio;
   }
   // Fora do Foco e sem nada escolhido, a linha sugere o próximo passo; a contagem vira um selo.
@@ -440,7 +434,7 @@ export function MaoJogo({
             <CartaVs />
           </CartaDaMao>
         )}
-        {livres.map((carta, posicao) => {
+        {mao.map((carta, posicao) => {
           const principal = escolhida?.id === carta.id;
           const segunda = fundida?.id === carta.id;
           const marcada = principal || segunda;
@@ -448,7 +442,7 @@ export function MaoJogo({
           // Na Fusão, cada carta anda metade do caminho até a outra e para a MeioDoPar do meio.
           let fusao: FusaoNaMao | undefined;
           if (escolhida && fundida && marcada) {
-            const outra = livres.indexOf(principal ? fundida : escolhida);
+            const outra = mao.indexOf(principal ? fundida : escolhida);
             const lado = outra > posicao ? 1 : -1;
             fusao = {
               lado,
@@ -498,27 +492,6 @@ export function MaoJogo({
             >
               <CartaJogo carta={carta} apagada={!jogavel(carta)} compacta />
             </CartaDaMao>
-          );
-        })}
-        {reservadas.map((carta) => {
-          const i = indice++;
-          return (
-            <li
-              key={carta.id}
-              className="max-w-16 min-w-0 flex-1"
-              style={{
-                transform: `translateY(${Math.abs(inclinacaoDe(i)) * 1.5}px) rotate(${inclinacaoDe(i)}deg)`,
-              }}
-            >
-              <div
-                role="img"
-                aria-label={`${carta.nome} está na mesa`}
-                className="carta-distribuir grid aspect-[3/4] w-full place-items-center rounded-md border-2 border-dashed border-border-strong opacity-60"
-                style={{ animationDelay: `${i * DistribuicaoMs}ms` }}
-              >
-                <IconeCarta codigo={carta.codigo} />
-              </div>
-            </li>
           );
         })}
         {loja.data && mao.length < limite && (

@@ -18,7 +18,7 @@ export type Carta = {
   efeito: string;
 };
 
-export type CartaMao = Carta & { id: string; emJogo: boolean };
+export type CartaMao = Carta & { id: string };
 
 export type Loja = {
   saldo: number;
