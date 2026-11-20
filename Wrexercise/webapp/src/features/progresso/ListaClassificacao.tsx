@@ -54,7 +54,7 @@ export function ListaClassificacao({
                   )}
                 </p>
                 {motivo && (
-                  <p className="truncate text-xs text-muted">{motivo}</p>
+                  <p className="text-xs text-pretty text-muted">{motivo}</p>
                 )}
               </div>
               <div className="shrink-0 text-right">

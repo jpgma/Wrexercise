@@ -827,7 +827,7 @@ The group page and the challenge page show the ranking of the whole challenge. T
 The application does not use points.
 
 - Each item shows the position, the portrait, the first name, the number of completed weeks, the number of verified days and the streak (🔥, from 2 weeks). A tap on an item opens the page of the member.
-- Below the name, a short text tells why the member is above the next member. The text uses the first criterion that is different: "1 semana à frente de Bia", "Empate em semanas, 3 dias a mais que você", "Empate em semanas e dias, sequência maior que Caio" or "Empate com Duda". The last item has no text.
+- Below the name, a short text tells why the member is above the next member. The text uses the first criterion that is different: "1 semana à frente de Bia", "Empate em semanas, 3 dias a mais que você", "Empate em semanas e dias, sequência maior que Caio" or "Empate total com Duda (ordem alfabética)". The last item has no text.
 - When the challenge ended, the title is "Classificação final".
 - When the challenge is scheduled, or when nobody has a verified day, a text replaces the list.
 

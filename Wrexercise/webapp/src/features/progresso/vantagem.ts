@@ -32,5 +32,5 @@ export function explicarVantagem(
   if (acima.sequenciaSemanas > abaixo.sequenciaSemanas) {
     return `Empate em semanas e dias, sequência maior que ${nomeDeBaixo}`;
   }
-  return `Empate com ${nomeDeBaixo}`;
+  return `Empate total com ${nomeDeBaixo} (ordem alfabética)`;
 }
