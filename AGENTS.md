@@ -155,6 +155,8 @@ A versão do app e as novidades de cada versão ficam só em `Wrexercise/webapp/
 | Corrigido: vídeo do iPhone não abria em alguns celulares | fix(atividades): reempacota MP4 com moov no início |
 | Carta recebida agora aparece assim que você abre o app 🃏 | Implementa a Chegada (ADR 0076) com PortaoChegada no AppLayout |
 
+**Etiquetas e implantação.** O `run.bat --ssh` grava a versão no `versao.txt` do celular e, depois de implantar sem alterações fora de commit, cria e envia a etiqueta `vX.Y.Z` no commit implantado, se ela ainda não existe. Não crie nem mova etiquetas de versão à mão.
+
 `VersoesTests` (em `Wrexercise.UnitTests`) verifica o formato, a ordem, as datas, o número de tópicos e o limite de caracteres. Não afrouxe o teste para fazer uma entrada caber: reescreva a entrada.
 
 ## Decisões e documentação

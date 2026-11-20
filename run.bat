@@ -421,6 +421,13 @@ if not defined SSH_IMAGE (
   goto :fail
 )
 if defined DIRTY echo AVISO: há alterações sem commit; a imagem será marcada como %SSH_IMAGE%.
+rem Decisão 0077: a versão do app é a primeira entrada do versoes.json.
+set "APP_VERSAO="
+for /f %%v in ('powershell -NoProfile -Command "(ConvertFrom-Json (Get-Content -Raw -Encoding UTF8 Wrexercise/webapp/src/features/novidades/versoes.json))[0].versao"') do set "APP_VERSAO=%%v"
+if not defined APP_VERSAO (
+  echo Não foi possível ler a versão do app em versoes.json.
+  goto :fail
+)
 
 echo.
 echo ==^> Construindo %SSH_IMAGE% para linux/%S_ARCH%
@@ -439,7 +446,7 @@ if not exist "%PUBLISH_DIR%\Wrexercise" (
 )
 echo.
 echo ==^> Enviando o app para o Termux
-"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo && echo %SSH_IMAGE% > wrexercise/app.novo/versao.txt"
+"%SSH_EXE%" %SSH_OPTS% %TARGET% "mkdir -p wrexercise/deploy && rm -rf wrexercise/app.novo && mkdir wrexercise/app.novo && echo %APP_VERSAO% %SSH_IMAGE% > wrexercise/app.novo/versao.txt"
 if errorlevel 1 goto :fail
 tar --format ustar -cf - -C "%PUBLISH_DIR%" . | "%SSH_EXE%" %SSH_OPTS% %TARGET% "tar -xf - -C wrexercise/app.novo"
 if errorlevel 1 goto :fail
@@ -462,8 +469,31 @@ echo.
 call :check_tunnel
 echo.
 "%SSH_EXE%" %SSH_OPTS% %TARGET% "sh wrexercise/deploy/remote-termux.sh status"
+if not defined SO_SCRIPTS call :tag_versao
 echo.
-echo Implantação em %TARGET% concluída ^(%SSH_IMAGE%, Termux^). Perfil em %SSH_FILE%
+echo Implantação em %TARGET% concluída ^(%APP_VERSAO% %SSH_IMAGE%, Termux^). Perfil em %SSH_FILE%
+exit /b 0
+
+:tag_versao
+rem Decisão 0077: a primeira implantação de cada versão ganha a etiqueta vX.Y.Z no commit implantado.
+rem Falhar aqui nunca desfaz a implantação: só avisa.
+if defined DIRTY (
+  echo AVISO: com alterações sem commit, a etiqueta v%APP_VERSAO% não foi criada.
+  exit /b 0
+)
+git rev-parse -q --verify "refs/tags/v%APP_VERSAO%" >nul
+if not errorlevel 1 exit /b 0
+git tag -a "v%APP_VERSAO%" -m "Versão %APP_VERSAO%"
+if errorlevel 1 (
+  echo AVISO: não foi possível criar a etiqueta v%APP_VERSAO%.
+  exit /b 0
+)
+git push -q origin "v%APP_VERSAO%"
+if errorlevel 1 (
+  echo AVISO: a etiqueta v%APP_VERSAO% ficou só neste computador. Envie com: git push origin v%APP_VERSAO%
+  exit /b 0
+)
+echo Etiqueta v%APP_VERSAO% criada e enviada.
 exit /b 0
 
 :ssh_backup
