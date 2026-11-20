@@ -22,6 +22,7 @@ public class ProximoTreinoTests
         new(codigo, envio ?? Envio, prazo ?? Prazo, "Aceita", (envio ?? Envio).AddHours(1), alvo, "Corrida", fusao);
 
     /// <param name="registro">Horas depois do aceite em que o treino foi registrado: define a ordem.</param>
+    /// <param name="antes">Começou antes do aceite (decisão 0076).</param>
     private static AtividadeJogada Atividade(
         string tipo = "Musculacao",
         int dia = 24,
@@ -29,8 +30,17 @@ public class ProximoTreinoTests
         int minuto = 0,
         int duracao = 3600,
         bool verificada = true,
+        int registro = 1,
+        bool antes = false) =>
+        new(new DateTime(2026, 11, dia, hora, minuto, 0), tipo, duracao, verificada, Aceite.AddHours(registro), antes);
+
+    /// <summary>Um treino que começou entre a chegada da carta (segunda, 15:00) e o aceite (16:00).</summary>
+    private static AtividadeJogada AntesDoAceite(
+        string tipo = "Musculacao",
+        int duracao = 3600,
+        bool verificada = true,
         int registro = 1) =>
-        new(new DateTime(2026, 11, dia, hora, minuto, 0), tipo, duracao, verificada, Aceite.AddHours(registro));
+        Atividade(tipo, dia: 23, hora: 15, minuto: 10, duracao: duracao, verificada: verificada, registro: registro, antes: true);
 
     private static DateTimeOffset Em(int dia, int hora) => new(2026, 11, dia, hora, 0, 0, Fuso);
 
@@ -173,5 +183,143 @@ public class ProximoTreinoTests
         var id = Guid.NewGuid();
 
         Assert.True(JogadasConcluidas.ConcluiAgora(Jogada(), id, [(id, Atividade())]));
+    }
+
+    // Decisão 0076: o treino de antes do aceite conta se cumpre e nunca faz a Jogada falhar.
+
+    [Fact]
+    public void TreinoAntesDoAceiteQueCumpre_Concluida() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(Jogada(), [AntesDoAceite()], Em(23, 17)));
+
+    [Fact]
+    public void TreinoAntesDoAceiteQueCumprePendente_AguardaVerificacao() =>
+        Assert.Equal(
+            SituacaoJogada.AguardandoVerificacao,
+            SituacaoJogada.Calcular(Jogada(), [AntesDoAceite(verificada: false)], Em(23, 17)));
+
+    [Fact]
+    public void TreinoAntesDoAceiteQueNaoCumpre_NaoFalha()
+    {
+        var (situacao, falhouEm) = SituacaoJogada.Avaliar(Jogada(), [AntesDoAceite(tipo: "Corrida")], Em(23, 17));
+
+        Assert.Equal(SituacaoJogada.Aceita, situacao);
+        Assert.Null(falhouEm);
+        Assert.Equal(
+            SituacaoJogada.Expirada,
+            SituacaoJogada.Calcular(Jogada(), [AntesDoAceite(tipo: "Corrida")], Prazo.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void TreinoAntesDoAceite_NaoEAVez_OProximoTreinoDecide()
+    {
+        // O de antes do aceite foi registrado primeiro e não cumpre; o próximo treino, depois do aceite, cumpre.
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(),
+                [AntesDoAceite(tipo: "Corrida", registro: 1), Atividade(registro: 2)],
+                Em(24, 13)));
+
+        // E se o próximo treino não cumpre, a Jogada falha no registro dele, não no do treino de antes.
+        var (situacao, falhouEm) = SituacaoJogada.Avaliar(
+            Jogada(),
+            [AntesDoAceite(tipo: "Corrida", registro: 1), Atividade(tipo: "Corrida", registro: 2)],
+            Em(24, 13));
+        Assert.Equal(SituacaoJogada.Falhou, situacao);
+        Assert.Equal(Aceite.AddHours(2), falhouEm);
+    }
+
+    [Fact]
+    public void ProximoTreinoFalhou_TreinoAntesDoAceiteQueCumpre_Salva() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(),
+                [Atividade(tipo: "Corrida", registro: 1), AntesDoAceite(registro: 2)],
+                Em(24, 13)));
+
+    [Fact]
+    public void Duracao_TreinoAntesDoAceiteSomaComODiaDaVez()
+    {
+        // A carta chega 6:00, o treino das 6:30 é registrado depois do aceite das 7:00, e o da tarde completa a soma.
+        var envio = Em(24, 6);
+        var jogada = Jogada(CodigoCarta.Mais10Min, alvo: 4200, envio: envio, prazo: envio.AddHours(48));
+
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                jogada,
+                [Atividade(hora: 6, minuto: 30, duracao: 2100, registro: 1, antes: true),
+                    Atividade(hora: 18, duracao: 2100, registro: 2)],
+                Em(24, 20)));
+    }
+
+    [Fact]
+    public void Duracao_TreinoAntesDoAceiteEmOutroDia_NaoSalvaODiaDaVez()
+    {
+        var (situacao, falhouEm) = SituacaoJogada.Avaliar(
+            Jogada(CodigoCarta.Mais10Min, alvo: 4200),
+            [AntesDoAceite(duracao: 2100, registro: 1), Atividade(dia: 24, duracao: 2100, registro: 2)],
+            Em(25, 9));
+
+        Assert.Equal(SituacaoJogada.Falhou, situacao);
+        Assert.Equal(Em(25, 0), falhouEm);
+    }
+
+    [Fact]
+    public void Duracao_DiaAntesDoAceiteSozinhoCumpre() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.Mais10Min, alvo: 4200),
+                [AntesDoAceite(duracao: 4200)],
+                Em(23, 17)));
+
+    [Fact]
+    public void Fusao_TreinoAntesDoAceitePrecisaCumprirOsDois()
+    {
+        var fusao = Jogada(CodigoCarta.AntesDas8, fusao: CodigoCarta.Variedade);
+        var cedo = Atividade(tipo: "Musculacao", dia: 23, hora: 6, antes: true);
+        var cedoCorrida = Atividade(tipo: "Corrida", dia: 23, hora: 6, antes: true);
+
+        Assert.Equal(SituacaoJogada.Concluida, SituacaoJogada.Calcular(fusao, [cedo], Em(23, 17)));
+        Assert.Equal(SituacaoJogada.Aceita, SituacaoJogada.Calcular(fusao, [cedoCorrida], Em(23, 17)));
+    }
+
+    [Fact]
+    public void AntesDas8_TreinoAntesDoAceite_OlhaOFim() =>
+        Assert.Equal(
+            SituacaoJogada.Aceita,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.AntesDas8),
+                [Atividade(dia: 23, hora: 7, minuto: 30, duracao: 3600, antes: true)],
+                Em(23, 17)));
+
+    [Fact]
+    public void ConcluiAgora_TreinoAntesDoAceiteVerificado()
+    {
+        var id = Guid.NewGuid();
+
+        Assert.True(JogadasConcluidas.ConcluiAgora(Jogada(), id, [(id, AntesDoAceite())]));
+    }
+
+    [Fact]
+    public void ConcluiAgora_TreinoAntesDoAceiteQueNaoCumpre_NaoConclui()
+    {
+        var id = Guid.NewGuid();
+
+        Assert.False(JogadasConcluidas.ConcluiAgora(Jogada(), id, [(id, AntesDoAceite(tipo: "Corrida"))]));
+    }
+
+    [Fact]
+    public void JaCumpre_CartaSemResposta()
+    {
+        var semResposta = Jogada() with { Resposta = null, RespondidaEm = null };
+
+        Assert.True(ObjetivoCarta.JaCumpre(semResposta, [Atividade(dia: 23, hora: 15, minuto: 30)]));
+        Assert.False(ObjetivoCarta.JaCumpre(semResposta, [Atividade(tipo: "Corrida", dia: 23, hora: 15, minuto: 30)]));
+        Assert.False(ObjetivoCarta.JaCumpre(semResposta, []));
     }
 }

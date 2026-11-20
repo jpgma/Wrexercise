@@ -238,22 +238,166 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TreinoAntesDoAceite_NaoConta()
+    public async Task CartaSemResposta_BloqueiaTreinoNovoEmQualquerGrupo()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var outroGrupoId = await _host.CreateGrupoAsync(bia, "Outro");
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        foreach (var grupo in new[] { grupoId, outroGrupoId })
+        {
+            await ApiTestHost.AssertProblemAsync(
+                await PostAtividadeResponseAsync(bia, grupo),
+                HttpStatusCode.Conflict,
+                "CARTA_SEM_RESPOSTA");
+        }
+
+        // Quem enviou não fica bloqueado.
+        await PostAtividadeAsync(ana, grupoId);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
+        await PostAtividadeAsync(bia, outroGrupoId);
+    }
+
+    [Fact]
+    public async Task CartaExpirada_NaoBloqueia()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        await ExpirarAsync(jogadaId);
+
+        await PostAtividadeAsync(bia, grupoId);
+    }
+
+    [Fact]
+    public async Task Pendentes_ListaSoAsRecebidasSemResposta_DaMaisAntiga()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var cara = await _host.AddMembroAsync(grupoId, nome: "Cara");
+        await JogoTestes.AtivarJogoAsync(_host, cara);
+        await JogoTestes.DarEnergiaAsync(_host, cara, grupoId, 12);
+        var daAna = await JogarAsync(ana, grupoId, (await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade)).Id, bia.Id);
+        var doCara = await JogarAsync(cara, grupoId, (await JogoTestes.ComprarAsync(cara, CodigoCarta.FimDeSemana)).Id, bia.Id);
+        var paraAna = await JogarAsync(cara, grupoId, (await JogoTestes.ComprarAsync(cara, CodigoCarta.Variedade)).Id, ana.Id);
+        await _host.ExecuteAsync($"UPDATE jogadas SET enviada_em = enviada_em - interval '1 hour' WHERE id = '{daAna}'");
+
+        var pendentes = await GetPendentesAsync(bia);
+        Assert.Equal([daAna, doCara], pendentes.Select(p => p.Id));
+        Assert.All(pendentes, p => Assert.Equal(grupoId, p.GrupoId));
+        Assert.Equal([paraAna], (await GetPendentesAsync(ana)).Select(p => p.Id));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, daAna, "Aceita")).StatusCode);
+        await ExpirarAsync(doCara);
+        Assert.Empty(await GetPendentesAsync(bia));
+        Assert.Empty(await GetPendentesAsync(cara));
+    }
+
+    [Fact]
+    public async Task Pendentes_IgnoraGrupoQueAPessoaDeixou()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await JogarAsync(ana, grupoId, (await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade)).Id, bia.Id);
+        await _host.ExecuteAsync(
+            $"UPDATE membros_grupo SET removed_at = now() WHERE grupo_id = '{grupoId}' AND usuario_id = '{bia.Id}'");
+
+        Assert.Empty(await GetPendentesAsync(bia));
+    }
+
+    [Fact]
+    public async Task Pendentes_SemSessao_Recusa()
+    {
+        using var client = _host.CreateAnonimo();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/jogadas/pendentes", Token)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Responder_MarcaComoVistaELeOAvisoDaCarta()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
         var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
 
-        // Um treino entre o envio e o aceite: pela regra antiga contaria (AguardandoVerificacao).
-        var atividade = await PostAtividadeAsync(bia, grupoId);
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
-        await _host.ExecuteAsync($"""
-            UPDATE atividades
-            SET started_at = (SELECT enviada_em + (respondida_em - enviada_em) / 2 FROM jogadas WHERE id = '{jogadaId}')
-            WHERE id = '{atividade.Id}'
-            """);
+
+        Assert.False(Assert.Single(await GetJogadasAsync(bia, grupoId)).Nova);
+        Assert.Equal(0, await _host.CountAsync($"""
+            SELECT count(*) FROM notificacoes
+            WHERE usuario_id = '{bia.Id}' AND tipo = 'CartaRecebida' AND read_at IS NULL
+            """));
+    }
+
+    [Fact]
+    public async Task TreinoAntesDoAceiteQueCumpre_Conta()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        // Decisão 0076: o treino que começou entre a chegada da carta e o aceite, registrado depois do aceite.
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+        var atividade = await PostAtividadeAsync(bia, grupoId);
+        await MoverParaAntesDoAceiteAsync(atividade.Id, jogadaId);
+        Assert.Equal(SituacaoJogada.AguardandoVerificacao, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+
+        (await ana.Client.PutAsJsonAsync(
+            $"/api/atividades/{atividade.Id}/reacao",
+            new ReacaoRequest(TipoReacao.Kudos),
+            AppJsonContext.Default.ReacaoRequest,
+            Token)).EnsureSuccessStatusCode();
+
+        Assert.Equal(SituacaoJogada.Concluida, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
+    }
+
+    [Fact]
+    public async Task TreinoAntesDoAceiteQueNaoCumpre_NaoFalhaNemDaFadiga()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        // O último treino da Bia é corrida: a VARIEDADE pede outro tipo.
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 5);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+
+        var atividade = await PostAtividadeAsync(bia, grupoId, TipoAtividade.Corrida);
+        await MoverParaAntesDoAceiteAsync(atividade.Id, jogadaId);
 
         Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).FadigaRestante);
+    }
+
+    [Fact]
+    public async Task AceitarComTreinoJaVerificado_ConcluiNaHoraEAvisa()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        // Um treino já verificado que começou depois que a carta chegou.
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Musculacao, "Verificada", 0);
+
+        Assert.True(Assert.Single(await GetJogadasAsync(bia, grupoId)).JaCumpre);
+        Assert.False(Assert.Single(await GetJogadasAsync(ana, grupoId)).JaCumpre);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+
+        var jogada = Assert.Single(await GetJogadasAsync(bia, grupoId));
+        Assert.Equal(SituacaoJogada.Concluida, jogada.Situacao);
+        Assert.False(jogada.JaCumpre);
+        Assert.Equal(1, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
+    }
+
+    [Fact]
+    public async Task JaCumpre_FalsoQuandoOTreinoNaoCumpre()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 5);
+        await JogarVariedadeAsync(ana, bia, grupoId);
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 0);
+
+        Assert.False(Assert.Single(await GetJogadasAsync(bia, grupoId)).JaCumpre);
     }
 
     [Fact]
@@ -818,7 +962,16 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         Guid grupoId,
         string tipo = TipoAtividade.Corrida)
     {
-        var response = await usuario.Client.PostAsJsonAsync(
+        var response = await PostAtividadeResponseAsync(usuario, grupoId, tipo);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token))!;
+    }
+
+    private static Task<HttpResponseMessage> PostAtividadeResponseAsync(
+        TestUsuario usuario,
+        Guid grupoId,
+        string tipo = TipoAtividade.Corrida) =>
+        usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades",
             new CriarAtividadeRequest(
                 tipo,
@@ -828,7 +981,22 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
                 TipoComprovacao.RegistroManual),
             AppJsonContext.Default.CriarAtividadeRequest,
             Token);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token))!;
-    }
+
+    private static async Task<IReadOnlyList<JogadaPendenteResponse>> GetPendentesAsync(TestUsuario usuario) =>
+        (await usuario.Client.GetFromJsonAsync(
+            "/api/jogadas/pendentes", AppJsonContext.Default.JogadasPendentesResponse, Token))!.Jogadas;
+
+    private Task ExpirarAsync(Guid jogadaId) =>
+        _host.ExecuteAsync($"""
+            UPDATE jogadas SET enviada_em = now() - interval '2 hours', expira_em = now() - interval '1 minute'
+            WHERE id = '{jogadaId}'
+            """);
+
+    /// <summary>Faz o treino começar no meio do caminho entre o envio e o aceite da Jogada.</summary>
+    private Task MoverParaAntesDoAceiteAsync(Guid atividadeId, Guid jogadaId) =>
+        _host.ExecuteAsync($"""
+            UPDATE atividades
+            SET started_at = (SELECT enviada_em + (respondida_em - enviada_em) / 2 FROM jogadas WHERE id = '{jogadaId}')
+            WHERE id = '{atividadeId}'
+            """);
 }

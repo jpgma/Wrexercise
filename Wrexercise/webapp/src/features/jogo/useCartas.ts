@@ -68,9 +68,23 @@ export type Jogada = {
   cartaFusao: Carta | null;
   /** A Energia de quem cumpre, já com o bônus da Fusão e a APOSTA. */
   recompensa: number;
+  /**
+   * Na carta recebida que espera resposta: um treino feito depois que ela chegou já cumpre o objetivo.
+   * Aceitando, ela é cumprida na hora (decisão 0076).
+   */
+  jaCumpre: boolean;
+};
+
+/** Uma carta recebida que espera resposta, em qualquer grupo: a Chegada (decisão 0076). */
+export type JogadaPendente = {
+  id: string;
+  grupoId: string;
+  enviadaEm: string;
+  expiraEm: string;
 };
 
 const lojaKey = ["jogo", "loja"] as const;
+export const pendentesKey = ["jogo", "pendentes"] as const;
 const energiaKey = ["jogo", "energia"] as const;
 const jogadasKey = (grupoId: string) => ["jogo", "jogadas", grupoId] as const;
 const notificacoesKey = ["notificacoes"] as const;
@@ -109,6 +123,29 @@ export function useJogadas(grupoId: string, ativo = true) {
     },
     retry: shouldRetry,
   });
+}
+
+/**
+ * As cartas recebidas que esperam resposta, em todos os grupos, da mais antiga para a mais nova. Lidas ao
+ * abrir o aplicativo e ao voltar para ele, sem polling.
+ */
+export function useJogadasPendentes(ativo = true) {
+  return useQuery({
+    queryKey: pendentesKey,
+    enabled: ativo,
+    queryFn: ({ signal }) => buscarPendentes(signal),
+    retry: shouldRetry,
+  });
+}
+
+export async function buscarPendentes(
+  signal?: AbortSignal,
+): Promise<JogadaPendente[]> {
+  const { jogadas } = await getJson<{ jogadas: JogadaPendente[] }>(
+    "/api/jogadas/pendentes",
+    signal,
+  );
+  return jogadas;
 }
 
 /** O que o arremesso fixaria agora: objetivo, prazo e recompensas (`PreverJogada.cs`). */
@@ -191,6 +228,7 @@ export function useResponderJogada(grupoId: string) {
         queryClient.invalidateQueries({ queryKey: lojaKey }),
         // Recusar pode dar FADIGA.
         queryClient.invalidateQueries({ queryKey: energiaKey }),
+        queryClient.invalidateQueries({ queryKey: pendentesKey }),
       ]);
     },
   });

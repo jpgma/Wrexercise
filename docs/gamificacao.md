@@ -112,7 +112,7 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 
 - O movimento vertical usa o mesmo `andar` de lado, com um balanço de 1 a 2 px. O deslizamento na vertical é aceito como estilo.
 - No máximo uma encenação de cada vez, e no máximo 3 em sequência por visita. As demais aparecem só como estado final.
-- Tocar na tela pula a encenação. Ela nunca bloqueia a navegação nem o registro de atividade.
+- Tocar na tela pula a encenação. Ela nunca bloqueia a navegação nem o registro de atividade. A exceção é a Chegada de uma carta que espera resposta (§6.3, `decisoes/0076-chegada-da-carta-e-treino-antes-do-aceite.md`): ela toma a tela até a resposta, e a encenação "carta recebida" abaixo fica só para cartas que chegaram já respondidas ou expiradas.
 - **Quem acordou:** quem dormia na última visita de quem vê e agora está acordado faz `levantar`, uma vez, antes das outras encenações. Todos juntos contam como uma encenação. A lista de quem estava dormindo fica no cookie comum `wx_dormindo_<grupo>` (o começo de cada identificador), gravado ao fim da encenação ou quando não há ninguém para acordar.
 - **Quem dorme numa encenação:** para andar ou fazer qualquer pose de pé (arremessar, aceitar, recusar, provocar, comemorar), faz `levantar` antes e `adormecer` depois. Atingido por uma carta, faz `acordar` (um susto, sentado) no lugar de `receber`.
 - Com `prefers-reduced-motion`, as poses ficam estáticas e as cartas aparecem no lugar final, sem voo.
@@ -300,7 +300,7 @@ Recusar uma carta precisa ter uma consequência, sem tirar Energia já ganha e s
 - **Cálculo na leitura**, como o resto da Energia, numa função pura (`Fadiga`): os gatilhos (`respondida_em` da recusa, `expira_em` da expiração, e o registro do próximo treino ou o fim do dia dele quando a Jogada `Falhou`) e os dias verificados, cada um no `verified_at` da primeira atividade verificada dele, seguem em ordem de tempo. Um dia só tem FADIGA se foi verificado depois do gatilho, então nenhuma leitura anterior pagou a base inteira a ele. Não há coluna nova, e repetir requisições não aplica a FADIGA duas vezes.
 - Um dia verificado e depois anulado gasta a carga dele, sem render. Assim, a carga não passa para outro dia já pago.
 - Recusas e expirações de antes de `Fadiga.Inicio` (13/11/2026) não contam.
-- **Na interface:** um selo `FADIGA` com uma bateria fraca e os treinos restantes, ao lado do saldo. Recusar pede confirmação e explica a consequência. A carta recebida mostra os dois resultados: "Cumprir: +N EN" e "Recusar ou falhar: FADIGA — 3 treinos com −50% EN". Quando a FADIGA muda, a tela do Jogo mostra um aviso ("+5 EN · FADIGA: 2 treinos restantes", "FADIGA REMOVIDA!"). O último valor visto fica num cookie comum (`wx_fadiga`).
+- **Na interface:** um selo `FADIGA` com uma bateria fraca e os treinos restantes, ao lado do saldo. O botão de recusar mostra a consequência e não pede confirmação (`decisoes/0076-chegada-da-carta-e-treino-antes-do-aceite.md`). A carta recebida mostra os dois resultados: "Cumprir: +N EN" e "Recusar ou falhar: FADIGA — 3 treinos com −50% EN". Quando a FADIGA muda, a tela do Jogo mostra um aviso ("+5 EN · FADIGA: 2 treinos restantes", "FADIGA REMOVIDA!"). O último valor visto fica num cookie comum (`wx_fadiga`).
 
 ## 6. Loja e cartas
 
@@ -323,7 +323,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite; na VARIEDADE, vale o último treino de quem responde que não esteja rejeitado nem anulado. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
 - **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que a Jogada original já gastou (§6.2). A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o do treino de referência de quem vai cumprir (aqui, conta o "Dar moral" de quem devolve) e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
 - Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. O treino de referência da VARIEDADE é o que começou por último entre os `Verificada` do destinatário e os que quem joga aprovou com `Kudos` e não estão `Rejeitada` nem `Anulada`; sem nenhum, qualquer tipo vale. Em +10 MIN e +20 MIN, somam-se as atividades do dia do próximo treino dentro do prazo da Jogada (§6.4).
-- **Só o próximo treino vale** (`decisoes/0075-proximo-treino-e-antes-das-8.md`): o objetivo precisa ser cumprido no primeiro treino depois do aceite, e não em qualquer treino no prazo.
+- **Só o próximo treino vale** (`decisoes/0075-proximo-treino-e-antes-das-8.md`): o objetivo precisa ser cumprido no primeiro treino depois do aceite, e não em qualquer treino no prazo. Um treino feito depois que a carta chegou e antes do aceite também vale, se cumpre, e nunca faz falhar (`decisoes/0076-chegada-da-carta-e-treino-antes-do-aceite.md`).
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 
@@ -341,12 +341,21 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 ### 6.3. Jogar uma carta
 
 - Uma Provocação é jogada da Mão para outro membro do mesmo grupo que esteja no modo Jogo.
-- O destinatário recebe uma `Notificacao` no aplicativo (`decisoes/0020-notificacoes-no-aplicativo.md`) e vê a encenação na próxima visita à cena.
+- O destinatário recebe uma `Notificacao` no aplicativo (`decisoes/0020-notificacoes-no-aplicativo.md`). Na próxima abertura do aplicativo, em qualquer tela e em qualquer modo, vem a **Chegada** (`decisoes/0076-chegada-da-carta-e-treino-antes-do-aceite.md`):
+  - o portão (`PortaoChegada`, no `AppLayout`) leva a pessoa à praça do grupo da carta (`/grupos/{id}/inicio?chegada={jogadaId}`), sem abas, menu nem troca de grupo;
+  - a câmera do Foco (§3.5) mostra o arremesso do outro lado: vai até quem jogou, que gira e arremessa (`arremessar`); a carta voa até quem vê, com a câmera atrás; quem vê faz `receber` (ou `acordar`, se dorme), com o tremor, o nome da carta e uma vibração curta. Quem jogou e não está mais no grupo joga pela porta;
+  - tocar na praça pula direto para a resposta; com movimento reduzido, tudo aparece no fim;
+  - a carta cresce até virar o painel da resposta (`carta-cresce`), sem botão de fechar. Respondida, a cena faz `aceitar` (a carta dobra) ou `recusar` (a carta sai), e o painel oferece "Registrar treino" e "Depois", ou "Entendi" na recusa;
+  - com mais de uma carta, uma depois da outra, da mais antiga; no fim, a pessoa volta para onde estava, ou para o formulário de treino;
+  - voltar ao aplicativo com o formulário de treino aberto não tira a pessoa dele. O servidor recusa o registro com `CARTA_SEM_RESPOSTA` enquanto houver carta sem resposta, em qualquer grupo, e o formulário mostra "Responder a carta";
+  - sem a lista de cartas (`GET /api/jogadas/pendentes`), por erro ou falta de rede, nada bloqueia.
 - O remetente recebe uma `Notificacao` quando a carta é aceita, recusada ou concluída. A conclusão também avisa o destinatário. Ela é gravada pelo contrato `Features/Jogo/Contracts/JogadasConcluidas.cs`, chamado em todo lugar que deixa uma atividade `Verificada`, na mesma transação. A expiração não gera aviso, porque é calculada na leitura.
 - Diante de uma Provocação, o destinatário pode:
   - **Aceitar**, de graça;
   - **Aceitar com uma Resposta** da própria Mão (DESAFIO DUPLO, APOSTA, PRAZO EXTRA ou MUDANÇA DE PLANOS), no máximo uma por Jogada;
-  - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito.
+  - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito. Recusar é um toque só: o custo fica no próprio botão ("Recusar · FADIGA: 3 treinos com −50% EN"), na Chegada e na Mesa.
+- Antes da resposta, a Chegada e a Mesa dizem se um treino já feito depois que a carta chegou cumpre o objetivo ("Seu treino já cumpre esta carta. Aceite e ganhe!").
+- Responder grava `vista_em` e marca como lido o aviso `CartaRecebida` da carta.
 - Uma Jogada criada por DESAFIO DUPLO não aceita outro DESAFIO DUPLO.
 - **Revide** (`decisoes/0069-revide-limite-por-sentido.md`): quem recebeu uma Provocação pode jogar uma carta da própria Mão em quem a enviou, mesmo com a primeira Jogada aberta. Cada sentido tem uma vaga só, então a cadeia para no revide.
 
@@ -380,10 +389,12 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | `Expirada` | Passou de `expira_em` sem resposta, ou aceita sem atividade que conte até lá. |
 | `Falhou` | Aceita, e o próximo treino não cumpriu o objetivo (`decisoes/0075-proximo-treino-e-antes-das-8.md`). |
 
-- **Próximo treino** (a vez): o primeiro treino registrado (`created_at`) do destinatário no grupo da Jogada, não `Rejeitada` nem `Anulada`, com `started_at` entre `respondida_em` (o aceite) e `expira_em`. Em +10 MIN e +20 MIN fora da Fusão, a vez é o dia desse treino, no fuso do grupo: os treinos desse dia somam. A Jogada precisa ter sido aceita antes de `expira_em`.
-- **Atividade que conta:** a vez, quando cumpre o objetivo da carta.
+- **Janela:** os treinos do destinatário no grupo da Jogada, não `Rejeitada` nem `Anulada`, com `started_at` entre `enviada_em` e `expira_em`. A Jogada precisa ter sido aceita antes de `expira_em`.
+- **Próximo treino** (a vez): o primeiro treino registrado (`created_at`) entre os que começam depois de `respondida_em` (o aceite). Em +10 MIN e +20 MIN fora da Fusão, a vez é o dia desse treino, no fuso do grupo: os treinos desse dia somam.
+- **Treino antes do aceite** (`decisoes/0076-chegada-da-carta-e-treino-antes-do-aceite.md`): um treino que começou entre `enviada_em` e `respondida_em` conta se cumpre o objetivo e nunca faz a Jogada falhar. Nas cartas de duração, ele soma com o dia da vez, e um dia de antes do aceite também cumpre sozinho. Ele salva a Jogada mesmo depois de uma falha da vez.
+- **Atividade que conta:** a vez ou um treino antes do aceite, quando cumpre o objetivo da carta.
 - A vez que não cumpre faz a Jogada `Falhou` na hora, mesmo antes da verificação. Nas cartas de duração, o dia falha quando acaba sem a soma; se o prazo acaba antes, a Jogada fica `Expirada`. Um treino que depois é rejeitado, anulado ou apagado sai da conta, e a vez passa ao seguinte.
-- Um treino feito antes de aceitar não conta nem faz falhar.
+- Aceitar com um treino já verificado que cumpre conclui a Jogada na hora, e quem enviou recebe `JogadaConcluida`.
 - As Jogadas enviadas antes de `ObjetivoCarta.InicioProximoTreino` (20/11/2026, 13:00, UTC−3) seguem a regra antiga: qualquer atividade não rejeitada com `started_at` entre `enviada_em` e `expira_em` que cumpra o objetivo conta, e a ANTES DAS 8 olha o início.
 - A verificação pode acontecer depois de `expira_em`: o que importa é o `started_at`.
 - A mesma atividade pode concluir várias Jogadas e missões.

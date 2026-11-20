@@ -28,7 +28,9 @@ import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { CelebracaoConquista } from "./CelebracaoConquista";
+import { type DestinoChegada, PainelChegada } from "./PainelChegada";
 import { PainelFoco } from "./PainelFoco";
+import type { RespostaEnviada } from "./RespostaCarta";
 import { type PlacarCena, PlacarJogo } from "./PlacarJogo";
 import { getTipoCutucada } from "./textosCutucada";
 import { getBloqueioJogada, primeiroNome } from "./textosCartas";
@@ -469,15 +471,23 @@ function useFatorDeEncaixe() {
   return { ref: setElemento, fator };
 }
 
+/** A Chegada de uma carta recebida (decisão 0076): a cena encena o arremesso e pede a resposta. */
+export type ChegadaNaCena = {
+  jogadaId: string;
+  onConcluir: (destino: DestinoChegada) => void;
+};
+
 export function CenaGrupo({
   grupoId,
   usuarioId,
   placar,
+  chegada,
 }: {
   grupoId: string;
   usuarioId: string;
   /** A classificação do desafio em destaque; sem ela, nem Placar nem medalhas. */
   placar?: PlacarCena;
+  chegada?: ChegadaNaCena;
 }) {
   const cena = useCena(grupoId);
   const reduzido = useMovimentoReduzido();
@@ -502,6 +512,7 @@ export function CenaGrupo({
       usuarioId={usuarioId}
       reduzido={reduzido}
       placar={placar}
+      chegada={chegada}
     />
   );
 }
@@ -591,12 +602,14 @@ function Praca({
   usuarioId,
   reduzido,
   placar,
+  chegada,
 }: {
   cena: Cena;
   grupoId: string;
   usuarioId: string;
   reduzido: boolean;
   placar: PlacarCena | undefined;
+  chegada: ChegadaNaCena | undefined;
 }) {
   const { ref, fator } = useFatorDeEncaixe();
   const { showToast } = useToast();
@@ -660,8 +673,55 @@ function Praca({
     reduzido,
     pausado: entrada.ativa,
     dormindo,
+    porta: vaoDaPorta,
   });
   const emFoco = foco.alvoId !== null;
+
+  // A Chegada (decisão 0076): sem a entrada, a carta voa até quem vê e a resposta toma a Mão.
+  const emChegada = chegada !== undefined;
+  const jogadaChegada = chegada
+    ? jogadas.data?.find((j) => j.id === chegada.jogadaId)
+    : undefined;
+  const [respondida, setRespondida] = useState<RespostaEnviada | null>(null);
+  const chegadaIniciada = useRef<string | null>(null);
+  const { ativa: entradaAtiva, pular: pularEntrada } = entrada;
+  useEffect(() => {
+    if (emChegada && entradaAtiva) pularEntrada();
+  }, [emChegada, entradaAtiva, pularEntrada]);
+  const { receber } = foco;
+  useEffect(() => {
+    if (
+      !jogadaChegada ||
+      entradaAtiva ||
+      chegadaIniciada.current === jogadaChegada.id ||
+      !(jogadaChegada.recebida && jogadaChegada.situacao === "Enviada")
+    )
+      return;
+    chegadaIniciada.current = jogadaChegada.id;
+    void receber({
+      remetenteId: jogadaChegada.remetenteId,
+      codigo: jogadaChegada.carta.codigo,
+      codigoFusao: jogadaChegada.cartaFusao?.codigo,
+      texto: jogadaChegada.cartaFusao ? "Fusão" : jogadaChegada.carta.nome,
+    });
+  }, [jogadaChegada, entradaAtiva, receber]);
+  /** Na Chegada, só quem vê e quem jogou a carta ficam acesos. */
+  const atuaNaChegada = (id: string) =>
+    id === usuarioId || id === jogadaChegada?.remetenteId;
+  const responderChegada = (resposta: RespostaEnviada) => {
+    setRespondida(resposta);
+    if (jogadaChegada) {
+      void foco.responderChegada(
+        resposta.aceitou,
+        jogadaChegada.carta.codigo,
+        jogadaChegada.cartaFusao?.codigo,
+      );
+    }
+  };
+  const concluirChegada = (destino: DestinoChegada) => {
+    foco.soltarChegada();
+    chegada?.onConcluir(destino);
+  };
   /** O Foco no próprio avatar: a Vitrine toma o lugar da Mão. */
   const focoProprio = foco.alvoId === usuarioId;
   const [selecao, setSelecao] = useState<SelecaoMao | null>(null);
@@ -689,12 +749,12 @@ function Praca({
   // Ao abrir o Foco, a praça sobe para o alto da tela, com a Mão logo abaixo: numa tela de
   // 390×844, as duas cabem sem rolar mais.
   useEffect(() => {
-    if (!emFoco || !palco.current) return;
+    if (!(emFoco || emChegada) || !palco.current) return;
     window.scrollTo({
       top: window.scrollY + palco.current.getBoundingClientRect().top - Folga,
       behavior: reduzido ? "auto" : "smooth",
     });
-  }, [emFoco, reduzido]);
+  }, [emFoco, emChegada, reduzido]);
   const emAcao = foco.fase !== "aberto";
   const alvo = membros.find((m) => m.usuarioId === foco.alvoId);
   const cartaEscolhida = !emFoco && selecao?.tipo === "carta";
@@ -710,8 +770,8 @@ function Praca({
       ? 0
       : null;
   };
-  // As encenações esperam a entrada terminar e o Foco fechar.
-  const aguardar = entrada.ativa || emFoco;
+  // As encenações esperam a entrada terminar, o Foco fechar e a Chegada acabar.
+  const aguardar = entrada.ativa || emFoco || emChegada;
   const encenacao = useEncenacoes({
     jogadas: aguardar ? undefined : jogadas.data,
     posicoes: porUsuario,
@@ -759,7 +819,7 @@ function Praca({
     ocupados: chaoDosEnfeites,
     largura,
     altura,
-    pausada: entrada.ativa || encenacao.ativa || emFoco,
+    pausada: entrada.ativa || encenacao.ativa || emFoco || emChegada,
     reduzido,
     comPombos: periodo !== "noite",
   });
@@ -827,7 +887,7 @@ function Praca({
       <div ref={ref} className="w-full" style={{ height: altura * fator }}>
         <section
           aria-label="Praça do grupo"
-          className={`relative overflow-hidden rounded-xl transition-colors duration-300 ${emFoco ? "bg-surface-muted" : ""}`}
+          className={`relative overflow-hidden rounded-xl transition-colors duration-300 ${emFoco || emChegada ? "bg-surface-muted" : ""}`}
           style={{
             width: largura,
             height: altura,
@@ -868,6 +928,7 @@ function Praca({
                   posicaoClassificacao={posicaoNoPodio.get(membro.usuarioId)}
                   apagado={
                     (emFoco && !atuaNoFoco(membro.usuarioId)) ||
+                    (emChegada && !atuaNaChegada(membro.usuarioId)) ||
                     // Com uma carta escolhida, quem não pode recebê-la agora fica apagado.
                     (cartaEscolhida &&
                       !emAcao &&
@@ -934,7 +995,7 @@ function Praca({
               placar={placar}
               usuarioId={usuarioId}
               dormindo={dormindo}
-              oculto={emFoco || entrada.ativa || encenacao.ativa}
+              oculto={emFoco || emChegada || entrada.ativa || encenacao.ativa}
               onToque={(id) => {
                 if (!emAcao) foco.abrir(id);
               }}
@@ -951,13 +1012,20 @@ function Praca({
               onCutucado={foco.cutucar}
             />
           )}
-          {(entrada.ativa || encenacao.ativa) && (
-            // Tocar na praça pula a entrada e a encenação: elas nunca prendem a pessoa.
+          {(entrada.ativa || encenacao.ativa || foco.fase === "chegando") && (
+            // Tocar na praça pula a entrada e as encenações: elas nunca prendem a pessoa. Na
+            // Chegada, pula direto para a resposta.
             <button
               type="button"
               className="absolute inset-0 cursor-pointer"
               style={{ zIndex: 1002 }}
-              onClick={entrada.ativa ? entrada.pular : encenacao.pular}
+              onClick={
+                foco.fase === "chegando"
+                  ? foco.pularChegada
+                  : entrada.ativa
+                    ? entrada.pular
+                    : encenacao.pular
+              }
             >
               <span className="sr-only">Pular a encenação</span>
             </button>
@@ -968,7 +1036,24 @@ function Praca({
         pronto={!aguardar && !encenacao.ativa}
         onVerVitrine={() => foco.abrir(usuarioId)}
       />
-      {focoProprio ? (
+      {emChegada ? (
+        <PainelChegada
+          jogada={jogadaChegada}
+          carregando={!jogadas.data}
+          grupoId={grupoId}
+          chegando={
+            foco.fase === "chegando" ||
+            (!respondida &&
+              foco.fase === "aberto" &&
+              jogadaChegada?.recebida === true &&
+              jogadaChegada.situacao === "Enviada")
+          }
+          reduzido={reduzido}
+          respondida={respondida}
+          onRespondida={responderChegada}
+          onConcluir={concluirChegada}
+        />
+      ) : focoProprio ? (
         <VitrineFoco />
       ) : (
         <MaoJogo
@@ -990,7 +1075,9 @@ function Praca({
       <p aria-live="polite" className="sr-only">
         {foco.efeito?.tipo === "impacto" && alvo
           ? `${foco.efeito.texto} entregue para ${primeiroNome(alvo.nomeExibicao)}.`
-          : ""}
+          : foco.efeito?.tipo === "impacto" && jogadaChegada
+            ? `${primeiroNome(jogadaChegada.remetenteNome)} te provocou: ${foco.efeito.texto}.`
+            : ""}
       </p>
     </div>
   );

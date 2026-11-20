@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router";
 import { Logo } from "@/components/BrandMark";
 import { useGrupos } from "@/features/grupos";
+import { PortaoChegada, useEmChegada } from "@/features/jogo";
 
 type ItemNavegacao = {
   to: string;
@@ -77,9 +78,25 @@ export function AppLayout() {
     { to: "/perfil", label: "Perfil", Icon: User },
   ];
   const registrar = prefixo ? `${prefixo}/atividades/nova` : "/";
+  // Na Chegada de uma carta, a resposta vem antes de tudo: sem menu, abas nem troca de grupo (decisão 0076).
+  const emChegada = useEmChegada();
+
+  if (emChegada) {
+    return (
+      <div className="min-h-dvh">
+        <PortaoChegada />
+        <main className="pb-12">
+          <div className="mx-auto w-full max-w-5xl animate-fade-in px-4 pt-4 sm:px-6">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh">
+      <PortaoChegada />
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-surface p-5 lg:flex">
         <Logo className="mb-8 px-2" />
         <nav aria-label="Principal" className="flex flex-col gap-1">

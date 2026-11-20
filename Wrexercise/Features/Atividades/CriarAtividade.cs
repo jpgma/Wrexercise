@@ -142,6 +142,12 @@ internal static class CriarAtividade
             return (AtividadeOperacaoStatus.AvaliacoesPendentes, default, false);
         }
 
+        // Uma carta recebida espera resposta, em qualquer grupo: o treino novo só depois dela (decisão 0076).
+        if (await CartasSemResposta.ExistsAsync(connection, transaction, usuarioId, cancellationToken))
+        {
+            return (AtividadeOperacaoStatus.CartaSemResposta, default, false);
+        }
+
         // Duas requisições com a mesma chave ao mesmo tempo: a segunda espera a primeira e não insere nada.
         await using var insert = new NpgsqlCommand("""
             INSERT INTO atividades (

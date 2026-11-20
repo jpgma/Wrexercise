@@ -43,6 +43,7 @@ const resumo = [
   "Treinos verificados rendem Energia (EN).",
   "Com EN você compra cartas na Loja.",
   "Provocação: você joga num colega e dá um objetivo para o próximo treino dele, com prazo.",
+  "Carta recebida: ela aparece assim que você abre o app, e você responde antes de qualquer outra coisa. Um treino feito depois que ela chegou vale, se cumprir.",
   "Resposta: você usa ao aceitar uma Provocação.",
   "Cumpriu: os dois ganham EN. Recusou, não cumpriu no próximo treino ou venceu o prazo: FADIGA, e quem jogou perde a carta.",
 ];

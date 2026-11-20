@@ -574,6 +574,23 @@
     }
   }
 
+  /* Chegada (decisão 0076): a carta que bateu no peito cresce até virar o painel da resposta. */
+  .carta-cresce {
+    transform-origin: 50% 0;
+    animation: carta-cresce 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @keyframes carta-cresce {
+    from {
+      transform: translateY(-120px) scale(0.12) rotate(-8deg);
+      opacity: 0.6;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
   .input-field {
     @apply h-12 w-full rounded-lg border-2 border-border-strong bg-surface px-3.5 text-[15px] text-foreground transition-[border-color,box-shadow] duration-150 outline-none placeholder:text-placeholder focus:border-focus focus:ring-3 focus:ring-focus/20 aria-invalid:border-danger;
   }
@@ -897,6 +914,7 @@
     .mira-alvo,
     .mesa-pendente,
     .camera-tremor,
+    .carta-cresce,
     .fusao-colisao,
     .fusao-pulso {
       animation: none;

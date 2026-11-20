@@ -98,6 +98,21 @@ internal static class ResponderJogada
                 : TipoNotificacaoJogada.CartaRecusada,
             cancellationToken);
 
+        // Respondida, a carta deixa de pedir resposta no aviso "Topa?" (decisão 0076).
+        await NotificacoesJogada.MarcarLidasAsync(
+            connection, transaction, id, usuarioId, TipoNotificacaoJogada.CartaRecebida, cancellationToken);
+
+        // Um treino de antes do aceite já verificado conclui a Jogada no próprio aceite (decisão 0076). Nenhuma
+        // atividade fica verificada agora, então o aviso de conclusão sai daqui.
+        if (request.Resposta == SituacaoJogada.RespostaAceita
+            && (await Jogadas.LoadAsync(connection, transaction, usuarioId, usuarioId, cancellationToken))
+                .FirstOrDefault(j => j.Id == id) is { Situacao: SituacaoJogada.Concluida })
+        {
+            await NotificacoesJogada.NotificarAsync(
+                connection, transaction, id, remetenteId, usuarioId, TipoNotificacaoJogada.JogadaConcluida,
+                cancellationToken);
+        }
+
         await transaction.CommitAsync(cancellationToken);
         return Results.NoContent();
     }
@@ -269,11 +284,12 @@ internal static class ResponderJogada
         CancellationToken cancellationToken)
     {
         // Só troca o que a Resposta mudou: o prazo convertido de volta do horário local poderia andar numa
-        // mudança de horário de verão.
+        // mudança de horário de verão. Responder é ter visto a carta chegar (decisão 0076).
         await using var update = new NpgsqlCommand("""
             UPDATE jogadas j
             SET resposta = $2,
                 respondida_em = now(),
+                vista_em = coalesce(j.vista_em, now()),
                 carta_resposta_id = $3,
                 expira_em = COALESCE($4 AT TIME ZONE g.fuso_horario, j.expira_em),
                 codigo_objetivo = COALESCE($5, j.codigo_objetivo),

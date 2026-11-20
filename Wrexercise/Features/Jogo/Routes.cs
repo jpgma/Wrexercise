@@ -46,8 +46,8 @@ internal static class JogoRoutes
             .RequireSessao()
             .MapGet("/{arquivo}", ObterFolhaAvatar.HandleAsync);
 
-        routes.MapGroup("/api/jogadas")
-            .RequireSessao()
-            .MapPut("/{id:guid}/resposta", ResponderJogada.HandleAsync);
+        var jogadas = routes.MapGroup("/api/jogadas").RequireSessao();
+        jogadas.MapGet("/pendentes", ListarJogadasPendentes.HandleAsync);
+        jogadas.MapPut("/{id:guid}/resposta", ResponderJogada.HandleAsync);
     }
 }

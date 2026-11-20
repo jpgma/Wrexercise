@@ -34,4 +34,24 @@ internal static class NotificacoesJogada
         command.Parameters.AddWithValue(tipo);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
+
+    /// <summary>Marca como lidos os avisos de um tipo desta Jogada para a pessoa: a carta já foi respondida.</summary>
+    public static async Task MarcarLidasAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid jogadaId,
+        Guid usuarioId,
+        string tipo,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            UPDATE notificacoes
+            SET read_at = now()
+            WHERE jogada_id = $1 AND usuario_id = $2 AND tipo = $3 AND read_at IS NULL
+            """, connection, transaction);
+        command.Parameters.AddWithValue(jogadaId);
+        command.Parameters.AddWithValue(usuarioId);
+        command.Parameters.AddWithValue(tipo);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
 }

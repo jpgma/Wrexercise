@@ -147,8 +147,11 @@ export function useEncenacoes({
     }
   }, []);
 
-  const chave = `${(jogadas ?? [])
-    .filter((j) => j.nova)
+  // A carta recebida que espera resposta é da Chegada (decisão 0076), não desta encenação.
+  const novas = (jogadas ?? []).filter(
+    (j) => j.nova && !(j.recebida && j.situacao === "Enviada"),
+  );
+  const chave = `${novas
     .map((j) => j.id)
     .join(",")}|${enfeitesNovos.join(",")}|${rivais
     .map((r) => `${r.id}:${r.efeito}`)
@@ -156,7 +159,7 @@ export function useEncenacoes({
 
   useEffect(() => {
     if (chave === "|||") return;
-    const fila = (jogadas ?? []).filter((j) => j.nova);
+    const fila = novas;
     pendentes.current = fila.map((j) => j.id);
     pendenteEnfeites.current = enfeitesNovos.length > 0;
     pendentesRivais.current = rivais.map((r) => r.id);

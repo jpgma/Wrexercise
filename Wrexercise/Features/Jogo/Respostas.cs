@@ -92,6 +92,9 @@ internal sealed record RivaisResponse(
 /// <param name="Nova">Se quem consulta ainda não viu o que mudou: o envio (destinatário) ou a resposta (remetente).</param>
 /// <param name="CartaFusao">A segunda Provocação de uma Fusão, ou <c>null</c> (decisão 0070).</param>
 /// <param name="Recompensa">A Energia de quem cumpre, já com o bônus da Fusão e a APOSTA.</param>
+/// <param name="JaCumpre">
+/// Na carta recebida que espera resposta: um treino feito depois que ela chegou já cumpre o objetivo (decisão 0076).
+/// </param>
 internal sealed record JogadaResponse(
     Guid Id,
     Guid GrupoId,
@@ -113,9 +116,15 @@ internal sealed record JogadaResponse(
     bool Nova,
     CartaCatalogoResponse? CartaFusao,
     int Recompensa,
-    DateTimeOffset? RespondidaEm);
+    DateTimeOffset? RespondidaEm,
+    bool JaCumpre);
 
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
+
+/// <summary>Uma carta recebida que espera resposta, em qualquer grupo: a Chegada (decisão 0076).</summary>
+internal sealed record JogadaPendenteResponse(Guid Id, Guid GrupoId, DateTimeOffset EnviadaEm, DateTimeOffset ExpiraEm);
+
+internal sealed record JogadasPendentesResponse(IReadOnlyList<JogadaPendenteResponse> Jogadas);
 
 /// <param name="Folha">O endereço da folha importada; quem não importou nem aparece no mapa.</param>
 /// <param name="Codigo">O Enfeite (a família).</param>

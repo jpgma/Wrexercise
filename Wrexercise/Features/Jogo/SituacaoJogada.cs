@@ -17,8 +17,8 @@ internal static class SituacaoJogada
 
     /// <summary>A situação calculada na leitura (docs/gamificacao.md §6.4).</summary>
     /// <param name="atividades">
-    /// As atividades não rejeitadas nem anuladas do destinatário, no grupo da Jogada, com início na janela
-    /// (<see cref="Jogadas.InicioJanelaSql"/>) e na ordem em que foram registradas.
+    /// As atividades não rejeitadas nem anuladas do destinatário, no grupo da Jogada, com início entre o envio e o
+    /// prazo e na ordem em que foram registradas.
     /// </param>
     /// <param name="agoraLocal">O instante atual no fuso do grupo; sem ele, o horário de <paramref name="agora"/>.</param>
     public static string Calcular(
@@ -91,12 +91,17 @@ internal sealed record JogadaEstado(
 
 /// <summary>Uma atividade candidata, com o início no fuso do grupo.</summary>
 /// <param name="RegistradaEm">Quando a atividade foi registrada: define qual é o próximo treino (decisão 0075).</param>
+/// <param name="AntesDoAceite">
+/// Começou depois que a carta chegou e antes do aceite (ou a carta ainda espera resposta): conta se cumpre o
+/// objetivo e nunca faz a Jogada falhar (decisão 0076).
+/// </param>
 internal sealed record AtividadeJogada(
     DateTime InicioLocal,
     string Tipo,
     int DuracaoSegundos,
     bool Verificada,
-    DateTimeOffset RegistradaEm = default);
+    DateTimeOffset RegistradaEm = default,
+    bool AntesDoAceite = false);
 
 /// <summary>Se as atividades de uma Jogada cumprem o objetivo da carta.</summary>
 internal static class ObjetivoCarta
@@ -112,7 +117,8 @@ internal static class ObjetivoCarta
     /// <summary>
     /// +10 MIN e +20 MIN somam as atividades de um mesmo dia (decisão 0040); as outras cartas pedem uma atividade.
     /// Numa Fusão, um mesmo treino cumpre os dois objetivos: a duração é a dessa atividade, sem somar o dia
-    /// (decisão 0070). Na regra do próximo treino, só a vez conta (<see cref="GetVez"/>).
+    /// (decisão 0070). Na regra do próximo treino, só contam a vez e os treinos de antes do aceite
+    /// (<see cref="GetVez"/>).
     /// </summary>
     /// <param name="apenasVerificadas">Só as verificadas contam; senão, também as pendentes.</param>
     public static bool Cumpre(JogadaEstado jogada, IEnumerable<AtividadeJogada> atividades, bool apenasVerificadas)
@@ -139,26 +145,51 @@ internal static class ObjetivoCarta
         Cumpre(jogada, [atividade], apenasVerificadas: false);
 
     /// <summary>
-    /// As atividades que decidem a Jogada (decisão 0075): o primeiro treino registrado na janela ou, em +10 MIN e
-    /// +20 MIN fora da Fusão, todos os treinos do dia dele. Na regra antiga, todas as atividades.
+    /// As atividades que contam para a Jogada: os treinos de antes do aceite (decisão 0076) mais a vez do próximo
+    /// treino (<see cref="GetProximoTreino"/>). Na regra antiga, todas as atividades.
     /// </summary>
     public static IReadOnlyList<AtividadeJogada> GetVez(JogadaEstado jogada, IEnumerable<AtividadeJogada> atividades)
     {
         var lista = atividades.ToList();
-        if (!IsProximoTreino(jogada) || lista.Count == 0)
+        if (!IsProximoTreino(jogada))
         {
             return lista;
         }
 
-        var primeira = lista.OrderBy(a => a.RegistradaEm).First();
+        return [.. lista.Where(a => a.AntesDoAceite), .. GetProximoTreino(jogada, lista)];
+    }
+
+    /// <summary>
+    /// O próximo treino (decisão 0075): o primeiro registrado entre os que começaram depois do aceite ou, em
+    /// +10 MIN e +20 MIN fora da Fusão, todos os de depois do aceite no dia dele. Só ele pode fazer a Jogada falhar.
+    /// </summary>
+    public static IReadOnlyList<AtividadeJogada> GetProximoTreino(
+        JogadaEstado jogada,
+        IEnumerable<AtividadeJogada> atividades)
+    {
+        var depois = atividades.Where(a => !a.AntesDoAceite).ToList();
+        if (depois.Count == 0)
+        {
+            return [];
+        }
+
+        var primeira = depois.OrderBy(a => a.RegistradaEm).First();
         return SomaODia(jogada)
-            ? lista.Where(a => a.InicioLocal.Date == primeira.InicioLocal.Date).ToList()
+            ? depois.Where(a => a.InicioLocal.Date == primeira.InicioLocal.Date).ToList()
             : [primeira];
     }
 
     /// <summary>
+    /// Se um treino já feito cumpre o objetivo de uma carta que ainda espera resposta: ao aceitar, ela é cumprida
+    /// na hora (decisão 0076).
+    /// </summary>
+    public static bool JaCumpre(JogadaEstado jogada, IEnumerable<AtividadeJogada> atividades) =>
+        Cumpre(jogada, atividades.Select(a => a with { AntesDoAceite = true }), apenasVerificadas: false);
+
+    /// <summary>
     /// Quando o próximo treino deixou de cumprir o objetivo, ou <c>null</c>. Um treino só falha assim que é
     /// registrado; nas cartas de duração, o dia falha quando acaba sem a soma, se isso acontece antes do prazo.
+    /// Um treino de antes do aceite nunca faz falhar, mas o que cumpre salva a Jogada (decisão 0076).
     /// </summary>
     public static DateTimeOffset? GetFalha(
         JogadaEstado jogada,
@@ -166,8 +197,8 @@ internal static class ObjetivoCarta
         DateTimeOffset agora,
         DateTime agoraLocal)
     {
-        var vez = IsProximoTreino(jogada) ? GetVez(jogada, atividades) : [];
-        if (vez.Count == 0 || Cumpre(jogada, vez, apenasVerificadas: false))
+        var vez = IsProximoTreino(jogada) ? GetProximoTreino(jogada, atividades) : [];
+        if (vez.Count == 0 || Cumpre(jogada, atividades, apenasVerificadas: false))
         {
             return null;
         }

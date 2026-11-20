@@ -15,7 +15,14 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { Link, Navigate, useParams, useSearchParams } from "react-router";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import { z } from "zod";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -382,6 +389,12 @@ export function RegistrarAtividadePage() {
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
   const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Uma carta chegou com o formulário aberto (decisão 0076): o treino só depois da resposta.
+  const cartaSemResposta =
+    criar.error instanceof ApiError &&
+    criar.error.code === "CARTA_SEM_RESPOSTA";
   const sessao = useSessao().data;
   const usuarioId = sessao?.id;
   const getAvanco = useAvancoEnfeite(sessao?.modoInicio === "Jogo");
@@ -1149,6 +1162,20 @@ export function RegistrarAtividadePage() {
           <p role="alert" className="form-error mt-4">
             {getErrorMessage(criar.error)}
           </p>
+        )}
+        {cartaSemResposta && (
+          // Navegar de novo para a mesma tela deixa o portão abrir a Chegada e voltar para cá depois.
+          <button
+            type="button"
+            className="btn-primary mt-3 h-12 w-full"
+            onClick={() =>
+              void navigate(location.pathname + location.search, {
+                replace: true,
+              })
+            }
+          >
+            Responder a carta
+          </button>
         )}
 
         <button

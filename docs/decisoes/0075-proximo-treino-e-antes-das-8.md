@@ -1,6 +1,6 @@
 # 0075 — Só o próximo treino vale, e a ANTES DAS 8 olha o fim do treino
 
-**Status:** DECIDIDA. Muda, em `0035-cartas-e-jogadas.md`, a "atividade que conta" (qualquer treino entre o envio e o prazo) e o objetivo da ANTES DAS 8. Acrescenta a situação `Falhou` à Jogada e um gatilho à FADIGA (`0059`). A soma do dia nas cartas de duração (`0040`), a Fusão (`0070`) e a carta perdida (`0074`) continuam valendo. Detalhes em `../gamificacao.md` §5.4, §6.1, §6.4 e §6.5.
+**Status:** DECIDIDA. Alterada em parte por `0076-chegada-da-carta-e-treino-antes-do-aceite.md`: o treino entre o envio e o aceite conta, se cumpre, e nunca faz falhar. Muda, em `0035-cartas-e-jogadas.md`, a "atividade que conta" (qualquer treino entre o envio e o prazo) e o objetivo da ANTES DAS 8. Acrescenta a situação `Falhou` à Jogada e um gatilho à FADIGA (`0059`). A soma do dia nas cartas de duração (`0040`), a Fusão (`0070`) e a carta perdida (`0074`) continuam valendo. Detalhes em `../gamificacao.md` §5.4, §6.1, §6.4 e §6.5.
 
 ## Contexto
 

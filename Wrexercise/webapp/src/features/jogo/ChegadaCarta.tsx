@@ -1,0 +1,132 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { CenaGrupo } from "./CenaGrupo";
+import type { DestinoChegada } from "./PainelChegada";
+import {
+  buscarPendentes,
+  type JogadaPendente,
+  pendentesKey,
+  useJogadasPendentes,
+} from "./useCartas";
+
+/** O parâmetro da tela inicial que abre a Chegada de uma carta. */
+const parametro = "chegada";
+
+/** O que a Chegada lembra de onde a pessoa estava, para voltar depois da resposta. */
+type EstadoChegada = { voltar?: string };
+
+const getRota = (p: JogadaPendente) =>
+  `/grupos/${p.grupoId}/inicio?${parametro}=${p.id}`;
+
+/** O formulário de treino, ou o rascunho do Movr que leva até ele. */
+const isFormularioDeTreino = (caminho: string) =>
+  /^\/grupos\/[^/]+\/atividades\/nova$/.test(caminho) ||
+  caminho.startsWith("/importar/");
+
+/** Se a tela atual é a Chegada: as abas e o menu somem até a resposta. */
+export function useEmChegada(): boolean {
+  const [params] = useSearchParams();
+  return params.has(parametro);
+}
+
+/**
+ * O portão da Chegada (decisão 0076): com uma carta recebida esperando resposta, qualquer tela leva à
+ * Chegada dela, a mais antiga primeiro. Ao voltar para o aplicativo com o formulário de treino aberto,
+ * a pessoa não é tirada dele: o servidor recusa o registro e o formulário leva à Chegada. Sem dados
+ * (erro, sem rede), nada bloqueia.
+ */
+export function PortaoChegada() {
+  const pendentes = useJogadasPendentes();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const emChegada = useEmChegada();
+  const primeira = pendentes.data?.[0];
+  const ultimaTela = useRef<string | null>(null);
+  const primeiraCarga = useRef(true);
+
+  useEffect(() => {
+    if (!pendentes.data) return;
+    const mudouDeTela = ultimaTela.current !== location.key;
+    const permitido = primeiraCarga.current || mudouDeTela;
+    ultimaTela.current = location.key;
+    primeiraCarga.current = false;
+    if (!primeira || emChegada) return;
+    if (!permitido && isFormularioDeTreino(location.pathname)) return;
+    void navigate(getRota(primeira), {
+      replace: true,
+      state: {
+        voltar: location.pathname + location.search,
+      } satisfies EstadoChegada,
+    });
+  }, [
+    pendentes.data,
+    primeira,
+    emChegada,
+    location.key,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
+
+  return null;
+}
+
+/**
+ * A Chegada de uma carta recebida, na tela inicial do grupo, em qualquer modo: a praça encena o
+ * arremesso e a resposta é obrigatória. Depois, a próxima carta pendente ou o lugar de onde a pessoa
+ * veio (ou o formulário de treino).
+ */
+export function ChegadaPagina({
+  grupoId,
+  usuarioId,
+}: {
+  grupoId: string;
+  usuarioId: string;
+}) {
+  const [params] = useSearchParams();
+  const jogadaId = params.get(parametro) ?? "";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const voltar = (location.state as EstadoChegada | null)?.voltar;
+
+  const concluir = async (destino: DestinoChegada) => {
+    const destinoFinal =
+      destino === "treino" && !(voltar && isFormularioDeTreino(voltar))
+        ? `/grupos/${grupoId}/atividades/nova`
+        : (voltar ?? `/grupos/${grupoId}/inicio`);
+    let proxima: JogadaPendente | undefined;
+    try {
+      const lista = await queryClient.fetchQuery({
+        queryKey: pendentesKey,
+        queryFn: ({ signal }) => buscarPendentes(signal),
+        staleTime: 0,
+      });
+      proxima = lista.find((p) => p.id !== jogadaId);
+    } catch {
+      // Sem a lista, segue para onde a pessoa ia: o portão confere de novo na próxima tela.
+    }
+    void navigate(proxima ? getRota(proxima) : destinoFinal, {
+      replace: true,
+      state: proxima
+        ? ({ voltar: destinoFinal } satisfies EstadoChegada)
+        : undefined,
+    });
+  };
+
+  return (
+    <div className="mt-2">
+      <h1 className="sr-only">Carta recebida</h1>
+      <CenaGrupo
+        key={jogadaId}
+        grupoId={grupoId}
+        usuarioId={usuarioId}
+        chegada={{
+          jogadaId,
+          onConcluir: (destino) => void concluir(destino),
+        }}
+      />
+    </div>
+  );
+}

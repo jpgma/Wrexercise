@@ -176,6 +176,10 @@ export function useCriarAtividade(grupoId: string) {
           queryKey: [...atividadesDoGrupoKey(grupoId), "fila"],
         });
       }
+      // Chegou uma carta com o formulário aberto (decisão 0076): a lista atualizada abre a Chegada.
+      if (error instanceof ApiError && error.code === "CARTA_SEM_RESPOSTA") {
+        void queryClient.invalidateQueries({ queryKey: ["jogo", "pendentes"] });
+      }
     },
   });
 }

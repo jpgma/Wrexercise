@@ -17,16 +17,29 @@ import type { Atuacao, Ponto } from "./useEncenacoes";
 /** Para onde a câmera leva a praça: deslocamento e ampliação, em px da praça (360×400). */
 export type Camera = { x: number; y: number; zoom: number; ms: number };
 
-export type FaseFoco = "aberto" | "arremessando" | "rivalizando";
+/**
+ * `chegando`: a carta recebida voa até quem vê; `recebendo`: a câmera fica em quem vê, que responde
+ * (a Chegada, decisão 0076).
+ */
+export type FaseFoco =
+  "aberto" | "arremessando" | "rivalizando" | "chegando" | "recebendo";
 
-/** A carta do Foco: voa de quem joga até o alvo ou cai, quando o envio falha. */
+/** A carta do Foco: voa de quem joga até o alvo, cai quando o envio falha, ou é aceita. */
 export type CartaNoFoco = {
   codigo: CodigoCarta;
   /** A segunda carta de uma Fusão: as duas voam juntas. */
   codigoFusao?: CodigoCarta;
-  efeito: "voo" | "sai";
+  efeito: "voo" | "sai" | "aceita";
   de: Ponto;
   para: Ponto;
+};
+
+/** A carta que chega para quem vê a cena: quem jogou e o que estoura no impacto. */
+export type CartaChegando = {
+  remetenteId: string;
+  codigo: CodigoCarta;
+  codigoFusao?: CodigoCarta;
+  texto: string;
 };
 
 export type EfeitoFoco =
@@ -72,6 +85,7 @@ export function useFoco({
   reduzido,
   pausado,
   dormindo,
+  porta,
 }: {
   posicoes: Map<string, Ponto>;
   centro: Ponto;
@@ -83,6 +97,8 @@ export function useFoco({
   pausado: boolean;
   /** Quem está com a pose `dormindo`. */
   dormindo: Set<string>;
+  /** De onde vem a carta de quem não está mais na praça. */
+  porta: Ponto;
 }) {
   const [params, setParams] = useSearchParams();
   const pedido = params.get(parametro);
@@ -495,6 +511,165 @@ export function useFoco({
     [alvoId, atuar, cancelar, centro, esperar, mirar, reduzido, usuarioId],
   );
 
+  /** Onde a Chegada deixa a câmera: no peito de quem vê, no alto da praça. */
+  const cameraChegada = useCallback(
+    (ms = CameraMs): Camera | null => {
+      const eu = posicoesRef.current.get(usuarioId);
+      return eu ? mirar(eu, ZoomFoco, MiraFoco, ms) : null;
+    },
+    [mirar, usuarioId],
+  );
+
+  /** Quem vê, parado de frente, ou dormindo, se dormia: o fim da Chegada. */
+  const pararNaChegada = useCallback(
+    () =>
+      atuar(
+        usuarioId,
+        dormindoRef.current.has(usuarioId) ? null : pose("parado", "sul"),
+      ),
+    [atuar, usuarioId],
+  );
+
+  /**
+   * A Chegada (decisão 0076): o arremesso visto do outro lado. A câmera vai até quem jogou, que gira
+   * e arremessa; a carta voa até quem vê, com a câmera atrás dela, e bate no peito com o tremor e o
+   * nome da carta. Termina com a câmera em quem vê, na fase `recebendo`, para a resposta.
+   */
+  const receber = useCallback(
+    async ({ remetenteId, codigo, codigoFusao, texto }: CartaChegando) => {
+      cancelar();
+      const minha = geracao.current;
+      const vivo = () => geracao.current === minha;
+      const eu = posicoesRef.current.get(usuarioId);
+      if (!eu) {
+        setFase("recebendo");
+        return;
+      }
+      const remetente = posicoesRef.current.get(remetenteId);
+      const de = remetente ?? porta;
+      const euDurmo = dormindoRef.current.has(usuarioId);
+      const recebe = euDurmo ? "acordar" : "receber";
+      const quadroRecebe = euDurmo ? quadroSusto : quadroImpacto;
+
+      if (reduzido) {
+        setCameraAcao(cameraChegada(0));
+        atuar(usuarioId, pose(recebe, "sul", { quadro: quadroRecebe }));
+        setFase("recebendo");
+        return;
+      }
+
+      setFase("chegando");
+      setCameraAcao(mirar(de, ZoomAcao, MiraAcao));
+      const remDorme = remetente && dormindoRef.current.has(remetenteId);
+      const repousoRem = getDirecao(de, centro);
+      if (remetente) {
+        if (remDorme) {
+          atuar(remetenteId, pose("levantar", repousoRem));
+          await esperar(getDuracao("levantar"));
+          if (!vivo()) return;
+        }
+        const rumo = getDirecao(de, eu);
+        const giro = getGiro(repousoRem, rumo);
+        for (const direcao of giro) {
+          atuar(remetenteId, pose("parado", direcao));
+          await esperar(PassoGiroMs);
+          if (!vivo()) return;
+        }
+        await esperar(Math.max(0, CameraMs - giro.length * PassoGiroMs));
+        if (!vivo()) return;
+        atuar(remetenteId, pose("arremessar", rumo));
+        await esperar(quadroSoltura * animacoes.arremessar.ms);
+      } else {
+        await esperar(CameraMs);
+      }
+      if (!vivo()) return;
+
+      setCarta({ codigo, codigoFusao, efeito: "voo", de, para: eu });
+      setCameraAcao(cameraChegada(VooMs));
+      const impactoMs = quadroRecebe * animacoes[recebe].ms;
+      await esperar(VooMs - impactoMs);
+      if (!vivo()) return;
+      atuar(usuarioId, pose(recebe, getDirecao(eu, de)));
+      await esperar(impactoMs);
+      if (!vivo()) return;
+      setCarta(null);
+      setTremor(true);
+      setEfeito({ tipo: "impacto", texto, ponto: eu, fusao: !!codigoFusao });
+      if ("vibrate" in navigator) navigator.vibrate(30);
+      if (remetente) {
+        if (remDorme) {
+          atuar(remetenteId, pose("adormecer", repousoRem));
+          void esperar(getDuracao("adormecer")).then(
+            () => vivo() && atuar(remetenteId, null),
+          );
+        } else {
+          atuar(remetenteId, null);
+        }
+      }
+      await esperar(getDuracao(recebe) - impactoMs + 500);
+      if (!vivo()) return;
+      setTremor(false);
+      setEfeito(null);
+      pararNaChegada();
+      setFase("recebendo");
+    },
+    [
+      atuar,
+      cameraChegada,
+      cancelar,
+      centro,
+      esperar,
+      mirar,
+      pararNaChegada,
+      porta,
+      reduzido,
+      usuarioId,
+    ],
+  );
+
+  /** Pula a Chegada direto para a resposta: tocar na praça nunca prende a pessoa na animação. */
+  const pularChegada = useCallback(() => {
+    cancelar();
+    setAtuacoes(new Map());
+    setCameraAcao(cameraChegada(0));
+    pararNaChegada();
+    setFase("recebendo");
+  }, [cameraChegada, cancelar, pararNaChegada]);
+
+  /** Quem vê aceita (a carta dobra no objetivo) ou recusa (a carta sai pelo lado). */
+  const responderChegada = useCallback(
+    async (
+      aceitou: boolean,
+      codigo: CodigoCarta,
+      codigoFusao?: CodigoCarta,
+    ) => {
+      const eu = posicoesRef.current.get(usuarioId);
+      if (!eu || reduzido) return;
+      geracao.current++;
+      const minha = geracao.current;
+      const animacao = aceitou ? "aceitar" : "recusar";
+      atuar(usuarioId, pose(animacao, "sul"));
+      setCarta({
+        codigo,
+        codigoFusao,
+        efeito: aceitou ? "aceita" : "sai",
+        de: eu,
+        para: eu,
+      });
+      await esperar(Math.max(getDuracao(animacao), 900));
+      if (geracao.current !== minha) return;
+      setCarta(null);
+      pararNaChegada();
+    },
+    [atuar, esperar, pararNaChegada, reduzido, usuarioId],
+  );
+
+  /** Fim da Chegada: a câmera volta para a praça inteira. */
+  const soltarChegada = useCallback(() => {
+    cancelar();
+    setAtuacoes(new Map());
+  }, [cancelar]);
+
   /** Depois da Cutucada, quem dorme leva outro susto (`acordar`) e volta a dormir. */
   const cutucar = useCallback(() => {
     if (!alvoId || reduzido || !dormindoRef.current.has(alvoId)) return;
@@ -507,9 +682,10 @@ export function useFoco({
   }, [alvoId, atuar, centro, esperar, reduzido]);
 
   const alvo = alvoId ? posicoes.get(alvoId) : undefined;
-  const camera: Camera = !alvo
-    ? { ...semCamera, ms: CameraMs }
-    : (cameraAcao ?? mirar(alvo, ZoomFoco, MiraFoco));
+  // A ação manda na câmera, com ou sem alvo: a Chegada não abre o Foco.
+  const camera: Camera =
+    cameraAcao ??
+    (alvo ? mirar(alvo, ZoomFoco, MiraFoco) : { ...semCamera, ms: CameraMs });
 
   return {
     alvoId,
@@ -524,5 +700,9 @@ export function useFoco({
     arremessar,
     rivalizar,
     cutucar,
+    receber,
+    pularChegada,
+    responderChegada,
+    soltarChegada,
   };
 }

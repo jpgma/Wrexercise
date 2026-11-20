@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Dialog } from "@/components/Dialog";
 import { useToast } from "@/components/Toast";
-import { getErrorMessage } from "@/services/api";
 import { IconeCarta } from "./CartaJogo";
+import { PainelResposta } from "./RespostaCarta";
 import {
   formatarDiaDoPrazo,
   formatarPrazo,
@@ -12,30 +11,9 @@ import {
   getObjetivo,
   getObjetivoCurto,
   getSeloSituacao,
-  objetivoCurto,
   primeiroNome,
 } from "./textosCartas";
-import {
-  type CodigoProvocacao,
-  type CodigoResposta,
-  type Jogada,
-  type RespostaJogada,
-  useJogadas,
-  useLoja,
-  useResponderJogada,
-} from "./useCartas";
-import {
-  avisoFadigaAplicada,
-  marcarFadigaVista,
-  useEnergia,
-} from "./useEnergia";
-
-const avisoResposta: Record<CodigoResposta, string> = {
-  DesafioDuplo: "Carta aceita e devolvida. Agora são dois desafios!",
-  Aposta: "Aposta feita. Cumprindo, a recompensa dobra!",
-  PrazoExtra: "Carta aceita com 24 horas a mais.",
-  MudancaDePlanos: "Objetivo trocado. Bora treinar!",
-};
+import { type Jogada, useJogadas } from "./useCartas";
 
 const encerradas: readonly string[] = [
   "Concluida",
@@ -44,7 +22,7 @@ const encerradas: readonly string[] = [
   "Falhou",
 ];
 
-function getTitulo(jogada: Jogada): string {
+export function getTitulo(jogada: Jogada): string {
   const remetente = primeiroNome(jogada.remetenteNome);
   if (!jogada.recebida) return `Para ${primeiroNome(jogada.destinatarioNome)}`;
   return jogada.desafioDuplo
@@ -52,110 +30,78 @@ function getTitulo(jogada: Jogada): string {
     : `${remetente} te provocou`;
 }
 
-/** Aceitar usando uma Resposta da Mão: escolhe a carta e, na MUDANÇA DE PLANOS, o objetivo novo. */
-function AceitarComResposta({
-  jogada,
-  pendente,
-  onResponder,
-}: {
-  jogada: Jogada;
-  pendente: boolean;
-  onResponder: (dados: Omit<RespostaJogada, "id" | "resposta">) => void;
-}) {
-  const loja = useLoja();
-  const [cartaId, setCartaId] = useState<string>();
-  const [objetivo, setObjetivo] = useState<CodigoProvocacao>();
-
-  const respostas = (loja.data?.mao ?? []).filter(
-    (c) =>
-      c.tipo === "Resposta" &&
-      !(c.codigo === "DesafioDuplo" && jogada.desafioDuplo) &&
-      !(
-        c.codigo === "MudancaDePlanos" &&
-        jogada.objetivosEquivalentes.length === 0
-      ),
-  );
-  if (respostas.length === 0) return null;
-
-  const escolhida = respostas.find((c) => c.id === cartaId);
-  const precisaObjetivo = escolhida?.codigo === "MudancaDePlanos";
-  const pronta = escolhida && (!precisaObjetivo || objetivo);
+/** A carta, o objetivo, o prazo e a situação de uma Jogada: na Mesa e na Chegada. */
+export function CabecalhoJogada({ jogada }: { jogada: Jogada }) {
+  const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
+  const pendente = jogada.recebida && jogada.situacao === "Enviada";
+  const encerrada = encerradas.includes(jogada.situacao);
+  const aposta = jogada.cartaResposta?.codigo === "Aposta";
 
   return (
-    <details className="mt-3 rounded-md border-2 border-border">
-      <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold">
-        Aceitar com uma Resposta
-      </summary>
-      <div className="px-3 pb-3">
-        <div
-          role="radiogroup"
-          aria-label="Resposta para usar"
-          className="flex flex-wrap gap-2"
-        >
-          {respostas.map((carta) => {
-            const marcada = carta.id === cartaId;
-            return (
-              <button
-                key={carta.id}
-                type="button"
-                role="radio"
-                aria-checked={marcada}
-                className={`flex min-h-11 items-center gap-2 rounded-md border-2 px-2 text-left tap ${marcada ? "border-game bg-game-soft" : "border-border"}`}
-                onClick={() => {
-                  setCartaId(carta.id);
-                  setObjetivo(undefined);
-                }}
-              >
-                <IconeCarta codigo={carta.codigo} />
-                <span className="font-display text-sm uppercase">
-                  {carta.nome}
-                </span>
-              </button>
-            );
-          })}
+    <div className="flex gap-3">
+      <span className="flex shrink-0 gap-1 self-start">
+        <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
+          <IconeCarta codigo={jogada.carta.codigo} />
+        </span>
+        {jogada.cartaFusao && (
+          <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
+            <IconeCarta codigo={jogada.cartaFusao.codigo} />
+          </span>
+        )}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="font-display text-base leading-tight uppercase">
+            {getNomeJogada(jogada)}
+          </p>
+          {jogada.cartaFusao && (
+            <span className="chip chip-game uppercase">Fusão</span>
+          )}
+          <span className={`chip uppercase ${selo.classe}`}>{selo.texto}</span>
+          {jogada.cartaResposta && (
+            <span className="chip chip-game uppercase">
+              {jogada.cartaResposta.nome}
+            </span>
+          )}
         </div>
-        {escolhida && (
-          <p className="mt-2 text-sm text-muted">{escolhida.efeito}</p>
+        <p className="mt-0.5 text-sm text-muted">{getObjetivo(jogada)}</p>
+        {jogada.cartaFusao && !encerrada && (
+          <p className="mt-1 text-xs text-muted">
+            Tudo ou nada: os dois objetivos valem no mesmo treino.
+          </p>
         )}
-        {precisaObjetivo && (
-          <fieldset className="mt-3">
-            <legend className="eyebrow mb-2">Trocar por</legend>
-            <div className="grid gap-2">
-              {jogada.objetivosEquivalentes.map((codigo) => (
-                <label
-                  key={codigo}
-                  className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-md border-2 px-3 text-sm ${objetivo === codigo ? "border-game bg-game-soft" : "border-border"}`}
-                >
-                  <input
-                    type="radio"
-                    name={`objetivo-${jogada.id}`}
-                    value={codigo}
-                    checked={objetivo === codigo}
-                    onChange={() => setObjetivo(codigo)}
-                    className="accent-game"
-                  />
-                  {objetivoCurto[codigo]}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+        {!encerrada && (
+          <p className="mt-1 text-xs text-muted">
+            {pendente ? "Responda até" : "Vale até"}{" "}
+            {formatarPrazo(jogada.expiraEm)}
+          </p>
         )}
-        <button
-          type="button"
-          className="btn-primary mt-3 h-11 w-full"
-          disabled={!pronta || pendente}
-          onClick={() =>
-            escolhida &&
-            onResponder({
-              cartaRespostaId: escolhida.id,
-              objetivo: precisaObjetivo ? objetivo : undefined,
-            })
-          }
-        >
-          {escolhida ? `Aceitar com ${escolhida.nome}` : "Escolha uma Resposta"}
-        </button>
+        {jogada.recebida && jogada.situacao === "Aceita" && (
+          <p className="mt-1 text-xs text-muted">
+            Vale o próximo treino. Um treino feito depois que a carta chegou e
+            antes do aceite também vale, se cumprir.
+          </p>
+        )}
+        {jogada.recebida && jogada.situacao === "Falhou" && (
+          <p className="mt-1 text-xs text-muted">
+            O próximo treino não cumpriu a carta.
+          </p>
+        )}
+        {!jogada.recebida &&
+          !jogada.desafioDuplo &&
+          encerrada &&
+          jogada.situacao !== "Concluida" && (
+            <p className="mt-1 text-xs text-muted">
+              Carta perdida: ela não volta para a Mão.
+            </p>
+          )}
+        {jogada.recebida && aposta && !encerrada && (
+          <p className="mt-1 text-xs font-semibold text-game">
+            Apostado: cumprindo, você ganha {jogada.recompensa} EN.
+          </p>
+        )}
       </div>
-    </details>
+    </div>
   );
 }
 
@@ -167,180 +113,18 @@ function DetalheJogada({
   jogada: Jogada;
   grupoId: string;
 }) {
-  const responder = useResponderJogada(grupoId);
-  const loja = useLoja();
-  const energia = useEnergia();
   const { showToast } = useToast();
-  const [confirmandoRecusa, setConfirmandoRecusa] = useState(false);
-  // FADIGA não acumula nem renova: com ela ativa, recusar não muda nada (decisão 0059).
-  const comFadiga = (energia.data?.fadigaRestante ?? 0) > 0;
-  const selo = getSeloSituacao(jogada.situacao, jogada.recebida);
   const pendente = jogada.recebida && jogada.situacao === "Enviada";
-  const encerrada = encerradas.includes(jogada.situacao);
-
-  const enviar = (
-    resposta: "Aceita" | "Recusada",
-    extra: Omit<RespostaJogada, "id" | "resposta"> = {},
-  ) => {
-    const codigoResposta = loja.data?.mao.find(
-      (c) => c.id === extra.cartaRespostaId,
-    )?.codigo as CodigoResposta | undefined;
-    responder.mutate(
-      { id: jogada.id, resposta, ...extra },
-      {
-        onSuccess: () => {
-          setConfirmandoRecusa(false);
-          if (resposta === "Recusada" && !comFadiga) {
-            // O aviso já aparece aqui: o da mudança da FADIGA não deve repetir.
-            marcarFadigaVista(3);
-          }
-          showToast(
-            codigoResposta
-              ? avisoResposta[codigoResposta]
-              : resposta === "Aceita"
-                ? "Carta aceita. Bora treinar!"
-                : comFadiga
-                  ? "Carta recusada. Você já está com FADIGA, então nada muda."
-                  : avisoFadigaAplicada,
-          );
-        },
-      },
-    );
-  };
-
-  const aposta = jogada.cartaResposta?.codigo === "Aposta";
 
   return (
     <div>
-      <div className="flex gap-3">
-        <span className="flex shrink-0 gap-1 self-start">
-          <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
-            <IconeCarta codigo={jogada.carta.codigo} />
-          </span>
-          {jogada.cartaFusao && (
-            <span className="grid size-11 place-items-center rounded-md bg-carta-giz">
-              <IconeCarta codigo={jogada.cartaFusao.codigo} />
-            </span>
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="font-display text-base leading-tight uppercase">
-              {getNomeJogada(jogada)}
-            </p>
-            {jogada.cartaFusao && (
-              <span className="chip chip-game uppercase">Fusão</span>
-            )}
-            <span className={`chip uppercase ${selo.classe}`}>
-              {selo.texto}
-            </span>
-            {jogada.cartaResposta && (
-              <span className="chip chip-game uppercase">
-                {jogada.cartaResposta.nome}
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-sm text-muted">{getObjetivo(jogada)}</p>
-          {jogada.cartaFusao && !encerrada && (
-            <p className="mt-1 text-xs text-muted">
-              Tudo ou nada: os dois objetivos valem no mesmo treino.
-            </p>
-          )}
-          {!encerrada && (
-            <p className="mt-1 text-xs text-muted">
-              {pendente ? "Responda até" : "Vale até"}{" "}
-              {formatarPrazo(jogada.expiraEm)}
-            </p>
-          )}
-          {jogada.recebida && (pendente || jogada.situacao === "Aceita") && (
-            <p className="mt-1 text-xs text-muted">
-              Só vale o próximo treino depois de aceitar.
-            </p>
-          )}
-          {jogada.recebida && jogada.situacao === "Falhou" && (
-            <p className="mt-1 text-xs text-muted">
-              O próximo treino não cumpriu a carta.
-            </p>
-          )}
-          {!jogada.recebida &&
-            !jogada.desafioDuplo &&
-            encerrada &&
-            jogada.situacao !== "Concluida" && (
-              <p className="mt-1 text-xs text-muted">
-                Carta perdida: ela não volta para a Mão.
-              </p>
-            )}
-          {jogada.recebida && aposta && !encerrada && (
-            <p className="mt-1 text-xs font-semibold text-game">
-              Apostado: cumprindo, você ganha {jogada.recompensa} EN.
-            </p>
-          )}
-        </div>
-      </div>
+      <CabecalhoJogada jogada={jogada} />
       {pendente && (
-        <>
-          {responder.isError && (
-            <p role="alert" className="form-error mt-3">
-              {getErrorMessage(responder.error)}
-            </p>
-          )}
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="btn-ghost border-2 border-border"
-              disabled={responder.isPending}
-              onClick={() => setConfirmandoRecusa(true)}
-            >
-              Recusar
-            </button>
-            <button
-              type="button"
-              className="btn-primary h-11"
-              disabled={responder.isPending}
-              onClick={() => enviar("Aceita")}
-            >
-              Aceitar
-            </button>
-          </div>
-          <ul className="mt-2 space-y-0.5 text-xs text-muted">
-            <li>
-              Cumprir:{" "}
-              <span className="font-semibold text-game">
-                +{jogada.recompensa} EN
-              </span>
-            </li>
-            <li>
-              Recusar ou falhar:{" "}
-              <span className="font-semibold text-foreground">
-                FADIGA — 3 treinos com −50% EN
-              </span>
-            </li>
-          </ul>
-          <ConfirmDialog
-            open={confirmandoRecusa}
-            title="Recusar a carta?"
-            message={
-              comFadiga
-                ? "Você já está com FADIGA. Ela não acumula nem renova: recusar não muda nada para você. Quem enviou perde a carta."
-                : "Você fica com FADIGA: seus próximos 3 treinos verificados rendem metade da EN. A Energia que você já tem não muda, e o treino conta normalmente no desafio. Quem enviou perde a carta."
-            }
-            confirmLabel="Recusar"
-            pending={responder.isPending}
-            error={
-              responder.isError ? getErrorMessage(responder.error) : undefined
-            }
-            onConfirm={() => enviar("Recusada")}
-            onCancel={() => {
-              responder.reset();
-              setConfirmandoRecusa(false);
-            }}
-          />
-          <AceitarComResposta
-            jogada={jogada}
-            pendente={responder.isPending}
-            onResponder={(extra) => enviar("Aceita", extra)}
-          />
-        </>
+        <PainelResposta
+          jogada={jogada}
+          grupoId={grupoId}
+          onRespondida={({ aviso }) => showToast(aviso)}
+        />
       )}
     </div>
   );

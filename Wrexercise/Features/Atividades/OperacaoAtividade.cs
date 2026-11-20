@@ -1,4 +1,5 @@
 using Wrexercise.Features.Grupos.Contracts;
+using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Infrastructure.Errors;
 using Wrexercise.Infrastructure.Files;
 
@@ -17,6 +18,7 @@ internal enum AtividadeOperacaoStatus
     EvidenciaInvalida,
     AtividadeEncerrada,
     AvaliacoesPendentes,
+    CartaSemResposta,
     AtividadeMuitoAntiga,
     EvidenciaDuplicada,
     EvidenciaJaAnexada,
@@ -85,6 +87,7 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "AVALIACOES_PENDENTES",
             "Avalie as atividades do grupo antes de registrar a sua."),
+        AtividadeOperacaoStatus.CartaSemResposta => CartasSemResposta.Pendente(),
         AtividadeOperacaoStatus.AtividadeMuitoAntiga => ApiProblem.Create(
             StatusCodes.Status400BadRequest,
             "ATIVIDADE_MUITO_ANTIGA",

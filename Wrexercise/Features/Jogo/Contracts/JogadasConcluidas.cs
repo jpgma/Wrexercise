@@ -24,28 +24,27 @@ internal static class JogadasConcluidas
             List<(Guid AtividadeId, AtividadeJogada Atividade)> Candidatas)>();
 
         // Para cada Jogada aceita cuja janela contém a atividade, todas as candidatas da mesma janela, também as
-        // pendentes: elas dizem qual é o próximo treino (decisão 0075).
+        // pendentes: elas dizem qual é o próximo treino (decisão 0075) e quais são de antes do aceite (0076).
         await using (var command = new NpgsqlCommand($"""
             SELECT j.id, j.remetente_id, j.destinatario_id, {Jogadas.ObjetivoSql}, j.enviada_em, j.expira_em, j.resposta,
                 j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
                 o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos, cf.codigo,
-                o.situacao_verificacao = 'Verificada', o.created_at
+                o.situacao_verificacao = 'Verificada', o.created_at, {Jogadas.AntesDoAceiteSql("o")}
             FROM atividades x
             JOIN jogadas j ON j.destinatario_id = x.usuario_id AND j.grupo_id = x.grupo_id
                 AND j.resposta = 'Aceita'
-                AND x.started_at >= {Jogadas.InicioJanelaSql(2)} AND x.started_at <= j.expira_em
+                AND x.started_at >= j.enviada_em AND x.started_at <= j.expira_em
             JOIN cartas c ON c.id = j.carta_id
             LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades o ON o.usuario_id = j.destinatario_id AND o.grupo_id = j.grupo_id
                 AND o.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
-                AND o.started_at >= {Jogadas.InicioJanelaSql(2)} AND o.started_at <= j.expira_em
+                AND o.started_at >= j.enviada_em AND o.started_at <= j.expira_em
             WHERE x.id = $1 AND x.situacao_verificacao = 'Verificada'
             ORDER BY o.created_at, o.id
             """, connection, transaction))
         {
             command.Parameters.AddWithValue(atividadeId);
-            command.Parameters.AddWithValue(ObjetivoCarta.InicioProximoTreino.ToUniversalTime());
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -75,7 +74,8 @@ internal static class JogadasConcluidas
                         reader.GetString(12),
                         reader.GetInt32(13),
                         reader.GetBoolean(15),
-                        TimestampLeitura.FromReader(reader, 16))));
+                        TimestampLeitura.FromReader(reader, 16),
+                        reader.GetBoolean(17))));
             }
         }
 

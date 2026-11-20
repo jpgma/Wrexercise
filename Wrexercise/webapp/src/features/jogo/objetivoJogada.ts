@@ -31,7 +31,8 @@ function terminaAte8(treino: TreinoPrevisto): boolean {
  * do grupo. Quem decide é o servidor, depois que o treino é verificado.
  *
  * Só o próximo treino depois do aceite vale (decisão 0075): um treino no prazo que não cumpre faz a
- * carta falhar. Um treino fora do prazo não conta e não faz falhar.
+ * carta falhar. Um treino que começou depois que a carta chegou e antes do aceite conta se cumpre e
+ * nunca faz falhar (decisão 0076). Um treino fora do prazo não conta e não faz falhar.
  */
 export function getAvisoCarta(
   jogada: Jogada,
@@ -43,16 +44,25 @@ export function getAvisoCarta(
   if (codigos.includes("Variedade") && !treino.tipo) return null;
 
   const nome = primeiroNome(jogada.remetenteNome);
-  const naoCumpre = (motivo: string): AvisoCarta => ({
-    cumpre: false,
-    falha: true,
-    texto: `Não cumpre a carta de ${nome}: ${motivo}. Postando, a carta falha e você fica com FADIGA.`,
-  });
-
   const inicio = treino.inicio.getTime();
+  const antesDoAceite =
+    jogada.respondidaEm !== null && inicio < Date.parse(jogada.respondidaEm);
+  const naoCumpre = (motivo: string): AvisoCarta =>
+    antesDoAceite
+      ? {
+          cumpre: false,
+          falha: false,
+          texto: `Não conta pra carta de ${nome}: é de antes do aceite e ${motivo}.`,
+        }
+      : {
+          cumpre: false,
+          falha: true,
+          texto: `Não cumpre a carta de ${nome}: ${motivo}. Postando, a carta falha e você fica com FADIGA.`,
+        };
+
   if (
     Number.isNaN(inicio) ||
-    inicio < Date.parse(jogada.respondidaEm ?? jogada.enviadaEm) ||
+    inicio < Date.parse(jogada.enviadaEm) ||
     inicio > Date.parse(jogada.expiraEm)
   )
     return {
@@ -91,6 +101,8 @@ export function getAvisoCarta(
   return {
     cumpre: true,
     falha: false,
-    texto: `Esse treino cumpre a carta de ${nome}.`,
+    texto: antesDoAceite
+      ? `Esse treino é de antes do aceite e cumpre a carta de ${nome}.`
+      : `Esse treino cumpre a carta de ${nome}.`,
   };
 }

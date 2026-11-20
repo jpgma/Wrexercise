@@ -22,8 +22,10 @@ import { useGrupo } from "@/features/grupos";
 import {
   CelebracaoConquista,
   CenaGrupo,
+  ChegadaPagina,
   ConviteJogo,
   SaudacaoAlternada,
+  useEmChegada,
 } from "@/features/jogo";
 import { SinoNotificacoes } from "@/features/notificacoes";
 import {
@@ -262,8 +264,14 @@ export function InicioPage() {
   const { data: usuario } = useSessao();
   const grupo = useGrupo(id);
   const resumo = useResumoGrupo(id);
+  const emChegada = useEmChegada();
 
   if (grupo.isPending || !usuario) return <SplashScreen />;
+
+  // A Chegada de uma carta vale em qualquer modo, também no App (decisão 0076).
+  if (emChegada && !grupo.isError) {
+    return <ChegadaPagina grupoId={id} usuarioId={usuario.id} />;
+  }
 
   if (grupo.isError) {
     return (
