@@ -1,5 +1,13 @@
 [
   {
+    "versao": "1.2.0",
+    "data": "2026-11-20",
+    "novidades": [
+      "Perdeu várias versões? As novidades agora vêm uma por vez, em ordem",
+      "Fechou no meio? Da próxima vez aparece só o que faltou ver"
+    ]
+  },
+  {
     "versao": "1.1.0",
     "data": "2026-11-20",
     "novidades": [

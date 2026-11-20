@@ -21,7 +21,7 @@
 
 - `Wrexercise/webapp/src/features/novidades/versoes.json` guarda todas as versões, da mais nova para a mais antiga: `versao` (`X.Y.Z`), `data` (`AAAA-MM-DD`) e `novidades` (1 a 6 tópicos, até 80 caracteres, sem ponto final). A primeira entrada é a versão atual.
 - Versionamento semântico pelo que a pessoa percebe: patch para correção, minor para funcionalidade ou regra nova, major para mudança grande. Regras de escrita em "Versões e novidades" no `AGENTS.md`.
-- Na primeira abertura depois da atualização, com sessão, o diálogo "Novidades" lista as versões que a pessoa ainda não viu neste aparelho (no máximo 5) e fecha com "Bora!". Sem registro no aparelho, ele mostra só a versão atual. O cookie `wx_versao_vista` guarda a última versão vista.
+- Na primeira abertura depois da atualização, com sessão, o diálogo "Novidades" mostra as versões que a pessoa ainda não viu neste aparelho, todas, sem limite. Com mais de uma, mostra uma versão por passo, da mais antiga para a mais nova, com "Voltar", "Próxima" e o contador "2 de 3"; o último passo fecha com "Bora!". Quem fecha no meio guarda a versão do passo atual e, na próxima abertura, vê só as mais novas (versão 1.2.0). Sem registro no aparelho, ele mostra só a versão atual. O cookie `wx_versao_vista` guarda a última versão vista.
 - O diálogo espera a Chegada (`0076`): enquanto há carta sem resposta, ou enquanto a lista de cartas carrega, ele não abre.
 - Configurações tem a linha "Novidades", com a versão atual, que abre a página `/perfil/novidades` com o histórico inteiro.
 - `VersoesTests`, em `Wrexercise.UnitTests`, verifica o arquivo, porque o frontend não tem executor de testes.
