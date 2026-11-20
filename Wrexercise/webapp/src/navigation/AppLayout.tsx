@@ -3,7 +3,12 @@ import { useState } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router";
 import { Logo } from "@/components/BrandMark";
 import { useGrupos } from "@/features/grupos";
-import { PortaoChegada, useEmChegada } from "@/features/jogo";
+import {
+  PortaoChegada,
+  useCartaEsperando,
+  useEmChegada,
+} from "@/features/jogo";
+import { NovidadesDialog } from "@/features/novidades";
 
 type ItemNavegacao = {
   to: string;
@@ -80,6 +85,7 @@ export function AppLayout() {
   const registrar = prefixo ? `${prefixo}/atividades/nova` : "/";
   // Na Chegada de uma carta, a resposta vem antes de tudo: sem menu, abas nem troca de grupo (decisão 0076).
   const emChegada = useEmChegada();
+  const cartaEsperando = useCartaEsperando();
 
   if (emChegada) {
     return (
@@ -97,6 +103,7 @@ export function AppLayout() {
   return (
     <div className="min-h-dvh">
       <PortaoChegada />
+      <NovidadesDialog pausado={cartaEsperando} />
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-surface p-5 lg:flex">
         <Logo className="mb-8 px-2" />
         <nav aria-label="Principal" className="flex flex-col gap-1">

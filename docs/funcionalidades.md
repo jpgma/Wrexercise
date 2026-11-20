@@ -942,6 +942,19 @@ The system makes a notification for these events:
 - The application looks for a new version when the page becomes visible again.
 - When a new version is available, the application shows "Nova versão disponível" and an "Atualizar" button. The page reloads only when the user pushes the button.
 
+### 13.4. Versions and what's new
+
+- The application has a version number in the format `X.Y.Z`. The first version is `1.0.0`.
+- The file `versoes.json` keeps all versions and their changes, the newest version first. The first version in the file is the current version.
+- Each version has a date and 1 to 6 short items in Portuguese. Each item has a maximum of 80 characters.
+- After an update, the first time the user opens the application, a "Novidades" dialog shows the items of the new versions. The dialog has a "Bora!" button.
+- When the dialog shows more than one version, it shows each version with its number and date. It shows a maximum of 5 versions.
+- On a device that has no record of a version, the dialog shows only the current version.
+- The dialog shows one time on each device. A cookie (`wx_versao_vista`) keeps the last version that the user saw.
+- The dialog shows only to a logged-in user. It waits while a received `Provocacao` waits for an answer (the `Chegada`).
+- The Settings page shows a "Novidades" link with the current version. The link opens the "Novidades" page, which shows all versions.
+- A change that the user cannot see does not change the version.
+
 ## 14. Operation
 
 These functions are for the operator. They are not in the interface.

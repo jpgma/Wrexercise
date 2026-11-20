@@ -53,7 +53,7 @@ Pensado para conexões móveis lentas: bundles pequenos, páginas com `lazy`, ev
 ## Sessão e PWA
 
 - A sessão é um cookie `HttpOnly`: o JavaScript nunca vê o token. O ESLint bloqueia o uso de `localStorage`.
-- Preferências que não são credenciais, como a dispensa do aviso de instalação, ficam num cookie comum (`wx_instalacao_dispensada`). Não libere `localStorage` para isso.
+- Preferências que não são credenciais, como a dispensa do aviso de instalação, ficam num cookie comum (`wx_instalacao_dispensada`, `wx_versao_vista`). Não libere `localStorage` para isso.
 - O Service Worker não guarda respostas autenticadas nem imagens privadas.
 - O Service Worker fica em `sw.js`, escrito à mão. O plugin `serviceWorker()` de `vite.config.ts` injeta a versão e o pré-cache no build. Ele nunca intercepta `/api`, `/health` nem `/ready`, e só é registrado no build de produção. Ver `docs/decisoes/0021-pwa-e-service-worker.md`.
 - Escritas não têm fila offline: as mutações usam `networkMode: "always"` e falham na hora sem rede.

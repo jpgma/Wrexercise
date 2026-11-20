@@ -31,6 +31,16 @@ export function useEmChegada(): boolean {
 }
 
 /**
+ * Se há carta recebida esperando resposta, ou se ainda não dá para saber: avisos que não são
+ * urgentes, como as Novidades (decisão 0077), esperam a Chegada acabar. Com erro, nada espera.
+ */
+export function useCartaEsperando(): boolean {
+  const pendentes = useJogadasPendentes();
+  if (pendentes.isError) return false;
+  return !pendentes.data || pendentes.data.length > 0;
+}
+
+/**
  * O portão da Chegada (decisão 0076): com uma carta recebida esperando resposta, qualquer tela leva à
  * Chegada dela, a mais antiga primeiro. Ao voltar para o aplicativo com o formulário de treino aberto,
  * a pessoa não é tirada dele: o servidor recusa o registro e o formulário leva à Chegada. Sem dados

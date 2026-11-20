@@ -44,13 +44,15 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`, `Fusao`, `Chegada`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`.
 
 `Fusao` (ADR 0070): duas Provocações diferentes jogadas juntas, numa Jogada só. Um mesmo treino cumpre os dois objetivos, e é tudo ou nada. Quem cumpre ganha a soma dos preços mais 20%. Na interface: o selo "FUSÃO" e o botão "Jogar fusão".
 
 Próximo treino (ADR 0075): uma Provocação aceita só vale no primeiro treino registrado depois do aceite (em +10 MIN e +20 MIN, no dia dele). Se ele não cumpre o objetivo, a Jogada fica `Falhou`, com FADIGA para quem recebeu. Na interface, o selo é "Não cumprida". A ANTES DAS 8 pede um treino que termine até as 08:00. Um treino que começou depois que a carta chegou e antes do aceite também vale, se cumpre, e nunca faz falhar (ADR 0076).
 
 `Chegada` (ADR 0076): a Provocação recebida que espera resposta toma o aplicativo, em qualquer tela e modo. A praça do grupo mostra o arremesso com a câmera do Foco, e a carta vira o painel da resposta, sem fechar. Enquanto houver carta sem resposta, o servidor recusa treino novo (`CARTA_SEM_RESPOSTA`). Na interface: "Aceitar · +N EN", "Recusar · FADIGA: …" (um toque, sem confirmação), "Registrar treino", "Depois" e "Responder a carta".
+
+`Versao` e `Novidade` (ADR 0077): o app tem uma versão `X.Y.Z`, e cada versão traz uma lista curta de novidades. Na primeira abertura depois da atualização, um diálogo "Novidades" mostra o que mudou, uma vez por aparelho. Na interface: "Novidades", "Bora!", "Versão 1.0.0" e a página Perfil › Configurações › Novidades.
 
 `Correcao` (ADR 0068): o proprietário ou um administrador corrige a duração da atividade de outra pessoa, com justificativa. Vale também para atividade `Verificada`; não vale para `Rejeitada` nem `Anulada`. Todo o grupo vê a correção na atividade. Na interface, o botão é "Corrigir duração".
 
@@ -126,6 +128,34 @@ Fatias planejadas, criadas apenas na fase correspondente de `docs/arquitetura.md
 ## Dependências
 
 Toda dependência nova precisa de justificativa na descrição da alteração: o que resolve, por que não dá para fazer sem ela e se é compatível com Native AOT. No backend, ela também entra na lista de `PackageAllowlistTests`.
+
+## Versões e novidades
+
+A versão do app e as novidades de cada versão ficam só em `Wrexercise/webapp/src/features/novidades/versoes.json`, da mais nova para a mais antiga. A primeira entrada é a versão atual. Ver `docs/decisoes/0077-versoes-e-novidades.md`.
+
+**Quando mudar a versão.** Toda alteração que o participante percebe (funcionalidade, regra, tela, texto relevante ou correção visível) atualiza o `versoes.json` no mesmo commit:
+
+- **Patch** (`1.0.0` → `1.0.1`): correção.
+- **Minor** (`1.0.0` → `1.1.0`): funcionalidade nova ou regra que muda.
+- **Major** (`1.0.0` → `2.0.0`): mudança grande, que muda o jeito de usar o app.
+- Alteração que ninguém percebe (refatoração, testes, documentação, implantação) não muda a versão.
+- Vários commits antes da mesma implantação entram na mesma entrada ainda não publicada: suba a versão uma vez e acrescente tópicos. Use o maior tipo entre eles.
+- A data é a do dia da implantação, no formato `AAAA-MM-DD`.
+
+**Como escrever as novidades.** Tópicos em pt-BR, curtos, claros e descontraídos, escritos para quem usa o app:
+
+- Um assunto por tópico, de 1 a 6 tópicos por versão, até 80 caracteres e sem ponto final.
+- Diga o que muda para a pessoa, não o que mudou no código. Nada de nomes de arquivo, endpoint, tabela, ADR ou termos técnicos.
+- Comece pelo efeito: "Agora dá pra…", "Corrigido: …", "A carta … agora …". Emoji é opcional, no máximo um por tópico.
+- Use os nomes da interface ("Dar moral", "Corrigir duração", "FADIGA"), não os do código (`Kudos`, `Correcao`).
+
+| Bom | Ruim |
+|---|---|
+| Agora dá pra apagar o treino nos primeiros 15 min | Adiciona endpoint DELETE /api/atividades/{id} com janela de 15 minutos. |
+| Corrigido: vídeo do iPhone não abria em alguns celulares | fix(atividades): reempacota MP4 com moov no início |
+| Carta recebida agora aparece assim que você abre o app 🃏 | Implementa a Chegada (ADR 0076) com PortaoChegada no AppLayout |
+
+`VersoesTests` (em `Wrexercise.UnitTests`) verifica o formato, a ordem, as datas, o número de tópicos e o limite de caracteres. Não afrouxe o teste para fazer uma entrada caber: reescreva a entrada.
 
 ## Decisões e documentação
 

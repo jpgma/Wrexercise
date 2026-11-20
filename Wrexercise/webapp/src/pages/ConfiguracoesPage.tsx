@@ -2,16 +2,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Bell,
   BellOff,
+  ChevronRight,
   Download,
   KeyRound,
   Link2,
   LogOut,
   Shield,
   Smartphone,
+  Sparkles,
   User,
 } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router";
 import { z } from "zod";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PageHeader, SectionTitle } from "@/components/PageHeader";
@@ -30,6 +33,7 @@ import {
   useDesconectarApp,
   type AppConectado,
 } from "@/features/integracoes";
+import { versaoAtual } from "@/features/novidades";
 import { getErrorMessage } from "@/services/api";
 import {
   getModoInstalacao,
@@ -432,6 +436,17 @@ export function ConfiguracoesPage() {
           seus grupos. Ninguém de fora vê nada.
         </p>
       </div>
+
+      <SectionTitle>Sobre o app</SectionTitle>
+      <Link
+        to="/perfil/novidades"
+        className="card flex min-h-14 items-center gap-3 p-4 text-sm tap"
+      >
+        <Sparkles aria-hidden="true" className="size-5 shrink-0 text-link" />
+        <span className="flex-1 font-semibold">Novidades</span>
+        <span className="text-muted">Versão {versaoAtual}</span>
+        <ChevronRight aria-hidden="true" className="size-4 text-muted" />
+      </Link>
 
       <button
         type="button"

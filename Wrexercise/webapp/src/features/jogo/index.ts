@@ -2,7 +2,12 @@ export { AvisoCartaNoTreino, useCartasQueFalham } from "./AvisoCartaNoTreino";
 export { useAvancoEnfeite } from "./avancoEnfeite";
 export { CelebracaoConquista } from "./CelebracaoConquista";
 export { CenaGrupo } from "./CenaGrupo";
-export { ChegadaPagina, PortaoChegada, useEmChegada } from "./ChegadaCarta";
+export {
+  ChegadaPagina,
+  PortaoChegada,
+  useCartaEsperando,
+  useEmChegada,
+} from "./ChegadaCarta";
 export { ConviteJogo } from "./ConviteJogo";
 export { EnergiaPerfil } from "./SaldoEnergia";
 export { LojaCartas } from "./LojaCartas";
