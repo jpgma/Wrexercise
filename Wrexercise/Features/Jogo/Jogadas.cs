@@ -27,7 +27,8 @@ internal sealed record JogadaCarregada(
     DateTimeOffset? ResultadoVistoEm,
     string Situacao,
     Guid? CartaFusaoId = null,
-    int PrecoFusao = 0)
+    int PrecoFusao = 0,
+    DateTimeOffset? FalhouEm = null)
 {
     public JogadaLimite ToLimite() => new(RemetenteId, DestinatarioId, Estado.EnviadaEm, Situacao);
 
@@ -72,6 +73,13 @@ internal static class Jogadas
     public const string ObjetivoSql = "COALESCE(j.codigo_objetivo, c.codigo)";
 
     /// <summary>
+    /// O início da janela das atividades que contam: o aceite, na regra do próximo treino (decisão 0075), ou o
+    /// envio, nas Jogadas mais antigas. O parâmetro recebe <see cref="ObjetivoCarta.InicioProximoTreino"/>.
+    /// </summary>
+    public static string InicioJanelaSql(int parametro) =>
+        $"(CASE WHEN j.enviada_em >= ${parametro} THEN j.respondida_em ELSE j.enviada_em END)";
+
+    /// <summary>
     /// As Jogadas em que alguma das duas pessoas participa, em qualquer grupo. Para uma pessoa só,
     /// passe o mesmo identificador duas vezes.
     /// </summary>
@@ -85,15 +93,16 @@ internal static class Jogadas
         var linhas = new List<(Guid Id, Guid GrupoId, Guid RemetenteId, Guid DestinatarioId, Guid CartaId,
             string CodigoCarta, int Preco, Guid? CartaRespostaId, string? CodigoResposta, Guid? OrigemId,
             JogadaEstado Estado, DateTimeOffset? VistaEm, DateTimeOffset? ResultadoVistoEm,
-            Guid? CartaFusaoId, int PrecoFusao)>();
+            Guid? CartaFusaoId, int PrecoFusao, DateTime AgoraLocal)>();
         DateTimeOffset agora;
 
         await using (var command = new NpgsqlCommand($"""
             SELECT j.id, j.grupo_id, j.remetente_id, j.destinatario_id, j.carta_id, c.preco, {ObjetivoSql},
                 j.enviada_em, j.expira_em, j.resposta, j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
                 j.vista_em, j.resultado_visto_em, now(), c.codigo, j.carta_resposta_id, cr.codigo, j.origem_id,
-                j.carta_fusao_id, cf.codigo, cf.preco
+                j.carta_fusao_id, cf.codigo, cf.preco, now() AT TIME ZONE g.fuso_horario
             FROM jogadas j
+            JOIN grupos g ON g.id = j.grupo_id
             JOIN cartas c ON c.id = j.carta_id
             LEFT JOIN cartas cr ON cr.id = j.carta_resposta_id
             LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
@@ -131,39 +140,47 @@ internal static class Jogadas
                     reader.IsDBNull(13) ? null : TimestampLeitura.FromReader(reader, 13),
                     reader.IsDBNull(14) ? null : TimestampLeitura.FromReader(reader, 14),
                     reader.IsDBNull(20) ? null : reader.GetGuid(20),
-                    reader.IsDBNull(22) ? 0 : reader.GetInt32(22)));
+                    reader.IsDBNull(22) ? 0 : reader.GetInt32(22),
+                    reader.GetDateTime(23)));
             }
         }
 
         var atividades = await LoadAtividadesAsync(connection, transaction, usuarioA, usuarioB, cancellationToken);
 
         return linhas
-            .Select(l => new JogadaCarregada(
-                l.Id,
-                l.GrupoId,
-                l.RemetenteId,
-                l.DestinatarioId,
-                l.CartaId,
-                l.CodigoCarta,
-                l.Preco,
-                l.CartaRespostaId,
-                l.CodigoResposta,
-                l.OrigemId,
-                l.Estado,
-                l.VistaEm,
-                l.ResultadoVistoEm,
-                SituacaoJogada.Calcular(
+            .Select(l =>
+            {
+                var (situacao, falhouEm) = SituacaoJogada.Avaliar(
                     l.Estado,
                     atividades.TryGetValue(l.Id, out var candidatas) ? candidatas : [],
-                    agora),
-                l.CartaFusaoId,
-                l.PrecoFusao))
+                    agora,
+                    l.AgoraLocal);
+                return new JogadaCarregada(
+                    l.Id,
+                    l.GrupoId,
+                    l.RemetenteId,
+                    l.DestinatarioId,
+                    l.CartaId,
+                    l.CodigoCarta,
+                    l.Preco,
+                    l.CartaRespostaId,
+                    l.CodigoResposta,
+                    l.OrigemId,
+                    l.Estado,
+                    l.VistaEm,
+                    l.ResultadoVistoEm,
+                    situacao,
+                    l.CartaFusaoId,
+                    l.PrecoFusao,
+                    falhouEm);
+            })
             .ToList();
     }
 
     /// <summary>
     /// As atividades que podem cumprir cada Jogada aceita: não rejeitadas nem anuladas, do destinatário, no grupo da
-    /// Jogada e com início entre o envio e o prazo. O objetivo da carta é conferido em <see cref="ObjetivoCarta"/>.
+    /// Jogada e com início entre o começo da janela (<see cref="InicioJanelaSql"/>) e o prazo, na ordem em que foram
+    /// registradas. O objetivo da carta é conferido em <see cref="ObjetivoCarta"/>.
     /// </summary>
     public static async Task<Dictionary<Guid, List<AtividadeJogada>>> LoadAtividadesAsync(
         NpgsqlConnection connection,
@@ -172,20 +189,22 @@ internal static class Jogadas
         Guid usuarioB,
         CancellationToken cancellationToken)
     {
-        await using var command = new NpgsqlCommand("""
+        await using var command = new NpgsqlCommand($"""
             SELECT j.id, a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.duracao_segundos,
-                a.situacao_verificacao = 'Verificada'
+                a.situacao_verificacao = 'Verificada', a.created_at
             FROM jogadas j
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades a ON a.usuario_id = j.destinatario_id AND a.grupo_id = j.grupo_id
             WHERE ($1 IN (j.remetente_id, j.destinatario_id) OR $2 IN (j.remetente_id, j.destinatario_id))
               AND j.resposta = 'Aceita'
               AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
-              AND a.started_at >= j.enviada_em
+              AND a.started_at >= {InicioJanelaSql(3)}
               AND a.started_at <= j.expira_em
+            ORDER BY a.created_at, a.id
             """, connection, transaction);
         command.Parameters.AddWithValue(usuarioA);
         command.Parameters.AddWithValue(usuarioB);
+        command.Parameters.AddWithValue(ObjetivoCarta.InicioProximoTreino.ToUniversalTime());
 
         var atividades = new Dictionary<Guid, List<AtividadeJogada>>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -197,7 +216,12 @@ internal static class Jogadas
                 atividades[jogadaId] = lista = [];
             }
 
-            lista.Add(new AtividadeJogada(reader.GetDateTime(1), reader.GetString(2), reader.GetInt32(3), reader.GetBoolean(4)));
+            lista.Add(new AtividadeJogada(
+                reader.GetDateTime(1),
+                reader.GetString(2),
+                reader.GetInt32(3),
+                reader.GetBoolean(4),
+                TimestampLeitura.FromReader(reader, 5)));
         }
 
         return atividades;

@@ -112,7 +112,8 @@ internal sealed record JogadaResponse(
     bool Recebida,
     bool Nova,
     CartaCatalogoResponse? CartaFusao,
-    int Recompensa);
+    int Recompensa,
+    DateTimeOffset? RespondidaEm);
 
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
 

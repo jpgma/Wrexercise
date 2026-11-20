@@ -1,4 +1,4 @@
-export { AvisoCartaNoTreino } from "./AvisoCartaNoTreino";
+export { AvisoCartaNoTreino, useCartasQueFalham } from "./AvisoCartaNoTreino";
 export { useAvancoEnfeite } from "./avancoEnfeite";
 export { CelebracaoConquista } from "./CelebracaoConquista";
 export { CenaGrupo } from "./CenaGrupo";

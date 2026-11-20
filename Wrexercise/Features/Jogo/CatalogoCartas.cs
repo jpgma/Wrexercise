@@ -38,7 +38,7 @@ internal static class CatalogoCartas
         new(CodigoCarta.FimDeSemana, "FIM DE SEMANA", TipoCarta.Provocacao, 35,
             "Um treino no sábado ou no domingo."),
         new(CodigoCarta.AntesDas8, "ANTES DAS 8", TipoCarta.Provocacao, 40,
-            "Um treino que comece antes das 8h."),
+            "Um treino que termine até as 8h."),
         new(CodigoCarta.DesafioDuplo, "DESAFIO DUPLO", TipoCarta.Resposta, 40,
             "Você aceita e devolve o mesmo desafio pra quem mandou."),
         new(CodigoCarta.Aposta, "APOSTA", TipoCarta.Resposta, 25,

@@ -44,7 +44,8 @@ export function FadigaExplicada() {
           treino conta normalmente no desafio.
         </p>
         <p className="mt-3 text-sm text-muted">
-          A FADIGA vem de recusar uma carta ou deixar o prazo vencer.
+          A FADIGA vem de recusar uma carta, não cumprir no próximo treino ou
+          deixar o prazo vencer.
         </p>
       </Dialog>
     </>

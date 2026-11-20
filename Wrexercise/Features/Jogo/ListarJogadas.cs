@@ -70,7 +70,8 @@ internal static class ListarJogadas
                 x.Jogada.Estado.CodigoFusao is { } codigoFusao
                     ? ErrosJogo.ToResponse(CatalogoCartas.Find(codigoFusao)! with { Preco = x.Jogada.PrecoFusao })
                     : null,
-                CalculoEnergia.GetRecompensa(x.Jogada.ToRecompensa(comoDestinatario: true))))
+                CalculoEnergia.GetRecompensa(x.Jogada.ToRecompensa(comoDestinatario: true)),
+                x.Jogada.Estado.RespondidaEm))
             .ToList();
 
         return Results.Json(new JogadasResponse(resposta), AppJsonContext.Default.JogadasResponse);

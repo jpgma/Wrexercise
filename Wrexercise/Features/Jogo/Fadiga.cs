@@ -86,6 +86,8 @@ internal static class Fadiga
             SituacaoJogada.Recusada => jogada.Estado.RespondidaEm,
             // Sem resposta ou aceita sem cumprir: a falha acontece no prazo.
             SituacaoJogada.Expirada => jogada.Estado.ExpiraEm,
+            // O próximo treino não cumpriu: a falha acontece quando ele é registrado ou o dia acaba (decisão 0075).
+            SituacaoJogada.Falhou => jogada.FalhouEm,
             _ => null,
         };
     }

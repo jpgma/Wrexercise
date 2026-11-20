@@ -64,7 +64,7 @@ export function getEfeitoFusao(a: Carta, b: Carta): string {
     duracao: minutos > 0 ? `com +${minutos} min` : null,
     tipo: "de outro tipo",
     dia: "no fim de semana",
-    hora: "antes das 8h",
+    hora: "terminado até as 8h",
   });
   return `FUSÃO · ${getPremioFusao(a, b)} EN: um mesmo treino ${partes.join(" e ")}.`;
 }
@@ -89,7 +89,7 @@ function getObjetivoDe(dados: DadosObjetivo): string {
         : null,
       tipo: outroTipo,
       dia: "no sábado ou no domingo",
-      hora: "que comece antes das 8h",
+      hora: "que termine até as 8h",
     });
     return `Um mesmo treino ${partes.join(" e ")}`;
   }
@@ -104,7 +104,7 @@ function getObjetivoDe(dados: DadosObjetivo): string {
     case "FimDeSemana":
       return "Um treino no sábado ou no domingo";
     case "AntesDas8":
-      return "Um treino que comece antes das 8h";
+      return "Um treino que termine até as 8h";
   }
 }
 
@@ -143,7 +143,7 @@ export function getPrevia(
   const pedido = objetivo.startsWith("Um ")
     ? `de um ${objetivo.slice(3)}`
     : objetivo.charAt(0).toLowerCase() + objetivo.slice(1);
-  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}. Se não, você perde ${fusao ? "as cartas" : "a carta"}.`;
+  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}, no próximo treino depois de aceitar. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}. Se não, você perde ${fusao ? "as cartas" : "a carta"}.`;
 }
 
 /** A linha da Mão com uma carta escolhida e ainda sem prévia: o nome, que a carta pequena não mostra, e o efeito. */
@@ -219,6 +219,8 @@ export function getSeloSituacao(
       return { texto: "Recusada", classe: "" };
     case "Expirada":
       return { texto: "Expirada", classe: "" };
+    case "Falhou":
+      return { texto: "Não cumprida", classe: "" };
   }
 }
 

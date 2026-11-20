@@ -37,7 +37,12 @@ const avisoResposta: Record<CodigoResposta, string> = {
   MudancaDePlanos: "Objetivo trocado. Bora treinar!",
 };
 
-const encerradas: readonly string[] = ["Concluida", "Recusada", "Expirada"];
+const encerradas: readonly string[] = [
+  "Concluida",
+  "Recusada",
+  "Expirada",
+  "Falhou",
+];
 
 function getTitulo(jogada: Jogada): string {
   const remetente = primeiroNome(jogada.remetenteNome);
@@ -245,6 +250,16 @@ function DetalheJogada({
             <p className="mt-1 text-xs text-muted">
               {pendente ? "Responda até" : "Vale até"}{" "}
               {formatarPrazo(jogada.expiraEm)}
+            </p>
+          )}
+          {jogada.recebida && (pendente || jogada.situacao === "Aceita") && (
+            <p className="mt-1 text-xs text-muted">
+              Só vale o próximo treino depois de aceitar.
+            </p>
+          )}
+          {jogada.recebida && jogada.situacao === "Falhou" && (
+            <p className="mt-1 text-xs text-muted">
+              O próximo treino não cumpriu a carta.
             </p>
           )}
           {!jogada.recebida &&

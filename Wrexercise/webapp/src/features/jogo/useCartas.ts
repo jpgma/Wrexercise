@@ -33,7 +33,9 @@ export type SituacaoJogada =
   | "Aceita"
   | "AguardandoVerificacao"
   | "Concluida"
-  | "Expirada";
+  | "Expirada"
+  /** O próximo treino depois do aceite não cumpriu o objetivo (decisão 0075). */
+  | "Falhou";
 
 export type Jogada = {
   id: string;
@@ -53,6 +55,8 @@ export type Jogada = {
   objetivosEquivalentes: CodigoProvocacao[];
   situacao: SituacaoJogada;
   enviadaEm: string;
+  /** Quando a carta foi aceita ou recusada; o próximo treino conta a partir do aceite (decisão 0075). */
+  respondidaEm: string | null;
   expiraEm: string;
   duracaoAlvoSegundos: number | null;
   tipoEvitar: string | null;
@@ -92,9 +96,10 @@ export function useComprarCarta() {
   });
 }
 
-export function useJogadas(grupoId: string) {
+export function useJogadas(grupoId: string, ativo = true) {
   return useQuery({
     queryKey: jogadasKey(grupoId),
+    enabled: ativo,
     queryFn: async ({ signal }) => {
       const { jogadas } = await getJson<{ jogadas: Jogada[] }>(
         `/api/grupos/${grupoId}/jogadas`,

@@ -21,27 +21,31 @@ internal static class JogadasConcluidas
         CancellationToken cancellationToken)
     {
         var jogadas = new Dictionary<Guid, (Guid Remetente, Guid Destinatario, JogadaEstado Estado,
-            List<(Guid AtividadeId, AtividadeJogada Atividade)> Verificadas)>();
+            List<(Guid AtividadeId, AtividadeJogada Atividade)> Candidatas)>();
 
-        // Para cada Jogada aceita cuja janela contém a atividade, todas as verificadas na mesma janela.
+        // Para cada Jogada aceita cuja janela contém a atividade, todas as candidatas da mesma janela, também as
+        // pendentes: elas dizem qual é o próximo treino (decisão 0075).
         await using (var command = new NpgsqlCommand($"""
             SELECT j.id, j.remetente_id, j.destinatario_id, {Jogadas.ObjetivoSql}, j.enviada_em, j.expira_em, j.resposta,
                 j.respondida_em, j.duracao_alvo_segundos, j.tipo_evitar,
-                o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos, cf.codigo
+                o.id, o.started_at AT TIME ZONE g.fuso_horario, o.tipo, o.duracao_segundos, cf.codigo,
+                o.situacao_verificacao = 'Verificada', o.created_at
             FROM atividades x
             JOIN jogadas j ON j.destinatario_id = x.usuario_id AND j.grupo_id = x.grupo_id
                 AND j.resposta = 'Aceita'
-                AND x.started_at >= j.enviada_em AND x.started_at <= j.expira_em
+                AND x.started_at >= {Jogadas.InicioJanelaSql(2)} AND x.started_at <= j.expira_em
             JOIN cartas c ON c.id = j.carta_id
             LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades o ON o.usuario_id = j.destinatario_id AND o.grupo_id = j.grupo_id
-                AND o.situacao_verificacao = 'Verificada'
-                AND o.started_at >= j.enviada_em AND o.started_at <= j.expira_em
+                AND o.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+                AND o.started_at >= {Jogadas.InicioJanelaSql(2)} AND o.started_at <= j.expira_em
             WHERE x.id = $1 AND x.situacao_verificacao = 'Verificada'
+            ORDER BY o.created_at, o.id
             """, connection, transaction))
         {
             command.Parameters.AddWithValue(atividadeId);
+            command.Parameters.AddWithValue(ObjetivoCarta.InicioProximoTreino.ToUniversalTime());
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -64,15 +68,20 @@ internal static class JogadasConcluidas
                     jogadas[jogadaId] = jogada;
                 }
 
-                jogada.Verificadas.Add((
+                jogada.Candidatas.Add((
                     reader.GetGuid(10),
-                    new AtividadeJogada(reader.GetDateTime(11), reader.GetString(12), reader.GetInt32(13), Verificada: true)));
+                    new AtividadeJogada(
+                        reader.GetDateTime(11),
+                        reader.GetString(12),
+                        reader.GetInt32(13),
+                        reader.GetBoolean(15),
+                        TimestampLeitura.FromReader(reader, 16))));
             }
         }
 
         foreach (var (jogadaId, jogada) in jogadas)
         {
-            if (!ConcluiAgora(jogada.Estado, atividadeId, jogada.Verificadas))
+            if (!ConcluiAgora(jogada.Estado, atividadeId, jogada.Candidatas))
             {
                 continue;
             }
@@ -85,18 +94,19 @@ internal static class JogadasConcluidas
     }
 
     /// <summary>
-    /// Regra pura: com esta atividade, as verificadas cumprem o objetivo, e sem ela ainda não cumpriam.
-    /// Nas cartas de duração, ela pode completar a soma de um dia (decisão 0040).
+    /// Regra pura: com esta atividade verificada, as verificadas cumprem o objetivo, e com ela ainda pendente não
+    /// cumpriam. Nas cartas de duração, ela pode completar a soma de um dia (decisão 0040). As pendentes ficam na
+    /// lista porque dizem qual é o próximo treino (decisão 0075).
     /// </summary>
     public static bool ConcluiAgora(
         JogadaEstado jogada,
         Guid atividadeId,
-        IReadOnlyList<(Guid AtividadeId, AtividadeJogada Atividade)> verificadas) =>
+        IReadOnlyList<(Guid AtividadeId, AtividadeJogada Atividade)> candidatas) =>
         jogada.RespondidaEm < jogada.ExpiraEm
-        && verificadas.Any(v => v.AtividadeId == atividadeId)
-        && ObjetivoCarta.Cumpre(jogada, verificadas.Select(v => v.Atividade), apenasVerificadas: true)
+        && candidatas.Any(v => v.AtividadeId == atividadeId && v.Atividade.Verificada)
+        && ObjetivoCarta.Cumpre(jogada, candidatas.Select(v => v.Atividade), apenasVerificadas: true)
         && !ObjetivoCarta.Cumpre(
             jogada,
-            verificadas.Where(v => v.AtividadeId != atividadeId).Select(v => v.Atividade),
+            candidatas.Select(v => v.AtividadeId == atividadeId ? v.Atividade with { Verificada = false } : v.Atividade),
             apenasVerificadas: true);
 }

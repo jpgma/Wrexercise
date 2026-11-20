@@ -48,6 +48,8 @@ Use exatamente estas grafias:
 
 `Fusao` (ADR 0070): duas Provocações diferentes jogadas juntas, numa Jogada só. Um mesmo treino cumpre os dois objetivos, e é tudo ou nada. Quem cumpre ganha a soma dos preços mais 20%. Na interface: o selo "FUSÃO" e o botão "Jogar fusão".
 
+Próximo treino (ADR 0075): uma Provocação aceita só vale no primeiro treino registrado depois do aceite (em +10 MIN e +20 MIN, no dia dele). Se ele não cumpre o objetivo, a Jogada fica `Falhou`, com FADIGA para quem recebeu. Na interface, o selo é "Não cumprida". A ANTES DAS 8 pede um treino que termine até as 08:00.
+
 `Correcao` (ADR 0068): o proprietário ou um administrador corrige a duração da atividade de outra pessoa, com justificativa. Vale também para atividade `Verificada`; não vale para `Rejeitada` nem `Anulada`. Todo o grupo vê a correção na atividade. Na interface, o botão é "Corrigir duração".
 
 `Fadiga` (ADR 0059): debuff de quem recusa ou deixa expirar uma Provocação recebida. Os próximos 3 dias verificados rendem metade da base de Energia. Na interface, aparece como "FADIGA".

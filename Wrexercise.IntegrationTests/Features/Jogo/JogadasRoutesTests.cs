@@ -210,6 +210,53 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ProximoTreinoQueNaoCumpre_FalhaNaHora_ComFadigaEMesmoComOutroTreinoDepois()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        // O último treino da Bia é corrida: a VARIEDADE pede outro tipo.
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 5);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+
+        // Decisão 0075: só o próximo treino vale. Corrida de novo falha, mesmo antes da verificação.
+        await PostAtividadeAsync(bia, grupoId, TipoAtividade.Corrida);
+        Assert.Equal(SituacaoJogada.Falhou, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+
+        var outro = await PostAtividadeAsync(bia, grupoId, TipoAtividade.Musculacao);
+        (await ana.Client.PutAsJsonAsync(
+            $"/api/atividades/{outro.Id}/reacao",
+            new ReacaoRequest(TipoReacao.Kudos),
+            AppJsonContext.Default.ReacaoRequest,
+            Token)).EnsureSuccessStatusCode();
+
+        Assert.Equal(SituacaoJogada.Falhou, Assert.Single(await GetJogadasAsync(ana, grupoId)).Situacao);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
+        Assert.True((await GetEnergiaAsync(bia)).FadigaRestante > 0);
+        Assert.Equal(0, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
+        Assert.Empty((await JogoTestes.GetLojaAsync(ana)).Mao);
+    }
+
+    [Fact]
+    public async Task TreinoAntesDoAceite_NaoConta()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        // Um treino entre o envio e o aceite: pela regra antiga contaria (AguardandoVerificacao).
+        var atividade = await PostAtividadeAsync(bia, grupoId);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades
+            SET started_at = (SELECT enviada_em + (respondida_em - enviada_em) / 2 FROM jogadas WHERE id = '{jogadaId}')
+            WHERE id = '{atividade.Id}'
+            """);
+
+        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+    }
+
+    [Fact]
     public async Task Aposta_ConcluidaPagaODobroEGastaAResposta()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
@@ -410,7 +457,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
         // Um treino na segunda-feira antes do domingo do prazo: cumpre a VARIEDADE, mas não o FIM DE SEMANA.
         var atividade = await PostAtividadeAsync(bia, grupoId);
         await _host.ExecuteAsync(
-            $"UPDATE jogadas SET enviada_em = expira_em - interval '8 days' WHERE id = '{jogadaId}'");
+            $"UPDATE jogadas SET enviada_em = expira_em - interval '8 days', respondida_em = expira_em - interval '7 days' WHERE id = '{jogadaId}'");
         await _host.ExecuteAsync(
             $"UPDATE atividades SET started_at = (SELECT expira_em - interval '6 days 12 hours' FROM jogadas WHERE id = '{jogadaId}') WHERE id = '{atividade.Id}'");
         (await ana.Client.PutAsJsonAsync(
@@ -419,7 +466,11 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             AppJsonContext.Default.ReacaoRequest,
             Token)).EnsureSuccessStatusCode();
 
-        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        // O envio recuado pode cair antes de ObjetivoCarta.InicioProximoTreino (regra antiga: segue valendo) ou
+        // depois (decisão 0075: o próximo treino falhou). Nos dois casos, nada é pago.
+        Assert.Contains(
+            Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao,
+            new[] { SituacaoJogada.Aceita, SituacaoJogada.Falhou });
         Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
         Assert.Equal(0, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
     }
@@ -762,12 +813,15 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     private Task<long> ContarNotificacoesAsync(TestUsuario usuario, string tipo) =>
         _host.CountAsync($"SELECT count(*) FROM notificacoes WHERE usuario_id = '{usuario.Id}' AND tipo = '{tipo}'");
 
-    private static async Task<AtividadeResponse> PostAtividadeAsync(TestUsuario usuario, Guid grupoId)
+    private static async Task<AtividadeResponse> PostAtividadeAsync(
+        TestUsuario usuario,
+        Guid grupoId,
+        string tipo = TipoAtividade.Corrida)
     {
         var response = await usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades",
             new CriarAtividadeRequest(
-                TipoAtividade.Corrida,
+                tipo,
                 3600,
                 DateTimeOffset.UtcNow,
                 "Treino",

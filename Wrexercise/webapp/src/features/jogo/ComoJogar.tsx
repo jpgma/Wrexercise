@@ -42,9 +42,9 @@ const passos: { titulo: string; texto: string; icone: ReactNode }[] = [
 const resumo = [
   "Treinos verificados rendem Energia (EN).",
   "Com EN você compra cartas na Loja.",
-  "Provocação: você joga num colega e dá um objetivo com prazo.",
+  "Provocação: você joga num colega e dá um objetivo para o próximo treino dele, com prazo.",
   "Resposta: você usa ao aceitar uma Provocação.",
-  "Cumpriu: os dois ganham EN. Recusou ou venceu o prazo: FADIGA, e quem jogou perde a carta.",
+  "Cumpriu: os dois ganham EN. Recusou, não cumpriu no próximo treino ou venceu o prazo: FADIGA, e quem jogou perde a carta.",
 ];
 
 /**

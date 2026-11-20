@@ -293,11 +293,11 @@ A regra fica numa função pura (`CalculoEnergia`), que recebe as atividades de 
 
 Recusar uma carta precisa ter uma consequência, sem tirar Energia já ganha e sem dificultar o treino (`decisoes/0059-fadiga.md`).
 
-- **Quando aparece:** para quem **recebeu** uma Provocação, quando a Jogada fica `Recusada` ou `Expirada`. Vale para a recusa, para a carta que expira sem resposta e para a carta aceita que não foi cumprida no prazo. Quem enviou nunca recebe FADIGA.
+- **Quando aparece:** para quem **recebeu** uma Provocação, quando a Jogada fica `Recusada`, `Expirada` ou `Falhou`. Vale para a recusa, para a carta que expira sem resposta, para a carta aceita sem treino no prazo e para a carta cujo próximo treino não cumpriu o objetivo (§6.4, `decisoes/0075-proximo-treino-e-antes-das-8.md`). Quem enviou nunca recebe FADIGA.
 - **Efeito:** os próximos **3 dias com atividade verificada**, em cada grupo, rendem metade da base: 5 EN em vez de 10 (metade, arredondada para baixo). Cada dia gasta uma carga, qualquer que seja a Energia dele. Depois da terceira, a FADIGA some.
 - **Não acumula nem renova:** um gatilho com a FADIGA ativa não muda nada. Não expira com o tempo: só treinos verificados a removem.
 - **Não muda:** bônus por atividade, meta semanal, sequências, desafios, recompensas de Jogada, Rival, progresso oficial, classificação e estatísticas. A Energia já ganha também não diminui.
-- **Cálculo na leitura**, como o resto da Energia, numa função pura (`Fadiga`): os gatilhos (`respondida_em` da recusa, `expira_em` da expiração ou da falha) e os dias verificados, cada um no `verified_at` da primeira atividade verificada dele, seguem em ordem de tempo. Um dia só tem FADIGA se foi verificado depois do gatilho, então nenhuma leitura anterior pagou a base inteira a ele. Não há coluna nova, e repetir requisições não aplica a FADIGA duas vezes.
+- **Cálculo na leitura**, como o resto da Energia, numa função pura (`Fadiga`): os gatilhos (`respondida_em` da recusa, `expira_em` da expiração, e o registro do próximo treino ou o fim do dia dele quando a Jogada `Falhou`) e os dias verificados, cada um no `verified_at` da primeira atividade verificada dele, seguem em ordem de tempo. Um dia só tem FADIGA se foi verificado depois do gatilho, então nenhuma leitura anterior pagou a base inteira a ele. Não há coluna nova, e repetir requisições não aplica a FADIGA duas vezes.
 - Um dia verificado e depois anulado gasta a carga dele, sem render. Assim, a carga não passa para outro dia já pago.
 - Recusas e expirações de antes de `Fadiga.Inicio` (13/11/2026) não contam.
 - **Na interface:** um selo `FADIGA` com uma bateria fraca e os treinos restantes, ao lado do saldo. Recusar pede confirmação e explica a consequência. A carta recebida mostra os dois resultados: "Cumprir: +N EN" e "Recusar ou falhar: FADIGA — 3 treinos com −50% EN". Quando a FADIGA muda, a tela do Jogo mostra um aviso ("+5 EN · FADIGA: 2 treinos restantes", "FADIGA REMOVIDA!"). O último valor visto fica num cookie comum (`wx_fadiga`).
@@ -314,7 +314,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | +20 MIN | `Provocacao` | 45 | Somar num mesmo dia pelo menos a duração mínima do desafio + 20 minutos. |
 | VARIEDADE | `Provocacao` | 35 | Uma atividade de tipo diferente do treino de referência do destinatário neste grupo, no momento do envio: o mais recente entre os já verificados e os que quem joga aprovou com "Dar moral" (`decisoes/0071-referencia-da-variedade.md`). |
 | FIM DE SEMANA | `Provocacao` | 35 | Uma atividade que comece no sábado ou no domingo. |
-| ANTES DAS 8 | `Provocacao` | 40 | Uma atividade que comece antes das 08:00. |
+| ANTES DAS 8 | `Provocacao` | 40 | Uma atividade que termine até as 08:00 do dia em que começou (`decisoes/0075-proximo-treino-e-antes-das-8.md`). |
 | DESAFIO DUPLO | `Resposta` | 40 | Aceita a Provocação e devolve o mesmo objetivo para o remetente, como uma Jogada nova. |
 | APOSTA | `Resposta` | 25 | Aceita a Provocação. Se a Jogada for concluída, a recompensa do destinatário dobra. Se não for, a carta está perdida. |
 | PRAZO EXTRA | `Resposta` | 20 | Aceita a Provocação com 24 horas a mais de prazo. |
@@ -322,7 +322,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 
 - **Trocas da MUDANÇA DE PLANOS:** `+10 MIN ↔ VARIEDADE ↔ FIM DE SEMANA` e `+20 MIN ↔ ANTES DAS 8`. A duração-alvo e o tipo a evitar do objetivo novo são fixados no aceite; na VARIEDADE, vale o último treino de quem responde que não esteja rejeitado nem anulado. Trocar para +10 MIN ou +20 MIN exige um desafio ativo. O prazo passa a ser o maior entre o atual e o da carta nova, contado do envio (`decisoes/0036-respostas.md`).
 - **DESAFIO DUPLO:** a Jogada devolvida usa a Provocação original, que a Jogada original já gastou (§6.2). A duração-alvo é copiada, o tipo a evitar da VARIEDADE é o do treino de referência de quem vai cumprir (aqui, conta o "Dar moral" de quem devolve) e o prazo começa no aceite. A devolução não confere os limites de §6.3, mas exige que quem enviou esteja no modo Jogo.
-- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. O treino de referência da VARIEDADE é o que começou por último entre os `Verificada` do destinatário e os que quem joga aprovou com `Kudos` e não estão `Rejeitada` nem `Anulada`; sem nenhum, qualquer tipo vale. Em +10 MIN e +20 MIN, somam-se as atividades de um mesmo dia dentro do prazo da Jogada.
+- Os objetivos usam as regras e o fuso do grupo da Jogada. Sem desafio ativo, as cartas +10 MIN e +20 MIN não podem ser jogadas nesse grupo. A duração-alvo e o tipo a evitar da VARIEDADE são fixados no envio. O treino de referência da VARIEDADE é o que começou por último entre os `Verificada` do destinatário e os que quem joga aprovou com `Kudos` e não estão `Rejeitada` nem `Anulada`; sem nenhum, qualquer tipo vale. Em +10 MIN e +20 MIN, somam-se as atividades do dia do próximo treino dentro do prazo da Jogada (§6.4).
+- **Só o próximo treino vale** (`decisoes/0075-proximo-treino-e-antes-das-8.md`): o objetivo precisa ser cumprido no primeiro treino depois do aceite, e não em qualquer treino no prazo.
 - Cumprir a Provocação também conta para a meta oficial, como qualquer atividade. Não existe tipo especial de atividade.
 - Não cumprir ou recusar não muda nada no progresso oficial.
 
@@ -377,15 +378,20 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | `AguardandoVerificacao` | Aceita, com atividade que conta ainda não verificada. |
 | `Concluida` | Aceita, com atividade que conta `Verificada`. |
 | `Expirada` | Passou de `expira_em` sem resposta, ou aceita sem atividade que conte até lá. |
+| `Falhou` | Aceita, e o próximo treino não cumpriu o objetivo (`decisoes/0075-proximo-treino-e-antes-das-8.md`). |
 
-- **Atividade que conta:** não rejeitada, do destinatário, no grupo da Jogada, com `started_at` entre `enviada_em` e `expira_em`, que cumpre o objetivo da carta. A Jogada precisa ter sido aceita antes de `expira_em`.
-- Uma atividade feita antes de aceitar, mas depois do envio, conta.
+- **Próximo treino** (a vez): o primeiro treino registrado (`created_at`) do destinatário no grupo da Jogada, não `Rejeitada` nem `Anulada`, com `started_at` entre `respondida_em` (o aceite) e `expira_em`. Em +10 MIN e +20 MIN fora da Fusão, a vez é o dia desse treino, no fuso do grupo: os treinos desse dia somam. A Jogada precisa ter sido aceita antes de `expira_em`.
+- **Atividade que conta:** a vez, quando cumpre o objetivo da carta.
+- A vez que não cumpre faz a Jogada `Falhou` na hora, mesmo antes da verificação. Nas cartas de duração, o dia falha quando acaba sem a soma; se o prazo acaba antes, a Jogada fica `Expirada`. Um treino que depois é rejeitado, anulado ou apagado sai da conta, e a vez passa ao seguinte.
+- Um treino feito antes de aceitar não conta nem faz falhar.
+- As Jogadas enviadas antes de `ObjetivoCarta.InicioProximoTreino` (20/11/2026, 13:00, UTC−3) seguem a regra antiga: qualquer atividade não rejeitada com `started_at` entre `enviada_em` e `expira_em` que cumpra o objetivo conta, e a ANTES DAS 8 olha o início.
 - A verificação pode acontecer depois de `expira_em`: o que importa é o `started_at`.
 - A mesma atividade pode concluir várias Jogadas e missões.
 - **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo (enviada num domingo, vale até o domingo seguinte). ANTES DAS 8 vale até as 08:00 do segundo dia depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
 - **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente recebe 1 × o preço de volta (`decisoes/0074-carta-jogada-nao-volta.md`). A regra vale também para as Jogadas concluídas antes da mudança, porque a Energia é calculada na leitura. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
 - **Custo para quem enviou:** a Provocação é gasta ao ser jogada (§6.2). Se a Jogada fica `Concluida`, a recompensa de 1 × devolve o preço e a carta sai de graça. Se fica `Recusada` ou `Expirada`, quem enviou perde a carta e o preço dela (30 a 45 EN). Se a atividade for rejeitada ou anulada depois da conclusão, a Jogada deixa de estar `Concluida` e a recompensa some; a carta não volta. Quem enviou não recebe notificação da expiração: a Mesa mostra "Carta perdida: ela não volta para a Mão.".
-- **Custo para quem recebeu:** uma Jogada `Recusada` ou `Expirada` dá FADIGA a quem recebeu (§5.4).
+- **Custo para quem recebeu:** uma Jogada `Recusada`, `Expirada` ou `Falhou` dá FADIGA a quem recebeu (§5.4).
+- **`Falhou` para quem enviou:** como na expiração, a carta está perdida (§6.2), sem notificação. A Mesa mostra o selo "Não cumprida".
 
 ### 6.5. Fusão
 
@@ -396,7 +402,7 @@ Duas Provocações diferentes jogadas juntas, numa Jogada só (`decisoes/0070-fu
   - A duração de +10 MIN e +20 MIN, numa Fusão, é a dessa atividade: não se somam as atividades do dia.
   - +10 MIN com +20 MIN pede a duração mínima do desafio + 30 minutos.
   - A duração-alvo e o tipo a evitar são fixados no envio, como nas outras Jogadas (§6.1).
-- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e quem enviou perde as duas cartas (§6.2).
+- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. O próximo treino depois do aceite precisa cumprir os dois (§6.4). Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e quem enviou perde as duas cartas (§6.2).
 - **Recompensa:** quem cumpre ganha a soma dos dois preços mais 20% da soma, arredondado para baixo. Quem enviou recebe a soma de volta, sem o bônus. VARIEDADE (35) + ANTES DAS 8 (40): 90 EN e 75 EN.
 - **Prazo:** o maior entre os prazos das duas cartas (§6.4).
 - **Limites:** a Fusão ocupa uma vaga de Jogada, como qualquer outra (§6.3). Não há limite próprio.

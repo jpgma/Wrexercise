@@ -18,6 +18,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { Link, Navigate, useParams, useSearchParams } from "react-router";
 import { z } from "zod";
 import { Avatar } from "@/components/Avatar";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
@@ -60,7 +61,11 @@ import {
 import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
 import { appIntegracaoLabels, useRascunho } from "@/features/integracoes";
-import { AvisoCartaNoTreino, useAvancoEnfeite } from "@/features/jogo";
+import {
+  AvisoCartaNoTreino,
+  useAvancoEnfeite,
+  useCartasQueFalham,
+} from "@/features/jogo";
 import { useResumoGrupo } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
 
@@ -505,6 +510,18 @@ export function RegistrarAtividadePage() {
     : null;
   const faltaNoDia = falta && !falta.conta ? formatarFaltaNoDia(falta) : null;
 
+  // Só o próximo treino depois do aceite vale (decisão 0075): postar um que não cumpre faz a carta falhar.
+  const cartasQueFalham = useCartasQueFalham(
+    grupoId,
+    {
+      tipo: tipoAtual,
+      startedAt,
+      duracaoSegundos: (duracaoMinutos || 0) * 60,
+    },
+    sessao?.modoInicio === "Jogo",
+  );
+  const [confirmandoCarta, setConfirmandoCarta] = useState(false);
+
   const enviar = async (data: FormData) => {
     const dados: CriarAtividadeData = {
       tipo: data.tipo,
@@ -811,7 +828,29 @@ export function RegistrarAtividadePage() {
         </div>
       )}
 
-      <form noValidate onSubmit={(event) => void handleSubmit(enviar)(event)}>
+      <ConfirmDialog
+        open={confirmandoCarta}
+        title="Postar e perder a carta?"
+        message={`Esse treino não cumpre a carta de ${cartasQueFalham.join(" e ")}. Só o próximo treino depois do aceite vale: postando, a carta falha e você fica com FADIGA.`}
+        confirmLabel="Postar mesmo assim"
+        onConfirm={() => {
+          setConfirmandoCarta(false);
+          void handleSubmit(enviar)();
+        }}
+        onCancel={() => setConfirmandoCarta(false)}
+      />
+      <form
+        noValidate
+        onSubmit={(event) =>
+          void handleSubmit((data) => {
+            if (cartasQueFalham.length > 0) {
+              setConfirmandoCarta(true);
+              return;
+            }
+            return enviar(data);
+          })(event)
+        }
+      >
         <fieldset>
           <legend className="mb-2 text-sm font-semibold">
             Tipo de atividade
