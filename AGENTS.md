@@ -44,7 +44,7 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`, `EmAndamento`, `Torcida`, `Parceria`, `AoVivo`, `Marco`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`, `EmAndamento`, `Torcida`, `Parceria`, `AoVivo`, `Marco`.
 
 Treino ao vivo (ADR 0078): a pessoa começa o treino agora ("Começar treino") e termina depois ("Terminar treino" ou "Cancelar treino"). Enquanto isso, a atividade fica `EmAndamento`: não conta para nada, ninguém avalia, e o grupo vê o Avatar treinando na praça com a bolha "AO VIVO". O cronômetro fica em `/grupos/{id}/treino`. `Torcida`: um colega torce por quem treina ao vivo ("Torcer", uma vez a cada 10 minutos). `Parceria`: o bônus por treinar ao vivo junto com um colega ("Treinar junto"). `AoVivo`: o bônus do treino começado ao vivo. `Marco`: os 15, 30, 45, 60, 90, 120 e 180 minutos do cronômetro, quando o Avatar comemora. Na interface: "Começar agora", "Já treinei", "AO VIVO", "Manter a tela acesa".
 
@@ -74,7 +74,7 @@ Situações de verificação: `EmAndamento` (treino ao vivo, ADR 0078), `Aguarda
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 
-`Placar` (ADR 0066, 0067): a faixa no alto da praça do modo `Jogo` com a Classificacao de todos os participantes. Quando os itens não cabem, ela corre sozinha como um letreiro. Na interface, os itens mostram posição, retrato, primeiro nome e semanas cumpridas (★).
+Classificação do desafio (ADR 0079): fica na página do grupo, abaixo das "Regras do desafio", com uma frase que diz por que cada pessoa está à frente da seguinte. A praça do modo `Jogo` não tem Placar, só as medalhas 🥇🥈🥉.
 
 Modos da tela inicial: `App`, `Jogo` (ver `docs/gamificacao.md`). A tela do modo `Jogo` mostra a `Cena` do grupo; tocar num colega abre o `Foco`, a câmera aproximada nele. A `Mao` fica logo abaixo da praça, com a `Mesa` (as Jogadas de quem vê) embaixo das cartas.
 

@@ -23,7 +23,9 @@ export {
   getDataFim,
   getHojeNoFuso,
   getProximasSegundas,
+  getTotalSemanas,
 } from "./datas";
+export { RegrasDesafio } from "./RegrasDesafio";
 export { FaixaSemana } from "./FaixaSemana";
 export { HojeNoDesafio } from "./HojeNoDesafio";
 export {

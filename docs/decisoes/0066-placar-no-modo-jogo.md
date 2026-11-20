@@ -1,6 +1,6 @@
 # 0066 — Placar no modo Jogo
 
-**Status:** DECIDIDA. Complementa `0013-competicao-e-progresso.md` (o `resumo` passa a trazer todos os participantes) e `0023-gamificacao.md`. Não muda a ordem da Classificacao nem os princípios 1 e 7 de `gamificacao.md` §1.1. Complementada por `0067-placar-em-letreiro.md` (a faixa corre como letreiro).
+**Status:** SUBSTITUÍDA por `0079-desafio-em-destaque-na-pagina-do-grupo.md` (a praça não tem mais Placar). Complementa `0013-competicao-e-progresso.md` (o `resumo` passa a trazer todos os participantes) e `0023-gamificacao.md`. Não muda a ordem da Classificacao nem os princípios 1 e 7 de `gamificacao.md` §1.1. Complementada por `0067-placar-em-letreiro.md` (a faixa corre como letreiro).
 
 ## Contexto
 

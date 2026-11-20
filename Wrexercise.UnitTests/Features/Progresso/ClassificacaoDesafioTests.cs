@@ -88,43 +88,6 @@ public class ClassificacaoDesafioTests
     }
 
     [Fact]
-    public void CalcularRankingInicioSemana_NaPrimeiraSemana_NaoTemBase()
-    {
-        var ranking = ClassificacaoDesafio.CalcularRankingInicioSemana(
-            [(Guid.NewGuid(), "Ana")],
-            [],
-            Inicio,
-            Fim,
-            Inicio.AddDays(3),
-            Meta);
-
-        Assert.Null(ranking);
-    }
-
-    [Fact]
-    public void CalcularRankingInicioSemana_IgnoraASemanaAtual()
-    {
-        var ana = Guid.NewGuid();
-        var bob = Guid.NewGuid();
-        var participantes = new List<(Guid, string)> { (ana, "Ana"), (bob, "Bob") };
-        var matriz = new Dictionary<(Guid, int), (int, int)>
-        {
-            [(ana, 0)] = (4, 0),
-            [(bob, 0)] = (2, 0),
-            [(bob, 2)] = (4, 0),
-        };
-
-        var hoje = Inicio.AddDays(16);
-        var antes = ClassificacaoDesafio.CalcularRankingInicioSemana(participantes, matriz, Inicio, Fim, hoje, Meta);
-        var agora = ClassificacaoDesafio.CalcularRanking(participantes, matriz, Inicio, Fim, hoje, Meta);
-
-        Assert.NotNull(antes);
-        Assert.Equal(["Ana", "Bob"], antes.Select(r => r.NomeExibicao));
-        Assert.Equal(0, antes[1].SemanasCumpridas);
-        Assert.Equal(["Bob", "Ana"], agora.Select(r => r.NomeExibicao));
-    }
-
-    [Fact]
     public void GetProximo_Lider_MostraAVantagemEmTreinos()
     {
         var (ana, ranking) = Ranking(("Ana", 2, 10), ("Bob", 2, 7));

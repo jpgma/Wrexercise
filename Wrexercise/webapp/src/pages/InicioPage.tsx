@@ -229,23 +229,21 @@ function InicioJogo({
 }) {
   // Com meta, o progresso fica no cabeçalho (anel no avatar e saudação alternada).
   const temMeta = !!(resumo?.meuProgresso && resumo.sessoesPorSemana);
-  // Placar e medalhas só com o desafio em curso ou encerrado, e só quando alguém já tem atividade
-  // verificada: no começo, com todos zerados, a ordem seria só alfabética (ADR 0066).
+  // Medalhas só com o desafio em curso ou encerrado, e só quando alguém já tem atividade
+  // verificada: no começo, com todos zerados, a ordem seria só alfabética.
   const comClassificacao =
     resumo?.desafio &&
     resumo.desafio.situacao !== "Agendado" &&
     resumo.desafio.situacao !== "Cancelado" &&
     resumo.classificacao.some((c) => c.sessoesVerificadas > 0);
-  const placar = comClassificacao
-    ? {
-        itens: resumo.classificacao,
-        encerrado: resumo.desafio?.situacao === "Encerrado",
-      }
-    : undefined;
 
   return (
     <div className="mt-6 space-y-4">
-      <CenaGrupo grupoId={grupoId} usuarioId={usuarioId} placar={placar} />
+      <CenaGrupo
+        grupoId={grupoId}
+        usuarioId={usuarioId}
+        classificacao={comClassificacao ? resumo.classificacao : undefined}
+      />
       {!temMeta && resumo && (
         <p className="card p-4 text-sm text-muted">
           {!resumo.desafio

@@ -43,21 +43,7 @@ internal static class ObterResumoGrupo
             desafio.DataFim,
             desafio.Hoje,
             desafio.SessoesPorSemana);
-
-        // As setas do Placar só fazem sentido com o desafio em curso (ADR 0066).
         var ativo = destacado.Situacao == SituacaoDesafio.Ativo;
-        var inicioSemana = ativo
-            ? ClassificacaoDesafio.CalcularRankingInicioSemana(
-                participantes,
-                matriz,
-                desafio.DataInicio,
-                desafio.DataFim,
-                desafio.Hoje,
-                desafio.SessoesPorSemana)
-            : null;
-        var posicaoAnterior = inicioSemana?
-            .Select((item, index) => (item.UsuarioId, Posicao: index + 1))
-            .ToDictionary(item => item.UsuarioId, item => item.Posicao);
 
         var classificacao = ranking.Select((item, index) => new ClassificacaoResumoItemResponse(
             index + 1,
@@ -65,8 +51,7 @@ internal static class ObterResumoGrupo
             item.NomeExibicao,
             item.SemanasCumpridas,
             item.SessoesVerificadas,
-            item.SequenciaSemanas,
-            posicaoAnterior?.GetValueOrDefault(item.UsuarioId))).ToList();
+            item.SequenciaSemanas)).ToList();
 
         ProgressoResumoResponse? meuProgresso = null;
         if (!desafio.Cancelado)

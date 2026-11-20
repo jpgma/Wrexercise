@@ -48,8 +48,7 @@ internal sealed record ClassificacaoResumoItemResponse(
     string NomeExibicao,
     int SemanasCumpridas,
     int SessoesVerificadas,
-    int SequenciaSemanas,
-    int? PosicaoInicioSemana);
+    int SequenciaSemanas);
 
 internal sealed record ResumoGrupoResponse(
     Guid GrupoId,

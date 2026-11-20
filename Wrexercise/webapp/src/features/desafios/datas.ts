@@ -42,6 +42,14 @@ export function getDataFim(dataInicio: string, semanas: number): string {
   return addDias(dataInicio, semanas * 7 - 1);
 }
 
+/** As semanas de um desafio, que sempre vai de uma segunda a um domingo. */
+export function getTotalSemanas(dataInicio: string, dataFim: string): number {
+  return Math.round(
+    (toUtc(dataFim).getTime() - toUtc(dataInicio).getTime() + diaEmMs) /
+      (7 * diaEmMs),
+  );
+}
+
 /** Quanto falta para o fim do domingo no fuso do grupo, como "3 dias e 8h". */
 export function formatarTempoAteFim(fim: string, fusoHorario: string): string {
   const hoje = getHojeNoFuso(fusoHorario);

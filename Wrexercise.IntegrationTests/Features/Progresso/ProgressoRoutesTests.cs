@@ -261,7 +261,7 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ResumoGrupo_TrazTodosComAPosicaoDoInicioDaSemanaEADisputa()
+    public async Task ResumoGrupo_TrazTodosNaOrdemEADisputa()
     {
         var ana = await _host.CreateUsuarioAsync("Ana");
         var grupoId = await _host.CreateGrupoAsync(ana);
@@ -291,7 +291,6 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         var resumo = await GetResumoAsync(caio, grupoId);
 
         Assert.Equal(["Ana", "Bia", "Caio", "Duda"], resumo.Classificacao.Select(c => c.NomeExibicao));
-        Assert.Equal([2, 1, 3, 4], resumo.Classificacao.Select(c => c.PosicaoInicioSemana));
         Assert.Equal(new ProximoClassificacaoResponse("Treinos", "Bia", 2), resumo.Proximo);
         Assert.Equal(
             new ProximoClassificacaoResponse("Lider", "Bia", 0),

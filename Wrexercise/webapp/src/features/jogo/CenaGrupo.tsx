@@ -32,7 +32,6 @@ import { CelebracaoConquista } from "./CelebracaoConquista";
 import { type DestinoChegada, PainelChegada } from "./PainelChegada";
 import { PainelFoco } from "./PainelFoco";
 import type { RespostaEnviada } from "./RespostaCarta";
-import { type PlacarCena, PlacarJogo } from "./PlacarJogo";
 import { getTipoCutucada } from "./textosCutucada";
 import { getBloqueioJogada, primeiroNome } from "./textosCartas";
 import {
@@ -548,16 +547,23 @@ export type ChegadaNaCena = {
   onConcluir: (destino: DestinoChegada) => void;
 };
 
+/** Um participante na classificação do desafio em destaque: o que as medalhas da praça usam. */
+export type PosicaoNaCena = {
+  posicao: number;
+  usuarioId: string;
+  sessoesVerificadas: number;
+};
+
 export function CenaGrupo({
   grupoId,
   usuarioId,
-  placar,
+  classificacao,
   chegada,
 }: {
   grupoId: string;
   usuarioId: string;
-  /** A classificação do desafio em destaque; sem ela, nem Placar nem medalhas. */
-  placar?: PlacarCena;
+  /** A classificação do desafio em destaque; sem ela, nada de medalhas. */
+  classificacao?: PosicaoNaCena[];
   chegada?: ChegadaNaCena;
 }) {
   const cena = useCena(grupoId);
@@ -582,7 +588,7 @@ export function CenaGrupo({
       grupoId={grupoId}
       usuarioId={usuarioId}
       reduzido={reduzido}
-      placar={placar}
+      classificacao={classificacao}
       chegada={chegada}
     />
   );
@@ -672,14 +678,14 @@ function Praca({
   grupoId,
   usuarioId,
   reduzido,
-  placar,
+  classificacao,
   chegada,
 }: {
   cena: Cena;
   grupoId: string;
   usuarioId: string;
   reduzido: boolean;
-  placar: PlacarCena | undefined;
+  classificacao: PosicaoNaCena[] | undefined;
   chegada: ChegadaNaCena | undefined;
 }) {
   const { ref, fator } = useFatorDeEncaixe();
@@ -688,11 +694,11 @@ function Praca({
   const posicaoNoPodio = useMemo(
     () =>
       new Map(
-        (placar?.itens ?? [])
+        (classificacao ?? [])
           .filter((p) => p.posicao <= 3 && p.sessoesVerificadas > 0)
           .map((p) => [p.usuarioId, p.posicao]),
       ),
-    [placar],
+    [classificacao],
   );
   const jogadas = useJogadas(grupoId);
   const { mutate: marcarVistas } = useMarcarJogadasVistas(grupoId);
@@ -713,11 +719,6 @@ function Praca({
       new Set(
         membros.filter((m) => m.pose === "dormindo").map((m) => m.usuarioId),
       ),
-    [membros],
-  );
-  const aoVivo = useMemo(
-    () =>
-      new Set(membros.filter((m) => m.treinoAoVivo).map((m) => m.usuarioId)),
     [membros],
   );
   const { despertos, marcarVistos: marcarDespertosVistos } = useDespertos(
@@ -1065,18 +1066,6 @@ function Praca({
             >
               VS
             </span>
-          )}
-          {placar && (
-            <PlacarJogo
-              placar={placar}
-              usuarioId={usuarioId}
-              dormindo={dormindo}
-              aoVivo={aoVivo}
-              oculto={emFoco || emChegada || entrada.ativa || encenacao.ativa}
-              onToque={(id) => {
-                if (!emAcao) foco.abrir(id);
-              }}
-            />
           )}
           {alvo && (
             <PainelFoco

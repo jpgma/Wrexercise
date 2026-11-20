@@ -1,6 +1,6 @@
 # 0067 — Placar em letreiro
 
-**Status:** DECIDIDA. Complementa `0066-placar-no-modo-jogo.md`: muda só como a faixa do Placar se move. O conteúdo dos itens, a ordem e as regras de quando o Placar aparece continuam os da 0066.
+**Status:** SUBSTITUÍDA por `0079-desafio-em-destaque-na-pagina-do-grupo.md` (a praça não tem mais Placar). Complementa `0066-placar-no-modo-jogo.md`: muda só como a faixa do Placar se move. O conteúdo dos itens, a ordem e as regras de quando o Placar aparece continuam os da 0066.
 
 ## Contexto
 

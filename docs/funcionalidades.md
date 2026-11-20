@@ -109,7 +109,7 @@ The user cannot change the e-mail.
 ### 3.3.2. Game home screen (scene)
 
 - In the mode `Jogo`, the home screen of a group shows the scene and the notice of activities to review. The weekly ring is in the header, around the `Avatar` of the user. The ring has one segment for each activity of the weekly goal. A verified activity fills one segment. An activity that waits for verification fills one segment in a light colour.
-- In the mode `Jogo`, with a weekly goal, the header text changes every 4 seconds. It shows the greeting and the date, then the progress message and its detail (see "Weekly progress message" below). When the featured challenge is active, a third text shows the race in the ranking (`proximo`, see "Scoreboard" below). A tap on the text shows the other text and stops the change. The change also stops while the pointer is on the text. Screen readers always get the greeting, the progress message and the race text. If the device asks for reduced motion, the text does not change: the header shows the greeting and the detail of the progress message. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
+- In the mode `Jogo`, with a weekly goal, the header text changes every 4 seconds. It shows the greeting and the date, then the progress message and its detail (see "Weekly progress message" below). When the featured challenge is active, a third text shows the race in the ranking (`proximo`, see below). A tap on the text shows the other text and stops the change. The change also stops while the pointer is on the text. Screen readers always get the greeting, the progress message and the race text. If the device asks for reduced motion, the text does not change: the header shows the greeting and the detail of the progress message. The screen does not have its own button "Registrar atividade": the navigation has it. The screen does not show the list of recent activities.
 - The scene (`Cena`) is a rooftop plaza ("praça") of 360 by 400 px, seen from the front and from above at the same angle as the avatars. The back wall, the buildings and the floor are part of the image. The sky is transparent: the background of the app shows through it. The scene shows one `Avatar` for each active member, on a wide and low ellipse in the centre of the floor. An `Avatar` at the front hides a part of the `Avatar` behind it. The current user stands at the front (bottom). The other members follow in the order of joining.
 - With 10 members, the ellipse has its full size. With fewer members, the ellipse becomes smaller and the members stand closer, with the same distance between neighbours. The ellipse always keeps a minimum height, so that the `Avatar` at the back stays visible above the `Avatar` at the front.
 - The objects on the floor (the pull-up bar, the boxes and the planters) are separate images. The scene sorts them by their base, as it sorts the avatars: an `Avatar` behind an object is partly hidden by the object.
@@ -117,10 +117,7 @@ The user cannot change the e-mail.
 - The `Avatar` is always 2 times larger. The number of members does not change its size. The `Enfeite` items stand on the floor at the same scale (see 3.3.6).
 - The names of the members are in a layer above all the avatars. No avatar hides the name of another one.
 - The first 3 members of the ranking of the featured challenge always show a medal below the `Avatar`: 🥇, 🥈 or 🥉. When the name shows, the medal is before the name. The medals show only when the featured challenge is active or ended, and only for a member with one or more verified activities in the challenge. The data comes from `classificacao` in `GET /api/grupos/{id}/resumo`. The screen reader name of the `Avatar` includes the position (for example "Ana, 1º lugar no desafio").
-- Scoreboard (`Placar`, ADR 0066): a strip at the top of the plaza shows all the participants of the featured challenge, in the order of the ranking. Each item shows the position, the portrait, the first name and the number of weeks with the goal met (★). The item of the current user shows "Você" and has a colour. The strip scrolls horizontally. When it opens, it scrolls to the current user. The camera does not move the strip. When the items do not fit in the strip, the strip moves automatically as a ticker (ADR 0067): it moves to the left at a constant speed and it starts again after the last item, with a ◆ mark between the last item and the first item. A touch, a drag, the mouse pointer or keyboard focus stops the ticker. The ticker starts again 3 seconds after the last movement. The user can drag the strip in the two directions. The ticker does not move if all the items fit or if the system asks for reduced motion.
-- The scoreboard shows with the same rules as the medals. It does not show in the focus view or during a card event. A tap on an item opens the focus view of that member.
-- When the challenge is active, from the second week, an item shows "▲N" or "▼N" if the position changed since the start of the current week. A member who sleeps (`dormindo`) has a faded item with "💤". When the challenge ended, the strip shows the final ranking with the label "FINAL" and no arrows. The scoreboard does not show Energy.
-- In `GET /api/grupos/{id}/resumo`, `classificacao` has all the participants. Each item has `posicao`, `usuarioId`, `nomeExibicao`, `semanasCumpridas`, `sessoesVerificadas`, `sequenciaSemanas` and `posicaoInicioSemana`. `posicaoInicioSemana` is the position at the end of the previous week. It is null in the first week and when the challenge is not active.
+- In `GET /api/grupos/{id}/resumo`, `classificacao` has all the participants. Each item has `posicao`, `usuarioId`, `nomeExibicao`, `semanasCumpridas`, `sessoesVerificadas` and `sequenciaSemanas`. There is no scoreboard in the plaza (ADR 0079): the ranking is on the group page.
 - `proximo` in the same response is the race of the current user. It is null when the challenge is not active, when the user does not take part, when the user is alone, or when nobody has a verified activity. `tipo` is one of these:
   - `Lider`: the user is first. `quantidade` is the lead in activities over the second member when they have the same number of met weeks. Otherwise, it is 0. Text: "Na liderança!".
   - `Treinos`: the member above has the same number of met weeks. `quantidade` is the number of activities to pass that member. Text: "Faltam N treinos para passar Ana."
@@ -129,7 +126,7 @@ The user cannot change the e-mail.
 - On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
 - `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado", "recebeCartas": true, "dormindoDesde": null }] }`. `recebeCartas` is true when the member is in the mode `Jogo`. `dormindoDesde` has a value only when the pose is `dormindo`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
 - The pose is `treinando` if the member has a live workout in this group (`EmAndamento`, see 7.1.2), or an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
-- A member with a live workout has `treinoAoVivo` in the scene response: `atividadeId`, `tipo`, `startedAt`, `torcidas` (the number of cheers) and `torcidaPorMimEm` (the last cheer of the user who reads). The `Avatar` plays `correr` for `Corrida`, `andar` for `Caminhada` and `treinando` for the other types. Above the head, a label shows "AO VIVO", the minutes and 📣 with the number of cheers. In the `Placar`, the item has the label "AO VIVO". Members with a live workout stand side by side, after the user who reads (Treino junto).
+- A member with a live workout has `treinoAoVivo` in the scene response: `atividadeId`, `tipo`, `startedAt`, `torcidas` (the number of cheers) and `torcidaPorMimEm` (the last cheer of the user who reads). The `Avatar` plays `correr` for `Corrida`, `andar` for `Caminhada` and `treinando` for the other types. Above the head, a label shows "AO VIVO", the minutes and 📣 with the number of cheers. Members with a live workout stand side by side, after the user who reads (Treino junto).
 - The scene asks the server again each 30 seconds while the page is visible.
 - In the focus view (`Foco`) of a colleague with a live workout, the chip "Ao vivo há N min" and the button "Torcer por Ana" show. `POST /api/atividades/{id}/torcida` sends a cheer (`Torcida`). Each member can cheer one time each 10 minutes for each workout: else `429 TORCIDA_MUITO_CEDO`. The author cannot cheer: `403 TORCIDA_PROPRIA`. A workout that is not live: `409 TREINO_NAO_EM_ANDAMENTO`. A user that is not a member: `404 ATIVIDADE_NAO_ENCONTRADA`. The author gets the notification `Torcida`, only in the list. The feed shows a live workout with "treinando agora" and the button "Torcer".
 - Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.
@@ -808,11 +805,19 @@ An administrator can also change the status to `Anulada` (see 8.4).
 
 ### 9.2. Group goal for the week
 
-The group page shows the total of verified days of all members in the current week. The target is the goal multiplied by the number of members who count in this week. A new member does not decrease the group result.
+The group page shows the featured challenge first (ADR 0079):
+
+- A card with the name, the status, the progress of the challenge ("Semana 3 de 8 · até 29 de dez.") and a bar with one part for each week.
+- The rules of the challenge ("Regras do desafio") as a list: the dates and the number of weeks, the goal in days for each week, the minimum duration for each day (the activities of one day add up), the type goals (different types add up in proportion), only verified activities count, how a member wins and the tie rules, the number of participants and the rule for a member who joins during the challenge, and the time zone.
+- A link "Detalhes e seu histórico" to the challenge page.
+- The ranking (see 9.3).
+- One line about the current week: "Esta semana: 14/24 dias verificados do grupo · fecha em 2 dias e 5h". The first number is the total of verified days of all members in the current week, up to the goal of each member. The second number is the goal multiplied by the number of members who count in this week. A new member does not decrease the group result.
+
+The group page does not show the weekly progress of each member. The challenge page shows it, in the section "Esta semana", only when the challenge is active.
 
 ### 9.3. Ranking
 
-The challenge page shows the ranking. The order is:
+The group page and the challenge page show the ranking of the whole challenge. The order is:
 
 1. Number of completed weeks.
 2. Total number of verified days in the challenge.
@@ -821,10 +826,15 @@ The challenge page shows the ranking. The order is:
 
 The application does not use points.
 
+- Each item shows the position, the portrait, the first name, the number of completed weeks, the number of verified days and the streak (🔥, from 2 weeks). A tap on an item opens the page of the member.
+- Below the name, a short text tells why the member is above the next member. The text uses the first criterion that is different: "1 semana à frente de Bia", "Empate em semanas, 3 dias a mais que você", "Empate em semanas e dias, sequência maior que Caio" or "Empate com Duda". The last item has no text.
+- When the challenge ended, the title is "Classificação final".
+- When the challenge is scheduled, or when nobody has a verified day, a text replaces the list.
+
 ### 9.4. History
 
 - The challenge page shows a chart with the history of the weeks of the current user.
-- The group summary shows the featured challenge, the weekly progress of the user and all the members of the ranking (see 3.3.2, "Scoreboard"). Each ranking item has the `usuarioId` of the member.
+- The group summary shows the featured challenge, the weekly progress of the user and all the members of the ranking (see 9.3). Each ranking item has the `usuarioId` of the member.
 - Each `Avatar` that has a user ID shows the portrait: the head and shoulders of the front frame of the default sheet in the app bundle. While import is paused, all users have the same default sheet (see 3.3.5). If the ID is missing, the `Avatar` shows the initials.
 
 ## 10. Profile, member page and achievements

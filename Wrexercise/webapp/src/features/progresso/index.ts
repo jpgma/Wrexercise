@@ -1,4 +1,5 @@
 export { LinhaParticipante, SituacaoParticipante } from "./LinhaParticipante";
+export { ListaClassificacao } from "./ListaClassificacao";
 export { getDisputa, getMotivacao, type Motivacao } from "./motivacao";
 export {
   useClassificacao,

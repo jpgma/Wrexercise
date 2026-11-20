@@ -1,33 +1,18 @@
-import {
-  CalendarDays,
-  Clock,
-  CloudOff,
-  Flame,
-  Globe,
-  ListChecks,
-  Medal,
-  Repeat,
-  Target,
-  type LucideIcon,
-} from "lucide-react";
+import { CloudOff, Target } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { HistoryChart } from "@/components/HistoryChart";
 import { PageHeader, SectionTitle } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
-import { tipoAtividadeLabels } from "@/features/atividades";
 import { useSessao } from "@/features/autenticacao";
 import {
   canGerenciarDesafios,
-  formatarData,
   formatarDiaEMes,
-  formatarDuracao,
   formatarSemanaCurta,
-  getRotuloMeta,
   isDesafioAberto,
+  RegrasDesafio,
   situacaoLabels,
   useCancelarDesafio,
   useDesafio,
@@ -37,28 +22,11 @@ import {
 } from "@/features/desafios";
 import {
   LinhaParticipante,
+  ListaClassificacao,
   useClassificacao,
   useHistoricoSemanal,
 } from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
-
-function Dado({
-  icon: Icon,
-  titulo,
-  valor,
-}: {
-  icon: LucideIcon;
-  titulo: string;
-  valor: string;
-}) {
-  return (
-    <div className="rounded-xl bg-surface-muted p-3">
-      <Icon aria-hidden="true" className="size-4 text-link" />
-      <p className="mt-2 text-xs text-muted">{titulo}</p>
-      <p className="text-sm font-semibold break-words">{valor}</p>
-    </div>
-  );
-}
 
 function ProgressoSection({ desafio }: { desafio: Desafio }) {
   const { data: usuario } = useSessao();
@@ -66,7 +34,7 @@ function ProgressoSection({ desafio }: { desafio: Desafio }) {
 
   return (
     <>
-      <SectionTitle>Progresso desta semana</SectionTitle>
+      <SectionTitle>Esta semana</SectionTitle>
       {progresso.isPending && (
         <p role="status" className="py-8 text-center text-sm text-muted">
           Carregando…
@@ -111,74 +79,34 @@ function ProgressoSection({ desafio }: { desafio: Desafio }) {
   );
 }
 
-function ClassificacaoSection({ desafioId }: { desafioId: string }) {
+function ClassificacaoSection({ desafio }: { desafio: Desafio }) {
   const { data: usuario } = useSessao();
-  const classificacao = useClassificacao(desafioId);
+  const classificacao = useClassificacao(desafio.id);
+  const participantes = classificacao.data?.participantes ?? [];
 
   return (
     <>
-      <SectionTitle>Classificação</SectionTitle>
+      <SectionTitle>
+        {desafio.situacao === "Encerrado"
+          ? "Classificação final"
+          : "Classificação"}
+      </SectionTitle>
       {classificacao.isError && (
         <p role="alert" className="form-error">
           {getErrorMessage(classificacao.error)}
         </p>
       )}
       {classificacao.data &&
-        (classificacao.data.participantes.length === 0 ? (
-          <p className="card p-4 text-sm text-muted">
-            Ainda não há participantes neste desafio.
-          </p>
+        (participantes.some((p) => p.sessoesVerificadas > 0) ? (
+          <ListaClassificacao
+            participantes={participantes}
+            usuarioId={usuario?.id}
+            grupoId={desafio.grupoId}
+          />
         ) : (
-          <ol className="card divide-y divide-border">
-            {classificacao.data.participantes.map((item) => (
-              <li
-                key={item.usuarioId}
-                className="flex items-center gap-3 p-3.5"
-              >
-                <span
-                  className={`badge-rank ${item.posicao === 1 ? "badge-rank-1" : ""}`}
-                >
-                  {item.posicao}
-                </span>
-                <Avatar
-                  nome={item.nomeExibicao}
-                  id={item.usuarioId}
-                  size={34}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">
-                    {item.nomeExibicao}
-                    {item.usuarioId === usuario?.id && (
-                      <span className="font-normal text-muted"> (você)</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted">
-                    {item.semanasCumpridas}{" "}
-                    {item.semanasCumpridas === 1
-                      ? "semana cumprida"
-                      : "semanas cumpridas"}{" "}
-                    · {item.sessoesVerificadas}{" "}
-                    {item.sessoesVerificadas === 1
-                      ? "verificada"
-                      : "verificadas"}
-                  </p>
-                </div>
-                {item.sequenciaSemanas > 0 && (
-                  <span className="flex shrink-0 items-center gap-1 text-xs font-semibold">
-                    <Flame aria-hidden="true" className="size-4 text-warning" />
-                    {item.sequenciaSemanas}
-                    <span className="sr-only">semanas seguidas</span>
-                  </span>
-                )}
-                {item.posicao === 1 && (
-                  <Medal
-                    aria-label="Primeiro lugar"
-                    className="size-5 shrink-0 text-link"
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
+          <p className="card p-4 text-sm text-muted">
+            A classificação aparece com o primeiro dia de treino verificado.
+          </p>
         ))}
     </>
   );
@@ -291,7 +219,7 @@ function DesafioConteudo({ desafio }: { desafio: Desafio }) {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Meta do grupo" back={`/grupos/${desafio.grupoId}`} />
+      <PageHeader title="Desafio" back={`/grupos/${desafio.grupoId}`} />
 
       <div className="card p-5">
         <div className="flex items-start justify-between gap-3">
@@ -326,62 +254,15 @@ function DesafioConteudo({ desafio }: { desafio: Desafio }) {
             )}
           </>
         )}
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <Dado
-            icon={Repeat}
-            titulo="Dias por semana"
-            valor={String(desafio.sessoesPorSemana)}
-          />
-          <Dado
-            icon={Clock}
-            titulo="Mínimo por dia"
-            valor={formatarDuracao(desafio.duracaoMinimaSegundos)}
-          />
-          {desafio.metasPorTipo.length > 0 && (
-            <div className="col-span-2 rounded-xl bg-surface-muted p-3">
-              <ListChecks aria-hidden="true" className="size-4 text-link" />
-              <p className="mt-2 text-xs text-muted">
-                Mínimo por tipo · tipos diferentes somam em proporção
-              </p>
-              <ul className="mt-1 space-y-1">
-                {desafio.metasPorTipo.map((meta) => (
-                  <li
-                    key={meta.id}
-                    className="text-sm font-semibold break-words"
-                  >
-                    {formatarDuracao(meta.duracaoMinimaSegundos)} de{" "}
-                    {getRotuloMeta(meta)}
-                    {meta.nome && (
-                      <span className="font-normal text-muted">
-                        {" "}
-                        (
-                        {meta.tipos
-                          .map((t) => tipoAtividadeLabels[t])
-                          .join(", ")}
-                        )
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <Dado
-            icon={CalendarDays}
-            titulo="Período"
-            valor={`${formatarData(desafio.dataInicio)} – ${formatarData(desafio.dataFim)}`}
-          />
-          <Dado
-            icon={Globe}
-            titulo="Fuso do grupo"
-            valor={desafio.fusoHorario.replaceAll("_", " ")}
-          />
-        </div>
+        <h3 className="mt-5 text-xs font-semibold tracking-wide text-muted uppercase">
+          Regras do desafio
+        </h3>
+        <RegrasDesafio desafio={desafio} />
       </div>
 
-      <ProgressoSection desafio={desafio} />
-      <ClassificacaoSection desafioId={desafio.id} />
+      <ClassificacaoSection desafio={desafio} />
       {desafio.participando && <HistoricoSection desafioId={desafio.id} />}
+      {desafio.situacao === "Ativo" && <ProgressoSection desafio={desafio} />}
 
       {podeGerenciar && (
         <button

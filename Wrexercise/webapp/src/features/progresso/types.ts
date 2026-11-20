@@ -61,8 +61,6 @@ export type ClassificacaoResumoItem = {
   semanasCumpridas: number;
   sessoesVerificadas: number;
   sequenciaSemanas: number;
-  /** A posição no fim da semana anterior; `null` na primeira semana ou fora de `Ativo`. */
-  posicaoInicioSemana: number | null;
 };
 
 export type ProximoClassificacao = {

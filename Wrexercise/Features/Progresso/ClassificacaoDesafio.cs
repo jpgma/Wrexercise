@@ -80,38 +80,6 @@ internal static class ClassificacaoDesafio
             .ToList();
     }
 
-    /// <summary>
-    /// A classificação no fim da semana anterior, base das setas do Placar: as semanas a partir
-    /// da atual ficam de fora.
-    /// </summary>
-    /// <returns><c>null</c> na primeira semana ou fora do período.</returns>
-    public static IReadOnlyList<EstatisticasParticipante>? CalcularRankingInicioSemana(
-        IReadOnlyList<(Guid UsuarioId, string NomeExibicao)> participantes,
-        Dictionary<(Guid UsuarioId, int IndiceSemana), (int Verificadas, int Pendentes)> matriz,
-        DateOnly inicio,
-        DateOnly fim,
-        DateOnly hoje,
-        int sessoesPorSemana)
-    {
-        var semana = CalculoSemanaDesafio.GetSemana(inicio, fim, hoje);
-        if (semana is null || semana.Numero == 1)
-        {
-            return null;
-        }
-
-        var indiceAtual = semana.Numero - 1;
-        var anteriores = matriz
-            .Where(item => item.Key.IndiceSemana < indiceAtual)
-            .ToDictionary(item => item.Key, item => item.Value);
-        return CalcularRanking(
-            participantes,
-            anteriores,
-            inicio,
-            fim,
-            semana.Inicio.AddDays(-1),
-            sessoesPorSemana);
-    }
-
     /// <summary>Quem a pessoa persegue na classificação, ou a vantagem dela quando lidera.</summary>
     /// <returns><c>null</c> se ela não participa, se está sozinha ou se ninguém tem treino verificado.</returns>
     public static ProximoClassificacao? GetProximo(

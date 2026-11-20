@@ -4,7 +4,6 @@ import {
   CloudOff,
   LogOut,
   Plus,
-  Target,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -14,6 +13,7 @@ import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { SectionTitle } from "@/components/PageHeader";
+import { Segments } from "@/components/Segments";
 import { SplashScreen } from "@/components/SplashScreen";
 import { useAtividadesFeed } from "@/features/atividades";
 import { useSessao } from "@/features/autenticacao";
@@ -22,10 +22,13 @@ import {
   formatarData,
   formatarMeta,
   formatarTempoAteFim,
+  getTotalSemanas,
+  RegrasDesafio,
   situacaoLabels,
   useDesafio,
   useDesafios,
   useProgresso,
+  type Desafio,
 } from "@/features/desafios";
 import { AvisoAvaliacao, FeedAtividade } from "@/features/feed";
 import {
@@ -36,7 +39,11 @@ import {
   useMembros,
   useSairDoGrupo,
 } from "@/features/grupos";
-import { LinhaParticipante, useResumoGrupo } from "@/features/progresso";
+import {
+  ListaClassificacao,
+  useResumoGrupo,
+  type ClassificacaoParticipante,
+} from "@/features/progresso";
 import { ApiError, getErrorMessage } from "@/services/api";
 
 function getIniciais(nome: string): string {
@@ -48,107 +55,152 @@ function getIniciais(nome: string): string {
     .join("");
 }
 
-/** O cartão do grupo e a turma mostram o desafio atual; sem ele, sobra só o nome do grupo. */
-function CabecalhoComDesafio({
+/** "Semana 3 de 8 · até 29 de dez. de 2026", conforme a situação do desafio. */
+function getAndamento(desafio: Desafio, semana: number | undefined): string {
+  const total = getTotalSemanas(desafio.dataInicio, desafio.dataFim);
+  const semanas = `${total} ${total === 1 ? "semana" : "semanas"}`;
+  switch (desafio.situacao) {
+    case "Agendado":
+      return `Começa em ${formatarData(desafio.dataInicio)} · ${semanas}`;
+    case "Ativo":
+      return semana
+        ? `Semana ${semana} de ${total} · até ${formatarData(desafio.dataFim)}`
+        : semanas;
+    case "Encerrado":
+      return `Terminou em ${formatarData(desafio.dataFim)} · ${semanas}`;
+    case "Cancelado":
+      return "Cancelado";
+  }
+}
+
+/**
+ * O desafio em destaque, inteiro: andamento, regras, classificação e uma linha sobre a semana.
+ * A classificação vem do `resumo`, que já traz todos os participantes na ordem.
+ */
+function DesafioEmDestaque({
   desafioId,
-  nome,
-  totalMembros,
-  usuarioId,
   grupoId,
+  usuarioId,
+  classificacao,
 }: {
   desafioId: string;
-  nome: string;
-  totalMembros: number;
-  usuarioId: string | undefined;
   grupoId: string;
+  usuarioId: string | undefined;
+  classificacao: ClassificacaoParticipante[];
 }) {
   const desafio = useDesafio(desafioId);
   const progresso = useProgresso(desafioId);
 
+  if (desafio.isError) {
+    return (
+      <p role="alert" className="form-error mt-4">
+        {getErrorMessage(desafio.error)}
+      </p>
+    );
+  }
+  if (!desafio.data) {
+    return (
+      <p role="status" className="py-8 text-center text-sm text-muted">
+        Carregando o desafio…
+      </p>
+    );
+  }
+
+  const d = desafio.data;
+  const total = getTotalSemanas(d.dataInicio, d.dataFim);
+  const semanaAtual = progresso.data?.semanaAtual ?? null;
+  const semanasPassadas =
+    d.situacao === "Encerrado"
+      ? total
+      : semanaAtual
+        ? semanaAtual.numero - 1
+        : 0;
+  const comecou = d.situacao === "Ativo" || d.situacao === "Encerrado";
+  const alguemPontuou = classificacao.some((c) => c.sessoesVerificadas > 0);
+
+  // A semana do grupo: os dias verificados de quem conta nesta semana, até a meta de cada um.
   const meta = progresso.data?.sessoesPorSemana ?? 0;
-  const participantes = progresso.data?.participantes ?? [];
-  const contando = participantes.filter((p) => p.contaNestaSemana);
-  const totalFeito = contando.reduce(
+  const contando =
+    progresso.data?.participantes.filter((p) => p.contaNestaSemana) ?? [];
+  const feitoNaSemana = contando.reduce(
     (soma, p) => soma + Math.min(p.sessoesVerificadas, meta),
     0,
   );
-  const objetivo = meta * contando.length;
-  const faltam = objetivo - totalFeito;
-  const fim = progresso.data?.semanaAtual?.fim;
-  const ordenados = [...participantes].sort(
-    (a, b) =>
-      b.sessoesVerificadas - a.sessoesVerificadas ||
-      b.sessoesProvisorias - a.sessoesProvisorias,
-  );
+  const objetivoDaSemana = meta * contando.length;
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-2xl border-2 border-outline bg-brand p-5 text-on-brand shadow-sticker">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-4 -right-4 size-36 halftone-ink"
-        />
-        <div className="relative flex items-center gap-3">
-          <div className="grid size-14 shrink-0 rotate-[-4deg] place-items-center rounded-xl border-2 border-outline bg-reward font-display text-xl text-on-reward">
-            {getIniciais(nome)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-3xl uppercase">{nome}</h1>
-            <p className="truncate text-sm opacity-90">
-              {totalMembros} {totalMembros === 1 ? "membro" : "membros"}
-              {desafio.data && ` · ${desafio.data.nome}`}
-            </p>
-          </div>
+      <section className="card mt-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-semibold tracking-wide text-muted uppercase">
+            {d.situacao === "Agendado"
+              ? "Próximo desafio"
+              : d.situacao === "Encerrado"
+                ? "Último desafio"
+                : "Desafio atual"}
+          </p>
+          <span className="chip">{situacaoLabels[d.situacao]}</span>
         </div>
-        {objetivo > 0 && (
-          <div className="relative mt-5">
-            <div className="flex items-end justify-between">
-              <p className="text-sm opacity-90">Treinos do grupo na semana</p>
-              <p className="font-display text-2xl">
-                {totalFeito}
-                <span className="text-base opacity-80">/{objetivo}</span>
-              </p>
-            </div>
-            <div
-              aria-hidden="true"
-              className="mt-2 h-3 overflow-hidden rounded-sm border-2 border-outline bg-surface"
-            >
-              <div
-                className="h-full bg-progress"
-                style={{ width: `${(totalFeito / objetivo) * 100}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs opacity-90">
-              {faltam > 0
-                ? `Faltam ${faltam} treinos verificados para todo mundo bater a meta`
-                : "Todo mundo bateu a meta!"}
-              {fim &&
-                desafio.data &&
-                ` · ${formatarTempoAteFim(fim, desafio.data.fusoHorario)}`}
-            </p>
+        <h2 className="mt-1 text-2xl break-words uppercase">{d.nome}</h2>
+        {d.descricao && (
+          <p className="mt-1 text-sm break-words whitespace-pre-line text-muted">
+            {d.descricao}
+          </p>
+        )}
+        <p className="mt-3 text-sm font-semibold">
+          {getAndamento(d, semanaAtual?.numero)}
+        </p>
+        {comecou && (
+          <div className="mt-2">
+            <Segments
+              label={`Semanas do desafio: ${semanasPassadas} de ${total} concluídas`}
+              valor={semanasPassadas}
+              provisorio={semanaAtual ? semanaAtual.numero : semanasPassadas}
+              max={total}
+            />
           </div>
         )}
+
+        <h3 className="mt-5 text-xs font-semibold tracking-wide text-muted uppercase">
+          Regras do desafio
+        </h3>
+        <RegrasDesafio desafio={d} />
+
+        <Link
+          to={`/desafios/${d.id}`}
+          className="mt-3 flex items-center gap-1 text-sm font-semibold text-link"
+        >
+          Detalhes e seu histórico
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </Link>
       </section>
 
-      {ordenados.length > 0 && (
-        <>
-          <SectionTitle>Como está a turma</SectionTitle>
-          <div className="card p-3">
-            {ordenados.map((p) => (
-              <LinhaParticipante
-                key={p.usuarioId}
-                usuarioId={p.usuarioId}
-                nomeExibicao={p.nomeExibicao}
-                verificadas={p.sessoesVerificadas}
-                provisorias={p.sessoesProvisorias}
-                meta={meta}
-                voce={p.usuarioId === usuarioId}
-                contaNestaSemana={p.contaNestaSemana}
-                grupoId={grupoId}
-              />
-            ))}
-          </div>
-        </>
+      <SectionTitle>
+        {d.situacao === "Encerrado" ? "Classificação final" : "Classificação"}
+      </SectionTitle>
+      {comecou && alguemPontuou ? (
+        <ListaClassificacao
+          participantes={classificacao}
+          usuarioId={usuarioId}
+          grupoId={grupoId}
+        />
+      ) : (
+        <p className="card p-4 text-sm text-muted">
+          {d.situacao === "Agendado"
+            ? `A classificação começa em ${formatarData(d.dataInicio)}.`
+            : "A classificação aparece com o primeiro dia de treino verificado."}
+        </p>
+      )}
+
+      {d.situacao === "Ativo" && semanaAtual && objetivoDaSemana > 0 && (
+        <p className="mt-3 text-sm text-muted">
+          <span className="font-semibold text-foreground">Esta semana:</span>{" "}
+          <span className="font-score text-base text-foreground">
+            {feitoNaSemana}/{objetivoDaSemana}
+          </span>{" "}
+          dias verificados do grupo · fecha em{" "}
+          {formatarTempoAteFim(semanaAtual.fim, d.fusoHorario)}
+        </p>
       )}
     </>
   );
@@ -204,31 +256,34 @@ export function GrupoPage() {
 
   return (
     <>
-      {desafioAtual ? (
-        <CabecalhoComDesafio
-          desafioId={desafioAtual.id}
-          nome={nome}
-          totalMembros={totalMembros}
-          usuarioId={usuario?.id}
-          grupoId={id}
+      <section className="relative overflow-hidden rounded-2xl border-2 border-outline bg-brand p-5 text-on-brand shadow-sticker">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-4 -right-4 size-36 halftone-ink"
         />
-      ) : (
-        <section className="rounded-2xl border-2 border-outline bg-brand p-5 text-on-brand shadow-sticker">
-          <div className="flex items-center gap-3">
-            <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-reward font-display text-xl text-on-reward">
-              {getIniciais(nome)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl uppercase">{nome}</h1>
-              <p className="text-sm opacity-90">
-                {totalMembros} de {maxMembros} membros
-              </p>
-            </div>
+        <div className="relative flex items-center gap-3">
+          <div className="grid size-14 shrink-0 rotate-[-4deg] place-items-center rounded-xl border-2 border-outline bg-reward font-display text-xl text-on-reward">
+            {getIniciais(nome)}
           </div>
-        </section>
-      )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-3xl uppercase">{nome}</h1>
+            <p className="truncate text-sm opacity-90">
+              {totalMembros} de {maxMembros} membros
+            </p>
+          </div>
+        </div>
+      </section>
 
       <AvisoAvaliacao grupoId={id} />
+
+      {desafioAtual && resumo.data && (
+        <DesafioEmDestaque
+          desafioId={desafioAtual.id}
+          grupoId={id}
+          usuarioId={usuario?.id}
+          classificacao={resumo.data.classificacao}
+        />
+      )}
 
       {emDisputa.length > 0 && (
         <>
@@ -242,28 +297,15 @@ export function GrupoPage() {
       )}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {desafioAtual ? (
+        {!desafioAtual && canGerenciarDesafios(papel) && (
           <Link
-            to={`/desafios/${desafioAtual.id}`}
+            to={`/grupos/${id}/desafios/novo`}
             className="card flex items-center gap-3 p-4 tap"
           >
-            <Target aria-hidden="true" className="size-5 text-link" />
-            <span className="flex-1 text-sm font-semibold">Meta do grupo</span>
+            <Plus aria-hidden="true" className="size-5 text-link" />
+            <span className="flex-1 text-sm font-semibold">Criar desafio</span>
             <ChevronRight aria-hidden="true" className="size-4 text-muted" />
           </Link>
-        ) : (
-          canGerenciarDesafios(papel) && (
-            <Link
-              to={`/grupos/${id}/desafios/novo`}
-              className="card flex items-center gap-3 p-4 tap"
-            >
-              <Plus aria-hidden="true" className="size-5 text-link" />
-              <span className="flex-1 text-sm font-semibold">
-                Criar desafio
-              </span>
-              <ChevronRight aria-hidden="true" className="size-4 text-muted" />
-            </Link>
-          )
         )}
         {canConvidar(papel) && (
           <Link
@@ -365,7 +407,7 @@ export function GrupoPage() {
           )
         }
       >
-        Desafios
+        Todos os desafios
       </SectionTitle>
       {desafios.isError && (
         <p role="alert" className="form-error">
