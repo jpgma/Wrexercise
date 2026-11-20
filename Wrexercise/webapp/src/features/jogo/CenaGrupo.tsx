@@ -25,6 +25,7 @@ import { EnfeiteNoChao } from "./EnfeiteNoChao";
 import { getChaoDosEnfeites, posicionarEnfeites } from "./enfeitesNaPraca";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
+import { getAnimacaoDoTreino } from "./AvatarTreino";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMarcarEnfeitesVistos, useMeuAvatar } from "./useAvatares";
 import { CelebracaoConquista } from "./CelebracaoConquista";
@@ -144,7 +145,10 @@ function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
   const fracao = Math.min(n, GrupoCheio) / GrupoCheio;
   const raioX = Math.max(elipse.raioX.min, elipse.raioX.max * fracao);
   const raioY = Math.max(elipse.raioY.min, elipse.raioY.max * fracao);
-  const outros = membros.filter((m) => m.usuarioId !== usuarioId);
+  // Treino junto (ADR 0078): quem treina ao vivo fica lado a lado, logo depois de quem vê.
+  const outros = membros
+    .filter((m) => m.usuarioId !== usuarioId)
+    .sort((a, b) => Number(!!b.treinoAoVivo) - Number(!!a.treinoAoVivo));
   const ordenados = [
     ...membros.filter((m) => m.usuarioId === usuarioId),
     ...outros,
@@ -272,15 +276,18 @@ function AvatarCena({
     };
   }, [dormindo, reduzido, sorteio]);
 
+  const aoVivo = membro.treinoAoVivo;
   const animacao: NomeAnimacao =
     atuacao?.animacao ??
-    (parado
-      ? (variacao ?? "parado")
-      : dormindo
-        ? adormecendo
-          ? "adormecer"
-          : "dormindo"
-        : membro.pose);
+    (aoVivo
+      ? getAnimacaoDoTreino(aoVivo.tipo)
+      : parado
+        ? (variacao ?? "parado")
+        : dormindo
+          ? adormecendo
+            ? "adormecer"
+            : "dormindo"
+          : membro.pose);
   /** O "Zzz" e a bolha só aparecem com o avatar sentado, dormindo. */
   const sono = animacao === "dormindo";
   const direcao = atuacao?.direcao ?? getDirecao(posicao, centro);
@@ -302,6 +309,7 @@ function AvatarCena({
     medalha && `${posicaoClassificacao}º lugar no desafio`,
     rival === "escolhido" && "seu Rival da semana",
     rival === "escolheu" && "escolheu você como Rival",
+    aoVivo && "treinando ao vivo agora",
     membro.cutucadas &&
       (membro.cutucadas.total === 1
         ? "cutucado 1 vez hoje"
@@ -389,6 +397,14 @@ function AvatarCena({
                 reduzido={reduzido}
               />
             ))}
+          {aoVivo && !atuacao && (
+            <BolhaAoVivo
+              x={(ancora.x - corpo.esquerda) * escala}
+              startedAt={aoVivo.startedAt}
+              torcidas={aoVivo.torcidas}
+              reduzido={reduzido}
+            />
+          )}
           {sono && membro.cutucadas && (
             <BolhaCutucada
               x={(CabecaSentado.x - corpo.esquerda) * escala}
@@ -421,6 +437,48 @@ function AvatarCena({
         </span>
       )}
     </>
+  );
+}
+
+/** Os minutos desde o início, atualizados a cada 30 segundos. */
+function useMinutosDesde(inicio: string) {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const intervalo = window.setInterval(() => setAgora(Date.now()), 30_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
+  return Math.max(0, Math.floor((agora - new Date(inicio).getTime()) / 60_000));
+}
+
+/**
+ * Sobre a cabeça de quem treina ao vivo (ADR 0078): "AO VIVO", os minutos e as Torcidas. Todos na praça
+ * veem quem está treinando agora.
+ */
+function BolhaAoVivo({
+  x,
+  startedAt,
+  torcidas,
+  reduzido,
+}: {
+  x: number;
+  startedAt: string;
+  torcidas: number;
+  reduzido: boolean;
+}) {
+  const minutos = useMinutosDesde(startedAt);
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-outline bg-surface px-1.5 text-2xs leading-tight font-semibold whitespace-nowrap shadow-sticker"
+      style={{ left: x, top: -20 }}
+    >
+      <span
+        className={`size-1.5 rounded-full bg-danger ${reduzido ? "" : "motion-safe:animate-pulse"}`}
+      />
+      AO VIVO
+      <span className="font-score">{minutos}′</span>
+      {torcidas > 0 && <span>📣{torcidas > 1 ? torcidas : ""}</span>}
+    </span>
   );
 }
 
@@ -642,6 +700,11 @@ function Praca({
       new Set(
         membros.filter((m) => m.pose === "dormindo").map((m) => m.usuarioId),
       ),
+    [membros],
+  );
+  const aoVivo = useMemo(
+    () =>
+      new Set(membros.filter((m) => m.treinoAoVivo).map((m) => m.usuarioId)),
     [membros],
   );
   const { despertos, marcarVistos: marcarDespertosVistos } = useDespertos(
@@ -995,6 +1058,7 @@ function Praca({
               placar={placar}
               usuarioId={usuarioId}
               dormindo={dormindo}
+              aoVivo={aoVivo}
               oculto={emFoco || emChegada || entrada.ativa || encenacao.ativa}
               onToque={(id) => {
                 if (!emAcao) foco.abrir(id);

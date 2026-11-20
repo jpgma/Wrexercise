@@ -11,7 +11,19 @@ internal sealed record MembroCenaResponse(
     bool RecebeCartas,
     DateTimeOffset? DormindoDesde,
     CutucadasMembroResponse? Cutucadas = null,
-    DateTimeOffset? CutucadoPorMimEm = null);
+    DateTimeOffset? CutucadoPorMimEm = null,
+    TreinoAoVivoResponse? TreinoAoVivo = null);
+
+/// <summary>
+/// O treino ao vivo de um membro (ADR 0078). <c>TorcidaPorMimEm</c>: quando quem vê torceu por último, para o
+/// botão "Torcer" esperar o intervalo.
+/// </summary>
+internal sealed record TreinoAoVivoResponse(
+    Guid AtividadeId,
+    string Tipo,
+    DateTimeOffset StartedAt,
+    int Torcidas,
+    DateTimeOffset? TorcidaPorMimEm);
 
 /// <param name="UltimoTipo">O código da mensagem pronta da cutucada mais recente.</param>
 internal sealed record CutucadasMembroResponse(int Total, string UltimoTipo);

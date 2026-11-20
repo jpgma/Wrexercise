@@ -27,6 +27,7 @@ export const tipoComprovacaoLabels: Record<TipoComprovacao, string> = {
 };
 
 export const situacaoVerificacaoLabels: Record<SituacaoVerificacao, string> = {
+  EmAndamento: "Ao vivo",
   AguardandoFeedback: "Aguardando avaliação",
   Verificada: "Verificada",
   EmRevisao: "Em revisão",
@@ -73,4 +74,15 @@ export function formatarDataHora(iso: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(iso));
+}
+
+/** O cronômetro do treino ao vivo: "12:05" ou "1:02:05". */
+export function formatarCronometro(segundos: number): string {
+  const total = Math.max(0, Math.floor(segundos));
+  const horas = Math.floor(total / 3600);
+  const minutos = Math.floor((total % 3600) / 60);
+  const resto = String(total % 60).padStart(2, "0");
+  return horas > 0
+    ? `${horas}:${String(minutos).padStart(2, "0")}:${resto}`
+    : `${minutos}:${resto}`;
 }

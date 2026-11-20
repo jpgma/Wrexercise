@@ -1,6 +1,7 @@
 import { Camera, Clock, MessageCircle, Play } from "lucide-react";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
+import { useSessao } from "@/features/autenticacao";
 import {
   AvisosAtividadeResumo,
   formatarDataRelativa,
@@ -10,6 +11,7 @@ import {
   tipoAtividadeLabels,
   useAtividade,
   useGaleria,
+  useTorcer,
   type AtividadeResumo,
 } from "@/features/atividades";
 import { tipoReacaoEmojis, tipoReacaoLabels } from "@/features/reacoes";
@@ -28,6 +30,51 @@ function Contagem({
       <span className="sr-only">{tipoReacaoLabels[tipo]}:</span>
       {total}
     </span>
+  );
+}
+
+/** "há 25 min": desde quando o treino ao vivo começou. */
+function getMinutosAoVivo(startedAt: string): number {
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(startedAt).getTime()) / 60_000),
+  );
+}
+
+/** O treino ao vivo no feed (ADR 0078): quem vê pode torcer, uma vez a cada 10 minutos. */
+function TorcerNoFeed({
+  atividadeId,
+  grupoId,
+}: {
+  atividadeId: string;
+  grupoId: string;
+}) {
+  const torcer = useTorcer(grupoId);
+  return (
+    <div className="border-t border-border px-4 py-2">
+      {torcer.isSuccess ? (
+        <p
+          role="status"
+          className="flex min-h-11 items-center text-sm text-muted"
+        >
+          <span aria-hidden="true">📣</span>&nbsp;Torcida enviada!
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="btn-ghost min-h-11 w-full"
+          disabled={torcer.isPending}
+          onClick={() => torcer.mutate(atividadeId)}
+        >
+          <span aria-hidden="true">📣</span> Torcer
+        </button>
+      )}
+      {torcer.isError && (
+        <p role="alert" className="input-error">
+          {getErrorMessage(torcer.error)}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -51,6 +98,8 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
     avisos,
   } = atividade;
   const galeria = useGaleria(id);
+  const aoVivo = situacaoVerificacao === "EmAndamento";
+  const souEu = useSessao().data?.id === usuarioId;
   // As evidências completas só são buscadas quando a galeria é aberta.
   const detalhe = useAtividade(id, galeria.aberta);
 
@@ -71,7 +120,9 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
               {tipoAtividadeLabels[tipo]} ·
               <Clock aria-hidden="true" className="size-3.5" />
-              {formatarDuracao(duracaoSegundos)}
+              {aoVivo
+                ? `treinando agora, há ${getMinutosAoVivo(startedAt)} min`
+                : formatarDuracao(duracaoSegundos)}
             </p>
             {descricao && (
               <p className="mt-2 line-clamp-2 text-sm break-words">
@@ -86,7 +137,7 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
             <div className="mt-3 flex items-center justify-between gap-2">
               <SituacaoBadge situacao={situacaoVerificacao} />
               <div className="flex items-center gap-3">
-                <Contagem tipo="Kudos" total={kudos} />
+                {!aoVivo && <Contagem tipo="Kudos" total={kudos} />}
                 {suspeito > 0 && <Contagem tipo="Suspeito" total={suspeito} />}
                 {rejeitar > 0 && <Contagem tipo="Rejeitar" total={rejeitar} />}
                 {comentarios > 0 && (
@@ -115,6 +166,9 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
           )}
         </div>
       </Link>
+      {aoVivo && !souEu && (
+        <TorcerNoFeed atividadeId={id} grupoId={atividade.grupoId} />
+      )}
       {miniaturaUrl && (
         <>
           <button

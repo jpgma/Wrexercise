@@ -12,6 +12,8 @@ export type TipoAtividade =
 export type TipoComprovacao = "RegistroManual" | "Fotografia" | "CapturaDeTela";
 
 export type SituacaoVerificacao =
+  /** Treino ao vivo ainda não terminado (ADR 0078): não conta para nada e ninguém avalia. */
+  | "EmAndamento"
   | "AguardandoFeedback"
   | "Verificada"
   | "EmRevisao"
@@ -115,4 +117,29 @@ export type CriarAtividadeData = {
   tipoComprovacao: TipoComprovacao;
   /** ADR 0065: o rascunho de um app conectado, cuja imagem vira a primeira evidência. */
   rascunhoId?: string;
+};
+
+/** Uma Torcida recebida no treino ao vivo (ADR 0078). */
+export type Torcida = {
+  usuarioId: string;
+  nomeExibicao: string;
+  criadaEm: string;
+};
+
+/** O treino ao vivo de quem usa o aplicativo, em qualquer grupo (ADR 0078). */
+export type TreinoAtual = {
+  atividadeId: string;
+  grupoId: string;
+  grupoNome: string;
+  tipo: TipoAtividade;
+  startedAt: string;
+  totalEvidencias: number;
+  /** As mais recentes primeiro. */
+  torcidas: Torcida[];
+};
+
+export type TerminarTreinoData = {
+  duracaoSegundos: number;
+  descricao: string;
+  tipoComprovacao: TipoComprovacao;
 };

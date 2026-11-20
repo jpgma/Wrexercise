@@ -1,9 +1,21 @@
-import { CalendarCheck, Dumbbell, Flame, Moon, Swords, X } from "lucide-react";
+import {
+  CalendarCheck,
+  Dumbbell,
+  Flame,
+  Moon,
+  Radio,
+  Swords,
+  X,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { Dialog } from "@/components/Dialog";
 import { type Enfeite, useVitrine } from "@/components/folhaAvatar";
-import { formatarDuracao } from "@/features/atividades";
+import {
+  formatarDuracao,
+  intervaloTorcidaMs,
+  useTorcer,
+} from "@/features/atividades";
 import { usePerfilMembro } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
 import { EnfeiteIcone } from "./EnfeiteIcone";
@@ -33,6 +45,12 @@ function getTextoSono(desde: string): string {
     Math.floor((Date.now() - new Date(desde).getTime()) / 86_400_000),
   );
   return `Dormindo há ${dias} dias`;
+}
+
+/** "Ao vivo há 25 min": desde quando treina, contado do início. */
+function getTextoAoVivo(desde: string): string {
+  const segundos = (Date.now() - new Date(desde).getTime()) / 1000;
+  return `Ao vivo há ${formatarDuracao(Math.max(60, segundos))}`;
 }
 
 function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
@@ -163,12 +181,18 @@ export function PainelFoco({
           >
             {membro.nomeExibicao}
           </h2>
-          {(rival || membro.dormindoDesde) && (
+          {(rival || membro.dormindoDesde || membro.treinoAoVivo) && (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {rival && (
                 <p className="chip chip-game">
                   <Swords aria-hidden="true" className="size-3" />
                   {rival}
+                </p>
+              )}
+              {membro.treinoAoVivo && (
+                <p className="chip chip-danger">
+                  <Radio aria-hidden="true" className="size-3" />
+                  {getTextoAoVivo(membro.treinoAoVivo.startedAt)}
                 </p>
               )}
               {membro.dormindoDesde && (
@@ -242,6 +266,15 @@ export function PainelFoco({
         />
       )}
 
+      {!proprio && membro.treinoAoVivo && (
+        <Torcer
+          grupoId={grupoId}
+          atividadeId={membro.treinoAoVivo.atividadeId}
+          torcidaPorMimEm={membro.treinoAoVivo.torcidaPorMimEm}
+          nome={nome}
+        />
+      )}
+
       {!proprio && !membro.recebeCartas && (
         <p className="mt-2 text-xs text-muted">
           {nome} está no modo App e não recebe cartas.
@@ -255,6 +288,59 @@ export function PainelFoco({
         {proprio ? "Ver a minha página" : `Ver a página de ${nome}`}
       </Link>
     </section>
+  );
+}
+
+/**
+ * A Torcida (ADR 0078): para quem treina ao vivo agora, uma vez a cada 10 minutos. Quem treina vê
+ * a Torcida no cronômetro.
+ */
+function Torcer({
+  grupoId,
+  atividadeId,
+  torcidaPorMimEm,
+  nome,
+}: {
+  grupoId: string;
+  atividadeId: string;
+  torcidaPorMimEm: string | null;
+  nome: string;
+}) {
+  const torcer = useTorcer(grupoId);
+  const [agora] = useState(() => Date.now());
+  const recente =
+    torcer.isSuccess ||
+    (torcidaPorMimEm !== null &&
+      agora - new Date(torcidaPorMimEm).getTime() < intervaloTorcidaMs);
+
+  if (recente) {
+    return (
+      <p
+        role="status"
+        className="mt-2 flex min-h-11 items-center gap-1.5 text-sm text-muted"
+      >
+        <span aria-hidden="true">📣</span>
+        Você torceu por {nome}. Daqui a pouco dá de novo.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        disabled={torcer.isPending}
+        onClick={() => torcer.mutate(atividadeId)}
+        className="btn-primary min-h-11 w-full justify-center"
+      >
+        <span aria-hidden="true">📣</span> Torcer por {nome}
+      </button>
+      {torcer.isError && (
+        <p role="alert" className="input-error">
+          {getErrorMessage(torcer.error)}
+        </p>
+      )}
+    </div>
   );
 }
 

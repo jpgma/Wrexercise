@@ -224,7 +224,8 @@ internal static class AnexarEvidencia
         {
             revisores.Parameters.AddWithValue(atividadeId);
             var temRevisores = (bool)(await revisores.ExecuteScalarAsync(cancellationToken))!;
-            if (situacao != SituacaoVerificacao.AguardandoFeedback
+            // O treino ao vivo recebe fotos e vídeos enquanto acontece (ADR 0078).
+            if (situacao is not (SituacaoVerificacao.AguardandoFeedback or SituacaoVerificacao.EmAndamento)
                 && (temRevisores || situacao != SituacaoVerificacao.Verificada))
             {
                 return (AtividadeOperacaoStatus.AtividadeEncerrada, null);
@@ -290,9 +291,12 @@ internal static class AnexarEvidencia
             evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
         }
 
+        // Durante o treino ao vivo, o período vai até agora; ao terminar, os avisos de data são refeitos.
         var avisoData = AvisosEvidencia.CalcularAvisoData(
             startedAt,
-            duracaoSegundos,
+            situacao == SituacaoVerificacao.EmAndamento
+                ? TreinoAoVivo.Decorridos(startedAt, DateTimeOffset.UtcNow)
+                : duracaoSegundos,
             sinais.CapturadaEm,
             sinais.Origem,
             DateTimeOffset.UtcNow);
@@ -319,6 +323,7 @@ internal static class AnexarEvidencia
             UPDATE atividades a
             SET situacao_verificacao = 'Verificada', verified_at = coalesce(a.verified_at, now())
             WHERE a.id = $1
+              AND a.situacao_verificacao <> 'EmAndamento'
               AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = a.id)
             """, connection, transaction))
         {

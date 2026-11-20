@@ -37,12 +37,15 @@ export function PlacarJogo({
   placar,
   usuarioId,
   dormindo,
+  aoVivo,
   oculto,
   onToque,
 }: {
   placar: PlacarCena;
   usuarioId: string;
   dormindo: Set<string>;
+  /** Quem treina ao vivo agora (ADR 0078). */
+  aoVivo: Set<string>;
   oculto: boolean;
   onToque: (usuarioId: string) => void;
 }) {
@@ -130,6 +133,7 @@ export function PlacarJogo({
     placar.itens.map((item) => {
       const eu = item.usuarioId === usuarioId;
       const sono = dormindo.has(item.usuarioId);
+      const vivo = aoVivo.has(item.usuarioId);
       const variacao =
         placar.encerrado || item.posicaoInicioSemana === null
           ? 0
@@ -142,6 +146,7 @@ export function PlacarJogo({
         variacao > 0 && `subiu ${variacao} desde segunda`,
         variacao < 0 && `caiu ${-variacao} desde segunda`,
         sono && "dormindo",
+        vivo && "treinando ao vivo",
       ]
         .filter(Boolean)
         .join(", ");
@@ -180,6 +185,11 @@ export function PlacarJogo({
               </span>
             )}
             {sono && <span className="text-xs leading-none">💤</span>}
+            {vivo && (
+              <span className="rounded-sm bg-danger-soft px-1 text-2xs leading-tight font-extrabold text-on-danger-soft">
+                AO VIVO
+              </span>
+            )}
           </button>
         </li>
       );

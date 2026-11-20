@@ -1,5 +1,6 @@
 export { AvisoCartaNoTreino, useCartasQueFalham } from "./AvisoCartaNoTreino";
 export { useAvancoEnfeite } from "./avancoEnfeite";
+export { AvatarTreino } from "./AvatarTreino";
 export { CelebracaoConquista } from "./CelebracaoConquista";
 export { CenaGrupo } from "./CenaGrupo";
 export {

@@ -19,9 +19,10 @@ type EstadoChegada = { voltar?: string };
 const getRota = (p: JogadaPendente) =>
   `/grupos/${p.grupoId}/inicio?${parametro}=${p.id}`;
 
-/** O formulário de treino, ou o rascunho do Movr que leva até ele. */
+/** O formulário de treino, o cronômetro do treino ao vivo, ou o rascunho do Movr que leva até ele. */
 const isFormularioDeTreino = (caminho: string) =>
   /^\/grupos\/[^/]+\/atividades\/nova$/.test(caminho) ||
+  /^\/grupos\/[^/]+\/treino$/.test(caminho) ||
   caminho.startsWith("/importar/");
 
 /** Se a tela atual é a Chegada: as abas e o menu somem até a resposta. */
@@ -42,11 +43,11 @@ export function useCartaEsperando(): boolean {
 
 /**
  * O portão da Chegada (decisão 0076): com uma carta recebida esperando resposta, qualquer tela leva à
- * Chegada dela, a mais antiga primeiro. Ao voltar para o aplicativo com o formulário de treino aberto,
+ * Chegada dela, a mais antiga primeiro. Com um treino ao vivo aberto, ela espera o treino terminar. Ao voltar para o aplicativo com o formulário de treino aberto,
  * a pessoa não é tirada dele: o servidor recusa o registro e o formulário leva à Chegada. Sem dados
  * (erro, sem rede), nada bloqueia.
  */
-export function PortaoChegada() {
+export function PortaoChegada({ pausado = false }: { pausado?: boolean }) {
   const pendentes = useJogadasPendentes();
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,7 +62,8 @@ export function PortaoChegada() {
     const permitido = primeiraCarga.current || mudouDeTela;
     ultimaTela.current = location.key;
     primeiraCarga.current = false;
-    if (!primeira || emChegada) return;
+    // Durante o treino ao vivo, a carta espera o fim: o cronômetro mostra que ela chegou (decisão 0078).
+    if (!primeira || emChegada || pausado) return;
     if (!permitido && isFormularioDeTreino(location.pathname)) return;
     void navigate(getRota(primeira), {
       replace: true,
@@ -73,6 +75,7 @@ export function PortaoChegada() {
     pendentes.data,
     primeira,
     emChegada,
+    pausado,
     location.key,
     location.pathname,
     location.search,

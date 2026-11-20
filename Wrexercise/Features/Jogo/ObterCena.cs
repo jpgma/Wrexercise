@@ -34,13 +34,15 @@ internal static class ObterCena
         var comPendentes = await LoadComAtividadePendenteAsync(connection, grupoId, cancellationToken);
         var comMeta = await LoadComMetaCumpridaAsync(connection, grupoId, membros, cancellationToken);
         var cutucadas = await LoadCutucadasAsync(connection, grupoId, usuarioId, cancellationToken);
+        var aoVivo = await LoadTreinosAoVivoAsync(connection, grupoId, usuarioId, cancellationToken);
 
         var agora = DateTimeOffset.UtcNow;
         var resposta = membros
             .Select(m =>
             {
+                var treino = aoVivo.GetValueOrDefault(m.UsuarioId);
                 var pose = PoseAvatar.Calcular(
-                    comPendentes.Contains(m.UsuarioId),
+                    treino is not null || comPendentes.Contains(m.UsuarioId),
                     comMeta.Contains(m.UsuarioId),
                     PoseAvatar.IsDormindo(m.AcordadoEm, agora));
                 var dorme = pose == PoseAvatar.Dormindo;
@@ -52,7 +54,8 @@ internal static class ObterCena
                     m.ModoJogo,
                     dorme ? m.AcordadoEm : null,
                     cutucado is null ? null : new CutucadasMembroResponse(cutucado.Total, cutucado.UltimoTipo),
-                    cutucado?.PorMimEm);
+                    cutucado?.PorMimEm,
+                    treino);
             })
             .ToList();
 
@@ -125,6 +128,38 @@ internal static class ObterCena
         }
 
         return cutucadas;
+    }
+
+    /// <summary>Quem treina ao vivo agora neste grupo (ADR 0078): o Avatar treina e o grupo pode torcer.</summary>
+    private static async Task<Dictionary<Guid, TreinoAoVivoResponse>> LoadTreinosAoVivoAsync(
+        NpgsqlConnection connection,
+        Guid grupoId,
+        Guid usuarioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            SELECT a.usuario_id, a.id, a.tipo, a.started_at,
+                (SELECT count(*)::int FROM torcidas t WHERE t.atividade_id = a.id),
+                (SELECT max(t.created_at) FROM torcidas t WHERE t.atividade_id = a.id AND t.usuario_id = $2)
+            FROM atividades a
+            WHERE a.grupo_id = $1 AND a.situacao_verificacao = 'EmAndamento'
+            """, connection);
+        command.Parameters.AddWithValue(grupoId);
+        command.Parameters.AddWithValue(usuarioId);
+
+        var treinos = new Dictionary<Guid, TreinoAoVivoResponse>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            treinos[reader.GetGuid(0)] = new TreinoAoVivoResponse(
+                reader.GetGuid(1),
+                reader.GetString(2),
+                TimestampLeitura.FromReader(reader, 3),
+                reader.GetInt32(4),
+                reader.IsDBNull(5) ? null : TimestampLeitura.FromReader(reader, 5));
+        }
+
+        return treinos;
     }
 
     /// <summary>Quem tem atividade ainda sem veredito neste grupo, na semana corrente (segunda a domingo, fuso do grupo).</summary>

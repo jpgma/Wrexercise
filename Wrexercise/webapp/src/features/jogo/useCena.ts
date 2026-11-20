@@ -16,6 +16,18 @@ export type MembroCena = {
   cutucadas: { total: number; ultimoTipo: string } | null;
   /** Só com a pose `dormindo`: quando quem vê cutucou este membro nas últimas 24 horas. */
   cutucadoPorMimEm: string | null;
+  /** O treino ao vivo deste membro (ADR 0078); `null` quando não treina agora. */
+  treinoAoVivo: TreinoAoVivo | null;
+};
+
+export type TreinoAoVivo = {
+  atividadeId: string;
+  tipo: string;
+  startedAt: string;
+  /** Quantas Torcidas o treino recebeu. */
+  torcidas: number;
+  /** Quando quem vê torceu por último: o botão "Torcer" espera o intervalo. */
+  torcidaPorMimEm: string | null;
 };
 
 export type Cena = {
@@ -28,6 +40,10 @@ export function useCena(grupoId: string) {
     queryKey: ["jogo", "cena", grupoId],
     queryFn: ({ signal }) =>
       getJson<Cena>(`/api/grupos/${grupoId}/cena`, signal),
+    // Sem WebSocket: a praça se atualiza a cada 30 segundos enquanto está aberta, para mostrar quem
+    // começou ou terminou um treino ao vivo (ADR 0078).
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     retry: shouldRetry,
   });
 }

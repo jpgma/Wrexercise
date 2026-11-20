@@ -38,7 +38,7 @@ internal static class JogadasConcluidas
             LEFT JOIN cartas cf ON cf.id = j.carta_fusao_id
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades o ON o.usuario_id = j.destinatario_id AND o.grupo_id = j.grupo_id
-                AND o.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+                AND o.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')
                 AND o.started_at >= j.enviada_em AND o.started_at <= j.expira_em
             WHERE x.id = $1 AND x.situacao_verificacao = 'Verificada'
             ORDER BY o.created_at, o.id

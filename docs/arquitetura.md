@@ -817,6 +817,7 @@ mínimo_de_rejeições =
 ### 8.4. Situações de verificação
 
 ```text
+EmAndamento
 AguardandoFeedback
 Verificada
 EmRevisao
@@ -826,6 +827,8 @@ Anulada
 ```
 
 Regras:
+
+- EmAndamento: treino ao vivo ainda não terminado (`decisoes/0078-treino-ao-vivo.md`). Não conta para nada e não tem revisores. Ao terminar, vira AguardandoFeedback, com o envio no momento do término.
 
 - Todas as reações positivas: Verificada.
 - Uma ou mais reações suspeitas: EmRevisao.

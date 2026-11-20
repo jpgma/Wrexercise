@@ -27,6 +27,8 @@ internal enum AtividadeOperacaoStatus
     RascunhoNaoEncontrado,
     CorrecaoPropria,
     CorrecaoNaoPermitida,
+    TreinoEmAndamento,
+    TreinoNaoEmAndamento,
 }
 
 internal static class TipoEvidencia
@@ -120,6 +122,14 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "CORRECAO_NAO_PERMITIDA",
             "Esta atividade não conta mais, então não dá para corrigir a duração."),
+        AtividadeOperacaoStatus.TreinoEmAndamento => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "TREINO_EM_ANDAMENTO",
+            "Você já tem um treino ao vivo. Termine ou cancele esse antes."),
+        AtividadeOperacaoStatus.TreinoNaoEmAndamento => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "TREINO_NAO_EM_ANDAMENTO",
+            "Este treino já terminou."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

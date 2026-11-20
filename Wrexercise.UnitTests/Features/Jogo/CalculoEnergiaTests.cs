@@ -226,4 +226,30 @@ public class CalculoEnergiaTests
         Assert.Equal(
             0,
             CalculoEnergia.Calcular([], [Desafio([], encerrado: true, entrada: Segunda.AddDays(40))]).Desafios);
+
+    [Fact]
+    public void AoVivo_SomaAoBonusDaAtividade()
+    {
+        // Quarta, 10h: primeira da semana (3) + dia novo (3) + ao vivo (3).
+        var ganha = Calcular(Atividade(2, 10) with { AoVivo = true });
+
+        Assert.Equal(9, ganha.Bonus);
+    }
+
+    [Fact]
+    public void Parceria_SomaMasRespeitaOTeto()
+    {
+        // 3 + 3 + ao vivo 3 + parceria 3 = 12, limitado a 10.
+        var ganha = Calcular(Atividade(2, 10) with { AoVivo = true, Parceria = true });
+
+        Assert.Equal(CalculoEnergia.TetoBonus, ganha.Bonus);
+    }
+
+    [Fact]
+    public void AoVivo_NaoVerificada_NaoRende()
+    {
+        var ganha = Calcular(Atividade(2, 10, verificada: false) with { AoVivo = true });
+
+        Assert.Equal(0, ganha.Bonus);
+    }
 }

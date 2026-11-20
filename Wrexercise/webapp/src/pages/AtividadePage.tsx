@@ -102,7 +102,10 @@ export function AtividadePage() {
                 <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
                   <span className="inline-flex items-center gap-1">
                     <Clock aria-hidden="true" className="size-4" />
-                    {formatarDuracao(duracaoSegundos)}
+                    {/* O treino ao vivo ainda não tem duração: ela vem ao terminar (ADR 0078). */}
+                    {situacaoVerificacao === "EmAndamento"
+                      ? "Treinando agora"
+                      : formatarDuracao(duracaoSegundos)}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <CalendarDays aria-hidden="true" className="size-4" />

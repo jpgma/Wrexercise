@@ -25,6 +25,7 @@ internal static class ReacoesRoutes
         atividade.MapPut("/reacao", RegistrarReacao.HandleAsync);
         atividade.MapGet("/reacoes", ListarReacoes.HandleAsync);
         atividade.MapPost("/revisao", RevisarAtividade.HandleAsync);
+        atividade.MapPost("/torcida", Torcer.HandleAsync);
         atividade.MapGet("/comentarios", Comentarios.ListarAsync);
         atividade.MapPost("/comentarios", Comentarios.CriarAsync).RequireRateLimiting(ComentariosPolicy);
     }

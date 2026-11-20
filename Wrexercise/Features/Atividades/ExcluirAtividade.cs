@@ -7,7 +7,7 @@ namespace Wrexercise.Features.Atividades;
 
 /// <summary>
 /// O autor apaga a própria atividade nos primeiros 15 minutos, enquanto ela não foi verificada (ADR 0054, 0073).
-/// A exclusão é definitiva: reações, comentários, notificações, avisos e fotos saem junto.
+/// O treino ao vivo se cancela a qualquer momento (ADR 0078). A exclusão é definitiva: reações, comentários, notificações, avisos e fotos saem junto.
 /// </summary>
 internal static class ExcluirAtividade
 {
@@ -74,11 +74,27 @@ internal static class ExcluirAtividade
             return (AtividadeOperacaoStatus.AcessoNegado, []);
         }
 
-        if (ExclusaoAtividade.PermitidaAte(true, situacao, submittedAt, DateTimeOffset.UtcNow) is null)
+        if (!ExclusaoAtividade.Permitida(true, situacao, submittedAt, DateTimeOffset.UtcNow))
         {
             return (AtividadeOperacaoStatus.ExclusaoNaoPermitida, []);
         }
 
+        var arquivos = await ExcluirLinhasAsync(connection, transaction, atividadeId, cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        return (AtividadeOperacaoStatus.Concluida, arquivos);
+    }
+
+    /// <summary>
+    /// Apaga a atividade e o que depende dela, na transação de quem chama. Os arquivos devolvidos saem do disco
+    /// só depois do commit.
+    /// </summary>
+    public static async Task<List<string>> ExcluirLinhasAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid atividadeId,
+        CancellationToken cancellationToken)
+    {
         // O aviso FotoParecida de outra atividade continua, só sem o link para esta.
         await using (var desvincular = new NpgsqlCommand(
             "UPDATE avisos_atividade SET atividade_relacionada_id = NULL WHERE atividade_relacionada_id = $1",
@@ -121,7 +137,6 @@ internal static class ExcluirAtividade
             await excluir.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        await transaction.CommitAsync(cancellationToken);
-        return (AtividadeOperacaoStatus.Concluida, arquivos);
+        return arquivos;
     }
 }

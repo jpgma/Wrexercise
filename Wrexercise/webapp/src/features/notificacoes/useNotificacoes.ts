@@ -15,7 +15,10 @@ export type Notificacao = {
     | "CartaRecusada"
     | "JogadaConcluida"
     | "RivalEscolhido"
-    | "Cutucada";
+    | "Cutucada"
+    | "ComecouTreinar"
+    | "Torcida"
+    | "TreinoLongo";
   /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival e na Cutucada, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;

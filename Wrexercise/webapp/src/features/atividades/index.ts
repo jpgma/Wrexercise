@@ -1,4 +1,5 @@
 export {
+  formatarCronometro,
   formatarDataHora,
   formatarDataRelativa,
   formatarDuracao,
@@ -47,7 +48,20 @@ export {
   useExcluirAtividade,
   useFilaAvaliacao,
 } from "./useAtividades";
+export { getRotaTreino, PortaoTreino, useSegundosDesde } from "./PortaoTreino";
+export {
+  intervaloTorcidaMs,
+  treinoAtualKey,
+  useCancelarTreino,
+  useComecarTreino,
+  useTerminarTreino,
+  useTorcer,
+  useTreinoAtual,
+} from "./useTreinoAoVivo";
 export type {
+  TerminarTreinoData,
+  Torcida,
+  TreinoAtual,
   Atividade,
   Aviso,
   TipoAviso,

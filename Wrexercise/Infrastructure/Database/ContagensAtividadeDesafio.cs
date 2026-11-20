@@ -114,7 +114,7 @@ internal static class ContagensAtividadeDesafio
             a.tipo,
             coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao = 'Verificada'), 0)
                 AS segundos_verificados,
-            coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')), 0)
+            coalesce(sum(a.duracao_segundos) FILTER (WHERE a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')), 0)
                 AS segundos_provisorios
         {FromElegiveisSql}
         {filtros}
@@ -152,7 +152,7 @@ internal static class ContagensAtividadeDesafio
         {FromElegiveisSql}
         {FiltroSemanaSql}
           AND a.usuario_id = $4
-          AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+          AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')
         GROUP BY {DiaSql}, a.tipo
         ORDER BY {DiaSql}, a.tipo
         """;

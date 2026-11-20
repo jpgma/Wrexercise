@@ -3,6 +3,7 @@ import {
   Ban,
   CheckCircle2,
   Hourglass,
+  Radio,
   MessageCircleWarning,
   XCircle,
   type LucideIcon,
@@ -14,6 +15,7 @@ const estilos: Record<
   SituacaoVerificacao,
   { classe: string; Icon: LucideIcon }
 > = {
+  EmAndamento: { classe: "chip-danger", Icon: Radio },
   AguardandoFeedback: { classe: "", Icon: Hourglass },
   Verificada: { classe: "chip-success", Icon: CheckCircle2 },
   EmRevisao: { classe: "chip-warning", Icon: AlertTriangle },

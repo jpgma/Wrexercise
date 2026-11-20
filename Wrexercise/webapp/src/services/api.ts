@@ -49,6 +49,16 @@ export async function getJson<T>(
   return (await response.json()) as T;
 }
 
+/** Como `getJson`, mas o 204 (nada a devolver) vira `null`. */
+export async function getJsonOpcional<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T | null> {
+  const response = await request(path, { signal });
+  if (response.status === 204) return null;
+  return (await response.json()) as T;
+}
+
 function jsonRequest(
   method: string,
   body: unknown,

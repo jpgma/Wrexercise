@@ -28,6 +28,8 @@ internal static class TextosPush
         "CartaRecebida",
         "RivalEscolhido",
         "Cutucada",
+        "ComecouTreinar",
+        "TreinoLongo",
     ];
 
     public static string GetTexto(AvisoPush aviso)
@@ -47,12 +49,18 @@ internal static class TextosPush
             "CartaRecebida" => $"{nome} te mandou uma carta. Topa?",
             "RivalEscolhido" => $"{nome} escolheu você como Rival da semana. Quem cumpre a meta primeiro?",
             "Cutucada" => TextoCutucada(nome, aviso.Cutucada, aviso.CutucadaTexto),
+            "ComecouTreinar" => $"{nome} começou a treinar 🏋️ Bora torcer?",
+            "Torcida" => $"{nome} está torcendo por você 📣",
+            "TreinoLongo" => "Ainda treinando? Termine ou ajuste o seu treino",
             _ => "Você tem uma nova notificação",
         };
     }
 
     public static string GetDestino(AvisoPush aviso) => aviso.AtividadeId switch
     {
+        // O treino ao vivo aparece na praça do grupo; o de quem treina, no cronômetro (decisão 0078).
+        _ when aviso.Tipo == "ComecouTreinar" => $"/grupos/{aviso.GrupoId}/inicio",
+        _ when aviso.Tipo is "TreinoLongo" or "Torcida" => $"/grupos/{aviso.GrupoId}/treino",
         // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
         null => $"/grupos/{aviso.GrupoId}/inicio",
         { } atividadeId when aviso.Tipo == "NovaAtividade" => $"/grupos/{aviso.GrupoId}/revisar/{atividadeId}",

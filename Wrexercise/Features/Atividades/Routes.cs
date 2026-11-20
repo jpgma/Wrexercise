@@ -23,16 +23,19 @@ internal static class AtividadesRoutes
     {
         var autenticado = routes.MapGroup("").RequireSessao();
         autenticado.MapGet("/api/atividades/recentes", ListarRecentes.HandleAsync);
+        autenticado.MapGet("/api/atividades/em-andamento", ObterTreinoAtual.HandleAsync);
 
         var doGrupo = routes.MapGroup("/api/grupos/{grupoId:guid}/atividades").RequireSessao();
         doGrupo.MapGet("/", ListarAtividades.HandleAsync);
         doGrupo.MapPost("/", CriarAtividade.HandleAsync);
+        doGrupo.MapPost("/em-andamento", ComecarTreino.HandleAsync);
         doGrupo.MapGet("/para-avaliar", ListarParaAvaliar.HandleAsync);
 
         var atividade = routes.MapGroup("/api/atividades/{id:guid}").RequireSessao();
         atividade.MapGet("/", ObterAtividade.HandleAsync);
         atividade.MapDelete("/", ExcluirAtividade.HandleAsync);
         atividade.MapPut("/duracao", CorrigirDuracao.HandleAsync);
+        atividade.MapPost("/terminar", TerminarTreino.HandleAsync);
 
         var upload = atividade.MapGroup("");
         upload.MapPost("/evidencias", AnexarEvidencia.HandleAsync)

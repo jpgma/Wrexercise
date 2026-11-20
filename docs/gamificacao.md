@@ -85,10 +85,13 @@ A pose de cada avatar vem de `GET /api/grupos/{id}/cena`, calculada a partir do 
 
 | Situação | Pose |
 |---|---|
+| Treina ao vivo agora (`EmAndamento`, `decisoes/0078-treino-ao-vivo.md`) | `treinando` (`correr` na Corrida, `andar` na Caminhada), com a bolha "AO VIVO" |
 | Tem atividade `AguardandoFeedback` ou `EmRevisao` | `treinando` |
 | Meta cumprida (`metaCumprida`) | `comemorando` |
 | Nenhuma atividade deste grupo nas últimas 48 horas, sem contar as `Rejeitada` e as `Anulada` | `dormindo`: sentado no chão, com um "Zzz" |
 | Demais casos, sem desafio ou a semana não conta | `parado`, com uma variação de vez em quando (`alongar`, `olhar`) |
+
+**Ao vivo** (`decisoes/0078-treino-ao-vivo.md`): quem começou um treino ao vivo treina na praça com a bolha "AO VIVO", os minutos e as Torcidas recebidas. O Placar marca "AO VIVO". Quem treina ao vivo fica lado a lado, logo depois de quem vê (Treino junto). A praça consulta a cena a cada 30 segundos enquanto está visível. No Foco de quem treina ao vivo, o botão "Torcer" manda uma Torcida, uma vez a cada 10 minutos.
 
 As variações de `parado` tocam em momentos pseudoaleatórios, com semente no identificador do usuário, para que os avatares não se mexam todos juntos.
 
@@ -260,6 +263,8 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Primeira atividade da semana | 3 |
 | Primeira atividade num dia da semana ainda sem treino | 3 |
 | Primeiro tipo de atividade novo na semana, a partir do 2º tipo | 5 |
+| Treino ao vivo, com "Começar treino" e "Terminar treino" (`0078`) | 3 |
+| Parceria: treino ao vivo junto com um colega do grupo, verificado, por 15 min ou mais (`0078`) | 3 |
 
 - Máximo de **10 EN de bônus por atividade**.
 - Horários e semanas no fuso do grupo da atividade. Toda semana vai de segunda a domingo, como no desafio.

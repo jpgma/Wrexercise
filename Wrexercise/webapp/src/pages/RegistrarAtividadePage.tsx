@@ -9,6 +9,7 @@ import {
   Minus,
   Play,
   Plus,
+  Radio,
   RefreshCw,
   Smartphone,
   Trash2,
@@ -34,6 +35,7 @@ import {
   CameraEvidencia,
   calcularAvisoDataFoto,
   formatarDataHora,
+  getRotaTreino,
   lerRascunhoRegistro,
   marcarCapturaNoApp,
   maximoNoPassadoMs,
@@ -51,9 +53,11 @@ import {
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   tiposAtividade,
+  useComecarTreino,
   useCriarAtividade,
   useFilaAvaliacao,
   useGaleria,
+  useTreinoAtual,
   type AtividadeResumo,
   type CriarAtividadeData,
   type TipoAtividade,
@@ -96,7 +100,7 @@ type FormData = z.infer<typeof schema>;
 /** Preparada na escolha: assim o autor vê o aviso da data antes de enviar (ADR 0052). */
 type Anexo = { preparada: EvidenciaPreparada; url: string };
 
-const maximoDeEvidencias = 3;
+const maximoDeEvidencias = 10;
 const passoEmMinutos = 5;
 const maximoDeAutores = 5;
 
@@ -389,12 +393,17 @@ export function RegistrarAtividadePage() {
   const desafio = useDesafio(desafioId ?? "", desafioId !== undefined);
   const progresso = useProgresso(desafioId ?? "", desafioId !== undefined);
   const criar = useCriarAtividade(grupoId);
+  // Treino ao vivo (ADR 0078): começa agora e termina no cronômetro. "Já treinei" é o registro de sempre.
+  const treinoAtual = useTreinoAtual();
+  const comecar = useComecarTreino(grupoId);
+  const [modo, setModo] = useState<"agora" | "depois" | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   // Uma carta chegou com o formulário aberto (decisão 0076): o treino só depois da resposta.
+  const erroDoEnvio = criar.error ?? comecar.error;
   const cartaSemResposta =
-    criar.error instanceof ApiError &&
-    criar.error.code === "CARTA_SEM_RESPOSTA";
+    erroDoEnvio instanceof ApiError &&
+    erroDoEnvio.code === "CARTA_SEM_RESPOSTA";
   const sessao = useSessao().data;
   const usuarioId = sessao?.id;
   const getAvanco = useAvancoEnfeite(sessao?.modoInicio === "Jogo");
@@ -596,8 +605,18 @@ export function RegistrarAtividadePage() {
   // Se a fila não carregar, o formulário aparece e a API decide.
   const pendentes = fila.data ?? [];
 
-  if (grupo.isPending || fila.isPending || aguardandoImportado) {
+  if (
+    grupo.isPending ||
+    fila.isPending ||
+    aguardandoImportado ||
+    treinoAtual.isPending
+  ) {
     return <SplashScreen />;
+  }
+
+  // Com um treino ao vivo aberto, o lugar dele é o cronômetro: o servidor recusa outro registro.
+  if (!registrada && treinoAtual.data) {
+    return <Navigate to={getRotaTreino(treinoAtual.data)} replace />;
   }
 
   // O treino já virou atividade (por exemplo, em outro grupo): abre ela em vez de registrar de novo.
@@ -736,6 +755,22 @@ export function RegistrarAtividadePage() {
     }
   };
 
+  // Um treino importado ou um rascunho recuperado já são de um treino feito.
+  const modoEfetivo =
+    modo ?? (rascunhoId || rascunhoRestaurado ? "depois" : "agora");
+  const comecarAgora = () => {
+    if (!tipoAtual) {
+      void handleSubmit(() => undefined)();
+      return;
+    }
+    comecar.mutate(tipoAtual, {
+      onSuccess: (atividade) => {
+        if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
+        void navigate(`/grupos/${atividade.grupoId}/treino`, { replace: true });
+      },
+    });
+  };
+
   const inicioEscolhido = startedAt ? new Date(startedAt) : null;
   const avisoDaFoto = ({ preparada }: Anexo) => {
     if (!inicioEscolhido || Number.isNaN(inicioEscolhido.getTime()))
@@ -827,7 +862,36 @@ export function RegistrarAtividadePage() {
         </div>
       )}
 
-      {desafio.data && (
+      {!rascunhoId && (
+        <div
+          role="radiogroup"
+          aria-label="Quando foi o treino"
+          className="mb-5 grid grid-cols-2 gap-1 rounded-xl border-2 border-outline bg-surface p-1"
+        >
+          {(
+            [
+              ["agora", "Começar agora"],
+              ["depois", "Já treinei"],
+            ] as const
+          ).map(([valor, rotulo]) => (
+            <button
+              key={valor}
+              type="button"
+              role="radio"
+              aria-checked={modoEfetivo === valor}
+              onClick={() => setModo(valor)}
+              className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-semibold tap ${modoEfetivo === valor ? "bg-primary text-on-primary" : "text-muted"}`}
+            >
+              {valor === "agora" && (
+                <Radio aria-hidden="true" className="size-4" />
+              )}
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {desafio.data && modoEfetivo === "depois" && (
         <div className="mb-5 flex gap-3 rounded-2xl bg-soft p-4 text-sm text-on-soft">
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <p>
@@ -856,6 +920,10 @@ export function RegistrarAtividadePage() {
         noValidate
         onSubmit={(event) =>
           void handleSubmit((data) => {
+            if (modoEfetivo === "agora") {
+              comecarAgora();
+              return;
+            }
             if (cartasQueFalham.length > 0) {
               setConfirmandoCarta(true);
               return;
@@ -890,7 +958,7 @@ export function RegistrarAtividadePage() {
             })}
           </div>
           {errors.tipo && <p className="input-error">{errors.tipo.message}</p>}
-          {sessao?.modoInicio === "Jogo" && (
+          {modoEfetivo === "depois" && sessao?.modoInicio === "Jogo" && (
             <AvisoCartaNoTreino
               grupoId={grupoId}
               tipo={tipoAtual}
@@ -900,291 +968,336 @@ export function RegistrarAtividadePage() {
           )}
         </fieldset>
 
-        <p className="mt-6 mb-2 text-sm font-semibold">Duração</p>
-        <div className="card flex items-center justify-between p-3">
-          <button
-            type="button"
-            aria-label="Diminuir duração"
-            className="grid size-12 place-items-center rounded-xl bg-soft text-on-soft tap"
-            onClick={() => alterarDuracao(-passoEmMinutos)}
-          >
-            <Minus aria-hidden="true" className="size-5" />
-          </button>
-          <div className="min-w-0 flex-1 px-2 text-center">
-            <p className="font-score text-3xl">
-              {duracaoMinutos}
-              <span className="text-base text-muted"> min</span>
+        {modoEfetivo === "agora" ? (
+          <div className="mt-6">
+            <p className="text-sm text-muted">
+              O cronômetro começa agora e o grupo vê você treinando ao vivo.
+              Durante o treino, dá pra mandar até {maximoDeEvidencias} fotos e
+              vídeos. Treino ao vivo rende bônus de Energia.
             </p>
-            {falta && (
-              <p
-                className={`text-xs font-medium text-balance ${falta.conta ? "text-on-success-soft" : "text-on-warning-soft"}`}
-              >
-                {falta.conta
-                  ? "Conta para a meta"
-                  : `${faltaNoDia} para contar`}
+            {comecar.isError && (
+              <p role="alert" className="form-error mt-4">
+                {getErrorMessage(comecar.error)}
               </p>
             )}
-            {falta && minutosJaNoDia > 0 && (
-              <p className="text-xs text-muted">
-                Você já tem {minutosJaNoDia} min nesse dia
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            aria-label="Aumentar duração"
-            className="grid size-12 place-items-center rounded-xl bg-soft text-on-soft tap"
-            onClick={() => alterarDuracao(passoEmMinutos)}
-          >
-            <Plus aria-hidden="true" className="size-5" />
-          </button>
-        </div>
-
-        <label className="mt-6 block">
-          <span className="mb-2 block text-sm font-semibold">
-            Data e horário
-          </span>
-          <input
-            type="datetime-local"
-            min={inicioMinimo}
-            max={toLocalInputValue(new Date())}
-            className={`input-field ${errors.startedAt ? "border-danger" : ""}`}
-            {...register("startedAt")}
-          />
-          {errors.startedAt && (
-            <p className="input-error">{errors.startedAt.message}</p>
-          )}
-        </label>
-
-        <p className="mt-6 mb-2 text-sm font-semibold">
-          Comprovante <span className="font-normal text-muted">(opcional)</span>
-        </p>
-        <input
-          ref={seletor}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,video/*"
-          multiple
-          className="hidden"
-          onChange={(event) => {
-            const arquivos = event.target.files;
-            void adicionarAnexos(arquivos).finally(() => {
-              event.target.value = "";
-            });
-          }}
-        />
-        {(anexos.length > 0 || importadoPendente) && (
-          <ul className="mb-2 grid grid-cols-3 gap-2">
-            {importadoPendente && (
-              <li className="relative overflow-hidden rounded-2xl border-2 border-outline">
-                <img
-                  src={importadoPendente.imagemUrl}
-                  alt={`Resumo do treino no ${appIntegracaoLabels[importadoPendente.app]}`}
-                  className="aspect-square w-full object-cover object-top"
-                />
-                <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
-                  <Lock aria-hidden="true" className="size-3" />
-                  {appIntegracaoLabels[importadoPendente.app]}
-                </span>
-              </li>
-            )}
-            {anexos.map((anexo, indice) => (
-              <li
-                key={anexo.url}
-                className="relative overflow-hidden rounded-2xl border border-border"
-              >
-                <img
-                  src={anexo.url}
-                  alt={`Prévia do comprovante ${indice + 1}${anexo.preparada.tipo === "Video" ? ", vídeo" : ""}`}
-                  className="aspect-square w-full object-cover"
-                />
-                {anexo.preparada.tipo === "Video" && (
-                  <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
-                    <Play aria-hidden="true" className="size-3 fill-current" />
-                    {formatarDuracaoVideo(anexo.preparada.duracaoMs ?? 0)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  aria-label={`Remover comprovante ${indice + 1}`}
-                  className="absolute top-1.5 right-1.5 grid size-8 place-items-center rounded-full bg-surface text-danger shadow-card"
-                  onClick={() => removerAnexo(anexo)}
-                >
-                  <Trash2 aria-hidden="true" className="size-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {anexos.map(avisoDaFoto).some(Boolean) && (
-          <ul className="mb-2 space-y-1" aria-live="polite">
-            {anexos.map((anexo, indice) => {
-              const aviso = avisoDaFoto(anexo);
-              return (
-                aviso && (
-                  <li
-                    key={anexo.url}
-                    className="flex gap-1.5 text-xs text-muted"
-                  >
-                    <Info
-                      aria-hidden="true"
-                      className="mt-0.5 size-3.5 shrink-0"
-                    />
-                    <span>
-                      Comprovante {indice + 1}: {aviso}
-                    </span>
-                  </li>
-                )
-              );
-            })}
-          </ul>
-        )}
-        {anexos.some(
-          ({ preparada: { sinais } }) =>
-            sinais.latitude !== null && sinais.longitude !== null,
-        ) && (
-          <label className="mb-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-soft px-3 py-2 text-sm text-on-soft">
-            <input
-              type="checkbox"
-              className="size-5 shrink-0 accent-progress"
-              {...register("mostrarLocalizacao")}
-            />
-            <span className="flex-1">
-              Mostrar ao grupo o local do comprovante
-              <span className="block text-xs">
-                Desmarcado, a localização não sai do seu celular.
-              </span>
-            </span>
-            <MapPin aria-hidden="true" className="size-5 shrink-0" />
-          </label>
-        )}
-        {erroAnexo && (
-          <p role="alert" className="input-error mb-2">
-            {erroAnexo}
-          </p>
-        )}
-        {anexos.length < vagas && (
-          <div className="rounded-2xl border-2 border-dashed border-border-strong bg-surface p-3">
-            <div className="grid grid-cols-2 gap-2">
+            {cartaSemResposta && (
               <button
                 type="button"
-                disabled={preparando}
-                className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
-                onClick={() => camera.abrir(0)}
+                className="btn-primary mt-3 h-12 w-full"
+                onClick={() =>
+                  void navigate(location.pathname + location.search, {
+                    replace: true,
+                  })
+                }
               >
-                <Camera aria-hidden="true" className="size-7" />
-                Câmera
+                Responder a carta
               </button>
+            )}
+            <button
+              type="button"
+              className="btn-primary mt-6 h-14 w-full text-lg"
+              disabled={comecar.isPending}
+              onClick={comecarAgora}
+            >
+              <Radio aria-hidden="true" className="size-5" />
+              {comecar.isPending ? "Começando…" : "Começar treino"}
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="mt-6 mb-2 text-sm font-semibold">Duração</p>
+            <div className="card flex items-center justify-between p-3">
               <button
                 type="button"
-                disabled={preparando}
-                className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
-                onClick={() => seletor.current?.click()}
+                aria-label="Diminuir duração"
+                className="grid size-12 place-items-center rounded-xl bg-soft text-on-soft tap"
+                onClick={() => alterarDuracao(-passoEmMinutos)}
               >
-                <Images aria-hidden="true" className="size-7" />
-                Galeria
+                <Minus aria-hidden="true" className="size-5" />
+              </button>
+              <div className="min-w-0 flex-1 px-2 text-center">
+                <p className="font-score text-3xl">
+                  {duracaoMinutos}
+                  <span className="text-base text-muted"> min</span>
+                </p>
+                {falta && (
+                  <p
+                    className={`text-xs font-medium text-balance ${falta.conta ? "text-on-success-soft" : "text-on-warning-soft"}`}
+                  >
+                    {falta.conta
+                      ? "Conta para a meta"
+                      : `${faltaNoDia} para contar`}
+                  </p>
+                )}
+                {falta && minutosJaNoDia > 0 && (
+                  <p className="text-xs text-muted">
+                    Você já tem {minutosJaNoDia} min nesse dia
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                aria-label="Aumentar duração"
+                className="grid size-12 place-items-center rounded-xl bg-soft text-on-soft tap"
+                onClick={() => alterarDuracao(passoEmMinutos)}
+              >
+                <Plus aria-hidden="true" className="size-5" />
               </button>
             </div>
-            {progressoVideo !== null ? (
-              <div className="mt-3" role="status">
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <span>
-                    Preparando o vídeo… {Math.round(progressoVideo * 100)}%
-                  </span>
-                  <button
-                    type="button"
-                    className="btn-ghost h-11 px-3"
-                    onClick={() => conversao.current?.abort()}
+
+            <label className="mt-6 block">
+              <span className="mb-2 block text-sm font-semibold">
+                Data e horário
+              </span>
+              <input
+                type="datetime-local"
+                min={inicioMinimo}
+                max={toLocalInputValue(new Date())}
+                className={`input-field ${errors.startedAt ? "border-danger" : ""}`}
+                {...register("startedAt")}
+              />
+              {errors.startedAt && (
+                <p className="input-error">{errors.startedAt.message}</p>
+              )}
+            </label>
+
+            <p className="mt-6 mb-2 text-sm font-semibold">
+              Comprovante{" "}
+              <span className="font-normal text-muted">(opcional)</span>
+            </p>
+            <input
+              ref={seletor}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,video/*"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                const arquivos = event.target.files;
+                void adicionarAnexos(arquivos).finally(() => {
+                  event.target.value = "";
+                });
+              }}
+            />
+            {(anexos.length > 0 || importadoPendente) && (
+              <ul className="mb-2 grid grid-cols-3 gap-2">
+                {importadoPendente && (
+                  <li className="relative overflow-hidden rounded-2xl border-2 border-outline">
+                    <img
+                      src={importadoPendente.imagemUrl}
+                      alt={`Resumo do treino no ${appIntegracaoLabels[importadoPendente.app]}`}
+                      className="aspect-square w-full object-cover object-top"
+                    />
+                    <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
+                      <Lock aria-hidden="true" className="size-3" />
+                      {appIntegracaoLabels[importadoPendente.app]}
+                    </span>
+                  </li>
+                )}
+                {anexos.map((anexo, indice) => (
+                  <li
+                    key={anexo.url}
+                    className="relative overflow-hidden rounded-2xl border border-border"
                   >
-                    Cancelar
-                  </button>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-soft">
-                  <div
-                    className="h-full rounded-full bg-progress transition-[width]"
-                    style={{ width: `${Math.round(progressoVideo * 100)}%` }}
-                  />
-                </div>
-              </div>
-            ) : (
-              <p className="mt-2 text-center text-xs text-muted">
-                {preparando
-                  ? "Preparando…"
-                  : `Selfie, vídeo de até 1 minuto ou print do relógio (até ${vagas})`}
+                    <img
+                      src={anexo.url}
+                      alt={`Prévia do comprovante ${indice + 1}${anexo.preparada.tipo === "Video" ? ", vídeo" : ""}`}
+                      className="aspect-square w-full object-cover"
+                    />
+                    {anexo.preparada.tipo === "Video" && (
+                      <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-lightbox/60 px-2 py-0.5 text-xs font-semibold text-on-lightbox">
+                        <Play
+                          aria-hidden="true"
+                          className="size-3 fill-current"
+                        />
+                        {formatarDuracaoVideo(anexo.preparada.duracaoMs ?? 0)}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`Remover comprovante ${indice + 1}`}
+                      className="absolute top-1.5 right-1.5 grid size-8 place-items-center rounded-full bg-surface text-danger shadow-card"
+                      onClick={() => removerAnexo(anexo)}
+                    >
+                      <Trash2 aria-hidden="true" className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {anexos.map(avisoDaFoto).some(Boolean) && (
+              <ul className="mb-2 space-y-1" aria-live="polite">
+                {anexos.map((anexo, indice) => {
+                  const aviso = avisoDaFoto(anexo);
+                  return (
+                    aviso && (
+                      <li
+                        key={anexo.url}
+                        className="flex gap-1.5 text-xs text-muted"
+                      >
+                        <Info
+                          aria-hidden="true"
+                          className="mt-0.5 size-3.5 shrink-0"
+                        />
+                        <span>
+                          Comprovante {indice + 1}: {aviso}
+                        </span>
+                      </li>
+                    )
+                  );
+                })}
+              </ul>
+            )}
+            {anexos.some(
+              ({ preparada: { sinais } }) =>
+                sinais.latitude !== null && sinais.longitude !== null,
+            ) && (
+              <label className="mb-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-soft px-3 py-2 text-sm text-on-soft">
+                <input
+                  type="checkbox"
+                  className="size-5 shrink-0 accent-progress"
+                  {...register("mostrarLocalizacao")}
+                />
+                <span className="flex-1">
+                  Mostrar ao grupo o local do comprovante
+                  <span className="block text-xs">
+                    Desmarcado, a localização não sai do seu celular.
+                  </span>
+                </span>
+                <MapPin aria-hidden="true" className="size-5 shrink-0" />
+              </label>
+            )}
+            {erroAnexo && (
+              <p role="alert" className="input-error mb-2">
+                {erroAnexo}
               </p>
             )}
-          </div>
-        )}
-        <CameraEvidencia
-          aberta={camera.aberta}
-          pedirLocalizacao={valores.mostrarLocalizacao ?? true}
-          onFechar={camera.fechar}
-          onFoto={(arquivo, local) => {
-            const em = new Date();
-            camera.fechar();
-            void adicionarAnexos([arquivo], { em, local });
-          }}
-          onVideo={(arquivo, em, local) => {
-            camera.fechar();
-            void adicionarAnexos([arquivo], { em, local });
-          }}
-        />
-        {recorte && (
-          <RecorteVideo
-            arquivo={recorte.arquivo}
-            duracao={recorte.duracao}
-            onEscolher={recorte.resolver}
-            onCancelar={() => recorte.resolver(null)}
-          />
-        )}
+            {anexos.length < vagas && (
+              <div className="rounded-2xl border-2 border-dashed border-border-strong bg-surface p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={preparando}
+                    className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
+                    onClick={() => camera.abrir(0)}
+                  >
+                    <Camera aria-hidden="true" className="size-7" />
+                    Câmera
+                  </button>
+                  <button
+                    type="button"
+                    disabled={preparando}
+                    className="flex flex-col items-center gap-1.5 rounded-xl bg-soft py-5 text-sm font-medium text-on-soft tap disabled:opacity-60"
+                    onClick={() => seletor.current?.click()}
+                  >
+                    <Images aria-hidden="true" className="size-7" />
+                    Galeria
+                  </button>
+                </div>
+                {progressoVideo !== null ? (
+                  <div className="mt-3" role="status">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span>
+                        Preparando o vídeo… {Math.round(progressoVideo * 100)}%
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-ghost h-11 px-3"
+                        onClick={() => conversao.current?.abort()}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-soft">
+                      <div
+                        className="h-full rounded-full bg-progress transition-[width]"
+                        style={{
+                          width: `${Math.round(progressoVideo * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-center text-xs text-muted">
+                    {preparando
+                      ? "Preparando…"
+                      : `Selfie, vídeo de até 1 minuto ou print do relógio (até ${vagas})`}
+                  </p>
+                )}
+              </div>
+            )}
+            <CameraEvidencia
+              aberta={camera.aberta}
+              pedirLocalizacao={valores.mostrarLocalizacao ?? true}
+              onFechar={camera.fechar}
+              onFoto={(arquivo, local) => {
+                const em = new Date();
+                camera.fechar();
+                void adicionarAnexos([arquivo], { em, local });
+              }}
+              onVideo={(arquivo, em, local) => {
+                camera.fechar();
+                void adicionarAnexos([arquivo], { em, local });
+              }}
+            />
+            {recorte && (
+              <RecorteVideo
+                arquivo={recorte.arquivo}
+                duracao={recorte.duracao}
+                onEscolher={recorte.resolver}
+                onCancelar={() => recorte.resolver(null)}
+              />
+            )}
 
-        <label className="mt-6 block">
-          <span className="mb-2 block text-sm font-semibold">
-            Observações{" "}
-            <span className="font-normal text-muted">(opcional)</span>
-          </span>
-          <textarea
-            rows={3}
-            placeholder="Como foi o treino?"
-            className={`input-field h-auto resize-none py-3 ${errors.descricao ? "border-danger" : ""}`}
-            {...register("descricao")}
-          />
-          {errors.descricao && (
-            <p className="input-error">{errors.descricao.message}</p>
-          )}
-        </label>
+            <label className="mt-6 block">
+              <span className="mb-2 block text-sm font-semibold">
+                Observações{" "}
+                <span className="font-normal text-muted">(opcional)</span>
+              </span>
+              <textarea
+                rows={3}
+                placeholder="Como foi o treino?"
+                className={`input-field h-auto resize-none py-3 ${errors.descricao ? "border-danger" : ""}`}
+                {...register("descricao")}
+              />
+              {errors.descricao && (
+                <p className="input-error">{errors.descricao.message}</p>
+              )}
+            </label>
 
-        {errors.duracaoMinutos && (
-          <p role="alert" className="form-error mt-4">
-            {errors.duracaoMinutos.message}
-          </p>
-        )}
-        {criar.isError && (
-          <p role="alert" className="form-error mt-4">
-            {getErrorMessage(criar.error)}
-          </p>
-        )}
-        {cartaSemResposta && (
-          // Navegar de novo para a mesma tela deixa o portão abrir a Chegada e voltar para cá depois.
-          <button
-            type="button"
-            className="btn-primary mt-3 h-12 w-full"
-            onClick={() =>
-              void navigate(location.pathname + location.search, {
-                replace: true,
-              })
-            }
-          >
-            Responder a carta
-          </button>
-        )}
+            {errors.duracaoMinutos && (
+              <p role="alert" className="form-error mt-4">
+                {errors.duracaoMinutos.message}
+              </p>
+            )}
+            {criar.isError && (
+              <p role="alert" className="form-error mt-4">
+                {getErrorMessage(criar.error)}
+              </p>
+            )}
+            {cartaSemResposta && (
+              // Navegar de novo para a mesma tela deixa o portão abrir a Chegada e voltar para cá depois.
+              <button
+                type="button"
+                className="btn-primary mt-3 h-12 w-full"
+                onClick={() =>
+                  void navigate(location.pathname + location.search, {
+                    replace: true,
+                  })
+                }
+              >
+                Responder a carta
+              </button>
+            )}
 
-        <button
-          type="submit"
-          className="btn-primary mt-6 w-full"
-          disabled={criar.isPending || enviando !== null}
-        >
-          {enviando ?? (criar.isPending ? "Enviando…" : "Enviar atividade")}
-        </button>
+            <button
+              type="submit"
+              className="btn-primary mt-6 w-full"
+              disabled={criar.isPending || enviando !== null}
+            >
+              {enviando ?? (criar.isPending ? "Enviando…" : "Enviar atividade")}
+            </button>
+          </>
+        )}
       </form>
     </div>
   );

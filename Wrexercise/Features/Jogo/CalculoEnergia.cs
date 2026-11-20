@@ -4,7 +4,15 @@ using Wrexercise.Features.Progresso.Contracts;
 namespace Wrexercise.Features.Jogo;
 
 /// <summary>Uma atividade não rejeitada da pessoa, com o início no fuso do grupo dela.</summary>
-internal sealed record AtividadeEnergia(DateTime InicioLocal, string Tipo, bool Verificada, Guid GrupoId = default);
+/// <param name="AoVivo">Começou pelo "Começar treino" (decisão 0078).</param>
+/// <param name="Parceria">Ao vivo junto com um colega do grupo, com treino verificado, por 15 minutos ou mais.</param>
+internal sealed record AtividadeEnergia(
+    DateTime InicioLocal,
+    string Tipo,
+    bool Verificada,
+    Guid GrupoId = default,
+    bool AoVivo = false,
+    bool Parceria = false);
 
 /// <summary>Uma Jogada concluída de que a pessoa participou.</summary>
 /// <param name="Preco">O preço pago pela Provocação; numa Fusão, a soma das duas.</param>
@@ -53,6 +61,15 @@ internal static class CalculoEnergia
     public const int BonusPrimeiraDaSemana = 3;
     public const int BonusDiaNovo = 3;
     public const int BonusTipoNovo = 5;
+
+    /// <summary>Treino registrado ao vivo, com "Começar treino" e "Terminar treino" (decisão 0078).</summary>
+    public const int BonusAoVivo = 3;
+
+    /// <summary>Treino ao vivo junto com um colega do grupo (decisão 0078).</summary>
+    public const int BonusParceria = 3;
+
+    /// <summary>Quanto dois treinos ao vivo precisam acontecer juntos para render Parceria.</summary>
+    public static readonly TimeSpan SobreposicaoParceria = TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// A partir deste dia, a base é por dia, não por atividade (decisão 0040). Antes dele, cada atividade
@@ -157,6 +174,17 @@ internal static class CalculoEnergia
             if (dia.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday && diasComBonusFimDeSemana.Add(dia))
             {
                 bonus += BonusFimDeSemana;
+            }
+
+            // Por atividade, não por dia: não ocupam posição, então nenhuma toma o bônus de outra.
+            if (atividade.AoVivo)
+            {
+                bonus += BonusAoVivo;
+            }
+
+            if (atividade.Parceria)
+            {
+                bonus += BonusParceria;
             }
 
             if (atividade.Verificada)

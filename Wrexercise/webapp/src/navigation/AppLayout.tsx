@@ -2,6 +2,7 @@ import { Home, ListChecks, Plus, User, Users } from "lucide-react";
 import { useState } from "react";
 import { Link, NavLink, Outlet, useMatch, useNavigate } from "react-router";
 import { Logo } from "@/components/BrandMark";
+import { PortaoTreino, useTreinoAtual } from "@/features/atividades";
 import { useGrupos } from "@/features/grupos";
 import {
   PortaoChegada,
@@ -86,11 +87,14 @@ export function AppLayout() {
   // Na Chegada de uma carta, a resposta vem antes de tudo: sem menu, abas nem troca de grupo (decisão 0076).
   const emChegada = useEmChegada();
   const cartaEsperando = useCartaEsperando();
+  // O treino ao vivo (ADR 0078): o cronômetro vem primeiro, e a Chegada de uma carta espera o fim dele.
+  const treino = useTreinoAtual();
+  const treinoAberto = !!treino.data;
 
   if (emChegada) {
     return (
       <div className="min-h-dvh">
-        <PortaoChegada />
+        <PortaoChegada pausado={treinoAberto} />
         <main className="pb-12">
           <div className="mx-auto w-full max-w-5xl animate-fade-in px-4 pt-4 sm:px-6">
             <Outlet />
@@ -102,8 +106,9 @@ export function AppLayout() {
 
   return (
     <div className="min-h-dvh">
-      <PortaoChegada />
-      <NovidadesDialog pausado={cartaEsperando} />
+      <PortaoChegada pausado={treinoAberto} />
+      <PortaoTreino treino={treino.isError ? null : treino.data} />
+      <NovidadesDialog pausado={cartaEsperando || treinoAberto} />
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-surface p-5 lg:flex">
         <Logo className="mb-8 px-2" />
         <nav aria-label="Principal" className="flex flex-col gap-1">

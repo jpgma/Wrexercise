@@ -199,20 +199,34 @@ internal sealed record EstadoJogo(
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.situacao_verificacao = 'Verificada', a.grupo_id
+            SELECT a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.situacao_verificacao = 'Verificada', a.grupo_id,
+                a.ao_vivo,
+                a.ao_vivo AND EXISTS (
+                    SELECT 1 FROM atividades o
+                    WHERE o.grupo_id = a.grupo_id AND o.usuario_id <> a.usuario_id
+                      AND o.ao_vivo AND o.situacao_verificacao = 'Verificada'
+                      AND least(a.started_at + make_interval(secs => a.duracao_segundos),
+                                o.started_at + make_interval(secs => o.duracao_segundos))
+                          - greatest(a.started_at, o.started_at) >= $2)
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
-            WHERE a.usuario_id = $1 AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+            WHERE a.usuario_id = $1 AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')
             ORDER BY a.created_at, a.id
             """, connection, transaction);
         command.Parameters.AddWithValue(usuarioId);
+        command.Parameters.AddWithValue(CalculoEnergia.SobreposicaoParceria);
 
         var atividades = new List<AtividadeEnergia>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             atividades.Add(new AtividadeEnergia(
-                reader.GetDateTime(0), reader.GetString(1), reader.GetBoolean(2), reader.GetGuid(3)));
+                reader.GetDateTime(0),
+                reader.GetString(1),
+                reader.GetBoolean(2),
+                reader.GetGuid(3),
+                reader.GetBoolean(4),
+                reader.GetBoolean(5)));
         }
 
         return atividades;

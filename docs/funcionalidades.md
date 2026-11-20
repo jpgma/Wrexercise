@@ -33,6 +33,9 @@ The code uses Portuguese names for the terms of the domain. This document uses t
 | type goal | `MetaPorTipo` | Meta por tipo |
 | week | `Semana` | Semana |
 | activity | `Atividade` | Atividade, treino |
+| live workout | `EmAndamento` (status) | Treino ao vivo, "AO VIVO" |
+| cheer | `Torcida` | Torcer, torcida |
+| live partnership | `Parceria` | Treinar junto |
 | evidence | `Evidencia` | Comprovante |
 | proof method | `Comprovacao` | — |
 | reviewer | `Revisor` | — |
@@ -125,7 +128,10 @@ The user cannot change the e-mail.
   - `Semanas`: the member above has more met weeks. `quantidade` is the difference. Text: "Ana tem N semanas cumpridas a mais."
 - On a screen narrower than the plaza (360 px), the whole plaza becomes smaller. The plaza never has a horizontal scroll.
 - `GET /api/grupos/{id}/cena` returns the members and their pose: `{ "grupoId": "…", "membros": [{ "usuarioId": "…", "nomeExibicao": "…", "pose": "parado", "recebeCartas": true, "dormindoDesde": null }] }`. `recebeCartas` is true when the member is in the mode `Jogo`. `dormindoDesde` has a value only when the pose is `dormindo`. A user who is not a member gets 404 `GRUPO_NAO_ENCONTRADO`.
-- The pose is `treinando` if the member has an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
+- The pose is `treinando` if the member has a live workout in this group (`EmAndamento`, see 7.1.2), or an activity of this group in the current week with the state `AguardandoFeedback` or `EmRevisao`. The week runs from Monday to Sunday in the time zone of the group.
+- A member with a live workout has `treinoAoVivo` in the scene response: `atividadeId`, `tipo`, `startedAt`, `torcidas` (the number of cheers) and `torcidaPorMimEm` (the last cheer of the user who reads). The `Avatar` plays `correr` for `Corrida`, `andar` for `Caminhada` and `treinando` for the other types. Above the head, a label shows "AO VIVO", the minutes and 📣 with the number of cheers. In the `Placar`, the item has the label "AO VIVO". Members with a live workout stand side by side, after the user who reads (Treino junto).
+- The scene asks the server again each 30 seconds while the page is visible.
+- In the focus view (`Foco`) of a colleague with a live workout, the chip "Ao vivo há N min" and the button "Torcer por Ana" show. `POST /api/atividades/{id}/torcida` sends a cheer (`Torcida`). Each member can cheer one time each 10 minutes for each workout: else `429 TORCIDA_MUITO_CEDO`. The author cannot cheer: `403 TORCIDA_PROPRIA`. A workout that is not live: `409 TREINO_NAO_EM_ANDAMENTO`. A user that is not a member: `404 ATIVIDADE_NAO_ENCONTRADA`. The author gets the notification `Torcida`, only in the list. The feed shows a live workout with "treinando agora, há N min" and the button "Torcer".
 - Otherwise, the pose is `comemorando` if the member met the goal of the current week of the featured challenge. Without a featured challenge, or if the week does not count for the member, the pose is not `comemorando`.
 - Otherwise, the pose is `dormindo` if the member has no activity of this group that starts in the last 48 hours. Activities with the state `Rejeitada` or `Anulada` do not count. Pending activities count. A member that joined the group less than 48 hours ago is not `dormindo`. This rule applies with or without a challenge. `dormindoDesde` is the start of the last activity that counts, or the time of joining, if that time is later.
 - In all other cases, the pose is `parado`. From time to time, a member that is `parado` stretches (`alongar`) or looks around (`olhar`). The moments are random and differ for each member. The animation stops when the page is hidden.
@@ -227,6 +233,8 @@ The user cannot change the e-mail.
   - A type of activity that is new in the week: 5 EN. The type of the first activity of the week does not get this bonus.
   - Start before 06:00: 5 EN. Start from 06:00 to 08:00: 3 EN. This bonus counts one time for each user and day.
   - Saturday or Sunday: 3 EN. This bonus counts one time for each user and day.
+  - Live workout (`ao_vivo`, see 7.1.2): 3 EN.
+  - Live partnership (`Parceria`): 3 EN when the live workout and the live workout of a different member of the same group, that is `Verificada`, occur together for 15 minutes or more.
 - The bonus rules use all the activities of the user that are not `Rejeitada`, from all groups, in the order of registration (`created_at`). Only `Verificada` activities get the bonus. A pending activity keeps its position. If a reviewer rejects it, the next activity can get the bonus.
 - Days and weeks use the time zone of the group of each activity. A week runs from Monday to Sunday.
 - Fatigue (`Fadiga`):
@@ -514,7 +522,7 @@ An active member records an activity with these data:
 - Start date and time. It cannot be more than 1 hour in the future. It cannot be more than 48 hours in the past: the API returns `400 ATIVIDADE_MUITO_ANTIGA`.
 - Duration: 1 minute to 24 hours.
 - Description: optional, maximum 500 characters.
-- Evidence: 0 to 3 items. Each item is an image or a video, in any mix (ADR 0058).
+- Evidence: 0 to 10 items. Each item is an image or a video, in any mix (ADR 0058, 0078).
 
 The proof method comes from the evidence:
 
@@ -557,6 +565,36 @@ The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascu
 - If the review queue is not empty, the button "Começar avaliação" keeps the draft until the form opens again.
 - The Settings page shows "Apps conectados" when there is an active connection. "Desconectar" revokes the token.
 
+### 7.1.2. Live workout (`EmAndamento`)
+
+A member can start a workout now and finish it later (ADR 0078). The record of a workout that already occurred continues to work as in 7.1.
+
+- At the top, the form has two options: "Começar agora" and "Já treinei". "Começar agora" is the default. With an imported workout (7.1.1) or a recovered draft, the form shows only "Já treinei".
+- With "Começar agora", the user selects only the type and taps "Começar treino". `POST /api/grupos/{id}/atividades/em-andamento` with `{ "tipo": "…" }` creates an activity with the status `EmAndamento`, `ao_vivo = true` and `started_at` = now. The response is `201`. The same request in the same group returns the open workout with `200`.
+- The same blocks as 7.1 apply: `409 AVALIACOES_PENDENTES` and `409 CARTA_SEM_RESPOSTA`.
+- A user has a maximum of one live workout, in all groups. A start in a different group, or a record of a workout that already occurred (7.1), returns `409 TREINO_EM_ANDAMENTO`.
+- An activity in `EmAndamento` does not count for anything: no progress, no ranking, no Energy, no card goal, no reviewers, no review queue. Other members cannot react to it. Nobody can correct its duration. A member with a live workout is awake (see 3.3.2).
+- When the workout starts, the awake members of the group get the notification `ComecouTreinar` ("Ana começou a treinar 🏋️ Bora torcer?"). Each member gets a maximum of one for each person and group in 12 hours.
+- `GET /api/atividades/em-andamento` returns the live workout of the current user, or `204`: `atividadeId`, `grupoId`, `grupoNome`, `tipo`, `startedAt`, `totalEvidencias` and the 50 most recent cheers (`torcidas`).
+- Timer page `/grupos/{id}/treino`:
+  - It shows "AO VIVO", the type, the time since the start (from `startedAt` of the server, thus it continues after a reload or on a different device), and the `Avatar` of the user. The `Avatar` plays `correr` for `Corrida`, `andar` for `Caminhada` and `treinando` for the other types.
+  - At 15, 30, 45, 60, 90, 120 and 180 minutes, the page shows a message ("30 min! Segue firme 💪") and the `Avatar` plays `comemorar` for 4 seconds. Only a milestone that occurs with the page open shows.
+  - With a challenge, it shows if the workout already counts for the goal of the day, or the minutes that are necessary.
+  - The buttons "Câmera" and "Galeria" send each photo or video immediately, up to 10 items. A video must have 1 minute or less. During the workout, the location never leaves the device.
+  - "Manter a tela acesa" keeps the screen on (Screen Wake Lock), if the browser supports it.
+  - The page asks the server again each 15 seconds. When a new cheer arrives, the name shows above the `Avatar` and the `Avatar` celebrates.
+  - If a challenge card arrives, the page shows "Uma carta chegou! Ela espera você terminar o treino." The arrival of the card (`Chegada`) waits for the end of the workout.
+- When the application opens with a live workout, it opens the timer page, in the two modes. On all other pages, a "AO VIVO mm:ss" button shows above the tab bar. It opens the timer page.
+- "Terminar treino" opens a short form:
+  - The duration starts at the time since the start, in whole minutes. The user can only make it smaller (minimum 1 minute), for example after the user forgot to finish.
+  - If the time is more than 4 hours, the user must select "Treinei mesmo … seguidos" or make the duration smaller.
+  - Description: optional. In the mode `Jogo`, the form shows the card lines of 7.1 and asks for confirmation if the workout makes a card fail.
+  - `POST /api/atividades/{id}/terminar` with `{ "duracaoSegundos", "descricao", "tipoComprovacao" }`. The duration must be 60 seconds to the time since the start. With evidence, the proof method cannot be `RegistroManual`. Otherwise: `400 DADOS_INVALIDOS`. An activity that is not `EmAndamento` returns `409 TREINO_NAO_EM_ANDAMENTO`. Only the author can finish.
+  - The activity becomes `AguardandoFeedback` and `submitted_at` becomes now. Then all the rules of a new record apply: the `RegistroTardio` warning, the reviewers, the `NovaAtividade` notification, the automatic verification without reviewers, the 48-hour window and the 15 minutes to delete. The server calculates the date warnings of the evidence again with the final duration.
+  - After the end, the `Avatar` celebrates and the page shows "Treino ao vivo, feito!".
+- "Cancelar treino" asks for a confirmation, then deletes the workout and its evidence. There is no penalty.
+- A background task runs each 5 minutes. After 3 hours, the author gets the notification `TreinoLongo` ("Ainda treinando? Termine ou ajuste o seu treino"), one time. After 24 hours, the server deletes the workout and its evidence.
+
 ### 7.2. Evidence
 
 - The form has two buttons: "Câmera" and "Galeria".
@@ -585,7 +623,7 @@ The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascu
 - The API returns `latitude` and `longitude` for each evidence (`null` when the browser did not send them). The activity page and the review page show the button "Local" on an evidence with a location. The button opens Google Maps at that position, outside the application.
 - The server refuses an image if the same file (SHA-256 of the sent file or of the original file) is already evidence in any group of the user, also in the same activity. The API returns `409 EVIDENCIA_DUPLICADA`. The confirmation page shows "Esta foto já foi usada em outra atividade."
 - If an evidence file does not arrive, the confirmation page shows "Um comprovante não pôde ser enviado." (or the number of files) and the reason, if the server gave one. When the cause is the connection, the upload limit (`429`) or a server error (`5xx`), the page also shows "Confira a conexão e tente de novo sem sair desta tela." and the button "Tentar de novo" (ADR 0073). The button sends only the files that did not arrive. When all the files arrive, the page shows "Pronto, os comprovantes foram enviados." The page does not offer a new attempt for a file that the server refused (`400`, `409`). If the user leaves the page, the files that did not arrive are lost.
-- If the same file is already evidence of the same activity, the API returns `409 EVIDENCIA_JA_ANEXADA`, also when the activity has 3 images. This occurs when the form submits again after a lost response (see 7.1). The form counts the image as sent.
+- If the same file is already evidence of the same activity, the API returns `409 EVIDENCIA_JA_ANEXADA`, also when the activity has 10 items. This occurs when the form submits again after a lost response (see 7.1). The form counts the image as sent.
 - The server accepts JPEG, PNG and WebP images and MP4 videos (ADR 0058). The maximum size is 5 MB for each image, 25 MB for each video and 100 KB for each thumbnail. The server examines the real content of the file. A thumbnail is always a JPEG.
 - The server reads the boxes of each MP4 file. It does not decode the video. It refuses a video:
   - That it cannot read (no `ftyp` box first, no `moov` box, a box larger than the file, no video track, a truncated file): `400 VIDEO_INVALIDO`.
@@ -596,7 +634,7 @@ The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascu
 - When the server refuses a file, it deletes all the files of that request. No temporary file stays on the disk.
 - The API returns `tipo` (`Foto` or `Video`) and `duracaoMs` (only for videos) for each evidence. Each item in the feed has `miniaturaDuracaoMs` when the first evidence is a video.
 - The server sends a video with support for `Range` requests. The `<video>` element needs this to go to a different position.
-- Only the author can attach evidence. The author can attach evidence only while the activity has the status `AguardandoFeedback`.
+- Only the author can attach evidence. The author can attach evidence only while the activity has the status `EmAndamento` or `AguardandoFeedback`. During a live workout, the first evidence does not verify the activity.
 - Nobody can replace evidence. Evidence is deleted only with its activity (see 7.6).
 - Only active members of the group can see the evidence.
 - The feed shows the thumbnail. The full image loads only when the user opens it. When the first evidence is a video, the thumbnail shows ▶ and the duration.
@@ -653,6 +691,7 @@ The system adds warnings to an activity. All members of the group see them, also
 ### 7.6. Delete an activity
 
 - The author can delete his or her activity for 15 minutes after recording it (`submitted_at`), in each status but `Verificada` (ADR 0073). Reactions of all types do not stop this. The author can also delete an activity that is `EmRevisao`, `Rejeitada` or `Anulada` in these 15 minutes. If all the reviewers give `Kudos`, the status changes to `Verificada`, and then the author cannot delete.
+- The author can cancel a live workout (`EmAndamento`) at all times (see 7.1.2).
 - `DELETE /api/atividades/{id}`. Out of these limits, the API returns `409 EXCLUSAO_NAO_PERMITIDA`. A different member gets `403 ACESSO_NEGADO`.
 - The deletion is permanent. The system deletes the reviewers, reactions, comments, notifications, warnings, evidence and image files of the activity.
 - A `FotoParecida` warning of a different activity that links to the deleted activity stays, without the link.
@@ -849,6 +888,9 @@ The system makes a notification for these events:
 | An activity completes a play. | The sender. | `JogadaConcluida` |
 | A member chooses the user as weekly rival. | The rival. | `RivalEscolhido` |
 | A member pokes the user (see 3.3.8). | The member that got the poke. | `Cutucada` |
+| A member starts a live workout (see 7.1.2). Maximum one for each person and group in 12 hours. | The awake members, but not the author. | `ComecouTreinar` |
+| A member cheers for a live workout. | The author. | `Torcida` |
+| A live workout is open for 3 hours. | The author. | `TreinoLongo` |
 
 - When an activity becomes `Verificada`, the author does not get a notification.
 - The system joins unread reactions and comments of one activity into one notification with a total.
@@ -863,7 +905,7 @@ The system makes a notification for these events:
 ### 11.1. Push notifications
 
 - The phone or the computer can show a notification from the system, also when the application is closed. This is a push notification.
-- These types make a push notification: `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada`, `Disputa`, `CartaRecebida`, `RivalEscolhido` and `Cutucada`. The types `CartaAceita`, `CartaRecusada` and `JogadaConcluida` show only in the list of the application.
+- These types make a push notification: `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada`, `Disputa`, `CartaRecebida`, `RivalEscolhido`, `Cutucada`, `ComecouTreinar` and `TreinoLongo`. The types `CartaAceita`, `CartaRecusada`, `JogadaConcluida` and `Torcida` show only in the list of the application. `ComecouTreinar` opens the home screen of the group. `TreinoLongo` and `Torcida` open the timer page.
 - The title is the name of the group. The text is the same as in the list.
 - A background task sends new notifications each 30 seconds. It sends a notification only if it is not read, it changed less than 1 hour before, the user is still a member of the group and the user turned on push on one or more devices.
 - When a new reaction or comment adds to an unread notification, the device gets the notification again. The new notification replaces the old one on the screen and does not make a sound again.

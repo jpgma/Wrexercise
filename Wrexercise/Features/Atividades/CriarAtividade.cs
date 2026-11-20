@@ -3,9 +3,7 @@ using NpgsqlTypes;
 using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Features.Jogo.Contracts;
-using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
-using Wrexercise.Infrastructure.Database;
 using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
 
@@ -148,6 +146,12 @@ internal static class CriarAtividade
             return (AtividadeOperacaoStatus.CartaSemResposta, default, false);
         }
 
+        // Com um treino ao vivo aberto, a pessoa termina ou cancela esse antes (ADR 0078).
+        if (await RegistroAtividade.ExisteEmAndamentoAsync(connection, transaction, usuarioId, cancellationToken))
+        {
+            return (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
+        }
+
         // Duas requisições com a mesma chave ao mesmo tempo: a segunda espera a primeira e não insere nada.
         await using var insert = new NpgsqlCommand("""
             INSERT INTO atividades (
@@ -207,46 +211,18 @@ internal static class CriarAtividade
             temEvidenciaRascunho = true;
         }
 
-        if (AvisosEvidencia.IsRegistroTardio(request.StartedAt.Value, request.DuracaoSegundos.Value, submittedAt))
-        {
-            await ConsultasAtividade.InserirAvisoAsync(
-                connection, transaction, id, TipoAviso.RegistroTardio, null, null, cancellationToken);
-        }
-
-        // Quem dorme no grupo não revisa (decisão 0062). Sem ninguém acordado, a atividade não tem revisores
-        // e é verificada logo abaixo ou ao receber a evidência.
-        await using (var revisores = new NpgsqlCommand($"""
-            INSERT INTO revisores_atividade (atividade_id, usuario_id)
-            SELECT $1, m.usuario_id
-            FROM membros_grupo m
-            WHERE m.grupo_id = $2 AND m.removed_at IS NULL AND m.usuario_id <> $3
-              AND {MembrosDormindo.AcordadoSql("m")}
-            """, connection, transaction))
-        {
-            revisores.Parameters.AddWithValue(id);
-            revisores.Parameters.AddWithValue(grupoId);
-            revisores.Parameters.AddWithValue(usuarioId);
-            await revisores.ExecuteNonQueryAsync(cancellationToken);
-        }
-
-        await using (var verificar = new NpgsqlCommand("""
-            UPDATE atividades
-            SET situacao_verificacao = 'Verificada', verified_at = now()
-            WHERE id = $1
-              AND (tipo_comprovacao = 'RegistroManual' OR $2)
-              AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = $1)
-            """, connection, transaction))
-        {
-            verificar.Parameters.AddWithValue(id);
+        await RegistroAtividade.FinalizarAsync(
+            connection,
+            transaction,
+            id,
+            grupoId,
+            usuarioId,
+            request.StartedAt.Value,
+            request.DuracaoSegundos.Value,
+            submittedAt,
             // Com a evidência do rascunho já anexada, vale o mesmo que a primeira foto em AnexarEvidencia.
-            verificar.Parameters.AddWithValue(temEvidenciaRascunho);
-            if (await verificar.ExecuteNonQueryAsync(cancellationToken) > 0)
-            {
-                await JogadasConcluidas.NotificarAsync(connection, transaction, id, cancellationToken);
-            }
-        }
-
-        await NotificacoesAtividade.NotificarNovaAtividadeAsync(connection, transaction, id, cancellationToken);
+            temEvidenciaRascunho,
+            cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
         return (AtividadeOperacaoStatus.Concluida, id, false);

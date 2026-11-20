@@ -196,7 +196,7 @@ internal static class Jogadas
             JOIN atividades a ON a.usuario_id = j.destinatario_id AND a.grupo_id = j.grupo_id
             WHERE ($1 IN (j.remetente_id, j.destinatario_id) OR $2 IN (j.remetente_id, j.destinatario_id))
               AND (j.resposta = 'Aceita' OR (j.resposta IS NULL AND j.expira_em > now()))
-              AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+              AND a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')
               AND a.started_at >= j.enviada_em
               AND a.started_at <= j.expira_em
             ORDER BY a.created_at, a.id
@@ -369,7 +369,7 @@ internal static class Jogadas
             FROM atividades a
             WHERE a.grupo_id = $1 AND a.usuario_id = $2
               AND (a.situacao_verificacao = 'Verificada'
-                OR (a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada')
+                OR (a.situacao_verificacao NOT IN ('Rejeitada', 'Anulada', 'EmAndamento')
                   AND ($3 = $2 OR EXISTS (
                     SELECT 1 FROM reacoes_atividade r
                     WHERE r.atividade_id = a.id AND r.usuario_id = $3 AND r.tipo = 'Kudos'))))

@@ -97,6 +97,7 @@ internal static class ConsensoAtividade
 
 internal static class SituacaoVerificacao
 {
+    public const string EmAndamento = "EmAndamento";
     public const string AguardandoFeedback = "AguardandoFeedback";
     public const string Verificada = "Verificada";
     public const string EmRevisao = "EmRevisao";

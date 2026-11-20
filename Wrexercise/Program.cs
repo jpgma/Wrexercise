@@ -75,6 +75,7 @@ builder.Services.AddIntegracoesRateLimiter();
 builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 builder.Services.AddHostedService<LimpezaAvataresBackgroundService>();
 builder.Services.AddHostedService<EnvioPushBackgroundService>();
+builder.Services.AddHostedService<ExpiracaoTreinosBackgroundService>();
 
 var app = builder.Build();
 

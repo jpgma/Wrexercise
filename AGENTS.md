@@ -44,7 +44,9 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Placar`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`, `EmAndamento`, `Torcida`, `Parceria`, `AoVivo`, `Marco`.
+
+Treino ao vivo (ADR 0078): a pessoa começa o treino agora ("Começar treino") e termina depois ("Terminar treino" ou "Cancelar treino"). Enquanto isso, a atividade fica `EmAndamento`: não conta para nada, ninguém avalia, e o grupo vê o Avatar treinando na praça com a bolha "AO VIVO". O cronômetro fica em `/grupos/{id}/treino`. `Torcida`: um colega torce por quem treina ao vivo ("Torcer", uma vez a cada 10 minutos). `Parceria`: o bônus por treinar ao vivo junto com um colega ("Treinar junto"). `AoVivo`: o bônus do treino começado ao vivo. `Marco`: os 15, 30, 45, 60, 90, 120 e 180 minutos do cronômetro, quando o Avatar comemora. Na interface: "Começar agora", "Já treinei", "AO VIVO", "Manter a tela acesa".
 
 `Fusao` (ADR 0070): duas Provocações diferentes jogadas juntas, numa Jogada só. Um mesmo treino cumpre os dois objetivos, e é tudo ou nada. Quem cumpre ganha a soma dos preços mais 20%. Na interface: o selo "FUSÃO" e o botão "Jogar fusão".
 
@@ -68,7 +70,7 @@ Tipos de `Evidencia` (ADR 0058): `Foto`, `Video`. Origens da data da captura: `E
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 
-Situações de verificação: `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`, `Anulada` (ADR 0054: o administrador anula um registro errado; o autor pode apagar a própria atividade nos primeiros 15 minutos, em qualquer situação menos `Verificada`, ADR 0073).
+Situações de verificação: `EmAndamento` (treino ao vivo, ADR 0078), `AguardandoFeedback`, `Verificada`, `EmRevisao`, `Contestada`, `Rejeitada`, `Anulada` (ADR 0054: o administrador anula um registro errado; o autor pode apagar a própria atividade nos primeiros 15 minutos, em qualquer situação menos `Verificada`, ADR 0073).
 
 Situações de um desafio: `Agendado`, `Ativo`, `Encerrado`, `Cancelado`.
 

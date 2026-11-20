@@ -23,6 +23,8 @@ internal static class TipoComprovacao
 
 internal static class SituacaoVerificacao
 {
+    /// <summary>Treino ao vivo ainda não terminado (ADR 0078): não conta para nada e ninguém o avalia.</summary>
+    public const string EmAndamento = "EmAndamento";
     public const string AguardandoFeedback = "AguardandoFeedback";
     public const string Verificada = "Verificada";
     public const string EmRevisao = "EmRevisao";
@@ -39,7 +41,7 @@ internal static class ValidacaoAtividade
     private const int MaxDescricaoLength = 500;
     private const int MinDuracaoSegundos = 60;
     private const int MaxDuracaoSegundos = 24 * 60 * 60;
-    public const int MaxEvidencias = 3;
+    public const int MaxEvidencias = 10;
     public const int LimiteFeedPadrao = 20;
     public const int LimiteFeedMaximo = 50;
 
@@ -95,7 +97,7 @@ internal static class CorrecaoDuracao
         papel is PapelMembro.Proprietario or PapelMembro.Administrador;
 
     public static bool SituacaoPermite(string situacao) =>
-        situacao is not (SituacaoVerificacao.Rejeitada or SituacaoVerificacao.Anulada);
+        situacao is not (SituacaoVerificacao.Rejeitada or SituacaoVerificacao.Anulada or SituacaoVerificacao.EmAndamento);
 
     public static bool IsValidJustificativa(string? justificativa) =>
         justificativa?.Trim().Length is >= 1 and <= MaxJustificativaLength;
@@ -123,4 +125,37 @@ internal static class ExclusaoAtividade
         var limite = submittedAt + Janela;
         return autor && situacao != SituacaoVerificacao.Verificada && agora < limite ? limite : null;
     }
+
+    /// <summary>O treino ao vivo se cancela a qualquer momento, até terminar (ADR 0078).</summary>
+    public static bool Permitida(bool autor, string situacao, DateTimeOffset submittedAt, DateTimeOffset agora) =>
+        (autor && situacao == SituacaoVerificacao.EmAndamento)
+        || PermitidaAte(autor, situacao, submittedAt, agora) is not null;
+}
+
+/// <summary>
+/// ADR 0078: o treino ao vivo. A pessoa começa agora e termina depois; o início fica travado e a duração
+/// só diminui (quem esqueceu de terminar ajusta para menos).
+/// </summary>
+internal static class TreinoAoVivo
+{
+    /// <summary>Sem terminar até aqui, o servidor lembra a pessoa ("Ainda treinando?").</summary>
+    public static readonly TimeSpan Lembrete = TimeSpan.FromHours(3);
+
+    /// <summary>Esquecido por mais que a duração máxima, o treino expira e sai, com as evidências.</summary>
+    public static readonly TimeSpan Expiracao = TimeSpan.FromHours(24);
+
+    /// <summary>Duração provisória gravada ao começar; a real vem ao terminar.</summary>
+    public const int DuracaoProvisoriaSegundos = 60;
+
+    /// <summary>Segundos decorridos desde o início, arredondados para baixo.</summary>
+    public static int Decorridos(DateTimeOffset startedAt, DateTimeOffset agora) =>
+        (int)Math.Max(0, Math.Floor((agora - startedAt).TotalSeconds));
+
+    /// <summary>A duração informada ao terminar: de 60 segundos até o tempo decorrido (e no máximo 24 horas).</summary>
+    public static bool IsValidDuracaoFinal(int? segundos, DateTimeOffset startedAt, DateTimeOffset agora) =>
+        ValidacaoAtividade.IsValidDuracao(segundos) && segundos <= Decorridos(startedAt, agora);
+
+    /// <summary>Com evidências já enviadas, o treino não pode terminar como registro manual.</summary>
+    public static bool IsValidComprovacaoFinal(string? tipo, int totalEvidencias) =>
+        TipoComprovacao.IsValid(tipo) && (totalEvidencias == 0 || TipoComprovacao.ExigeEvidencia(tipo!));
 }

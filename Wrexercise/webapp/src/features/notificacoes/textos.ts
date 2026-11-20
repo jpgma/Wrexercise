@@ -62,6 +62,12 @@ export function getTextoNotificacao({
         ? `${primeiroNome(atorNome)} te cutucou 👉 ${tipo.emoji} ${tipo.texto}`
         : `${primeiroNome(atorNome)} te cutucou 👉`;
     }
+    case "ComecouTreinar":
+      return `${primeiroNome(atorNome)} começou a treinar 🏋️ Bora torcer?`;
+    case "Torcida":
+      return `${primeiroNome(atorNome)} está torcendo por você 📣`;
+    case "TreinoLongo":
+      return "Ainda treinando? Termine ou ajuste o seu treino";
   }
 }
 
@@ -70,6 +76,10 @@ export function getDestinoNotificacao({
   grupoId,
   atividadeId,
 }: Notificacao): string {
+  // O treino ao vivo aparece na praça do grupo; o de quem treina, no cronômetro (decisão 0078).
+  if (tipo === "ComecouTreinar") return `/grupos/${grupoId}/inicio`;
+  if (tipo === "TreinoLongo" || tipo === "Torcida")
+    return `/grupos/${grupoId}/treino`;
   // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
   if (atividadeId === null) return `/grupos/${grupoId}/inicio`;
   return tipo === "NovaAtividade"
