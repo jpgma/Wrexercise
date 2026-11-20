@@ -1,4 +1,6 @@
 import type {
+  Evidencia,
+  OrigemDataCaptura,
   SituacaoVerificacao,
   TipoAtividade,
   TipoComprovacao,
@@ -85,4 +87,56 @@ export function formatarCronometro(segundos: number): string {
   return horas > 0
     ? `${horas}:${String(minutos).padStart(2, "0")}:${resto}`
     : `${minutos}:${resto}`;
+}
+
+/** De onde veio a data da captura (ADR 0052, 0060, 0065). "Data do arquivo" é o sinal mais fraco. */
+export function origemDataCapturaLabel(
+  origem: OrigemDataCaptura,
+  tipo: Evidencia["tipo"],
+): string {
+  switch (origem) {
+    case "Exif":
+      return tipo === "Video" ? "Dados do vídeo" : "Dados da foto";
+    case "Arquivo":
+      return "Data do arquivo";
+    case "Camera":
+      return "Câmera do app";
+    case "Print":
+      return "Nome do print";
+    case "Integracao":
+      return "Movr";
+  }
+}
+
+function formatarIntervalo(ms: number): string {
+  const minutos = Math.round(ms / 60_000);
+  if (minutos < 1) return "menos de 1 min";
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) {
+    const resto = minutos % 60;
+    return resto > 0 ? `${horas}h ${resto}min` : `${horas}h`;
+  }
+  const dias = Math.round(horas / 24);
+  return dias === 1 ? "1 dia" : `${dias} dias`;
+}
+
+/**
+ * Quando a captura aconteceu em relação ao treino: "12 min antes do início", "Durante o treino" ou
+ * "3h depois do fim". No treino ao vivo, o fim ainda não existe.
+ */
+export function descreverMomentoCaptura(
+  capturadaEm: string,
+  startedAt: string,
+  duracaoSegundos: number,
+  aoVivo = false,
+): string {
+  const captura = new Date(capturadaEm).getTime();
+  const inicio = new Date(startedAt).getTime();
+  if (captura < inicio) {
+    return `${formatarIntervalo(inicio - captura)} antes do início`;
+  }
+  const fim = inicio + duracaoSegundos * 1000;
+  if (aoVivo || captura <= fim) return "Durante o treino";
+  return `${formatarIntervalo(captura - fim)} depois do fim`;
 }

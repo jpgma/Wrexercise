@@ -52,6 +52,11 @@ builder.Services.Configure<EvidenciasOptions>(builder.Configuration.GetSection(E
 builder.Services.AddSingleton<ArmazenamentoEvidencias>();
 builder.Services.Configure<AvataresOptions>(builder.Configuration.GetSection(AvataresOptions.Section));
 builder.Services.AddSingleton<ArmazenamentoAvatares>();
+builder.Services.Configure<MapasOptions>(builder.Configuration.GetSection(MapasOptions.Section));
+builder.Services.AddSingleton(services => new CacheMapas(
+    services.GetRequiredService<IOptions<MapasOptions>>(),
+    new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10) },
+    services.GetRequiredService<ILogger<CacheMapas>>()));
 builder.Services.Configure<VapidOptions>(builder.Configuration.GetSection(VapidOptions.Section));
 builder.Services.AddSingleton(services => new WebPushClient(
     services.GetRequiredService<IOptions<VapidOptions>>(),

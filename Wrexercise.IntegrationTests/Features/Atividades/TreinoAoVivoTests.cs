@@ -50,6 +50,47 @@ public sealed class TreinoAoVivoTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Comecar_ComLocal_GuardaEMostraOMapaAoGrupo()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var estranho = await _host.CreateUsuarioAsync("Estranho");
+
+        var atividade = await LerAsync(await ComecarAsync(ana, grupoId, -23.5505, -46.6333));
+        var vistaPelaBia = await bia.Client.GetFromJsonAsync(
+            $"/api/atividades/{atividade.Id}", AppJsonContext.Default.AtividadeResponse, Token);
+        var mapa = await bia.Client.GetAsync($"/api/atividades/{atividade.Id}/mapa/0/1", Token);
+        var deFora = await estranho.Client.GetAsync($"/api/atividades/{atividade.Id}/mapa/0/0", Token);
+
+        Assert.Equal(-23.5505, vistaPelaBia!.Latitude);
+        Assert.Equal(-46.6333, vistaPelaBia.Longitude);
+        Assert.Equal(HttpStatusCode.OK, mapa.StatusCode);
+        Assert.Equal("image/png", mapa.Content.Headers.ContentType?.MediaType);
+        await ApiTestHost.AssertProblemAsync(deFora, HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(-23.5505, null)]
+    [InlineData(91.0, -46.6333)]
+    [InlineData(0.0, 0.0)]
+    public async Task Comecar_SemLocalOuInvalido_ComecaSemLocal(double? latitude, double? longitude)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await ComecarAsync(ana, grupoId, latitude, longitude);
+        var atividade = await LerAsync(response);
+        var mapa = await ana.Client.GetAsync($"/api/atividades/{atividade.Id}/mapa/0/0", Token);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Null(atividade.Latitude);
+        Assert.Null(atividade.Longitude);
+        await ApiTestHost.AssertProblemAsync(mapa, HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
+    }
+
+    [Fact]
     public async Task SemTreino_EmAndamentoDevolve204()
     {
         var ana = await _host.CreateUsuarioAsync();
@@ -312,10 +353,14 @@ public sealed class TreinoAoVivoTests : IAsyncLifetime
             WHERE id = '{atividadeId}'
             """);
 
-    private static Task<HttpResponseMessage> ComecarAsync(TestUsuario usuario, Guid grupoId) =>
+    private static Task<HttpResponseMessage> ComecarAsync(
+        TestUsuario usuario,
+        Guid grupoId,
+        double? latitude = null,
+        double? longitude = null) =>
         usuario.Client.PostAsJsonAsync(
             $"/api/grupos/{grupoId}/atividades/em-andamento",
-            new ComecarTreinoRequest(TipoAtividade.Musculacao),
+            new ComecarTreinoRequest(TipoAtividade.Musculacao, latitude, longitude),
             AppJsonContext.Default.ComecarTreinoRequest,
             Token);
 

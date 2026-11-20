@@ -103,6 +103,8 @@ ambiente_app() {
   export ConnectionStrings__Database="Host=127.0.0.1;Port=5432;Database=wrexercise;Username=wrexercise;Password=$DB_PASSWORD;Maximum Pool Size=10"
   export Evidencias__Diretorio=$dados/evidencias
   export Avatares__Diretorio=$dados/avatares
+  # Cache dos tiles do mini-mapa (ADR 0080): fora do backup, refaz-se sozinho.
+  export Mapas__Diretorio=$dados/mapas
   export ASPNETCORE_URLS=http://127.0.0.1:8080
   # Sem isto o ASP.NET usa o diretório atual (o pai de app/) e não acha wwwroot nem appsettings.json.
   export ASPNETCORE_CONTENTROOT=$base/app

@@ -1,9 +1,14 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Wrexercise.Features.Grupos;
 using Wrexercise.Features.Grupos.Contracts;
 using Wrexercise.Infrastructure.Authentication;
+using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.IntegrationTests;
@@ -41,9 +46,22 @@ internal sealed class ApiTestHost : IAsyncDisposable
             builder.UseSetting("ConnectionStrings:Database", database.ConnectionString);
             builder.UseSetting("Evidencias:Diretorio", evidenciasDiretorio);
             builder.UseSetting("Avatares:Diretorio", avataresDiretorio);
+            // Nenhum teste chega ao servidor de mapas de verdade (ADR 0080).
+            builder.ConfigureTestServices(services => services.AddSingleton(new CacheMapas(
+                Options.Create(new MapasOptions
+                {
+                    // Relativo, como em appsettings.Development.json: o cache precisa resolver o caminho.
+                    Diretorio = Path.Combine("wrexercise-test-mapas", Guid.NewGuid().ToString("N")),
+                    Servidor = "http://mapas.teste",
+                }),
+                Tiles,
+                NullLogger<CacheMapas>.Instance)));
             configurar?.Invoke(builder);
         });
     }
+
+    /// <summary>O servidor de mapas falso do mini-mapa.</summary>
+    public TilesFalsos Tiles { get; } = new();
 
     /// <summary>Onde o servidor de teste guarda as evidências.</summary>
     public string EvidenciasDiretorio { get; }

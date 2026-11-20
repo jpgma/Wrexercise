@@ -14,6 +14,7 @@ Wrexercise/wwwroot/
 # Evidências em desenvolvimento local
 Wrexercise/evidencias-dev/
 Wrexercise/avatares-dev/
+Wrexercise/mapas-dev/
 
 # Segredos e configuração local
 .env

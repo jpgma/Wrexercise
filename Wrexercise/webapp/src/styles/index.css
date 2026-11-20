@@ -219,6 +219,8 @@
   --float-shadow: 0 10px 30px -10px rgb(34 38 51 / 0.3);
   /* Pontos do halftone, como no ícone. */
   --halftone-dot: rgb(121 87 232 / 0.16);
+  /* Os tiles do mini-mapa (ADR 0080) são claros: no tema escuro, ficam mais apagados. */
+  --map-filter: none;
 }
 
 /* Tema escuro: asphalt ao fundo, chalk no texto, superfícies um pouco mais claras. */
@@ -272,6 +274,7 @@
     --card-shadow: 0 1px 0 rgb(0 0 0 / 0.25);
     --float-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.6);
     --halftone-dot: rgb(156 130 245 / 0.18);
+    --map-filter: brightness(0.75) contrast(1.15) saturate(0.7);
   }
 }
 
@@ -401,6 +404,11 @@
 }
 
 /* Números de placar: progresso, pontos e posições. */
+/* Os tiles do mini-mapa (ADR 0080), no tom do tema. */
+@utility mapa-tiles {
+  filter: var(--map-filter);
+}
+
 @utility font-score {
   font-family: var(--font-display);
   font-weight: 400;

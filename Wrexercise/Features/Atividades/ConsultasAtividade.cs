@@ -112,7 +112,7 @@ internal static class ConsultasAtividade
         await using var atividade = new NpgsqlCommand("""
             SELECT a.id, a.grupo_id, g.nome, a.usuario_id, u.nome_exibicao, a.tipo,
                 a.duracao_segundos, a.started_at, a.descricao, a.tipo_comprovacao,
-                a.situacao_verificacao, a.submitted_at, m.papel
+                a.situacao_verificacao, a.submitted_at, m.papel, a.latitude, a.longitude
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
             JOIN usuarios u ON u.id = a.usuario_id
@@ -135,6 +135,8 @@ internal static class ConsultasAtividade
         string situacao;
         DateTimeOffset submittedAt;
         string papel;
+        double? latitude;
+        double? longitude;
 
         await using (var reader = await atividade.ExecuteReaderAsync(cancellationToken))
         {
@@ -156,13 +158,15 @@ internal static class ConsultasAtividade
             situacao = reader.GetString(10);
             submittedAt = reader.GetFieldValue<DateTimeOffset>(11);
             papel = reader.GetString(12);
+            latitude = reader.IsDBNull(13) ? null : reader.GetDouble(13);
+            longitude = reader.IsDBNull(14) ? null : reader.GetDouble(14);
         }
 
         var evidencias = new List<EvidenciaResponse>();
         await using (var lista = new NpgsqlCommand(
             """
             SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms,
-                print, latitude, longitude
+                print, latitude, longitude, capturada_em, origem_data_captura
             FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
             """,
             connection))
@@ -181,7 +185,9 @@ internal static class ConsultasAtividade
                     reader.IsDBNull(3) ? null : reader.GetInt32(3),
                     reader.GetBoolean(4),
                     reader.IsDBNull(5) ? null : reader.GetDouble(5),
-                    reader.IsDBNull(6) ? null : reader.GetDouble(6)));
+                    reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                    reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+                    reader.IsDBNull(8) ? null : reader.GetString(8)));
             }
         }
 
@@ -251,6 +257,8 @@ internal static class ConsultasAtividade
             avisos,
             ExclusaoAtividade.PermitidaAte(autorId == usuarioId, situacao, submittedAt, DateTimeOffset.UtcNow),
             CorrecaoDuracao.Permitida(autorId == usuarioId, papel, situacao),
-            correcoes);
+            correcoes,
+            latitude,
+            longitude);
     }
 }

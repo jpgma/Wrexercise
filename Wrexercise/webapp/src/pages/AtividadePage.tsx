@@ -11,6 +11,7 @@ import {
   ExcluirAtividade,
   formatarDataRelativa,
   formatarDuracao,
+  LocalTreino,
   tipoAtividadeLabels,
   TipoAtividadeIcone,
   useAtividade,
@@ -65,6 +66,8 @@ export function AtividadePage() {
     exclusaoPermitidaAte,
     correcaoPermitida,
     correcoes,
+    latitude,
+    longitude,
   } = atividade.data;
 
   return (
@@ -115,6 +118,12 @@ export function AtividadePage() {
               </div>
             </div>
 
+            <LocalTreino
+              atividadeId={id}
+              latitude={latitude}
+              longitude={longitude}
+              className="mt-4"
+            />
             {descricao && (
               <p className="mt-4 text-[15px] leading-relaxed break-words">
                 {descricao}

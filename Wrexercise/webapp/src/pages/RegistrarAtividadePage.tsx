@@ -54,6 +54,7 @@ import {
   tipoAtividadeLabels,
   tiposAtividade,
   useComecarTreino,
+  obterLocalAtual,
   useCriarAtividade,
   useFilaAvaliacao,
   useGaleria,
@@ -396,6 +397,9 @@ export function RegistrarAtividadePage() {
   // Treino ao vivo (ADR 0078): começa agora e termina no cronômetro. "Já treinei" é o registro de sempre.
   const treinoAtual = useTreinoAtual();
   const comecar = useComecarTreino(grupoId);
+  // Onde o treino ao vivo começa (ADR 0080): ligado por padrão, como o local do comprovante (ADR 0061).
+  const [mostrarLocalTreino, setMostrarLocalTreino] = useState(true);
+  const [buscandoLocal, setBuscandoLocal] = useState(false);
   const [modo, setModo] = useState<"agora" | "depois" | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -789,17 +793,28 @@ export function RegistrarAtividadePage() {
       setConfirmandoComeco(true);
       return;
     }
-    iniciar();
+    void iniciar();
   };
 
-  const iniciar = () => {
-    if (!tipoAtual) return;
-    comecar.mutate(tipoAtual, {
-      onSuccess: (atividade) => {
-        if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
-        void navigate(`/grupos/${atividade.grupoId}/treino`, { replace: true });
+  const iniciar = async () => {
+    if (!tipoAtual || buscandoLocal) return;
+    let local = null;
+    if (mostrarLocalTreino) {
+      setBuscandoLocal(true);
+      local = await obterLocalAtual();
+      setBuscandoLocal(false);
+    }
+    comecar.mutate(
+      { tipo: tipoAtual, local },
+      {
+        onSuccess: (atividade) => {
+          if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
+          void navigate(`/grupos/${atividade.grupoId}/treino`, {
+            replace: true,
+          });
+        },
       },
-    });
+    );
   };
 
   const inicioEscolhido = startedAt ? new Date(startedAt) : null;
@@ -954,7 +969,7 @@ export function RegistrarAtividadePage() {
         confirmLabel="Começar mesmo assim"
         onConfirm={() => {
           setConfirmandoComeco(false);
-          iniciar();
+          void iniciar();
         }}
         onCancel={() => setConfirmandoComeco(false)}
       />
@@ -1020,6 +1035,23 @@ export function RegistrarAtividadePage() {
               Durante o treino, dá pra mandar até {maximoDeEvidencias} fotos e
               vídeos. Treino ao vivo rende bônus de Energia.
             </p>
+            <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-soft px-3 py-2 text-sm text-on-soft">
+              <input
+                type="checkbox"
+                className="size-5 shrink-0 accent-progress"
+                checked={mostrarLocalTreino}
+                onChange={(event) =>
+                  setMostrarLocalTreino(event.target.checked)
+                }
+              />
+              <span className="flex-1">
+                Mostrar ao grupo o local do treino
+                <span className="block text-xs">
+                  Desmarcado, a localização não sai do seu celular.
+                </span>
+              </span>
+              <MapPin aria-hidden="true" className="size-5 shrink-0" />
+            </label>
             {comecar.isError && (
               <p role="alert" className="form-error mt-4">
                 {getErrorMessage(comecar.error)}
@@ -1041,11 +1073,15 @@ export function RegistrarAtividadePage() {
             <button
               type="button"
               className="btn-primary mt-6 h-14 w-full text-lg"
-              disabled={comecar.isPending}
+              disabled={comecar.isPending || buscandoLocal}
               onClick={comecarAgora}
             >
               <Radio aria-hidden="true" className="size-5" />
-              {comecar.isPending ? "Começando…" : "Começar treino"}
+              {buscandoLocal
+                ? "Buscando o local…"
+                : comecar.isPending
+                  ? "Começando…"
+                  : "Começar treino"}
             </button>
           </div>
         ) : (

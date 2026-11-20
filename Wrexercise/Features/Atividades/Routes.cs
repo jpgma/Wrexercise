@@ -36,6 +36,7 @@ internal static class AtividadesRoutes
         atividade.MapDelete("/", ExcluirAtividade.HandleAsync);
         atividade.MapPut("/duracao", CorrigirDuracao.HandleAsync);
         atividade.MapPost("/terminar", TerminarTreino.HandleAsync);
+        atividade.MapGet("/mapa/{dx:int}/{dy:int}", ObterMapaAtividade.HandleAsync);
 
         var upload = atividade.MapGroup("");
         upload.MapPost("/evidencias", AnexarEvidencia.HandleAsync)
@@ -43,5 +44,6 @@ internal static class AtividadesRoutes
             .AddEndpointFilter<LimiteUploadFilter>();
         upload.MapGet("/evidencias/{evidenciaId:guid}", ObterEvidencia.HandleAsync);
         upload.MapGet("/evidencias/{evidenciaId:guid}/miniatura", ObterMiniatura.HandleAsync);
+        upload.MapGet("/evidencias/{evidenciaId:guid}/mapa/{dx:int}/{dy:int}", ObterMapaEvidencia.HandleAsync);
     }
 }

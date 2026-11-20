@@ -13,6 +13,7 @@ import type {
   TipoAtividade,
   TreinoAtual,
 } from "./types";
+import type { LocalCaptura } from "./CameraEvidencia";
 
 /** Fora de `["atividades"]`: invalidar o feed não precisa refazer o treino atual. */
 export const treinoAtualKey = ["treino-ao-vivo"] as const;
@@ -45,9 +46,17 @@ function invalidarTudo(queryClient: ReturnType<typeof useQueryClient>) {
 export function useComecarTreino(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (tipo: TipoAtividade) =>
+    // O local só vai quando a pessoa escolheu mostrá-lo ao grupo (ADR 0080).
+    mutationFn: ({
+      tipo,
+      local,
+    }: {
+      tipo: TipoAtividade;
+      local: LocalCaptura | null;
+    }) =>
       postJson<Atividade>(`/api/grupos/${grupoId}/atividades/em-andamento`, {
         tipo,
+        ...(local ?? {}),
       }),
     onSuccess: () => invalidarTudo(queryClient),
     onError: (error) => {

@@ -11,6 +11,7 @@ import {
   EvidenciasAtividade,
   formatarDataRelativa,
   formatarDuracao,
+  LocalTreino,
   tipoAtividadeLabels,
   TipoAtividadeIcone,
   useAtividade,
@@ -260,6 +261,8 @@ export function RevisarPage() {
     voce,
     evidencias,
     avisos,
+    latitude,
+    longitude,
   } = atividade.data;
   return (
     <div key={atividadeId} className="mx-auto max-w-xl animate-fade-in">
@@ -298,6 +301,12 @@ export function RevisarPage() {
               </p>
             </div>
           </div>
+          <LocalTreino
+            atividadeId={atividadeId}
+            latitude={latitude}
+            longitude={longitude}
+            className="mt-4"
+          />
           {descricao && (
             <p className="mt-3 text-sm break-words">“{descricao}”</p>
           )}

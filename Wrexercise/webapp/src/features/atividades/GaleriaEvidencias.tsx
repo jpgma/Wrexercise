@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -17,13 +18,20 @@ import {
   formatarDuracao,
   tipoAtividadeLabels,
 } from "./labels";
+import { resumirCaptura } from "./DetalhesEvidencia";
+import { MiniMapa } from "./MiniMapa";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
 import { SeloPrint } from "./SeloPrint";
 import type { AtividadeResumo, Evidencia } from "./types";
 
 export type LegendaGaleria = Pick<
   AtividadeResumo,
-  "nomeExibicao" | "tipo" | "duracaoSegundos" | "startedAt" | "descricao"
+  | "nomeExibicao"
+  | "tipo"
+  | "duracaoSegundos"
+  | "startedAt"
+  | "descricao"
+  | "situacaoVerificacao"
 >;
 
 type GaleriaEvidenciasProps = {
@@ -101,7 +109,11 @@ function Galeria({
       });
   }, [indice]);
 
-  const videoAtual = evidencias?.[indice]?.tipo === "Video";
+  const evidenciaAtual = evidencias?.[indice];
+  const videoAtual = evidenciaAtual?.tipo === "Video";
+  const captura = evidenciaAtual
+    ? resumirCaptura(evidenciaAtual, legenda)
+    : null;
 
   function irPara(novo: number) {
     const trilho = trilhoRef.current;
@@ -349,24 +361,50 @@ function Galeria({
           zoom || videoAtual ? "opacity-0" : ""
         }`}
       >
-        <div className="mx-auto max-w-2xl">
-          <p className="font-semibold">{legenda.nomeExibicao}</p>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-on-lightbox/80">
-            <span>{tipoAtividadeLabels[legenda.tipo]}</span>
-            <span className="inline-flex items-center gap-1">
-              <Clock aria-hidden="true" className="size-3.5" />
-              {formatarDuracao(legenda.duracaoSegundos)}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarDays aria-hidden="true" className="size-3.5" />
-              {formatarDataRelativa(legenda.startedAt)}
-            </span>
-          </p>
-          {legenda.descricao && (
-            <p className="mt-2 line-clamp-2 text-sm break-words">
-              {legenda.descricao}
+        <div className="mx-auto flex max-w-2xl items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold">{legenda.nomeExibicao}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-on-lightbox/80">
+              <span>{tipoAtividadeLabels[legenda.tipo]}</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock aria-hidden="true" className="size-3.5" />
+                {formatarDuracao(legenda.duracaoSegundos)}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays aria-hidden="true" className="size-3.5" />
+                {formatarDataRelativa(legenda.startedAt)}
+              </span>
             </p>
-          )}
+            {captura && (
+              // A captura do comprovante na tela (ADR 0080): hora, momento no treino e de onde veio a data.
+              <p className="mt-1 inline-flex flex-wrap items-center gap-x-1.5 text-xs text-on-lightbox/80">
+                <CalendarClock aria-hidden="true" className="size-3.5" />
+                <span>{captura.quando}</span>
+                <span aria-hidden="true">·</span>
+                <span>{captura.relativo}</span>
+                <span aria-hidden="true">·</span>
+                <span>{captura.origem}</span>
+              </p>
+            )}
+            {legenda.descricao && (
+              <p className="mt-2 line-clamp-2 text-sm break-words">
+                {legenda.descricao}
+              </p>
+            )}
+          </div>
+          {evidenciaAtual &&
+            evidenciaAtual.latitude !== null &&
+            evidenciaAtual.longitude !== null && (
+              <MiniMapa
+                key={evidenciaAtual.id}
+                base={`${evidenciaAtual.url}/mapa`}
+                latitude={evidenciaAtual.latitude}
+                longitude={evidenciaAtual.longitude}
+                rotulo={`Ver no mapa o local do comprovante ${indice + 1}`}
+                tamanho={64}
+                className="pointer-events-auto border-on-lightbox/30"
+              />
+            )}
         </div>
       </div>
     </dialog>

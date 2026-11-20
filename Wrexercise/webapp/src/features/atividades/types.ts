@@ -35,7 +35,13 @@ export type Evidencia = {
   /** Só quando o autor escolheu mostrar a localização ao grupo (ADR 0061). */
   latitude: number | null;
   longitude: number | null;
+  /** Quando a foto ou o vídeo foi feito, e de onde veio essa data (ADR 0052, 0080). Sinal, não prova. */
+  capturadaEm: string | null;
+  origemDataCaptura: OrigemDataCaptura | null;
 };
+
+export type OrigemDataCaptura =
+  "Exif" | "Arquivo" | "Camera" | "Print" | "Integracao";
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */
 export type TipoAviso =
@@ -98,6 +104,9 @@ export type Atividade = Omit<
   /** Se quem vê pode corrigir a duração (ADR 0068): administrador, na atividade de outra pessoa. */
   correcaoPermitida: boolean;
   correcoes: CorrecaoDuracao[];
+  /** Onde o treino ao vivo começou, só quando a pessoa escolheu mostrar (ADR 0080). */
+  latitude: number | null;
+  longitude: number | null;
 };
 
 /** Uma correção da duração feita por um administrador (ADR 0068). */

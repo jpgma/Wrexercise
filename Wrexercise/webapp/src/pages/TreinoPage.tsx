@@ -27,6 +27,7 @@ import {
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   treinoAtualKey,
+  LocalTreino,
   useAtividade,
   useCancelarTreino,
   useGaleria,
@@ -324,6 +325,7 @@ function Cronometro({
         </p>
       )}
 
+      <LocalDoTreinoAoVivo treino={treino} />
       <EvidenciasAoVivo treino={treino} />
 
       {podeTravarTela && (
@@ -380,6 +382,21 @@ function Cronometro({
         onCancel={() => setCancelando(false)}
       />
     </div>
+  );
+}
+
+/** Onde o treino começou, se a pessoa escolheu mostrar (ADR 0080): ela vê o que o grupo vê. */
+function LocalDoTreinoAoVivo({ treino }: { treino: TreinoAtual }) {
+  const detalhe = useAtividade(treino.atividadeId);
+  if (!detalhe.data) return null;
+  return (
+    <LocalTreino
+      atividadeId={treino.atividadeId}
+      latitude={detalhe.data.latitude}
+      longitude={detalhe.data.longitude}
+      aoVivo
+      className="card mt-4 p-3"
+    />
   );
 }
 

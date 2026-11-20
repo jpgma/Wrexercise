@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
 using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
+using Wrexercise.Infrastructure.Files;
 using Wrexercise.Infrastructure.Json;
 using Wrexercise.IntegrationTests.Infrastructure;
 
@@ -522,6 +523,81 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         var evidencia = Assert.Single((await ObterAsync(ana, id)).Evidencias);
         Assert.Equal(-23.5505, evidencia.Latitude);
         Assert.Equal(-46.6333, evidencia.Longitude);
+        Assert.Equal("Exif", evidencia.OrigemDataCaptura);
+        Assert.Equal(capturadaEm.ToUnixTimeSeconds(), evidencia.CapturadaEm!.Value.ToUnixTimeSeconds());
+    }
+
+    [Fact]
+    public async Task MapaEvidencia_ServeOTileDoLocalEGuardaEmCache()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["latitude"] = "-23.5505",
+            ["longitude"] = "-46.6333",
+        });
+        var evidencia = Assert.Single((await ObterAsync(ana, id)).Evidencias);
+        var tile = TileMapa.De(-23.5505, -46.6333);
+
+        var primeira = await bia.Client.GetAsync($"{evidencia.Url}/mapa/0/0", Token);
+        var vizinho = await bia.Client.GetAsync($"{evidencia.Url}/mapa/-1/1", Token);
+        var deNovo = await ana.Client.GetAsync($"{evidencia.Url}/mapa/0/0", Token);
+
+        Assert.Equal(HttpStatusCode.OK, primeira.StatusCode);
+        Assert.Equal("image/png", primeira.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(TilesFalsos.Png, await primeira.Content.ReadAsByteArrayAsync(Token));
+        Assert.Equal(HttpStatusCode.OK, vizinho.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, deNovo.StatusCode);
+        Assert.Equal(2, _host.Tiles.Buscas);
+        Assert.Contains($"/16/{tile.X}/{tile.Y}.png", _host.Tiles.Caminhos);
+        Assert.Contains($"/16/{tile.X - 1}/{tile.Y + 1}.png", _host.Tiles.Caminhos);
+    }
+
+    [Fact]
+    public async Task MapaEvidencia_SemLocalForaDoGrupoOuLonge_NaoEncontrada()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var estranho = await _host.CreateUsuarioAsync("Estranho");
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["latitude"] = "-23.5505",
+            ["longitude"] = "-46.6333",
+        });
+        await PostEvidenciaAsync(ana, id, JpegVariante(2));
+        var evidencias = (await ObterAsync(ana, id)).Evidencias;
+
+        var deFora = await estranho.Client.GetAsync($"{evidencias[0].Url}/mapa/0/0", Token);
+        var longe = await ana.Client.GetAsync($"{evidencias[0].Url}/mapa/2/0", Token);
+        var semLocal = await ana.Client.GetAsync($"{evidencias[1].Url}/mapa/0/0", Token);
+
+        await ApiTestHost.AssertProblemAsync(deFora, HttpStatusCode.NotFound, "EVIDENCIA_NAO_ENCONTRADA");
+        await ApiTestHost.AssertProblemAsync(longe, HttpStatusCode.NotFound, "EVIDENCIA_NAO_ENCONTRADA");
+        await ApiTestHost.AssertProblemAsync(semLocal, HttpStatusCode.NotFound, "EVIDENCIA_NAO_ENCONTRADA");
+        Assert.Equal(0, _host.Tiles.Buscas);
+    }
+
+    [Fact]
+    public async Task MapaEvidencia_ServidorDeMapasForaDoAr_Devolve503()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await PostEvidenciaAsync(ana, id, JpegVariante(1), new()
+        {
+            ["latitude"] = "-23.5505",
+            ["longitude"] = "-46.6333",
+        });
+        var evidencia = Assert.Single((await ObterAsync(ana, id)).Evidencias);
+        _host.Tiles.ForaDoAr = true;
+
+        var response = await ana.Client.GetAsync($"{evidencia.Url}/mapa/0/0", Token);
+
+        await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.ServiceUnavailable, "MAPA_INDISPONIVEL");
     }
 
     [Fact]

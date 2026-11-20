@@ -34,6 +34,8 @@ export {
   salvarRascunhoRegistro,
 } from "./rascunhoRegistro";
 export { ExcluirAtividade } from "./ExcluirAtividade";
+export { LocalTreino } from "./LocalTreino";
+export { obterLocalAtual } from "./obterLocalAtual";
 export { CorrigirDuracao } from "./CorrigirDuracao";
 export { GaleriaEvidencias } from "./GaleriaEvidencias";
 export { useGaleria } from "./useGaleria";

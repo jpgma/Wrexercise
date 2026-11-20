@@ -30,4 +30,5 @@
 - **Migração 034:** apaga a latitude e a longitude de todas as evidências. Os backups no Drive ainda as têm até saírem da retenção de 31 dias (ADR 0046).
 - **Privacidade:** o autor que esquecer a caixa marcada mostra o local ao grupo. Não há como esconder depois: o autor só apaga a atividade nos primeiros 15 minutos (ADR 0054). Revisar se alguém pedir.
 - **Exclusão:** apagar a localização junto com a conta entra em Q029.
-- Relacionadas: 0046, 0052, 0054, 0058.
+- **Atualização (2026-11-20):** a ADR 0080 troca o botão "Local" por um mini-mapa servido pelo próprio servidor, sem carregar nada de fora no navegador.
+- Relacionadas: 0046, 0052, 0054, 0058, 0080.

@@ -8,7 +8,11 @@ using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Atividades;
 
-internal sealed record ComecarTreinoRequest(string? Tipo);
+/// <summary>
+/// <c>Latitude</c> e <c>Longitude</c>: onde o treino começou, só quando a pessoa escolheu mostrar o local ao grupo
+/// (ADR 0080). Sem essa escolha, o navegador nem as envia.
+/// </summary>
+internal sealed record ComecarTreinoRequest(string? Tipo, double? Latitude = null, double? Longitude = null);
 
 /// <summary>
 /// "Começar treino" (ADR 0078): cria a atividade <c>EmAndamento</c>, com o início agora. Ela não conta para
@@ -28,9 +32,14 @@ internal static class ComecarTreino
             return OperacaoAtividade.InvalidData();
         }
 
+        // Coordenadas malformadas não impedem o treino: ele só começa sem local.
+        var local = IsLocalValido(request.Latitude, request.Longitude)
+            ? (request.Latitude!.Value, request.Longitude!.Value)
+            : ((double, double)?)null;
+
         var usuarioId = context.GetSessaoAtual().UsuarioId;
         var (status, atividadeId, repetida) = await ExecutarAsync(
-            dataSource, grupoId, usuarioId, request.Tipo!, cancellationToken);
+            dataSource, grupoId, usuarioId, request.Tipo!, local, cancellationToken);
         if (status != AtividadeOperacaoStatus.Concluida)
         {
             return OperacaoAtividade.ToResult(status);
@@ -50,6 +59,7 @@ internal static class ComecarTreino
         Guid grupoId,
         Guid usuarioId,
         string tipo,
+        (double Latitude, double Longitude)? local,
         CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -83,8 +93,8 @@ internal static class ComecarTreino
         await using var insert = new NpgsqlCommand("""
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
-                situacao_verificacao, ao_vivo)
-            VALUES ($1, $2, $3, $4, now(), $5, 'EmAndamento', true)
+                situacao_verificacao, ao_vivo, latitude, longitude)
+            VALUES ($1, $2, $3, $4, now(), $5, 'EmAndamento', true, $6, $7)
             ON CONFLICT (usuario_id) WHERE situacao_verificacao = 'EmAndamento' DO NOTHING
             RETURNING id
             """, connection, transaction);
@@ -93,6 +103,8 @@ internal static class ComecarTreino
         insert.Parameters.AddWithValue(tipo);
         insert.Parameters.AddWithValue(TreinoAoVivo.DuracaoProvisoriaSegundos);
         insert.Parameters.AddWithValue(TipoComprovacao.Fotografia);
+        insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Double, (object?)local?.Latitude ?? DBNull.Value);
+        insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Double, (object?)local?.Longitude ?? DBNull.Value);
         if (await insert.ExecuteScalarAsync(cancellationToken) is not Guid id)
         {
             // Outro toque ao mesmo tempo abriu o treino primeiro.
@@ -104,6 +116,12 @@ internal static class ComecarTreino
         await transaction.CommitAsync(cancellationToken);
         return (AtividadeOperacaoStatus.Concluida, id, false);
     }
+
+    /// <summary>As duas coordenadas ou nenhuma, dentro dos limites; (0, 0) é o GPS sem sinal.</summary>
+    public static bool IsLocalValido(double? latitude, double? longitude) =>
+        latitude is >= -90 and <= 90
+        && longitude is >= -180 and <= 180
+        && !(latitude == 0 && longitude == 0);
 
     private static async Task<(Guid Id, Guid GrupoId)?> BuscarEmAndamentoAsync(
         NpgsqlConnection connection,

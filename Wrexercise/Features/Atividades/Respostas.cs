@@ -13,6 +13,8 @@ internal sealed record CriarAtividadeRequest(
 /// aplicativo fez a captura (ADR 0058). <c>Print</c>: o navegador reconheceu uma captura de tela, pelo nome do arquivo ou pelo tamanho da tela (ADR 0060).
 /// Os dois são sinais do navegador. <c>Latitude</c> e <c>Longitude</c>: o GPS do arquivo original, só quando o
 /// autor escolheu mostrá-lo ao grupo; sem essa escolha, o navegador nem o envia (ADR 0061).
+/// <c>CapturadaEm</c> e <c>OrigemDataCaptura</c>: quando a foto ou o vídeo foi feito e de onde veio essa data
+/// (<c>Exif</c>, <c>Arquivo</c>, <c>Camera</c>, <c>Print</c>, <c>Integracao</c>; ADR 0052, 0080). Também é sinal, não prova.
 /// </summary>
 internal sealed record EvidenciaResponse(
     Guid Id,
@@ -23,7 +25,9 @@ internal sealed record EvidenciaResponse(
     int? DuracaoMs,
     bool Print,
     double? Latitude,
-    double? Longitude);
+    double? Longitude,
+    DateTimeOffset? CapturadaEm,
+    string? OrigemDataCaptura);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,
@@ -74,7 +78,10 @@ internal sealed record AtividadeResponse(
     IReadOnlyList<AvisoResponse> Avisos,
     DateTimeOffset? ExclusaoPermitidaAte,
     bool CorrecaoPermitida,
-    IReadOnlyList<CorrecaoDuracaoResponse> Correcoes);
+    IReadOnlyList<CorrecaoDuracaoResponse> Correcoes,
+    // Onde o treino ao vivo começou, só quando a pessoa escolheu mostrar o local (ADR 0080).
+    double? Latitude,
+    double? Longitude);
 
 /// <summary>Uma correção da duração feita por um administrador (ADR 0068). Todo o grupo vê.</summary>
 internal sealed record CorrecaoDuracaoResponse(

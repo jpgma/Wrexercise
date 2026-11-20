@@ -18,6 +18,8 @@ services:
     volumes:
       - ${DATA_DIR:-/srv/wrexercise}/evidencias:/dados/evidencias
       - ${DATA_DIR:-/srv/wrexercise}/avatares:/dados/avatares
+      # Cache dos tiles do mini-mapa (ADR 0080): fora do backup, refaz-se sozinho.
+      - ${DATA_DIR:-/srv/wrexercise}/mapas:/dados/mapas
     mem_limit: 384m
     cpus: 0.50
 
