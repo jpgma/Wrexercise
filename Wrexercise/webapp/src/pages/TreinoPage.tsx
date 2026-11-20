@@ -1,4 +1,12 @@
-import { Camera, CheckCircle2, Images, Minus, Plus, Sun } from "lucide-react";
+import {
+  Camera,
+  CheckCircle2,
+  Images,
+  Minus,
+  Play,
+  Plus,
+  Sun,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -11,6 +19,7 @@ import {
   duracaoMinimaS,
   formatarCronometro,
   formatarDuracao,
+  GaleriaEvidencias,
   getRotaTreino,
   marcarCapturaNoApp,
   prepararEvidencia,
@@ -18,6 +27,7 @@ import {
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   treinoAtualKey,
+  useAtividade,
   useCancelarTreino,
   useGaleria,
   useSegundosDesde,
@@ -437,6 +447,10 @@ function EvidenciasAoVivo({ treino }: { treino: TreinoAtual }) {
     }
     setEnviando(null);
     void queryClient.invalidateQueries({ queryKey: treinoAtualKey });
+    // As miniaturas vêm do detalhe da atividade.
+    void queryClient.invalidateQueries({
+      queryKey: ["atividades", treino.atividadeId],
+    });
   };
 
   return (
@@ -459,6 +473,7 @@ function EvidenciasAoVivo({ treino }: { treino: TreinoAtual }) {
           });
         }}
       />
+      {treino.totalEvidencias > 0 && <MiniaturasTreino treino={treino} />}
       {vagas > 0 ? (
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -508,6 +523,78 @@ function EvidenciasAoVivo({ treino }: { treino: TreinoAtual }) {
         }}
       />
     </section>
+  );
+}
+
+/**
+ * O que já foi enviado durante o treino, em miniaturas: tocar abre a galeria em tela cheia. A legenda
+ * da galeria usa o tempo decorrido, porque a duração do treino só existe ao terminar.
+ */
+function MiniaturasTreino({ treino }: { treino: TreinoAtual }) {
+  const detalhe = useAtividade(treino.atividadeId);
+  const galeria = useGaleria("evidencias-treino");
+  const segundos = useSegundosDesde(treino.startedAt, 30_000);
+  const evidencias = detalhe.data?.evidencias ?? [];
+
+  return (
+    <>
+      <ul
+        aria-label="Já enviados"
+        className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]"
+      >
+        {evidencias.length === 0
+          ? Array.from({ length: treino.totalEvidencias }, (_, i) => (
+              <li
+                key={i}
+                aria-hidden="true"
+                className="size-16 shrink-0 animate-pulse rounded-xl bg-surface-muted"
+              />
+            ))
+          : evidencias.map((evidencia, i) => (
+              <li key={evidencia.id} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => galeria.abrir(i)}
+                  aria-label={
+                    evidencia.tipo === "Video"
+                      ? `Assistir ao vídeo ${i + 1}`
+                      : `Ver a foto ${i + 1}`
+                  }
+                  className="relative block size-16 cursor-zoom-in overflow-hidden rounded-xl border-2 border-outline tap"
+                >
+                  <img
+                    src={`${evidencia.url}/miniatura`}
+                    alt=""
+                    loading="lazy"
+                    className="size-full object-cover"
+                    // Sem miniatura (uma foto antiga ou um navegador que não a gerou), a imagem inteira.
+                    onError={(e) => {
+                      if (evidencia.tipo === "Foto")
+                        e.currentTarget.src = evidencia.url;
+                    }}
+                  />
+                  {evidencia.tipo === "Video" && (
+                    <span className="absolute inset-0 grid place-items-center bg-lightbox/30 text-on-lightbox">
+                      <Play
+                        aria-hidden="true"
+                        className="size-5 fill-current"
+                      />
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+      </ul>
+      {detalhe.data && (
+        <GaleriaEvidencias
+          aberta={galeria.aberta}
+          indiceInicial={galeria.indiceInicial}
+          evidencias={evidencias}
+          legenda={{ ...detalhe.data, duracaoSegundos: Math.max(60, segundos) }}
+          onFechar={galeria.fechar}
+        />
+      )}
+    </>
   );
 }
 

@@ -553,6 +553,20 @@ export function RegistrarAtividadePage() {
     sessao?.modoInicio === "Jogo",
   );
   const [confirmandoCarta, setConfirmandoCarta] = useState(false);
+  // Ao começar ao vivo, o início é agora e a duração ainda não existe (decisão 0078).
+  const [inicioAgora] = useState(() => new Date().toISOString());
+  const treinoAoComecar = {
+    tipo: tipoAtual,
+    startedAt: inicioAgora,
+    duracaoSegundos: 60,
+    aoComecar: true,
+  };
+  const cartasQueFalhamAoComecar = useCartasQueFalham(
+    grupoId,
+    treinoAoComecar,
+    sessao?.modoInicio === "Jogo" && modoEfetivo === "agora",
+  );
+  const [confirmandoComeco, setConfirmandoComeco] = useState(false);
 
   const enviar = async (data: FormData) => {
     const dados: CriarAtividadeData = {
@@ -770,6 +784,16 @@ export function RegistrarAtividadePage() {
       void handleSubmit(() => undefined)();
       return;
     }
+    // Um treino que já começa sem cumprir uma carta aceita pede confirmação, como ao postar.
+    if (cartasQueFalhamAoComecar.length > 0) {
+      setConfirmandoComeco(true);
+      return;
+    }
+    iniciar();
+  };
+
+  const iniciar = () => {
+    if (!tipoAtual) return;
     comecar.mutate(tipoAtual, {
       onSuccess: (atividade) => {
         if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
@@ -923,6 +947,17 @@ export function RegistrarAtividadePage() {
         }}
         onCancel={() => setConfirmandoCarta(false)}
       />
+      <ConfirmDialog
+        open={confirmandoComeco}
+        title="Começar e perder a carta?"
+        message={`Esse treino não vai cumprir a carta de ${cartasQueFalhamAoComecar.join(" e ")}. Só o próximo treino depois do aceite vale: terminando esse, a carta falha e você fica com FADIGA. Dá pra cancelar o treino antes de terminar.`}
+        confirmLabel="Começar mesmo assim"
+        onConfirm={() => {
+          setConfirmandoComeco(false);
+          iniciar();
+        }}
+        onCancel={() => setConfirmandoComeco(false)}
+      />
       <form
         noValidate
         onSubmit={(event) =>
@@ -965,14 +1000,17 @@ export function RegistrarAtividadePage() {
             })}
           </div>
           {errors.tipo && <p className="input-error">{errors.tipo.message}</p>}
-          {modoEfetivo === "depois" && sessao?.modoInicio === "Jogo" && (
-            <AvisoCartaNoTreino
-              grupoId={grupoId}
-              tipo={tipoAtual}
-              startedAt={startedAt}
-              duracaoSegundos={(duracaoMinutos || 0) * 60}
-            />
-          )}
+          {sessao?.modoInicio === "Jogo" &&
+            (modoEfetivo === "agora" ? (
+              <AvisoCartaNoTreino grupoId={grupoId} {...treinoAoComecar} />
+            ) : (
+              <AvisoCartaNoTreino
+                grupoId={grupoId}
+                tipo={tipoAtual}
+                startedAt={startedAt}
+                duracaoSegundos={(duracaoMinutos || 0) * 60}
+              />
+            ))}
         </fieldset>
 
         {modoEfetivo === "agora" ? (

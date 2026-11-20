@@ -1,4 +1,8 @@
-import { getAvisoCarta, type AvisoCarta } from "./objetivoJogada";
+import {
+  getAvisoCarta,
+  getAvisoCartaAoComecar,
+  type AvisoCarta,
+} from "./objetivoJogada";
 import { primeiroNome } from "./textosCartas";
 import { useJogadas } from "./useCartas";
 
@@ -8,6 +12,8 @@ type TreinoDoFormulario = {
   /** O valor do campo de data e hora, no horário do aparelho. */
   startedAt: string | undefined;
   duracaoSegundos: number;
+  /** Começar um treino ao vivo: a duração ainda não existe (decisão 0078). */
+  aoComecar?: boolean;
 };
 
 type AvisoJogada = { id: string; remetente: string; aviso: AvisoCarta };
@@ -27,7 +33,9 @@ function useAvisosCartas(
   return (jogadas.data ?? [])
     .filter((j) => j.recebida && j.situacao === "Aceita")
     .flatMap((j) => {
-      const aviso = getAvisoCarta(j, previsto);
+      const aviso = treino.aoComecar
+        ? getAvisoCartaAoComecar(j, previsto)
+        : getAvisoCarta(j, previsto);
       return aviso
         ? [{ id: j.id, remetente: primeiroNome(j.remetenteNome), aviso }]
         : [];

@@ -106,3 +106,45 @@ export function getAvisoCarta(
       : `Esse treino cumpre a carta de ${nome}.`,
   };
 }
+
+/**
+ * O aviso ao começar um treino ao vivo (decisão 0078), quando a duração ainda não existe. Com a menor
+ * duração possível (1 minuto), o que já falha agora falha de qualquer jeito: o tipo, o dia, ou passar
+ * das 8h. O que depende da duração vira um lembrete do que fazer, e não um "cumpre".
+ */
+export function getAvisoCartaAoComecar(
+  jogada: Jogada,
+  treino: Omit<TreinoPrevisto, "duracaoSegundos">,
+): AvisoCarta | null {
+  const aviso = getAvisoCarta(jogada, { ...treino, duracaoSegundos: 60 });
+  if (!aviso) return null;
+  if (aviso.falha) {
+    return {
+      ...aviso,
+      texto: aviso.texto.replace("Postando,", "Terminando esse treino,"),
+    };
+  }
+  if (!aviso.cumpre) return aviso;
+
+  const nome = primeiroNome(jogada.remetenteNome);
+  const codigos: CodigoCarta[] = [jogada.objetivo];
+  if (jogada.cartaFusao) codigos.push(jogada.cartaFusao.codigo);
+  const lembretes: string[] = [];
+  if (codigos.includes("AntesDas8")) lembretes.push("termine até as 8h");
+  const alvo = jogada.duracaoAlvoSegundos;
+  if (alvo) {
+    lembretes.push(
+      jogada.cartaFusao
+        ? `treine ${formatarDuracao(alvo)} ou mais`
+        : `até o fim do dia, os treinos precisam somar ${formatarDuracao(alvo)}`,
+    );
+  }
+  return {
+    cumpre: true,
+    falha: false,
+    texto:
+      lembretes.length > 0
+        ? `Esse treino vale pra carta de ${nome}: ${lembretes.join(" e ")}.`
+        : `Esse treino vale pra carta de ${nome}.`,
+  };
+}
