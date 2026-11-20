@@ -430,6 +430,9 @@ export function RegistrarAtividadePage() {
   const [registrada, setRegistrada] = useState<Registrada | null>(null);
   const [rascunhoRestaurado, setRascunhoRestaurado] = useState(false);
   const rascunhoLido = useRef(false);
+  // Um treino importado ou um rascunho recuperado já são de um treino feito.
+  const modoEfetivo =
+    modo ?? (rascunhoId || rascunhoRestaurado ? "depois" : "agora");
 
   const {
     register,
@@ -498,7 +501,14 @@ export function RegistrarAtividadePage() {
   }, [usuarioId, chaveLocal, reset, aguardandoImportado, importadoPendente]);
 
   useEffect(() => {
-    if (!usuarioId || !rascunhoLido.current || registrada) return;
+    // "Começar agora" só tem o tipo: não há o que recuperar, e um rascunho levaria a "Já treinei".
+    if (
+      !usuarioId ||
+      !rascunhoLido.current ||
+      registrada ||
+      modoEfetivo === "agora"
+    )
+      return;
     const temAlgo =
       valores.tipo !== undefined ||
       anexos.length > 0 ||
@@ -515,7 +525,7 @@ export function RegistrarAtividadePage() {
       }
     }, 300);
     return () => clearTimeout(espera);
-  }, [valores, anexos, usuarioId, chaveLocal, registrada]);
+  }, [valores, anexos, usuarioId, chaveLocal, registrada, modoEfetivo]);
 
   // As atividades do mesmo dia se somam, em proporção ao mínimo de cada tipo (decisões 0040 e 0045). O dia do
   // campo é o do aparelho, que costuma ser o fuso do grupo.
@@ -755,9 +765,6 @@ export function RegistrarAtividadePage() {
     }
   };
 
-  // Um treino importado ou um rascunho recuperado já são de um treino feito.
-  const modoEfetivo =
-    modo ?? (rascunhoId || rascunhoRestaurado ? "depois" : "agora");
   const comecarAgora = () => {
     if (!tipoAtual) {
       void handleSubmit(() => undefined)();

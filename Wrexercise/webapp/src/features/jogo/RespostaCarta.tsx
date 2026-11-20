@@ -168,26 +168,28 @@ export function PainelResposta({
     const codigoResposta = loja.data?.mao.find(
       (c) => c.id === extra.cartaRespostaId,
     )?.codigo as CodigoResposta | undefined;
-    responder.mutate(
-      { id: jogada.id, resposta, ...extra },
-      {
-        onSuccess: () => {
-          if (resposta === "Recusada" && !comFadiga) {
-            // O aviso já aparece aqui: o da mudança da FADIGA não deve repetir.
-            marcarFadigaVista(3);
-          }
-          onRespondida({
-            aceitou: resposta === "Aceita",
-            aviso: codigoResposta
-              ? avisoResposta[codigoResposta]
-              : resposta === "Aceita"
-                ? "Carta aceita. Bora treinar!"
-                : comFadiga
-                  ? "Carta recusada. Você já está com FADIGA, então nada muda."
-                  : avisoFadigaAplicada,
-          });
-        },
+    // `mutateAsync`, não o `onSuccess` do `mutate`: a lista de Jogadas volta atualizada antes dele, e
+    // a carta já respondida tira este painel da tela. O `onSuccess` do `mutate` nunca rodaria, e a
+    // Chegada mostraria "expirou" em vez da resposta.
+    responder.mutateAsync({ id: jogada.id, resposta, ...extra }).then(
+      () => {
+        if (resposta === "Recusada" && !comFadiga) {
+          // O aviso já aparece aqui: o da mudança da FADIGA não deve repetir.
+          marcarFadigaVista(3);
+        }
+        onRespondida({
+          aceitou: resposta === "Aceita",
+          aviso: codigoResposta
+            ? avisoResposta[codigoResposta]
+            : resposta === "Aceita"
+              ? "Carta aceita. Bora treinar!"
+              : comFadiga
+                ? "Carta recusada. Você já está com FADIGA, então nada muda."
+                : avisoFadigaAplicada,
+        });
       },
+      // O erro fica em `responder.error`, que este painel mostra.
+      () => undefined,
     );
   };
 

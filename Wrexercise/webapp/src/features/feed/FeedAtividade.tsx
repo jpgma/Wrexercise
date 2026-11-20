@@ -33,14 +33,6 @@ function Contagem({
   );
 }
 
-/** "há 25 min": desde quando o treino ao vivo começou. */
-function getMinutosAoVivo(startedAt: string): number {
-  return Math.max(
-    0,
-    Math.floor((Date.now() - new Date(startedAt).getTime()) / 60_000),
-  );
-}
-
 /** O treino ao vivo no feed (ADR 0078): quem vê pode torcer, uma vez a cada 10 minutos. */
 function TorcerNoFeed({
   atividadeId,
@@ -120,9 +112,8 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
             <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted">
               {tipoAtividadeLabels[tipo]} ·
               <Clock aria-hidden="true" className="size-3.5" />
-              {aoVivo
-                ? `treinando agora, há ${getMinutosAoVivo(startedAt)} min`
-                : formatarDuracao(duracaoSegundos)}
+              {/* O início já está no canto do cartão; uma contagem de minutos aqui ficaria parada. */}
+              {aoVivo ? "treinando agora" : formatarDuracao(duracaoSegundos)}
             </p>
             {descricao && (
               <p className="mt-2 line-clamp-2 text-sm break-words">

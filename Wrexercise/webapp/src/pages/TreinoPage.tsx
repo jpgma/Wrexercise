@@ -537,6 +537,8 @@ function TerminarTreino({
   const longo = maximoMin * 60 > confirmarAcimaDeS;
   const [confirmado, setConfirmado] = useState(false);
   const precisaConfirmar = longo && minutos === maximoMin && !confirmado;
+  // O servidor aceita de 1 minuto em diante: antes disso, o botão espera.
+  const curto = segundos < 60;
   const [confirmandoCarta, setConfirmandoCarta] = useState(false);
   const titulo = useRef<HTMLHeadingElement>(null);
   useEffect(() => titulo.current?.focus(), []);
@@ -638,6 +640,13 @@ function TerminarTreino({
         />
       </label>
 
+      {curto && (
+        <p role="status" className="mt-4 text-sm text-muted">
+          O treino precisa ter pelo menos 1 minuto. Já dá pra enviar daqui a{" "}
+          {60 - segundos} s.
+        </p>
+      )}
+
       {terminar.isError && (
         <p role="alert" className="form-error mt-4">
           {getErrorMessage(terminar.error)}
@@ -647,7 +656,7 @@ function TerminarTreino({
       <button
         type="button"
         className="btn-primary mt-4 h-12 w-full"
-        disabled={terminar.isPending || precisaConfirmar}
+        disabled={terminar.isPending || precisaConfirmar || curto}
         onClick={() =>
           cartasQueFalham.length > 0 ? setConfirmandoCarta(true) : enviar()
         }

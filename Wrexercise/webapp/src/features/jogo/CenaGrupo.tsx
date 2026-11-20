@@ -397,14 +397,6 @@ function AvatarCena({
                 reduzido={reduzido}
               />
             ))}
-          {aoVivo && !atuacao && (
-            <BolhaAoVivo
-              x={(ancora.x - corpo.esquerda) * escala}
-              startedAt={aoVivo.startedAt}
-              torcidas={aoVivo.torcidas}
-              reduzido={reduzido}
-            />
-          )}
           {sono && membro.cutucadas && (
             <BolhaCutucada
               x={(CabecaSentado.x - corpo.esquerda) * escala}
@@ -414,6 +406,17 @@ function AvatarCena({
           )}
         </span>
       </button>
+      {/* A bolha "AO VIVO" fica acima de tudo, até dos nomes: quem treina agora não some atrás de ninguém. */}
+      {aoVivo && !atuacao && (
+        <BolhaAoVivo
+          x={posicao.x}
+          y={posicao.y - alturaCorpo * escala - 22}
+          startedAt={aoVivo.startedAt}
+          torcidas={aoVivo.torcidas}
+          reduzido={reduzido}
+          apagado={apagado}
+        />
+      )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
       {(nomeVisivel || medalha || rival) && (
         <span
@@ -456,21 +459,31 @@ function useMinutosDesde(inicio: string) {
  */
 function BolhaAoVivo({
   x,
+  y,
   startedAt,
   torcidas,
   reduzido,
+  apagado,
 }: {
   x: number;
+  y: number;
   startedAt: string;
   torcidas: number;
   reduzido: boolean;
+  /** Durante o Foco em outra pessoa, a bolha apaga junto com o Avatar. */
+  apagado: boolean;
 }) {
   const minutos = useMinutosDesde(startedAt);
   return (
     <span
       aria-hidden="true"
       className="pointer-events-none absolute flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-outline bg-surface px-1.5 text-2xs leading-tight font-semibold whitespace-nowrap shadow-sticker"
-      style={{ left: x, top: -20 }}
+      style={{
+        left: x,
+        top: y,
+        zIndex: 1001,
+        opacity: apagado ? 0.45 : undefined,
+      }}
     >
       <span
         className={`size-1.5 rounded-full bg-danger ${reduzido ? "" : "motion-safe:animate-pulse"}`}

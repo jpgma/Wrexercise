@@ -37,14 +37,16 @@ export function PortaoTreino({
   const navigate = useNavigate();
   const conferido = useRef(false);
   const naTela = isTelaDoTreino(location.pathname);
+  // A raiz ainda vai levar ao grupo: decidir antes faria o redirecionamento dela vencer o do cronômetro.
+  const naRaiz = location.pathname === "/";
 
   useEffect(() => {
-    if (conferido.current || treino === undefined) return;
+    if (conferido.current || treino === undefined || naRaiz) return;
     conferido.current = true;
     if (treino && !naTela) {
       void navigate(getRotaTreino(treino), { replace: true });
     }
-  }, [treino, naTela, navigate]);
+  }, [treino, naTela, naRaiz, navigate]);
 
   if (!treino || naTela) return null;
   return <SeloAoVivo treino={treino} />;

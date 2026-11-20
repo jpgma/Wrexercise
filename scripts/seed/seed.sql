@@ -91,6 +91,10 @@ WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR responsavel_id IN (S
 DELETE FROM revisores_atividade
 WHERE atividade_id IN (SELECT id FROM velhas_atividades) OR usuario_id IN (SELECT id FROM velhos_usuarios);
 -- Os arquivos das evidências ficam no disco sem referência; o seed não cria evidências.
+-- Os avisos apontam para as evidências: saem antes delas.
+DELETE FROM avisos_atividade
+WHERE atividade_id IN (SELECT id FROM velhas_atividades)
+   OR atividade_relacionada_id IN (SELECT id FROM velhas_atividades);
 DELETE FROM evidencias_atividade WHERE atividade_id IN (SELECT id FROM velhas_atividades);
 DELETE FROM atividades WHERE id IN (SELECT id FROM velhas_atividades);
 
