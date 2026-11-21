@@ -1,15 +1,19 @@
-"""Enfeites do modo Jogo (docs/gamificacao.md §9): 19 objetos apoiados no chão da praça, animados.
+"""Enfeites do modo Jogo (docs/gamificacao.md §9): 22 objetos apoiados no chão da praça, animados.
 
-Gera um atlas de 4 quadros × 19 linhas, em células de 40×40 (escala do mestre da praça, mostrada em 2×),
+Gera um atlas de 4 quadros × 24 linhas, em células de 40×40 (escala do mestre da praça, mostrada em 2×),
 com cada objeto apoiado na base da célula: saida/enfeites.png, copiado para webapp/public/. A ordem das
-linhas é a de ENFEITES. O quadro 1 também é o ícone da vitrine.
+linhas é a de ENFEITES e, depois, a de EXTRAS. O quadro 1 também é o ícone da vitrine.
 
 Fontes (geradas no ChatGPT, ver prompts-chatgpt.md):
 - fonte/base.png: os 19 objetos parados, pedidos numa grade de 5×4 e lidos em ordem de leitura (o ChatGPT
   nem sempre respeita as colunas). Uma escala só para a folha toda, então os
   objetos mantêm as proporções reais entre si (a árvore e o poste do tamanho de um avatar).
+- fonte/base-2.png: os Enfeites de Futebol, Vôlei e Luta (ADR 0082), com o poste de luz à esquerda como
+  régua: a escala é a que deixa o poste com a altura dele na base, e o poste é descartado.
 - fonte/tira-NN-<conquista>.png: os 4 quadros de um objeto, numa grade de 2×2, reduzidos com a escala do
   objeto na base. Sem a tira, o quadro da base se repete e o objeto fica parado.
+- EXTRAS: linhas que não são Enfeites do catálogo, mas outra forma de um deles durante o treino ao vivo
+  (o cachorro andando, o tapete se abrindo), cada uma de uma tira de 2×2.
 Sem fonte/base.png, os ícones antigos de 32×32 (fonte/folha.png, da folha do Gemini) entram parados no
 lugar, para o aplicativo funcionar até a arte nova chegar.
 
@@ -31,6 +35,7 @@ from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
 
 BASE = AQUI / "fonte" / "base.png"
+BASE_2 = AQUI / "fonte" / "base-2.png"
 ANTIGA = AQUI / "fonte" / "folha.png"
 PUBLICO = AQUI.parents[1] / "Wrexercise/webapp/public/enfeites.png"
 LADO = 40  # célula do atlas: o maior Enfeite tem a altura de um avatar
@@ -65,6 +70,18 @@ ENFEITES = [
     ("noturno", 140),  # poste: quadro 1 apagado, 2 a 4 aceso
     ("fimdesemana", 150),  # caixa de som
     ("ecletico", 200),  # bolsa de academia
+    ("craque", 240),  # cones com bola (folha-base 2)
+    ("levantador", 260),  # redinha de vôlei (folha-base 2)
+    ("faixapreta", 260),  # saco de pancada (folha-base 2)
+]
+NA_BASE_1 = 19  # os primeiros de ENFEITES vêm de fonte/base.png; os outros, de fonte/base-2.png
+REGUA = "noturno"  # o poste, que a folha-base 2 repete à esquerda
+
+# Linhas extras, depois dos Enfeites: (nome no atlas, ms, tira, Enfeite de origem, altura do quadro 1 em
+# relação ao Enfeite na base). O cachorro em pé, de lado, é mais baixo que sentado.
+EXTRAS = [
+    ("andarilho-andando", 140, "tira-cachorro-andando.png", "andarilho", 0.8),
+    ("zen-aberto", 160, "tira-zen-aberto.png", "zen", 1.0),
 ]
 
 # Linhas de baixo (px da célula) que não se mexem: em todos os quadros, são as do quadro 1. O ChatGPT às
@@ -123,17 +140,28 @@ def recorte_para_prompt(quadro, destino):
 def main():
     cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
     if BASE.exists():
-        bases = recortar_grade(BASE, COLUNAS, LINHAS, len(ENFEITES), LADO, cores, em_leitura=True)
+        bases = recortar_grade(BASE, COLUNAS, LINHAS, NA_BASE_1, LADO, cores, em_leitura=True)
         print("fonte:", BASE.name)
     elif ANTIGA.exists():
-        bases = [na_celula(i) for i in recortar_grade(ANTIGA, COLUNAS, LINHAS, len(ENFEITES), 32, cores)]
+        bases = [na_celula(i) for i in recortar_grade(ANTIGA, COLUNAS, LINHAS, NA_BASE_1, 32, cores)]
         print("fonte:", ANTIGA.name, "(ícones antigos, parados: falta fonte/base.png)")
     else:
         sys.exit("falta fonte/base.png: gere a folha-base com prompts-chatgpt.md")
 
-    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * len(ENFEITES)))
+    if BASE.exists() and BASE_2.exists():
+        poste = bases[[c for c, _ in ENFEITES].index(REGUA)].getbbox()
+        lidos = recortar_grade(BASE_2, 4, 1, 1 + len(ENFEITES) - NA_BASE_1, LADO, cores,
+                               altura_do_primeiro=poste[3] - poste[1], soltos=True)
+        bases = bases[:NA_BASE_1] + lidos[1:]
+        print("fonte:", BASE_2.name)
+    else:
+        print("sem", BASE_2.name, ": os Enfeites de Futebol, Vôlei e Luta ficam de fora")
+    enfeites = ENFEITES[:len(bases)]
+    extras = [e for e in EXTRAS if (AQUI / "fonte" / e[2]).exists() and BASE.exists()]
+
+    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * (len(enfeites) + len(extras))))
     linhas_ts = []
-    for linha, ((conquista, ms), base) in enumerate(zip(ENFEITES, bases)):
+    for linha, ((conquista, ms), base) in enumerate(zip(enfeites, bases)):
         tira = AQUI / "fonte" / f"tira-{linha + 1:02d}-{conquista}.png"
         if BASE.exists() and conquista in BRILHO:
             quadros = _brilhar(base, *BRILHO[conquista])
@@ -159,6 +187,22 @@ def main():
         if "--recortes" in sys.argv:
             recorte_para_prompt(base, AQUI / "preview" / f"recorte-{linha + 1:02d}-{conquista}.png")
 
+    for linha, (nome, ms, arquivo, origem, proporcao) in enumerate(extras, start=len(enfeites)):
+        base = bases[[c for c, _ in enfeites].index(origem)]
+        altura = round((base.getbbox()[3] - base.getbbox()[1]) * proporcao)
+        quadros = recortar_grade(AQUI / "fonte" / arquivo, 2, 2, QUADROS, LADO, cores, altura_do_primeiro=altura)
+        if proporcao == 1.0:
+            # Começa onde o Enfeite está no chão: o quadro 1 é o objeto da base.
+            dx = base.getbbox()[0] - quadros[0].getbbox()[0]
+            dy = base.getbbox()[3] - quadros[0].getbbox()[3]
+            quadros = [_deslocar(q, dx, dy) for q in quadros]
+        for coluna, quadro in enumerate(quadros):
+            atlas.alpha_composite(quadro, (coluna * LADO, linha * LADO))
+        x0, y0, x1, y1 = caixa(quadros)
+        linhas_ts.append(
+            f'  "{nome}": {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
+            f'altura: {y1 - y0}, ms: {ms} }},')
+
     atlas.save(AQUI / "saida" / "enfeites.png", optimize=True)
     shutil.copyfile(AQUI / "saida" / "enfeites.png", PUBLICO)
 
@@ -166,11 +210,12 @@ def main():
     fundo.alpha_composite(atlas)
     fundo.resize((atlas.width * 4, atlas.height * 4), Image.NEAREST).save(AQUI / "preview" / "folha-4x.png")
 
-    # Os 19 animados lado a lado, numa grade de 5×4, sobre o asfalto.
+    # Todas as linhas animadas lado a lado, 5 por linha, sobre o asfalto.
+    total = len(enfeites) + len(extras)
     gif = []
     for coluna in range(QUADROS):
-        quadro = Image.new("RGBA", (LADO * COLUNAS, LADO * LINHAS), ASFALTO)
-        for i in range(len(ENFEITES)):
+        quadro = Image.new("RGBA", (LADO * COLUNAS, LADO * -(-total // COLUNAS)), ASFALTO)
+        for i in range(total):
             celula = atlas.crop((coluna * LADO, i * LADO, (coluna + 1) * LADO, (i + 1) * LADO))
             quadro.alpha_composite(celula, (i % COLUNAS * LADO, i // COLUNAS * LADO))
         gif.append(quadro.resize((quadro.width * 4, quadro.height * 4), Image.NEAREST).convert("RGB"))
@@ -178,7 +223,7 @@ def main():
 
     print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
     print("\n".join(linhas_ts))
-    print(f"\nsaida/enfeites.png {atlas.size}, {len(ENFEITES)} enfeites")
+    print(f"\nsaida/enfeites.png {atlas.size}, {len(enfeites)} enfeites e {len(extras)} extras")
 
 
 def _brilhar(base, de, ate):

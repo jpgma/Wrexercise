@@ -26,12 +26,14 @@ def cores_do_script(constantes, paleta_sprite):
 
 
 def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: int, lado: int, cores, na_base=True,
-                   altura_do_primeiro=None, em_leitura=False):
+                   altura_do_primeiro=None, em_leitura=False, soltos=False):
     """Devolve `quantidade` imagens lado×lado, lidas da esquerda para a direita e de cima para baixo.
 
     Cada objeto fica centrado na horizontal e, se `na_base`, apoiado na base; senão, centrado.
     Com `altura_do_primeiro`, a escala é a que deixa o primeiro objeto com essa altura em px (os quadros
     de uma tira de animação seguem a escala do objeto na folha-base); sem ela, o maior ocupa o lado.
+    Com `soltos`, cada objeto fica no centro da sua célula mesmo com `altura_do_primeiro`: o primeiro é só a
+    régua da escala (a folha-base 2 dos Enfeites), e não o quadro 1 de uma tira.
     Com `em_leitura`, a grade é ignorada: os objetos são lidos em ordem de leitura (linhas pela altura, e
     da esquerda para a direita), porque o gerador nem sempre respeita a quantidade de colunas pedida.
     """
@@ -149,7 +151,7 @@ def recortar_grade(fonte: pathlib.Path, colunas: int, linhas: int, quantidade: i
         sx, sy = (x1 - x0) / w, (y1 - y0) / h
         out = Image.new("RGBA", (lado, lado))
         ox, oy = (lado - w) // 2, (lado - h if na_base else (lado - h) // 2)
-        if altura_do_primeiro and celula > 0:
+        if altura_do_primeiro and celula > 0 and not soltos:
             # Quadros de uma tira: a posição dentro da célula é a do quadro 1, e não o centro da caixa de
             # cada um. Assim um rabo que balança não arrasta o corpo para o lado.
             cx, cy = celula % colunas * cw, celula // colunas * ch

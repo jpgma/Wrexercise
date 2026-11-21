@@ -64,19 +64,37 @@ const MaosNasParalelas = { dx: 10, dy: 28 };
 /** A pista das voltas: uma elipse por fora da dos avatares. */
 export type Pista = { cx: number; cy: number; rx: number; ry: number };
 
+/** O cachorro do Andarilho na Caminhada ao vivo: `x`/`y` são as patas, em px da praça. */
+export type CachorroEmCena = {
+  x: number;
+  y: number;
+  /** 1 anda para a direita; -1, para a esquerda. */
+  virado: 1 | -1;
+  /** Duração da transição até `x`/`y`, em ms. */
+  ms: number;
+};
+
+/** O cachorro anda um pouco atrás de quem caminha (radianos na pista) e por fora dela (px). */
+const CachorroAtras = 0.05;
+const CachorroPorFora = 12;
+
 export type TreinoNaPraca = {
   atuacoes: Map<string, Atuacao>;
   /** As chaves dos Enfeites que saem do chão enquanto alguém os usa (a bicicleta). */
   ocultos: Set<string>;
+  /** As chaves dos tapetes de ioga abertos por quem os usa. */
+  abertos: Set<string>;
   bolas: BolaEmCena[];
+  cachorros: CachorroEmCena[];
 };
 
 type Membro = { usuarioId: string; tipo: string; inicio: number };
 
-/** Os Enfeites de cada tipo, pelo código (Features/Jogo/Enfeites.cs). Os 3 últimos ainda não têm arte. */
+/** Os Enfeites de cada tipo, pelo código (Features/Jogo/Enfeites.cs). */
 const EnfeiteDoTipo: Record<string, string> = {
   Musculacao: "haltere",
   Corrida: "largada",
+  Caminhada: "cachorro",
   Ciclismo: "bicicleta",
   Natacao: "piscina",
   Yoga: "tapete",
@@ -169,6 +187,10 @@ export function useTreinoNaPraca({
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const [ocultos, setOcultos] = useState<Set<string>>(new Set());
   const [bolas, setBolas] = useState<Map<string, BolaEmCena>>(new Map());
+  const [abertos, setAbertos] = useState<Set<string>>(new Set());
+  const [cachorros, setCachorros] = useState<Map<string, CachorroEmCena>>(
+    new Map(),
+  );
 
   const aoVivo = useMemo(
     () =>
@@ -240,6 +262,20 @@ export function useTreinoNaPraca({
     };
     const ocultar = (chaveEnfeite: string) =>
       setOcultos((atual) => new Set(atual).add(chaveEnfeite));
+    const abrir = (chaveEnfeite: string) =>
+      setAbertos((atual) => new Set(atual).add(chaveEnfeite));
+    const porCachorro = (id: string, para: Ponto, ms: number) =>
+      setCachorros((atual) => {
+        const antes = atual.get(id);
+        const virado: 1 | -1 = !antes
+          ? 1
+          : para.x < antes.x
+            ? -1
+            : para.x > antes.x
+              ? 1
+              : antes.virado;
+        return new Map(atual).set(id, { x: para.x, y: para.y, virado, ms });
+      });
     const porBola = (chaveBola: string, bola: BolaEmCena | null) =>
       setBolas((atual) => {
         const nova = new Map(atual);
@@ -257,6 +293,8 @@ export function useTreinoNaPraca({
     const darVoltas = (
       id: string,
       animacao: "correr" | "andar" | "ciclismo",
+      /** A cada passo, o ângulo na pista para onde vai e quanto demora (o cachorro acompanha). */
+      aoPasso?: (angulo: number, ms: number) => void,
     ) => {
       const casa = posicoes.get(id)!;
       const inicio = Math.atan2(
@@ -268,11 +306,10 @@ export function useTreinoNaPraca({
       );
       const passo = (k: number) => {
         const de = getOnde(id);
-        const para = getPontoNaPista(
-          pista,
-          inicio + (2 * Math.PI * (k + 1)) / PontosPorVolta,
-        );
+        const angulo = inicio + (2 * Math.PI * (k + 1)) / PontosPorVolta;
+        const para = getPontoNaPista(pista, angulo);
         atuar(id, para, animacao, getDirecao(de, para), passoMs);
+        aoPasso?.(angulo, passoMs);
         depois(passoMs, () => passo((k + 1) % PontosPorVolta));
       };
       // Da elipse até a pista, no ritmo da volta.
@@ -281,6 +318,7 @@ export function useTreinoNaPraca({
         distancia(getOnde(id), entrada) / VelocidadeVolta[animacao],
       );
       atuar(id, entrada, animacao, getDirecao(getOnde(id), entrada), ms);
+      aoPasso?.(inicio, ms);
       depois(ms, () => passo(0));
     };
 
@@ -299,8 +337,28 @@ export function useTreinoNaPraca({
         );
       });
     }
-    // O cachorro andando ainda não tem arte (pixel-art/enfeites/prompts-chatgpt.md, prompt 4).
-    for (const m of porTipo("Caminhada")) darVoltas(m.usuarioId, "andar");
+    // Com o cachorro no chão, ele sai do lugar e caminha junto, um pouco atrás e por fora da pista.
+    const pistaDoCachorro = {
+      ...pista,
+      rx: pista.rx + CachorroPorFora,
+      ry: pista.ry + CachorroPorFora / 2,
+    };
+    for (const m of porTipo("Caminhada")) {
+      const cachorro = getEnfeiteDoTreino(enfeites, m.usuarioId, m.tipo);
+      if (!cachorro) {
+        darVoltas(m.usuarioId, "andar");
+        continue;
+      }
+      ocultar(cachorro.chave);
+      porCachorro(m.usuarioId, { x: cachorro.x, y: cachorro.y }, 0);
+      darVoltas(m.usuarioId, "andar", (angulo, ms) =>
+        porCachorro(
+          m.usuarioId,
+          getPontoNaPista(pistaDoCachorro, angulo - CachorroAtras),
+          ms,
+        ),
+      );
+    }
     for (const m of porTipo("Ciclismo")) {
       const bicicleta = getEnfeiteDoTreino(enfeites, m.usuarioId, m.tipo);
       if (!bicicleta) {
@@ -322,14 +380,16 @@ export function useTreinoNaPraca({
         direcao: Direcao;
         z?: number;
       },
+      chegou?: (e: EnfeiteColocado) => void,
     ) => {
       for (const m of porTipo(tipo)) {
         const enfeite = getEnfeiteDoTreino(enfeites, m.usuarioId, m.tipo);
         if (!enfeite) continue;
         const { ponto, direcao, z } = lugar(enfeite);
-        irAte(m.usuarioId, ponto, () =>
-          atuar(m.usuarioId, ponto, animacao, direcao, 0, z),
-        );
+        irAte(m.usuarioId, ponto, () => {
+          chegou?.(enfeite);
+          atuar(m.usuarioId, ponto, animacao, direcao, 0, z);
+        });
       }
     };
     noEnfeite("Musculacao", "musculacao", (e) => ({
@@ -342,12 +402,18 @@ export function useTreinoNaPraca({
       direcao: "sul",
       z: Math.round(e.y) + 1,
     }));
-    // Em cima do tapete e das paralelas: na frente deles, mesmo com os pés sobre o desenho.
-    noEnfeite("Yoga", "yoga", (e) => ({
-      ponto: { x: e.x, y: e.y - 6 },
-      direcao: "sul",
-      z: Math.round(e.y) + 1,
-    }));
+    // Em cima do tapete e das paralelas: na frente deles, mesmo com os pés sobre o desenho. O tapete se
+    // abre inteiro quando a pessoa chega.
+    noEnfeite(
+      "Yoga",
+      "yoga",
+      (e) => ({
+        ponto: { x: e.x, y: e.y - 6 },
+        direcao: "sul",
+        z: Math.round(e.y) + 1,
+      }),
+      (e) => abrir(e.chave),
+    );
     noEnfeite("Luta", "luta", (e) => ({
       ponto: { x: getLados(e).esquerda - 12, y: e.y + 1 },
       direcao: "leste",
@@ -568,9 +634,18 @@ export function useTreinoNaPraca({
       setAtuacoes(new Map());
       setOcultos(new Set());
       setBolas(new Map());
+      setAbertos(new Set());
+      setCachorros(new Map());
     };
   }, [chave, pausado, reduzido]);
 
   const listaBolas = useMemo(() => [...bolas.values()], [bolas]);
-  return { atuacoes, ocultos, bolas: listaBolas };
+  const listaCachorros = useMemo(() => [...cachorros.values()], [cachorros]);
+  return {
+    atuacoes,
+    ocultos,
+    abertos,
+    bolas: listaBolas,
+    cachorros: listaCachorros,
+  };
 }

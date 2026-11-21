@@ -27,6 +27,17 @@ const atlas = {
   noturno: { linha: 16, esquerda: 15, largura: 10, altura: 33, ms: 140 },
   fimdesemana: { linha: 17, esquerda: 10, largura: 19, altura: 29, ms: 150 },
   ecletico: { linha: 18, esquerda: 4, largura: 31, altura: 21, ms: 200 },
+  craque: { linha: 19, esquerda: 6, largura: 27, altura: 13, ms: 240 },
+  levantador: { linha: 20, esquerda: 4, largura: 32, altura: 24, ms: 260 },
+  faixapreta: { linha: 21, esquerda: 12, largura: 18, altura: 32, ms: 260 },
+  "andarilho-andando": {
+    linha: 22,
+    esquerda: 9,
+    largura: 22,
+    altura: 20,
+    ms: 140,
+  },
+  "zen-aberto": { linha: 23, esquerda: 1, largura: 38, altura: 18, ms: 160 },
 } as const satisfies Record<string, DesenhoEnfeite>;
 
 export type DesenhoEnfeite = {
@@ -38,7 +49,14 @@ export type DesenhoEnfeite = {
 };
 
 /** O lado da célula do atlas e a quantidade de quadros por linha. */
-export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 19 } as const;
+export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 24 } as const;
+
+/**
+ * As linhas extras do atlas, que não são Enfeites do catálogo: outra forma de um Enfeite no treino ao vivo
+ * (ADR 0082). O cachorro andando é de lado, para a direita; o tapete se abre do quadro 1 ao 4 e fica no 4.
+ */
+export const cachorroAndando = atlas["andarilho-andando"];
+export const tapeteAberto = atlas["zen-aberto"];
 
 /** O desenho de um Enfeite pela conquista do nível que aparece; `undefined` se o atlas não o tiver. */
 export function getDesenhoEnfeite(

@@ -505,6 +505,17 @@
       steps(var(--quadros)) infinite;
   }
 
+  /* O tapete de ioga se abre: do quadro 1 ao 4, uma vez, e fica no 4. */
+  .enfeite-abrir {
+    animation: enfeite-abrir calc(3 * var(--ms)) steps(3) forwards;
+  }
+
+  @keyframes enfeite-abrir {
+    to {
+      background-position-x: calc(3 * var(--celula) * -1);
+    }
+  }
+
   .sprite-uma-vez {
     animation: sprite-quadros calc(var(--quadros) * var(--ms))
       steps(var(--quadros)) 1;

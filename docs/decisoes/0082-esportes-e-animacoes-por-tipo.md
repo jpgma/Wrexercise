@@ -32,7 +32,7 @@
 |---|---|---|
 | `Craque` | `Futebol` | Cones de treino com bola |
 | `Levantador` | `Volei` | Redinha de vôlei de praia com bola |
-| `FaixaPreta` ("Faixa preta") | `Luta` | Saco de pancada num pedestal |
+| `FaixaPreta` ("Faixa preta") | `Luta` | Saco de pancada vermelho num pedestal |
 
 As conquistas valem já. O Enfeite de cada uma entra no catálogo quando a arte existir. Como os Enfeites liberados são calculados a partir das conquistas, quem já tem a conquista recebe o Enfeite nesse dia.
 
@@ -68,7 +68,7 @@ A folha passa de 129 para 225 linhas (432 × 10 800). As folhas de 97 e de 129 l
   - Caminhada: o cachorro sai do lugar e anda ao lado.
   - Ciclismo: o Avatar pega a bicicleta, que some do chão enquanto ele pedala.
   - Natação: dentro da piscininha, com a água cobrindo as pernas.
-  - Yoga: no tapete.
+  - Yoga: no tapete, que se abre inteiro quando a pessoa chega e fica aberto até o fim do treino.
   - Calistenia: flexões nas paralelas enquanto espera a barra.
   - Futebol: conduz a bola em zigue-zague entre os cones.
   - Vôlei: ao lado da redinha.
@@ -86,3 +86,4 @@ A folha passa de 129 para 225 linhas (432 × 10 800). As folhas de 97 e de 129 l
 - `ValidacaoFolhaAvatar` aceita 10 800, 6192 e 4656 px de altura.
 - O `pixel-art/base-masculino/build.py` e os builds das outras folhas do bundle ganham as 12 linhas.
 - A arte (avatar e os 3 Enfeites, mais o cachorro andando) será gerada depois. Até lá, as linhas são provisórias e os Enfeites novos não aparecem.
+- **Atualização (2026-11-21):** os 3 Enfeites, o cachorro andando e o tapete se abrindo foram gerados (`pixel-art/enfeites/`, prompts 3 a 5). O saco de pancada ficou vermelho, e não violeta. O atlas tem 24 linhas: os 22 Enfeites e 2 linhas extras (`andarilho-andando`, `zen-aberto`).

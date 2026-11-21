@@ -16,6 +16,15 @@ public sealed class EnfeitesTests
     }
 
     [Fact]
+    public void Liberados_EsportesDaAdr0082_TemEnfeite()
+    {
+        var liberados = Enfeites.Liberados(["FaixaPreta", "Levantador", "Craque"]);
+
+        Assert.Equal(["cones", "rede", "saco"], liberados.Select(e => e.Codigo));
+        Assert.Equal(["Cones de treino", "Redinha de vôlei", "Saco de pancada"], liberados.Select(e => e.Nome));
+    }
+
+    [Fact]
     public void Liberados_SemConquistas_EVazio() => Assert.Empty(Enfeites.Liberados([]));
 
     [Fact]

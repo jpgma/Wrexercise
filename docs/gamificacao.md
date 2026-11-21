@@ -488,9 +488,9 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `Andarilho` (nova) | `Caminhada` | Cachorro sentado, de coleira |
 | `Ciclista` (nova) | `Ciclismo` | Bicicleta |
 | `Peixe` (nova) | `Natacao` | Piscininha com boia |
-| `Craque` (ADR 0082) | `Futebol` | Cones de treino com bola (arte pendente) |
-| `Levantador` (ADR 0082) | `Volei` | Redinha de vôlei de praia com bola (arte pendente) |
-| `FaixaPreta` (ADR 0082) | `Luta` | Saco de pancada num pedestal (arte pendente) |
+| `Craque` (ADR 0082) | `Futebol` | Cones de treino com bola |
+| `Levantador` (ADR 0082) | `Volei` | Redinha de vôlei de praia com bola |
+| `FaixaPreta` (ADR 0082) | `Luta` | Saco de pancada vermelho num pedestal |
 | `Boleiro` (nova) | `Esporte` ("Outro esporte") | Golzinho com bola |
 | `Zen` (nova) | `Yoga` | Tapete de ioga meio desenrolado |
 | `PesoDoCorpo` (nova) | `Calistenia` | Paralelas (as barrinhas de chão) |
@@ -504,7 +504,7 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `FimDeSemana` (nova) | 10 atividades no sábado ou no domingo | Caixa de som de festa |
 | `Ecletico` (nova) | Atividades verificadas de 5 tipos diferentes, sem contar `Outro` | Bolsa de academia |
 
-- São 22 conquistas e 22 desenhos de Enfeite. A planta e o kettlebell evoluem, então a cena mostra no máximo 18 objetos diferentes. Enquanto a arte dos Enfeites de `Craque`, `Levantador` e `FaixaPreta` não existe, a conquista aparece sem desenho e não libera Enfeite (ADR 0082).
+- São 22 conquistas e 22 desenhos de Enfeite. A planta e o kettlebell evoluem, então a cena mostra no máximo 18 objetos diferentes. Os nomes na vitrine são "Cones de treino", "Redinha de vôlei" e "Saco de pancada" (códigos `cones`, `rede`, `saco`).
 - Todo Enfeite é um objeto que faz sentido no chão de uma praça (nada de medalha pendurada ou guia solta no ar), com o tamanho real: os maiores (árvore, poste, troféu no pedestal) têm a altura de um avatar. Cada um tem um ciclo parado de 4 quadros, fora de sincronia com os outros; com movimento reduzido, fica no quadro 1.
 - Nenhuma conquista usa distância, ritmo ou carga: só contagem de atividades, horário e semanas cumpridas. Uma pessoa que faz 20 caminhadas tem a mesma chance de um Enfeite que uma pessoa que faz 20 corridas.
 - Os nomes e os limites (10 por tipo, 10 por hábito) ficam em constantes, como os demais marcos.

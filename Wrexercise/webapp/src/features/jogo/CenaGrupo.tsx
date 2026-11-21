@@ -21,7 +21,7 @@ import {
   type NomeAnimacao,
 } from "./animacoes";
 import { IconeCarta } from "./CartaJogo";
-import { EnfeiteNoChao } from "./EnfeiteNoChao";
+import { CachorroAndando, EnfeiteNoChao } from "./EnfeiteNoChao";
 import { getChaoDosEnfeites, posicionarEnfeites } from "./enfeitesNaPraca";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
@@ -1100,6 +1100,7 @@ function Praca({
                     reduzido={reduzido}
                     apagado={emFoco && !atuaNoFoco(item.usuarioId)}
                     aceso={isLuzAcesa(periodo)}
+                    aberto={treino.abertos.has(item.chave)}
                     brilho={
                       encenacao.brilho &&
                       item.usuarioId === usuarioId &&
@@ -1112,6 +1113,9 @@ function Praca({
               {vida.bola && <Bola bola={vida.bola} />}
               {treino.bolas.map((bola, i) => (
                 <Bola key={i} bola={bola} />
+              ))}
+              {treino.cachorros.map((cachorro, i) => (
+                <CachorroAndando key={i} cachorro={cachorro} />
               ))}
               <LuzDaPraca periodo={periodo} />
               {encenacao.carta && (

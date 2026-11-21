@@ -2,9 +2,12 @@ import type { CSSProperties } from "react";
 import { hashFnv1a } from "@/components/folhaAvatar";
 import {
   atlasEnfeites,
+  cachorroAndando,
   enfeiteAceso,
   type EnfeiteColocado,
+  tapeteAberto,
 } from "./enfeitesNaPraca";
+import type { CachorroEmCena } from "./useTreinoNaPraca";
 
 /** A praça é mostrada em 2×. */
 const escala = 2;
@@ -20,6 +23,7 @@ export function EnfeiteNoChao({
   apagado,
   aceso,
   brilho,
+  aberto = false,
 }: {
   item: EnfeiteColocado;
   reduzido: boolean;
@@ -29,13 +33,24 @@ export function EnfeiteNoChao({
   aceso: boolean;
   /** É o Enfeite novo de quem vê a cena: brilha enquanto a encenação toca. */
   brilho: boolean;
+  /** O tapete de ioga em uso no treino ao vivo: abre-se uma vez e fica aberto (ADR 0082). */
+  aberto?: boolean;
 }) {
   const { desenho } = item;
   const poste = item.enfeite.conquista.toLowerCase() === enfeiteAceso;
-  const ciclo = poste ? (aceso ? "enfeite-aceso" : "") : "sprite-repete";
+  const ciclo = aberto
+    ? "enfeite-abrir"
+    : poste
+      ? aceso
+        ? "enfeite-aceso"
+        : ""
+      : "sprite-repete";
   const quadros = poste ? 3 : atlasEnfeites.quadros;
   const meiaLargura = (desenho.largura * escala) / 2;
-  const atraso = hashFnv1a(item.chave) % (quadros * desenho.ms);
+  const atraso = aberto ? 0 : hashFnv1a(item.chave) % (quadros * desenho.ms);
+  // O tapete aberto fica no mesmo lugar: o quadro 1 da linha dele é o tapete da base.
+  const linha = aberto ? tapeteAberto.linha : desenho.linha;
+  const ms = aberto ? tapeteAberto.ms : desenho.ms;
 
   return (
     <span
@@ -69,10 +84,55 @@ export function EnfeiteNoChao({
             backgroundSize: `${celula * atlasEnfeites.quadros}px ${celula * atlasEnfeites.linhas}px`,
             // Parado (movimento reduzido ou o poste de dia), fica no quadro 1; o poste aceso, no 2.
             backgroundPositionX: poste && aceso ? -celula : 0,
-            backgroundPositionY: -desenho.linha * celula,
+            backgroundPositionY: -linha * celula,
             animationDelay: `-${atraso}ms`,
             "--quadros": quadros,
-            "--ms": `${desenho.ms}ms`,
+            "--ms": `${ms}ms`,
+            "--celula": `${celula}px`,
+          } as CSSProperties
+        }
+      />
+    </span>
+  );
+}
+
+/** O cachorro do Andarilho que anda ao lado de quem faz Caminhada ao vivo (ADR 0082). */
+export function CachorroAndando({ cachorro }: { cachorro: CachorroEmCena }) {
+  const centro =
+    cachorroAndando.esquerda * escala + (cachorroAndando.largura * escala) / 2;
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute top-0 left-0"
+      style={{
+        width: celula,
+        height: celula,
+        transform: `translate(${cachorro.x - centro}px, ${cachorro.y - celula}px)`,
+        transition: `transform ${cachorro.ms}ms linear`,
+        zIndex: Math.round(cachorro.y),
+      }}
+    >
+      <span
+        className="sombra-cena absolute"
+        style={{
+          left: centro - cachorroAndando.largura * 0.8,
+          top: celula - 5,
+          width: cachorroAndando.largura * 1.6,
+          height: 6,
+        }}
+      />
+      {/* A tira anda para a direita; para a esquerda, espelha em torno do centro do cachorro. */}
+      <span
+        className="sprite-avatar sprite-repete absolute inset-0"
+        style={
+          {
+            transform: cachorro.virado === -1 ? "scaleX(-1)" : undefined,
+            transformOrigin: `${centro}px 0`,
+            backgroundImage: "url(/enfeites.png)",
+            backgroundSize: `${celula * atlasEnfeites.quadros}px ${celula * atlasEnfeites.linhas}px`,
+            backgroundPositionY: -cachorroAndando.linha * celula,
+            "--quadros": atlasEnfeites.quadros,
+            "--ms": `${cachorroAndando.ms}ms`,
             "--celula": `${celula}px`,
           } as CSSProperties
         }

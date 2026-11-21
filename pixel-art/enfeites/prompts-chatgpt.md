@@ -2,7 +2,7 @@
 
 > Prompts para gerar no ChatGPT (geração de imagem) os 19 Enfeites (`docs/gamificacao.md` §9.1), apoiados no chão da praça e animados (`docs/decisoes/0050-enfeites-no-chao.md`). As imagens geradas são só a **fonte**: elas vão para `fonte/`, e o `build.py` recorta cada objeto, o reduz à escala do mestre da praça, o ajusta à paleta `wrexercise` e monta o atlas `saida/enfeites.png` (4 quadros × 19 linhas de 40×40), copiado para `webapp/public/`. Nunca copie uma imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** os 19 da primeira folha estão completos; os 3 Enfeites da folha-base 2 (prompt 3) e o cachorro andando (prompt 4) ainda não foram gerados (ADR 0082). A folha-base está em `fonte/base.png`; as tiras 01–03, 09–14 e 16–19 estão em `fonte/`; os Enfeites 04–08 e 15 brilham por código (`BRILHO`). Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
+> **Estado:** os 22 Enfeites estão completos, com o cachorro andando (prompt 4) e o tapete se abrindo (prompt 5). As folhas-base estão em `fonte/base.png` e `fonte/base-2.png`; as tiras 01–03, 09–14, 16–22, `tira-cachorro-andando.png` e `tira-zen-aberto.png` estão em `fonte/`; os Enfeites 04–08 e 15 brilham por código (`BRILHO`). Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
 
 ## Como usar
 
@@ -159,7 +159,7 @@ pixels.
    mesh pattern and a coral top band between them, and a yellow-and-blue volleyball (#ffd34e,
    #4aa8ff) resting at the foot of one post.
 4. (16×36) A punching bag on a free-standing floor stand: a dark grey stand with a round base, an
-   arm at the top, a short chain, and a hanging violet bag (#7957e8, shadow #4b35a6) with a chalk
+   arm at the top, a short chain, and a hanging red bag (#ff684a, shadow #c4432c) with a chalk
    band.
 ```
 
@@ -199,7 +199,36 @@ The ears bounce 1 px with the steps. The cycle loops smoothly from frame 4 back 
 
 (cole o bloco de estilo)
 
-**Ainda não feito no `build.py`** (fica para quando as fontes existirem, `docs/decisoes/0082-esportes-e-animacoes-por-tipo.md`, Impacto): ler `fonte/base-2.png` com a escala do poste, acrescentar as linhas 20 a 22 ao atlas e uma linha para o cachorro andando, e imprimir a lista nova para `enfeitesNaPraca.ts`.
+### Prompt 5 — o tapete se abrindo (1024×1024, um chat novo, anexando `preview/recorte-14-zen.png`)
+
+No Yoga ao vivo, o tapete (`Zen`) se abre inteiro quando o Avatar chega (ADR 0082). O quadro 4 fica parado até o fim do treino. Salve em `fonte/tira-zen-aberto.png`.
+
+```text
+The attached image is one pixel-art object on a magenta background: a violet yoga mat lying half
+unrolled flat on the floor, with the rolled part at one end.
+Create a 1024×1024 image with a 4-frame animation of EXACTLY this mat unrolling completely, in a 2×2
+grid of equal 512×512 cells: frame 1 top-left, frame 2 top-right, frame 3 bottom-left, frame 4
+bottom-right. No borders or lines between cells.
+
+Frame 1 is a faithful copy of the attached mat. In every frame the mat keeps the same pixel scale (6×6
+blocks per art pixel), the same width front to back, the same colors, and its bottom edge on the same
+line near the bottom of the cell. The flat end (the end without the roll) stays in exactly the same
+place in every frame; only the roll moves, rolling away from the flat end along the floor:
+Frame 2: the roll has moved 3 art pixels away from the flat end and is a little smaller; the flat part
+is 3 px longer.
+Frame 3: the roll has moved 6 px away and is only a small curl at the end of the mat.
+Frame 4: the mat lies completely flat, fully unrolled: one plain violet rectangle in 3/4 view, with no
+roll and no curl, with the same light top edge and shadow front edge as the flat part in frame 1. In
+total it is about 8 art pixels longer than in frame 1.
+The animation plays once, from rolled to flat.
+```
+
+(cole o bloco de estilo)
+
+### Folha-base 2, cachorro e tapete no `build.py`
+
+- `fonte/base-2.png` é lida pela grade (4 células numa linha), e não em ordem de leitura: os cones são baixos e cairiam numa "segunda linha". A escala é a que deixa o poste com a altura dele na base (`REGUA`); o poste é descartado.
+- As tiras do cachorro e do tapete são `EXTRAS`: linhas do atlas depois dos 22 Enfeites. O cachorro em pé tem 0,8 da altura do cachorro sentado; o quadro 1 do tapete é alinhado ao tapete da base, para ele se abrir no mesmo lugar.
 
 ## Conferência antes de salvar em `fonte/`
 

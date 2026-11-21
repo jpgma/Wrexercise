@@ -19,7 +19,7 @@ export function EnfeiteIcone({
   style?: CSSProperties;
 }) {
   const desenho = getDesenhoEnfeite(conquista);
-  // Conquista ainda sem desenho no atlas (Craque, Levantador, Faixa preta): guarda o lugar.
+  // Conquista sem desenho no atlas: guarda o lugar.
   if (!desenho)
     return (
       <span
