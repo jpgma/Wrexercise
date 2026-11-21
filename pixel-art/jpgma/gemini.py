@@ -60,7 +60,9 @@ EXTRAS = {
 }
 # Células que ficam no chão da calibração, mesmo que o Gemini as desenhe 1 ou 2 px acima (as
 # outras guardam a altura em relação a ela: o 3º de `acordar` é o susto, no ar).
-NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 5), "levantar": range(8)}
+NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 5), "levantar": range(8),
+           # A bicicleta na diagonal: a roda da frente, mais perto, desce abaixo dos pés e sairia da célula.
+           "ciclismo-southeast": range(8)}
 # Células sentadas: são postas sobre a pose sentada de `dormindo` (a 2ª célula da tira dele).
 SENTADOS = {"dormindo": (1, 2, 3), "adormecer": (4, 5, 6, 7), "acordar": (1, 3, 4, 5), "levantar": (0, 1, 2, 3)}
 
@@ -214,7 +216,7 @@ def processar(arq: pathlib.Path) -> None:
     quadros: list[dict] = [{} for _ in range(n)]
     for i in sorted(range(n), key=lambda i: (i != k, i)):
         grade, th = grades[i]
-        no_chao = i in NO_CHAO.get(animacao, ())
+        no_chao = i in NO_CHAO.get(arq.stem, NO_CHAO.get(animacao, ()))
         dy = 0 if no_chao else round((celulas[i][6] - y1max) / escala)
         if no_chao:  # a limpeza pode tirar a linha de baixo: mede pelo desenho
             th = max(ty for _, ty in grade) + 1
