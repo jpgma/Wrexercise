@@ -163,19 +163,6 @@
       "ms": 120
     }
   },
-  "provisorias": [
-    "barra",
-    "calistenia",
-    "chutar",
-    "ciclismo",
-    "futebol",
-    "largada",
-    "luta",
-    "manchete",
-    "musculacao",
-    "natacao",
-    "volei",
-    "yoga"
-  ],
-  "sha256": "e35d96e4353e8927ac91a9c3a4c483798e76f3dd09f90606336536e7a247a8c5"
+  "provisorias": [],
+  "sha256": "12648440d7328829077ae59bff5c3973e1e52eff9560de83273bc94d49d61532"
 }

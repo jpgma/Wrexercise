@@ -2,7 +2,9 @@
 
 > Prompts para gerar no ChatGPT (geração de imagem) as 12 animações dos esportes da folha de avatar (`docs/decisoes/0082-esportes-e-animacoes-por-tipo.md`, `docs/avatar-formato.md` §6). O personagem, a vista e as regras são os de `prompts-gemini.md`; o que muda é o ChatGPT no lugar do Gemini e os objetos de cada esporte. As imagens geradas são só a **fonte**: vão para `fonte/chatgpt/`, e o `gemini.py` as reduz. Nunca copie uma imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** nenhuma gerada. Até lá, o `build.py` preenche as 12 linhas com os quadros de `treinando` (`PROVISORIAS`).
+> **Estado:** as 52 geradas (2026-11-21), reduzidas em `saida/gemini/`, montadas no `.aseprite` pelo `montar.py` e na folha pelo `build.py`; nenhuma linha usa mais os quadros provisórios de `treinando`.
+>
+> **Correções pedidas no mesmo chat:** `ciclismo` de frente e de costas sai com a bicicleta de lado; peça a bicicleta "seen from the front/back, almost end-on". `yoga` de lado pode virar o guerreiro (quadro 5) de frente; peça o quadro 5 de lado. O ChatGPT às vezes falha ("the image generation tool encountered an error"); basta pedir de novo.
 
 ## 1. Como usar
 

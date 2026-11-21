@@ -48,7 +48,7 @@ QUADROS = {
 EXTRAS = {
     "musculacao": ["#ff684a", "#c4432c"],  # anilhas de borracha coral
     "ciclismo": ["#ff684a", "#c4432c", "#5f6783"],  # quadro coral e aros cinza (a bicicleta do Enfeite)
-    "natacao": ["#4aa8ff", "#2f7fd6", "#a58cf4"],  # água, sombra da água e óculos de natação
+    "natacao": ["#4aa8ff", "#2f7fd6", "#a58cf4", "#4b35a6"],  # água, sombra da água e óculos (claro e escuro)
     "volei": ["#ffd34e", "#4aa8ff"],  # a bola de vôlei amarela e azul
 }
 # Quadros que ficam no chão do 1º, mesmo que o Gemini os desenhe 1 ou 2 px acima: as poses
