@@ -48,6 +48,11 @@ const barra = (() => {
     y: (o.y + o.altura) * escala,
   };
 })();
+/**
+ * Os pés de quem está pendurado: a trave fica nas linhas 4 a 6 do recorte da barra (40 px), e as mãos
+ * da animação `barra`, 26 a 28 px acima da âncora da folha. Por isso os pés sobem 8 px do mestre.
+ */
+const naTrave = { x: barra.x, y: barra.y - 8 * escala };
 /** À frente da barra, quem espera a vez faz flexões, lado a lado. */
 const EsperaDaBarra = { dy: 26, entre: 34 };
 
@@ -351,8 +356,9 @@ export function useTreinoNaPraca({
         const esperando = calistenia.filter((id) => id !== naBarra);
         calistenia.forEach((id) => {
           if (id === naBarra) {
+            // Pendurado, fica atrás da barra, com as mãos na trave.
             irAte(id, barra, () =>
-              atuar(id, barra, "barra", "sul", 0, barra.y + 1),
+              atuar(id, naTrave, "barra", "sul", 0, barra.y - 1),
             );
             return;
           }
