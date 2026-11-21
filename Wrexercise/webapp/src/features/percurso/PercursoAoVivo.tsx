@@ -1,8 +1,9 @@
 import { MapPin, Moon, Smartphone } from "lucide-react";
 import { useState } from "react";
-import { formatarCronometro, type TipoAtividade } from "@/features/atividades";
+import type { TipoAtividade } from "@/features/atividades";
 import { formatarDistancia, formatarMedia, usaVelocidade } from "./calculo";
 import { MapaPercurso } from "./MapaPercurso";
+import { entrarTelaCheia, ModoBolso } from "./ModoBolso";
 import type { GravacaoPercurso } from "./useGravacaoPercurso";
 import { usePercurso } from "./usePercurso";
 
@@ -20,7 +21,8 @@ const textoEstado: Record<GravacaoPercurso["estado"], string | null> = {
 
 /**
  * O Percurso no cronômetro do treino ao vivo (ADR 0084): distância e ritmo até agora, o mapa com o trajeto e o
- * estado do GPS. A tela fica acesa enquanto grava; o "Modo bolso" escurece tudo e mostra só os números.
+ * estado do GPS. A tela fica acesa enquanto grava; o "Modo bolso" deixa a tela preta,
+ * em tela cheia, só com os números em branco.
  */
 export function PercursoAoVivo({
   atividadeId,
@@ -112,7 +114,11 @@ export function PercursoAoVivo({
         <button
           type="button"
           className="btn-ghost mt-2 w-full"
-          onClick={() => setBolso(true)}
+          onClick={() => {
+            // A tela cheia precisa ser pedida no próprio toque.
+            entrarTelaCheia();
+            setBolso(true);
+          }}
         >
           <Moon aria-hidden="true" className="size-4" />
           Modo bolso
@@ -124,58 +130,10 @@ export function PercursoAoVivo({
           distancia={gravacao.distancia}
           segundos={segundos}
           media={formatarMedia(tipo, velocidade)}
+          estado={gravacao.estado}
           onSair={() => setBolso(false)}
         />
       )}
     </section>
-  );
-}
-
-/**
- * A tela escura para levar o celular no bolso ou no suporte: só os números, com pouca luz. A tela continua
- * acesa (o GPS precisa dela). Sai com dois toques, para não sair sem querer.
- */
-function ModoBolso({
-  distancia,
-  segundos,
-  media,
-  onSair,
-}: {
-  distancia: number;
-  segundos: number;
-  media: string;
-  onSair: () => void;
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Modo bolso"
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-lightbox text-on-lightbox"
-      onDoubleClick={onSair}
-    >
-      <p className="font-score text-7xl tabular-nums opacity-80">
-        {formatarDistancia(distancia)}
-      </p>
-      <p className="font-score text-5xl tabular-nums opacity-70">
-        {formatarCronometro(segundos)}
-      </p>
-      <p className="text-xl tabular-nums opacity-60">{media}</p>
-      <button
-        type="button"
-        autoFocus
-        className="mt-10 min-h-11 rounded-full px-6 text-sm opacity-60"
-        onDoubleClick={onSair}
-        // Pelo teclado (sem toque), Enter ou Espaço saem de uma vez.
-        onClick={(e) => {
-          if (e.detail === 0) onSair();
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onSair();
-        }}
-      >
-        Toque duas vezes para sair
-      </button>
-    </div>
   );
 }

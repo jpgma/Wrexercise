@@ -24,7 +24,7 @@
 - Só no treino ao vivo começado no aplicativo, nos tipos `Corrida`, `Caminhada` e `Ciclismo`.
 - Em "Começar agora", a caixa "Mostrar ao grupo o local do treino" vira, nesses tipos, "Gravar o percurso e mostrar ao grupo", marcada por padrão. Desmarcada, o GPS fica desligado. Marcada, o ponto de início da ADR 0080 não é guardado: ele mostraria o que o percurso esconde.
 - O aparelho que começou o treino grava com `watchPosition` (alta precisão), guarda os pontos no IndexedDB e os manda em lotes, a cada 30 segundos, para `POST /api/atividades/{id}/percurso/pontos`. Outro aparelho só grava se a pessoa tocar em "Gravar neste aparelho".
-- Gravando, a tela fica acesa ("Manter a tela acesa" ligado e travado). O "Modo bolso" escurece a tela e mostra só os números.
+- Gravando, a tela fica acesa ("Manter a tela acesa" ligado e travado). O "Modo bolso" é um modo ambiente, como o de um relógio: tela preta pura (apagada no OLED), números em branco (hora, distância, cronômetro, ritmo e estado do GPS), por cima de tudo e segurando todos os toques. Pede a tela cheia e trava a tela em pé onde o navegador deixa (no iPhone, não há tela cheia). Os números mudam alguns pixels a cada minuto, para não marcar a tela. O Voltar não sai; sai segurando "Segure para sair" por 2 segundos.
 - Cada volta à tela (ou recarga do app) começa um trecho novo (`segmento`). A lacuna aparece tracejada e não conta distância.
 - O aparelho descarta pontos com precisão pior que 30 m e guarda um ponto a cada 3 s ou 5 m. Antes de "Terminar treino", manda o que falta.
 

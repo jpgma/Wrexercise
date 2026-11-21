@@ -141,6 +141,9 @@
   /* A galeria em tela cheia é escura nos dois temas, para não competir com a foto. */
   --color-lightbox: #161922;
   --color-on-lightbox: #f5f1e8;
+  /* O Modo bolso é preto puro nos dois temas: no OLED, o preto fica apagado (ADR 0084). */
+  --color-ambiente: #000000;
+  --color-on-ambiente: #ffffff;
   /* As cartas do Jogo são de papel giz com tinta escura nos dois temas, como a arte em pixel. */
   --color-on-carta: #14161f;
   --color-carta-tinta: #14161f;
