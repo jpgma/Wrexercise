@@ -17,6 +17,7 @@ import {
   TipoAtividadeIcone,
   useAtividade,
 } from "@/features/atividades";
+import { PercursoAtividade } from "@/features/percurso";
 import { ReacoesAtividade } from "@/features/reacoes";
 import { ApiError, getErrorMessage } from "@/services/api";
 
@@ -70,6 +71,7 @@ export function AtividadePage() {
     latitude,
     longitude,
     anexoPermitido,
+    percurso,
   } = atividade.data;
 
   return (
@@ -120,12 +122,20 @@ export function AtividadePage() {
               </div>
             </div>
 
-            <LocalTreino
-              atividadeId={id}
-              latitude={latitude}
-              longitude={longitude}
-              className="mt-4"
-            />
+            {percurso ? (
+              <PercursoAtividade
+                atividadeId={id}
+                aoVivo={situacaoVerificacao === "EmAndamento"}
+                className="mt-4"
+              />
+            ) : (
+              <LocalTreino
+                atividadeId={id}
+                latitude={latitude}
+                longitude={longitude}
+                className="mt-4"
+              />
+            )}
             {descricao && (
               <p className="mt-4 text-[15px] leading-relaxed break-words">
                 {descricao}

@@ -14,7 +14,7 @@ internal sealed record CriarAtividadeRequest(
 /// Os dois são sinais do navegador. <c>Latitude</c> e <c>Longitude</c>: o GPS do arquivo original, só quando o
 /// autor escolheu mostrá-lo ao grupo; sem essa escolha, o navegador nem o envia (ADR 0061).
 /// <c>CapturadaEm</c> e <c>OrigemDataCaptura</c>: quando a foto ou o vídeo foi feito e de onde veio essa data
-/// (<c>Exif</c>, <c>Arquivo</c>, <c>Camera</c>, <c>Print</c>, <c>Integracao</c>; ADR 0052, 0080). Também é sinal, não prova.
+/// (<c>Exif</c>, <c>Arquivo</c>, <c>Camera</c>, <c>Print</c>, <c>Integracao</c>, <c>Percurso</c>; ADR 0052, 0080, 0084). Também é sinal, não prova.
 /// <c>AdicionadaDepois</c>: chegou depois do prazo da verificação e não contou para ela (ADR 0083).
 /// </summary>
 internal sealed record EvidenciaResponse(
@@ -51,7 +51,9 @@ internal sealed record AtividadeResumoResponse(
     string? MiniaturaUrl,
     int Comentarios,
     IReadOnlyList<string> Avisos,
-    int? MiniaturaDuracaoMs);
+    int? MiniaturaDuracaoMs,
+    // A distância e o recorde, quando o treino gravou o Percurso (ADR 0084).
+    PercursoResumoResponse? Percurso);
 
 /// <summary>Um <c>Aviso</c> sobre a atividade (ADR 0052). Todo o grupo vê, inclusive o autor.</summary>
 internal sealed record AvisoResponse(string Tipo, Guid? EvidenciaId, Guid? AtividadeRelacionadaId);
@@ -85,7 +87,9 @@ internal sealed record AtividadeResponse(
     double? Latitude,
     double? Longitude,
     // O autor ainda manda fotos e vídeos por aqui; depois do prazo, com o selo "Adicionada depois" (ADR 0083).
-    bool AnexoPermitido);
+    bool AnexoPermitido,
+    // O resumo do Percurso; o trajeto vem de GET /api/atividades/{id}/percurso (ADR 0084).
+    PercursoResumoResponse? Percurso);
 
 /// <summary>Uma correção da duração feita por um administrador (ADR 0068). Todo o grupo vê.</summary>
 internal sealed record CorrecaoDuracaoResponse(

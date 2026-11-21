@@ -10,9 +10,15 @@ namespace Wrexercise.Features.Atividades;
 
 /// <summary>
 /// <c>Latitude</c> e <c>Longitude</c>: onde o treino começou, só quando a pessoa escolheu mostrar o local ao grupo
-/// (ADR 0080). Sem essa escolha, o navegador nem as envia.
+/// (ADR 0080). Sem essa escolha, o navegador nem as envia. <c>GravarPercurso</c>: na Corrida, na Caminhada e no
+/// Ciclismo, a pessoa escolheu gravar o Percurso e mostrá-lo ao grupo (ADR 0084); aí o ponto de início não é
+/// guardado, porque mostraria o que o percurso esconde.
 /// </summary>
-internal sealed record ComecarTreinoRequest(string? Tipo, double? Latitude = null, double? Longitude = null);
+internal sealed record ComecarTreinoRequest(
+    string? Tipo,
+    double? Latitude = null,
+    double? Longitude = null,
+    bool? GravarPercurso = null);
 
 /// <summary>
 /// "Começar treino" (ADR 0078): cria a atividade <c>EmAndamento</c>, com o início agora. Ela não conta para
@@ -32,14 +38,16 @@ internal static class ComecarTreino
             return OperacaoAtividade.InvalidData();
         }
 
+        var gravarPercurso = request.GravarPercurso == true && PercursoAtividade.IsTipoComPercurso(request.Tipo);
+
         // Coordenadas malformadas não impedem o treino: ele só começa sem local.
-        var local = IsLocalValido(request.Latitude, request.Longitude)
+        var local = !gravarPercurso && IsLocalValido(request.Latitude, request.Longitude)
             ? (request.Latitude!.Value, request.Longitude!.Value)
             : ((double, double)?)null;
 
         var usuarioId = context.GetSessaoAtual().UsuarioId;
         var (status, atividadeId, repetida) = await ExecutarAsync(
-            dataSource, grupoId, usuarioId, request.Tipo!, local, null, cancellationToken);
+            dataSource, grupoId, usuarioId, request.Tipo!, local, null, cancellationToken, gravarPercurso);
         if (status != AtividadeOperacaoStatus.Concluida)
         {
             return OperacaoAtividade.ToResult(status);
@@ -57,6 +65,7 @@ internal static class ComecarTreino
     /// <summary>
     /// Começa o treino. Com <paramref name="vinculo"/>, quem começa é um app conectado (ADR 0081): o mesmo
     /// identificador devolve o mesmo treino, e o treino aberto pelo navegador no mesmo grupo passa a ser do app.
+    /// <paramref name="gravarPercurso"/>: cria o Percurso vazio (ADR 0084); nunca num treino começado pelo app.
     /// </summary>
     internal static async Task<(AtividadeOperacaoStatus Status, Guid Id, bool Repetida)> ExecutarAsync(
         NpgsqlDataSource dataSource,
@@ -65,7 +74,8 @@ internal static class ComecarTreino
         string tipo,
         (double Latitude, double Longitude)? local,
         (string App, string ExternalId)? vinculo,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool gravarPercurso = false)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -151,6 +161,14 @@ internal static class ComecarTreino
         {
             // Outro toque ao mesmo tempo abriu o treino primeiro.
             return (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
+        }
+
+        if (gravarPercurso && vinculo is null)
+        {
+            await using var percurso = new NpgsqlCommand(
+                "INSERT INTO percursos (atividade_id) VALUES ($1)", connection, transaction);
+            percurso.Parameters.AddWithValue(id);
+            await percurso.ExecuteNonQueryAsync(cancellationToken);
         }
 
         await NotificacoesTreino.NotificarComecouTreinarAsync(connection, transaction, id, cancellationToken);

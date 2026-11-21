@@ -82,6 +82,24 @@ internal static class ConquistasDoUsuario
             diasComTreino = (int)(await command.ExecuteScalarAsync(cancellationToken))!;
         }
 
+        // O Percurso (ADR 0084) é de outra fatia: SQL explícito, só a soma por tipo.
+        var metrosPorTipo = new Dictionary<string, int>();
+        await using (var command = new NpgsqlCommand("""
+            SELECT a.tipo, sum(p.distancia_metros)::int
+            FROM atividades a
+            JOIN percursos p ON p.atividade_id = a.id
+            WHERE a.usuario_id = $1 AND a.situacao_verificacao = 'Verificada'
+            GROUP BY a.tipo
+            """, connection))
+        {
+            command.Parameters.AddWithValue(usuarioId);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                metrosPorTipo[reader.GetString(0)] = reader.GetInt32(1);
+            }
+        }
+
         var desafios = await DesafiosDaPessoa.LoadAsync(connection, null, usuarioId, cancellationToken);
 
         return new EstatisticasConquistas(
@@ -92,6 +110,7 @@ internal static class ConquistasDoUsuario
             fimDeSemana,
             desafios.Count(d => d.IsConcluido()),
             porTipo,
-            diasComTreino);
+            diasComTreino,
+            metrosPorTipo);
     }
 }

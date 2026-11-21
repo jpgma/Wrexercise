@@ -23,6 +23,12 @@ internal static class OrigemDataCaptura
     /// Só o servidor a atribui, ao postar o rascunho; o navegador não consegue informá-la.
     /// </summary>
     public const string Integracao = "Integracao";
+
+    /// <summary>
+    /// A imagem do Percurso que o navegador gera ao terminar o treino (ADR 0084), datada pelo fim do treino. Só o
+    /// servidor a atribui, na rota própria; ela nunca muda a comprovação.
+    /// </summary>
+    public const string Percurso = "Percurso";
 }
 
 /// <summary>
@@ -75,10 +81,10 @@ internal static class AvisosEvidencia
         return origem switch
         {
             OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print
-                or OrigemDataCaptura.Integracao when instante > fim
+                or OrigemDataCaptura.Integracao or OrigemDataCaptura.Percurso when instante > fim
                 => TipoAviso.FotoForaDoPeriodo,
             OrigemDataCaptura.Exif or OrigemDataCaptura.Camera or OrigemDataCaptura.Print
-                or OrigemDataCaptura.Integracao => null,
+                or OrigemDataCaptura.Integracao or OrigemDataCaptura.Percurso => null,
             // A data do arquivo dentro ou depois da janela não diz nada sobre quando a foto foi tirada.
             _ => TipoAviso.FotoSemData,
         };

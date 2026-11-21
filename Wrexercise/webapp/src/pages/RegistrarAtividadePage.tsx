@@ -6,6 +6,7 @@ import {
   Info,
   Lock,
   MapPin,
+  Route,
   Minus,
   Play,
   Plus,
@@ -73,6 +74,10 @@ import {
 import { useSessao } from "@/features/autenticacao";
 import { useGrupo } from "@/features/grupos";
 import { appIntegracaoLabels, useRascunho } from "@/features/integracoes";
+import {
+  iniciarGravacaoPercurso,
+  isTipoComPercurso,
+} from "@/features/percurso";
 import {
   AvisoCartaNoTreino,
   useAvancoEnfeite,
@@ -455,6 +460,9 @@ export function RegistrarAtividadePage() {
 
   const duracaoMinutos = useWatch({ control, name: "duracaoMinutos" });
   const tipoAtual = useWatch({ control, name: "tipo" });
+  // Corrida, Caminhada e Ciclismo gravam o Percurso no lugar do ponto de início (ADR 0084).
+  const tipoComPercurso = tipoAtual ? isTipoComPercurso(tipoAtual) : false;
+  const gravarPercurso = tipoComPercurso && mostrarLocalTreino;
   const startedAt = useWatch({ control, name: "startedAt" });
 
   // As prévias ocupam memória até serem liberadas.
@@ -800,15 +808,18 @@ export function RegistrarAtividadePage() {
     if (!tipoAtual || buscandoLocal) return;
     let local = null;
     if (mostrarLocalTreino) {
+      // Gravando o Percurso, o pedido também serve para o navegador perguntar a permissão agora, no toque
+      // (o iOS só pergunta assim); o ponto de início não vai ao servidor (ADR 0084).
       setBuscandoLocal(true);
       local = await obterLocalAtual();
       setBuscandoLocal(false);
     }
     comecar.mutate(
-      { tipo: tipoAtual, local },
+      { tipo: tipoAtual, local, gravarPercurso },
       {
-        onSuccess: (atividade) => {
+        onSuccess: async (atividade) => {
           if (usuarioId) void apagarRascunhoRegistro(usuarioId, chaveLocal);
+          if (gravarPercurso) await iniciarGravacaoPercurso(atividade.id);
           void navigate(`/grupos/${atividade.grupoId}/treino`, {
             replace: true,
           });
@@ -1044,14 +1055,34 @@ export function RegistrarAtividadePage() {
                   setMostrarLocalTreino(event.target.checked)
                 }
               />
-              <span className="flex-1">
-                Mostrar ao grupo o local do treino
-                <span className="block text-xs">
-                  Desmarcado, a localização não sai do seu celular.
+              {tipoComPercurso ? (
+                <span className="flex-1">
+                  Gravar o percurso e mostrar ao grupo
+                  <span className="block text-xs">
+                    Mapa, distância e ritmo. O grupo não vê os primeiros e os
+                    últimos 200 m. Desmarcado, o GPS fica desligado.
+                  </span>
                 </span>
-              </span>
-              <MapPin aria-hidden="true" className="size-5 shrink-0" />
+              ) : (
+                <span className="flex-1">
+                  Mostrar ao grupo o local do treino
+                  <span className="block text-xs">
+                    Desmarcado, a localização não sai do seu celular.
+                  </span>
+                </span>
+              )}
+              {tipoComPercurso ? (
+                <Route aria-hidden="true" className="size-5 shrink-0" />
+              ) : (
+                <MapPin aria-hidden="true" className="size-5 shrink-0" />
+              )}
             </label>
+            {gravarPercurso && (
+              <p className="mt-2 text-xs text-muted">
+                O GPS só grava com o app aberto: a tela fica acesa durante o
+                treino.
+              </p>
+            )}
             {comecar.isError && (
               <p role="alert" className="form-error mt-4">
                 {getErrorMessage(comecar.error)}
@@ -1078,7 +1109,9 @@ export function RegistrarAtividadePage() {
             >
               <Radio aria-hidden="true" className="size-5" />
               {buscandoLocal
-                ? "Buscando o local…"
+                ? gravarPercurso
+                  ? "Ligando o GPS…"
+                  : "Buscando o local…"
                 : comecar.isPending
                   ? "Começando…"
                   : "Começar treino"}

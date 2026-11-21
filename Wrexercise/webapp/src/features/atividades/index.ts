@@ -65,6 +65,8 @@ export {
 export type {
   TerminarTreinoData,
   Torcida,
+  PercursoResumo,
+  TipoRecorde,
   TreinoAtual,
   Atividade,
   Aviso,

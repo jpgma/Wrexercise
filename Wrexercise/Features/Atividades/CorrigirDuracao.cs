@@ -131,6 +131,9 @@ internal static class CorrigirDuracao
             await registro.ExecuteNonQueryAsync(cancellationToken);
         }
 
+        // O Percurso conta só dentro do período corrigido (ADR 0084).
+        await ConsultasPercurso.RecalcularAsync(connection, transaction, atividadeId, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
         return AtividadeOperacaoStatus.Concluida;
     }

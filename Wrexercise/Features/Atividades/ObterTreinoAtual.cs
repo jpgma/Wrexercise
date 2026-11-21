@@ -7,6 +7,12 @@ namespace Wrexercise.Features.Atividades;
 /// <summary>Uma Torcida recebida no treino ao vivo: quem torceu e quando.</summary>
 internal sealed record TorcidaResponse(Guid UsuarioId, string NomeExibicao, DateTimeOffset CriadaEm);
 
+/// <summary>
+/// O Percurso que o aparelho está gravando (ADR 0084). <c>UltimoSeq</c>: o maior ponto já guardado, ou −1; depois de
+/// recarregar, o aparelho continua do seguinte.
+/// </summary>
+internal sealed record PercursoAoVivoResponse(int UltimoSeq, int DistanciaMetros);
+
 internal sealed record TreinoAtualResponse(
     Guid AtividadeId,
     Guid GrupoId,
@@ -17,7 +23,8 @@ internal sealed record TreinoAtualResponse(
     IReadOnlyList<TorcidaResponse> Torcidas,
     string? App,
     int? AppDuracaoSegundos,
-    DateTimeOffset? AppEndedAt);
+    DateTimeOffset? AppEndedAt,
+    PercursoAoVivoResponse? Percurso);
 
 /// <summary>
 /// O treino ao vivo de quem consulta, em qualquer grupo (ADR 0078). Sem treino aberto, 204.
@@ -40,9 +47,12 @@ internal static class ObterTreinoAtual
         await using (var command = new NpgsqlCommand("""
             SELECT a.id, a.grupo_id, g.nome, a.tipo, a.started_at,
                 (SELECT count(*)::int FROM evidencias_atividade e WHERE e.atividade_id = a.id),
-                a.app, a.app_duracao_segundos, a.app_ended_at
+                a.app, a.app_duracao_segundos, a.app_ended_at,
+                p.distancia_metros,
+                (SELECT coalesce(max(pp.seq), -1) FROM pontos_percurso pp WHERE pp.atividade_id = a.id)
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
+            LEFT JOIN percursos p ON p.atividade_id = a.id
             JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = a.usuario_id AND m.removed_at IS NULL
             WHERE a.usuario_id = $1 AND a.situacao_verificacao = 'EmAndamento'
             """, connection))
@@ -64,7 +74,8 @@ internal static class ObterTreinoAtual
                 [],
                 reader.IsDBNull(6) ? null : reader.GetString(6),
                 reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8));
+                reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
+                reader.IsDBNull(9) ? null : new PercursoAoVivoResponse(reader.GetInt32(10), reader.GetInt32(9)));
         }
 
         var torcidas = new List<TorcidaResponse>();

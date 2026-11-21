@@ -136,8 +136,35 @@ Ver `decisoes/0011-atividades.md` e migração `006-create-atividades.sql`.
 | `sha256` | `text` | Hash do arquivo |
 | `ordem` | `smallint` | 1–3 por atividade |
 | `caminho_miniatura` | `text` | Opcional. JPEG gerado no navegador, sob o mesmo volume |
-| `origem_data_captura` | `text` | `Exif`, `Arquivo`, `Camera`, `Print` ou `Integracao` (só o servidor, ADR 0065) |
+| `origem_data_captura` | `text` | `Exif`, `Arquivo`, `Camera`, `Print`, `Integracao` (só o servidor, ADR 0065) ou `Percurso` (só o servidor, uma por atividade, ADR 0084) |
 | `created_at` | `timestamptz` | Padrão `now()` |
+
+## `percursos`
+
+O Percurso do treino ao vivo (ADR 0084, migração `045-create-percursos.sql`). A linha existe só quando a pessoa escolheu gravar; o resumo é refeito a partir dos pontos a cada lote, ao terminar e ao corrigir a duração.
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `atividade_id` | `uuid` | Chave primária. Referencia `atividades`; sai junto com ela |
+| `distancia_metros` | `integer` | Dentro do período do treino, sem as lacunas |
+| `velocidade_maxima` | `double precision` | m/s, em janelas de 10 s ou mais; nula sem janela |
+| `ganho_elevacao_metros` | `integer` | Aproximado; nulo quando o GPS não mandou altitude |
+| `total_pontos` | `integer` | Até 20.000 |
+| `updated_at` | `timestamptz` | Último recálculo |
+
+## `pontos_percurso`
+
+Os pontos crus, como o aparelho os mandou. O filtro (precisão, saltos, lacunas, tremor) é feito na leitura, em `PercursoAtividade.cs`. Chave primária `(atividade_id, seq)`: repetir um lote não duplica nada.
+
+| Coluna | Tipo | Observações |
+|---|---|---|
+| `atividade_id` | `uuid` | Referencia `percursos` |
+| `seq` | `integer` | Ordem do ponto no aparelho, de 0 a 100.000 |
+| `recorded_at` | `timestamptz` | Quando o GPS mediu |
+| `latitude`, `longitude` | `double precision` | Nunca vão para o log |
+| `precisao_metros` | `real` | Até 30 |
+| `altitude_metros` | `real` | Opcional |
+| `segmento` | `smallint` | Muda a cada reinício da gravação no aparelho |
 
 ## `codigos_integracao`
 

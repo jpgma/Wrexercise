@@ -23,7 +23,9 @@ internal sealed record TreinoAoVivoResponse(
     string Tipo,
     DateTimeOffset StartedAt,
     int Torcidas,
-    DateTimeOffset? TorcidaPorMimEm);
+    DateTimeOffset? TorcidaPorMimEm,
+    // A distância até agora, quando o treino grava o Percurso (ADR 0084): só aparece no Foco, nunca pontua.
+    int? DistanciaMetros);
 
 /// <param name="UltimoTipo">O código da mensagem pronta da cutucada mais recente.</param>
 internal sealed record CutucadasMembroResponse(int Total, string UltimoTipo);

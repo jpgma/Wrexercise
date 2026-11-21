@@ -1,8 +1,8 @@
-"""Enfeites do modo Jogo (docs/gamificacao.md §9): 22 objetos apoiados no chão da praça, animados.
+"""Enfeites do modo Jogo (docs/gamificacao.md §9): 25 objetos apoiados no chão da praça, animados.
 
-Gera um atlas de 4 quadros × 24 linhas, em células de 40×40 (escala do mestre da praça, mostrada em 2×),
+Gera um atlas de 4 quadros × 28 linhas, em células de 40×40 (escala do mestre da praça, mostrada em 2×),
 com cada objeto apoiado na base da célula: saida/enfeites.png, copiado para webapp/public/. A ordem das
-linhas é a de ENFEITES e, depois, a de EXTRAS. O quadro 1 também é o ícone da vitrine.
+linhas é a de ENFEITES, a de DESENHADOS, a de EXTRAS e a de DERIVADOS. O quadro 1 também é o ícone da vitrine.
 
 Fontes (geradas no ChatGPT, ver prompts-chatgpt.md):
 - fonte/base.png: os 19 objetos parados, pedidos numa grade de 5×4 e lidos em ordem de leitura (o ChatGPT
@@ -12,6 +12,8 @@ Fontes (geradas no ChatGPT, ver prompts-chatgpt.md):
   régua: a escala é a que deixa o poste com a altura dele na base, e o poste é descartado.
 - fonte/tira-NN-<conquista>.png: os 4 quadros de um objeto, numa grade de 2×2, reduzidos com a escala do
   objeto na base. Sem a tira, o quadro da base se repete e o objeto fica parado.
+- desenhados.py: os Enfeites das conquistas de distância do Percurso (ADR 0084), desenhados por código
+  com a paleta da folha (DESENHADOS).
 - EXTRAS: linhas que não são Enfeites do catálogo, mas outra forma de um deles durante o treino ao vivo
   (o cachorro andando, o tapete se abrindo), cada uma de uma tira de 2×2.
 Sem fonte/base.png, os ícones antigos de 32×32 (fonte/folha.png, da folha do Gemini) entram parados no
@@ -33,6 +35,7 @@ sys.path.insert(0, str(AQUI.parents[1] / ".claude/skills/pixel-art-studio/script
 sys.path.insert(0, str(AQUI.parent))
 from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
+from desenhados import DESENHOS  # noqa: E402
 
 BASE = AQUI / "fonte" / "base.png"
 BASE_2 = AQUI / "fonte" / "base-2.png"
@@ -74,6 +77,13 @@ ENFEITES = [
     ("levantador", 260),  # redinha de vôlei (folha-base 2)
     ("faixapreta", 260),  # saco de pancada (folha-base 2)
 ]
+# Os Enfeites desenhados por código (desenhados.py), logo depois dos da folha: (conquista, ms por quadro).
+DESENHADOS = [
+    ("fundista", 220),  # marco de quilômetro com bandeirinha
+    ("peregrino", 320),  # placa de trilha
+    ("estradeiro", 260),  # bicicletário com cadeado
+]
+
 NA_BASE_1 = 19  # os primeiros de ENFEITES vêm de fonte/base.png; os outros, de fonte/base-2.png
 REGUA = "noturno"  # o poste, que a folha-base 2 repete à esquerda
 
@@ -168,7 +178,10 @@ def main():
 
     derivados = [d for d in DERIVADOS if d[1] in [c for c, _ in enfeites]]
 
-    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * (len(enfeites) + len(extras) + len(derivados))))
+    desenhados = [(c, ms, DESENHOS[c]()) for c, ms in DESENHADOS]
+    antes_dos_extras = len(enfeites) + len(desenhados)
+    total = antes_dos_extras + len(extras) + len(derivados)
+    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * total))
     linhas_ts = []
     for linha, ((conquista, ms), base) in enumerate(zip(enfeites, bases)):
         tira = AQUI / "fonte" / f"tira-{linha + 1:02d}-{conquista}.png"
@@ -196,7 +209,15 @@ def main():
         if "--recortes" in sys.argv:
             recorte_para_prompt(base, AQUI / "preview" / f"recorte-{linha + 1:02d}-{conquista}.png")
 
-    for linha, (nome, ms, arquivo, origem, proporcao) in enumerate(extras, start=len(enfeites)):
+    for linha, (conquista, ms, quadros) in enumerate(desenhados, start=len(enfeites)):
+        for coluna, quadro in enumerate(quadros):
+            atlas.alpha_composite(quadro, (coluna * LADO, linha * LADO))
+        x0, y0, x1, y1 = caixa(quadros)
+        linhas_ts.append(
+            f'  {conquista}: {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
+            f'altura: {y1 - y0}, ms: {ms} }},')
+
+    for linha, (nome, ms, arquivo, origem, proporcao) in enumerate(extras, start=antes_dos_extras):
         base = bases[[c for c, _ in enfeites].index(origem)]
         altura = round((base.getbbox()[3] - base.getbbox()[1]) * proporcao)
         quadros = recortar_grade(AQUI / "fonte" / arquivo, 2, 2, QUADROS, LADO, cores, altura_do_primeiro=altura)
@@ -212,7 +233,7 @@ def main():
             f'  "{nome}": {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
             f'altura: {y1 - y0}, ms: {ms} }},')
 
-    for linha, (nome, origem, corte) in enumerate(derivados, start=len(enfeites) + len(extras)):
+    for linha, (nome, origem, corte) in enumerate(derivados, start=antes_dos_extras + len(extras)):
         i = [c for c, _ in enfeites].index(origem)
         quadro = atlas.crop((0, i * LADO, LADO, (i + 1) * LADO))
         quadro.paste((0, 0, 0, 0), (0, 0, corte, LADO))
@@ -231,7 +252,6 @@ def main():
     fundo.resize((atlas.width * 4, atlas.height * 4), Image.NEAREST).save(AQUI / "preview" / "folha-4x.png")
 
     # Todas as linhas animadas lado a lado, 5 por linha, sobre o asfalto.
-    total = len(enfeites) + len(extras) + len(derivados)
     gif = []
     for coluna in range(QUADROS):
         quadro = Image.new("RGBA", (LADO * COLUNAS, LADO * -(-total // COLUNAS)), ASFALTO)
@@ -243,7 +263,7 @@ def main():
 
     print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
     print("\n".join(linhas_ts))
-    print(f"\nsaida/enfeites.png {atlas.size}, {len(enfeites)} enfeites, {len(extras)} extras e "
+    print(f"\nsaida/enfeites.png {atlas.size}, {len(enfeites) + len(desenhados)} enfeites, {len(extras)} extras e "
           f"{len(derivados)} derivados")
 
 

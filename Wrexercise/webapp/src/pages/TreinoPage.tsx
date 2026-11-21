@@ -49,6 +49,12 @@ import {
   useCartaEsperando,
   useCartasQueFalham,
 } from "@/features/jogo";
+import {
+  GerarImagemPercurso,
+  PercursoAoVivo,
+  useGravacaoPercurso,
+  type GravacaoPercurso,
+} from "@/features/percurso";
 import { useResumoGrupo } from "@/features/progresso";
 import { getErrorMessage } from "@/services/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -210,8 +216,16 @@ function Cronometro({
   const torcidasNovas = useTorcidasNovas(treino.torcidas);
   const comemorando = marco !== null || torcidasNovas.length > 0;
 
+  // O Percurso (ADR 0084): o GPS de um PWA só grava com a tela acesa e o app à frente.
+  const gravacao = useGravacaoPercurso({
+    atividadeId: treino.atividadeId,
+    tipo: treino.tipo,
+    percurso: treino.percurso,
+  });
+  const gravando = treino.percurso !== null && gravacao.estado !== "parado";
+
   const [telaAcesa, setTelaAcesa] = useState(false);
-  useTelaAcesa(telaAcesa);
+  useTelaAcesa(telaAcesa || gravando);
   const podeTravarTela = "wakeLock" in navigator;
 
   // A meta do dia com o tempo que já passou: quanto falta para o treino contar.
@@ -333,7 +347,16 @@ function Cronometro({
         </p>
       )}
 
-      <LocalDoTreinoAoVivo treino={treino} />
+      {treino.percurso ? (
+        <PercursoAoVivo
+          atividadeId={treino.atividadeId}
+          tipo={treino.tipo}
+          segundos={segundos}
+          gravacao={gravacao}
+        />
+      ) : (
+        <LocalDoTreinoAoVivo treino={treino} />
+      )}
       <EvidenciasAoVivo treino={treino} />
 
       {podeTravarTela && (
@@ -341,10 +364,18 @@ function Cronometro({
           <input
             type="checkbox"
             className="size-5 shrink-0 accent-progress"
-            checked={telaAcesa}
+            checked={telaAcesa || gravando}
+            disabled={gravando}
             onChange={(e) => setTelaAcesa(e.target.checked)}
           />
-          <span className="flex-1">Manter a tela acesa</span>
+          <span className="flex-1">
+            Manter a tela acesa
+            {gravando && (
+              <span className="block text-xs">
+                Ligada para gravar o percurso
+              </span>
+            )}
+          </span>
           <Sun aria-hidden="true" className="size-5 shrink-0" />
         </label>
       )}
@@ -353,6 +384,7 @@ function Cronometro({
         <TerminarTreino
           treino={treino}
           segundos={segundos}
+          gravacao={gravacao}
           onCancelar={() => setTerminando(false)}
           onTerminado={onTerminado}
         />
@@ -384,7 +416,10 @@ function Cronometro({
         error={cancelar.isError ? getErrorMessage(cancelar.error) : undefined}
         onConfirm={() =>
           cancelar.mutate(undefined, {
-            onSuccess: () => void navigate(`/grupos/${grupoId}/inicio`),
+            onSuccess: () => {
+              gravacao.descartar();
+              void navigate(`/grupos/${grupoId}/inicio`);
+            },
           })
         }
         onCancel={() => setCancelando(false)}
@@ -609,11 +644,13 @@ function MiniaturasTreino({ treino }: { treino: TreinoAtual }) {
 function TerminarTreino({
   treino,
   segundos,
+  gravacao,
   onCancelar,
   onTerminado,
 }: {
   treino: TreinoAtual;
   segundos: number;
+  gravacao: GravacaoPercurso;
   onCancelar: () => void;
   onTerminado: (atividade: Atividade) => void;
 }) {
@@ -653,7 +690,24 @@ function TerminarTreino({
     sessao?.modoInicio === "Jogo",
   );
 
-  const enviar = () =>
+  // Antes de terminar, os pontos que ainda estão no aparelho sobem: o servidor só aceita durante o treino.
+  const [erroPercurso, setErroPercurso] = useState<string | null>(null);
+  const [descarregando, setDescarregando] = useState(false);
+  const enviar = async () => {
+    setErroPercurso(null);
+    if (treino.percurso && gravacao.estado !== "parado") {
+      setDescarregando(true);
+      try {
+        await gravacao.finalizar();
+      } catch (error) {
+        setErroPercurso(
+          `Não deu para enviar o fim do percurso: ${getErrorMessage(error)} Tente de novo.`,
+        );
+        return;
+      } finally {
+        setDescarregando(false);
+      }
+    }
     terminar.mutate(
       {
         duracaoSegundos: minutos * 60,
@@ -661,8 +715,14 @@ function TerminarTreino({
         tipoComprovacao:
           treino.totalEvidencias > 0 ? "Fotografia" : "RegistroManual",
       },
-      { onSuccess: onTerminado },
+      {
+        onSuccess: (atividade) => {
+          gravacao.descartar();
+          onTerminado(atividade);
+        },
+      },
     );
+  };
 
   const alterar = (delta: number) =>
     setMinutos((m) => Math.min(maximoMin, Math.max(1, m + delta)));
@@ -748,6 +808,12 @@ function TerminarTreino({
         </p>
       )}
 
+      {erroPercurso && (
+        <p role="alert" className="form-error mt-4">
+          {erroPercurso}
+        </p>
+      )}
+
       {terminar.isError && (
         <p role="alert" className="form-error mt-4">
           {getErrorMessage(terminar.error)}
@@ -757,12 +823,18 @@ function TerminarTreino({
       <button
         type="button"
         className="btn-primary mt-4 h-12 w-full"
-        disabled={terminar.isPending || precisaConfirmar || curto}
+        disabled={
+          terminar.isPending || descarregando || precisaConfirmar || curto
+        }
         onClick={() =>
-          cartasQueFalham.length > 0 ? setConfirmandoCarta(true) : enviar()
+          cartasQueFalham.length > 0 ? setConfirmandoCarta(true) : void enviar()
         }
       >
-        {terminar.isPending ? "Enviando…" : "Enviar treino"}
+        {descarregando
+          ? "Enviando o percurso…"
+          : terminar.isPending
+            ? "Enviando…"
+            : "Enviar treino"}
       </button>
       <button
         type="button"
@@ -779,7 +851,7 @@ function TerminarTreino({
         confirmLabel="Enviar mesmo assim"
         onConfirm={() => {
           setConfirmandoCarta(false);
-          enviar();
+          void enviar();
         }}
         onCancel={() => setConfirmandoCarta(false)}
       />
@@ -824,6 +896,13 @@ function TreinoTerminado({
       <p className="chip chip-game mt-4 whitespace-normal">
         Treino ao vivo rende bônus de Energia quando verificado ⚡
       </p>
+      {atividade.percurso && (
+        <GerarImagemPercurso
+          atividadeId={atividade.id}
+          inicio={atividade.startedAt}
+          totalEvidencias={atividade.evidencias.length}
+        />
+      )}
       <div className="mt-8 w-full space-y-2">
         <Link
           to={`/atividades/${atividade.id}`}

@@ -46,17 +46,20 @@ function invalidarTudo(queryClient: ReturnType<typeof useQueryClient>) {
 export function useComecarTreino(grupoId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    // O local só vai quando a pessoa escolheu mostrá-lo ao grupo (ADR 0080).
+    // O local só vai quando a pessoa escolheu mostrá-lo ao grupo (ADR 0080). Gravando o Percurso
+    // (ADR 0084), o ponto de início não vai: ele mostraria o que o percurso esconde.
     mutationFn: ({
       tipo,
       local,
+      gravarPercurso = false,
     }: {
       tipo: TipoAtividade;
       local: LocalCaptura | null;
+      gravarPercurso?: boolean;
     }) =>
       postJson<Atividade>(`/api/grupos/${grupoId}/atividades/em-andamento`, {
         tipo,
-        ...(local ?? {}),
+        ...(gravarPercurso ? { gravarPercurso: true } : (local ?? {})),
       }),
     onSuccess: () => invalidarTudo(queryClient),
     onError: (error) => {

@@ -7,6 +7,9 @@ internal static class AtividadesRoutes
 {
     public const string UploadPolicy = "upload";
 
+    /// <summary>Os lotes de pontos do Percurso: um a cada 30 segundos, com folga para reenvios (ADR 0084).</summary>
+    public const string PercursoPolicy = "percurso";
+
     public static void AddAtividadesRateLimiter(this IServiceCollection services) =>
         services.AddRateLimiter(options =>
         {
@@ -15,6 +18,13 @@ internal static class AtividadesRoutes
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 30,
+                    Window = TimeSpan.FromMinutes(1),
+                }));
+            options.AddPolicy(PercursoPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 20,
                     Window = TimeSpan.FromMinutes(1),
                 }));
         });
@@ -37,9 +47,15 @@ internal static class AtividadesRoutes
         atividade.MapPut("/duracao", CorrigirDuracao.HandleAsync);
         atividade.MapPost("/terminar", TerminarTreino.HandleAsync);
         atividade.MapGet("/mapa/{dx:int}/{dy:int}", ObterMapaAtividade.HandleAsync);
+        atividade.MapPost("/percurso/pontos", EnviarPontosPercurso.HandleAsync).RequireRateLimiting(PercursoPolicy);
+        atividade.MapGet("/percurso", ObterPercurso.HandleAsync);
+        atividade.MapGet("/percurso/mapa/{z:int}/{x:int}/{y:int}", ObterMapaPercurso.HandleAsync);
 
         var upload = atividade.MapGroup("");
         upload.MapPost("/evidencias", AnexarEvidencia.HandleAsync)
+            .RequireRateLimiting(UploadPolicy)
+            .AddEndpointFilter<LimiteUploadFilter>();
+        upload.MapPost("/percurso/imagem", AnexarImagemPercurso.HandleAsync)
             .RequireRateLimiting(UploadPolicy)
             .AddEndpointFilter<LimiteUploadFilter>();
         upload.MapGet("/evidencias/{evidenciaId:guid}", ObterEvidencia.HandleAsync);

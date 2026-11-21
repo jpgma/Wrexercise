@@ -30,16 +30,19 @@ const atlas = {
   craque: { linha: 19, esquerda: 6, largura: 27, altura: 13, ms: 240 },
   levantador: { linha: 20, esquerda: 4, largura: 32, altura: 24, ms: 260 },
   faixapreta: { linha: 21, esquerda: 12, largura: 18, altura: 32, ms: 260 },
+  fundista: { linha: 22, esquerda: 12, largura: 25, altura: 28, ms: 220 },
+  peregrino: { linha: 23, esquerda: 6, largura: 27, altura: 31, ms: 320 },
+  estradeiro: { linha: 24, esquerda: 5, largura: 30, altura: 22, ms: 260 },
   "andarilho-andando": {
-    linha: 22,
+    linha: 25,
     esquerda: 9,
     largura: 22,
     altura: 20,
     ms: 140,
   },
-  "zen-aberto": { linha: 23, esquerda: 1, largura: 38, altura: 18, ms: 160 },
+  "zen-aberto": { linha: 26, esquerda: 1, largura: 38, altura: 18, ms: 160 },
   "craque-sem-bola": {
-    linha: 24,
+    linha: 27,
     esquerda: 13,
     largura: 20,
     altura: 13,
@@ -56,7 +59,7 @@ export type DesenhoEnfeite = {
 };
 
 /** O lado da célula do atlas e a quantidade de quadros por linha. */
-export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 25 } as const;
+export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 28 } as const;
 
 /**
  * As linhas extras do atlas, que não são Enfeites do catálogo: outra forma de um Enfeite no treino ao vivo

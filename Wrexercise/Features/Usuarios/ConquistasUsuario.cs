@@ -6,6 +6,7 @@ namespace Wrexercise.Features.Usuarios;
 /// Dias com atividade verificada em cada grupo, que dão as medalhas; antes de
 /// <see cref="ConquistasUsuario.InicioTreinosPorDia"/>, cada atividade conta um.
 /// </param>
+/// <param name="MetrosPorTipo">A distância do Percurso das atividades verificadas, por tipo (ADR 0084).</param>
 internal readonly record struct EstatisticasConquistas(
     int TotalTreinos,
     int MelhorSequencia,
@@ -14,7 +15,8 @@ internal readonly record struct EstatisticasConquistas(
     int TreinosFimDeSemana = 0,
     int DesafiosCompletos = 0,
     IReadOnlyDictionary<string, int>? TreinosPorTipo = null,
-    int DiasComTreino = 0);
+    int DiasComTreino = 0,
+    IReadOnlyDictionary<string, int>? MetrosPorTipo = null);
 
 /// <summary>Conquistas são só reconhecimento: calculadas na leitura, sem efeito na classificação.</summary>
 internal static class ConquistasUsuario
@@ -55,6 +57,17 @@ internal static class ConquistasUsuario
         (Tipos.Esporte, "Boleiro", "Boleiro"),
         (Tipos.Yoga, "Zen", "Zen"),
         (Tipos.Calistenia, "PesoDoCorpo", "Peso do corpo"),
+    ];
+
+    /// <summary>
+    /// As conquistas de distância (ADR 0084): a soma do Percurso gravado nos treinos verificados daquele tipo. Os
+    /// alvos levam em conta o esforço de cada tipo, para que ninguém tenha vantagem por escolher um.
+    /// </summary>
+    private static readonly (string Tipo, string Codigo, string Titulo, int Km)[] ConquistasDeDistancia =
+    [
+        (Tipos.Corrida, "Fundista", "Fundista", 50),
+        (Tipos.Caminhada, "Peregrino", "Peregrino", 50),
+        (Tipos.Ciclismo, "Estradeiro", "Estradeiro", 200),
     ];
 
     /// <summary>As conquistas que a pessoa já tem.</summary>
@@ -110,6 +123,19 @@ internal static class ConquistasUsuario
                 total,
                 TreinosPorTipoMarco,
                 ($"treino de {NomeDoTipo(tipo)}", $"treinos de {NomeDoTipo(tipo)}")));
+        }
+
+        var metrosPorTipo = estatisticas.MetrosPorTipo;
+        foreach (var (tipo, codigo, titulo, km) in ConquistasDeDistancia)
+        {
+            var metros = metrosPorTipo is not null && metrosPorTipo.TryGetValue(tipo, out var valor) ? valor : 0;
+            conquistas.Add(Criar(
+                codigo,
+                titulo,
+                $"{km} km de {NomeDoTipo(tipo)} com o percurso gravado, em treinos verificados",
+                metros / 1000,
+                km,
+                ($"km de {NomeDoTipo(tipo)}", $"km de {NomeDoTipo(tipo)}")));
         }
 
         conquistas.Add(Criar(

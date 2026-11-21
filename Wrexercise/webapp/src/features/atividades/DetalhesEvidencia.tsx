@@ -1,4 +1,11 @@
-import { CalendarClock, Camera, FileImage, History, Video } from "lucide-react";
+import {
+  CalendarClock,
+  Camera,
+  FileImage,
+  History,
+  Route,
+  Video,
+} from "lucide-react";
 import type { LegendaGaleria } from "./GaleriaEvidencias";
 import {
   descreverMomentoCaptura,
@@ -13,8 +20,10 @@ type Momento = Pick<
   "startedAt" | "duracaoSegundos" | "situacaoVerificacao"
 >;
 
-/** "Foto tirada", "Vídeo gravado" ou "Print feito". */
+/** "Foto tirada", "Vídeo gravado", "Print feito" ou "Imagem do percurso". */
 function rotuloCaptura(evidencia: Evidencia) {
+  if (evidencia.origemDataCaptura === "Percurso")
+    return { texto: "Imagem do percurso", Icone: Route };
   if (evidencia.print) return { texto: "Print feito", Icone: FileImage };
   if (evidencia.tipo === "Video")
     return { texto: "Vídeo gravado", Icone: Video };

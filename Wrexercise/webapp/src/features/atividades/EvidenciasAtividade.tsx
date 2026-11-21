@@ -3,6 +3,7 @@ import { useState } from "react";
 import { DetalhesEvidencia } from "./DetalhesEvidencia";
 import { GaleriaEvidencias, type LegendaGaleria } from "./GaleriaEvidencias";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
+import { SeloPercurso } from "./SeloPercurso";
 import { SeloPrint } from "./SeloPrint";
 import type { Evidencia } from "./types";
 import { useGaleria } from "./useGaleria";
@@ -89,6 +90,9 @@ export function EvidenciasAtividade({
                 )}
                 {evidencia.print && (
                   <SeloPrint className="absolute top-3 left-3" />
+                )}
+                {evidencia.origemDataCaptura === "Percurso" && (
+                  <SeloPercurso className="absolute top-3 left-3" />
                 )}
               </button>
             </div>

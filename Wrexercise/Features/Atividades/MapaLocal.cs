@@ -27,6 +27,16 @@ internal static class MapaLocal
             return naoEncontrado();
         }
 
+        return await ResponderTileAsync(tile, cache, context, cancellationToken);
+    }
+
+    /// <summary>O PNG do tile, do cache do servidor; sem o servidor de mapas, <c>503 MAPA_INDISPONIVEL</c>.</summary>
+    public static async Task<IResult> ResponderTileAsync(
+        TileMapa tile,
+        CacheMapas cache,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
         if (await cache.ObterAsync(tile, cancellationToken) is not { } caminho)
         {
             return ApiProblem.Create(

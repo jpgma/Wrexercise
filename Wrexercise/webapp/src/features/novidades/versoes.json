@@ -1,5 +1,17 @@
 [
   {
+    "versao": "1.6.0",
+    "data": "2026-11-21",
+    "novidades": [
+      "Agora dá pra gravar o percurso da corrida, caminhada ou pedal ao vivo 🗺️",
+      "O grupo vê seu trajeto no mapa, sem o começo e o fim do caminho",
+      "No fim do treino sai uma imagem com km, ritmo, parciais e recordes",
+      "Na praça, toque em quem treina ao vivo pra ver o trajeto",
+      "Novos Enfeites por distância: Fundista, Peregrino e Estradeiro",
+      "Treinou junto com um colega? Os dois trajetos aparecem no mapa"
+    ]
+  },
+  {
     "versao": "1.5.0",
     "data": "2026-11-21",
     "novidades": [

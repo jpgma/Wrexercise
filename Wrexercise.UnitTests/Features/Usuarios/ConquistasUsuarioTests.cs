@@ -38,7 +38,7 @@ public class ConquistasUsuarioTests
         var todas = ConquistasUsuario.Listar(
             new EstatisticasConquistas(0, 5, 3, TreinosPorTipo: new Dictionary<string, int> { ["Corrida"] = 25 }, DiasComTreino: 23));
 
-        Assert.Equal(22, todas.Count);
+        Assert.Equal(25, todas.Count);
         Assert.Equal((4, 4, true), Progresso(todas, "Sequencia4"));
         Assert.Equal((5, 8, false), Progresso(todas, "Sequencia8"));
         Assert.Equal((23, 50, false), Progresso(todas, "Treinos50"));
@@ -123,5 +123,20 @@ public class ConquistasUsuarioTests
         Assert.Equal("Faltam 10 treinos antes das 7h", falta["Madrugador"]);
         Assert.Equal("Faltam 10 treinos a partir das 20h", falta["Noturno"]);
         Assert.Equal("Faltam 5 tipos de treino diferentes", falta["Ecletico"]);
+    }
+
+    [Fact]
+    public void Listar_ConquistasDeDistanciaContamOsKmDoPercurso()
+    {
+        var todas = ConquistasUsuario.Listar(new EstatisticasConquistas(
+            0,
+            0,
+            0,
+            MetrosPorTipo: new Dictionary<string, int> { ["Corrida"] = 50_400, ["Ciclismo"] = 120_999 }));
+
+        Assert.Equal((50, 50, true), Progresso(todas, "Fundista"));
+        Assert.Equal((0, 50, false), Progresso(todas, "Peregrino"));
+        Assert.Equal((120, 200, false), Progresso(todas, "Estradeiro"));
+        Assert.Equal("Faltam 80 km de ciclismo", todas.Single(c => c.Codigo == "Estradeiro").Falta);
     }
 }

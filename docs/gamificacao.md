@@ -145,6 +145,7 @@ Tocar num colega abre o **Foco**: a câmera se aproxima dele dentro da própria 
 - **Câmera:** uma camada dentro da praça com `translate` e `scale` (2,2× no Foco, 2× na ação), com transição de 450 ms. Ela leva o chão, os avatares, os objetos e a luz. O alvo gira de direção em direção até `sul`, olhando para quem vê, com a pose `parado` das 8 direções (`getGiro`), sem arte nova. Os outros avatares e os Enfeites deles ficam apagados, e os Enfeites do alvo que não estavam no chão caem em volta dele; os eventos de ambiente e as encenações esperam o Foco fechar. Ao abrir, a página rola até o alto da praça, com a Mão logo abaixo.
 - **Quem dorme:** não gira nem pula. Ao abrir o Foco, faz `acordar` e volta a dormir. Atingido pela carta, faz `acordar` no lugar de `receber`. Se quem joga, ou um dos dois do Rival, dorme, faz `levantar` antes do giro ou do passo e `adormecer` no fim.
 - **Painel:** na parte de baixo da praça, fora da câmera. Mostra o nome, a Vitrine, a semana no desafio, a sequência, os totais e o Rival da semana, com link para a página do membro. Para quem dorme, mostra "Dormindo há N dias". As Jogadas entre os dois ficam na Mesa.
+- **Percurso ao vivo** (`decisoes/0084-percurso-gps-no-treino-ao-vivo.md`): quando o colega treina ao vivo gravando o Percurso, o painel mostra, ao lado do selo "Ao vivo há…", um selo com a distância até agora. Tocar nele abre uma janela com o mapa do trajeto (aparado, sem os primeiros e os últimos 200 m), refeito a cada 30 s. O selo não ocupa altura nova: a regra de **Altura** continua valendo.
 - **Cutucada** (`decisoes/0063-cutucada.md`): no Foco de um colega que dorme, o botão "👉 Cutucar Nome" abre as 6 mensagens prontas (`textosCutucada.ts`) e "✍️ Escrever a minha", um texto de até 80 caracteres que só o colega lê (`decisoes/0064-cutucada-com-texto.md`). Tocar numa mensagem pronta, ou em "Enviar", manda a cutucada, grátis. Quem dorme leva um susto (`acordar`) e volta a dormir, e o painel passa a mostrar "Você já cutucou Nome hoje." por 24 horas. O colega recebe a notificação `Cutucada`, com push. Na praça, quem dorme e foi cutucado nas últimas 24 horas mostra uma bolha com o emoji da última cutucada (💬 para a escrita, sem o texto) e "×N" quando há mais de uma, vista por todos. Se o colega voltar a treinar, quem cutucou ganha o bônus Despertador (§5.1).
 - **Mão:** uma só, logo abaixo da praça, dentro e fora do Foco. Ao abrir o Foco, ela sobe até ficar sob o painel e as cartas são distribuídas uma a uma, em leque. As cartas em Jogadas abertas ficam na Mesa e deixam na Mão uma vaga reservada, tracejada. Tocar seleciona: a carta sobe, cresce e balança. Para jogar, arrasta-se a carta para cima ou toca-se em "Arremessar"; o botão garante uma alternativa ao arrasto. Durante o arrasto, um anel de mira pulsa sob os pés do alvo. Antes do arremesso, a Mão confere os limites de §6.3 que as Jogadas do grupo mostram (Jogada aberta entre os dois, carta para a mesma pessoa em 24 horas, 2 enviadas em aberto): as cartas ficam apagadas e o texto diz o motivo. O servidor confere tudo de novo.
 - **Prévia:** no Foco, com uma carta escolhida, a linha da Mão diz o que ela vai pedir a este colega, o que cada um ganha e o prazo: "Ana vai precisar de um treino que não seja Ciclismo. Se cumprir: Ana +35 EN, você +35 EN · até qui, 20h. Se não, você perde a carta." (decisão `0074`). O texto repete o primeiro nome, sem pronome. O servidor calcula a prévia com as mesmas funções do arremesso (`GET /api/grupos/{id}/jogadas/previa`); por isso não há passo de confirmação. A carta pequena da Mão não mostra o nome: ele abre a linha quando a carta é escolhida ("VARIEDADE · …").
@@ -267,6 +268,7 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Parceria: treino ao vivo junto com um colega do grupo, verificado, por 15 min ou mais (`0078`) | 3 |
 
 - Máximo de **10 EN de bônus por atividade**.
+- A distância do Percurso nunca rende Energia (`0084`). "Treinaram juntos", quando os dois percursos andam lado a lado, só aparece no mapa: a Parceria continua pela sobreposição de tempo, com ou sem percurso.
 - Horários e semanas no fuso do grupo da atividade. Toda semana vai de segunda a domingo, como no desafio.
 - Os qualificadores de "primeira" (da semana, num dia novo, tipo novo) consideram as atividades da pessoa em **todos os grupos**.
 - O tipo da primeira atividade da semana só é registrado: o bônus de tipo novo vale para o 2º tipo em diante.
@@ -495,6 +497,14 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `Zen` (nova) | `Yoga` | Tapete de ioga meio desenrolado |
 | `PesoDoCorpo` (nova) | `Calistenia` | Paralelas (as barrinhas de chão) |
 
+**Distância** (`decisoes/0084-percurso-gps-no-treino-ao-vivo.md`), uma por tipo com Percurso, somando a distância gravada nas atividades verificadas daquele tipo. Os alvos levam em conta o esforço de cada tipo. Quem não grava o percurso não as libera, mas também não perde nada: elas são só reconhecimento.
+
+| Conquista | Condição | Enfeite |
+|---|---|---|
+| `Fundista` | 50 km de `Corrida` | Marco de quilômetro com bandeirinha |
+| `Peregrino` | 50 km de `Caminhada` | Placa de trilha |
+| `Estradeiro` | 200 km de `Ciclismo` | Bicicletário com cadeado |
+
 **Hábito**, para jeitos diferentes de manter a rotina:
 
 | Conquista | Condição | Enfeite |
@@ -504,9 +514,9 @@ As conquistas marcadas como **nova** ainda não existem em `ConquistasUsuario` e
 | `FimDeSemana` (nova) | 10 atividades no sábado ou no domingo | Caixa de som de festa |
 | `Ecletico` (nova) | Atividades verificadas de 5 tipos diferentes, sem contar `Outro` | Bolsa de academia |
 
-- São 22 conquistas e 22 desenhos de Enfeite. A planta e o kettlebell evoluem, então a cena mostra no máximo 18 objetos diferentes. Os nomes na vitrine são "Cones de treino", "Redinha de vôlei" e "Saco de pancada" (códigos `cones`, `rede`, `saco`).
+- São 25 conquistas e 25 desenhos de Enfeite. A planta e o kettlebell evoluem, então a cena mostra no máximo 21 objetos diferentes. Os 3 de distância são desenhados por código (`pixel-art/enfeites/desenhados.py`). Os nomes na vitrine são "Cones de treino", "Redinha de vôlei" e "Saco de pancada" (códigos `cones`, `rede`, `saco`).
 - Todo Enfeite é um objeto que faz sentido no chão de uma praça (nada de medalha pendurada ou guia solta no ar), com o tamanho real: os maiores (árvore, poste, troféu no pedestal) têm a altura de um avatar. Cada um tem um ciclo parado de 4 quadros, fora de sincronia com os outros; com movimento reduzido, fica no quadro 1.
-- Nenhuma conquista usa distância, ritmo ou carga: só contagem de atividades, horário e semanas cumpridas. Uma pessoa que faz 20 caminhadas tem a mesma chance de um Enfeite que uma pessoa que faz 20 corridas.
+- Nenhuma conquista usa ritmo ou carga. Só as 3 de distância usam a distância do Percurso (`0084`), cada uma com um alvo do próprio tipo: 50 km caminhando valem o mesmo Enfeite que 50 km correndo. As demais usam só contagem de atividades, horário e semanas cumpridas. Uma pessoa que faz 20 caminhadas tem a mesma chance de um Enfeite que uma pessoa que faz 20 corridas.
 - Os nomes e os limites (10 por tipo, 10 por hábito) ficam em constantes, como os demais marcos.
 - `Madrugador` e `Noturno` cobrem as duas pontas do dia, para que treinar cedo não seja o único horário premiado (ver §12, item 3).
 
@@ -615,7 +625,7 @@ Cada fase entrega algo visível e pode ser a última. Todas ficam na fatia `Jogo
 | Duelos com aposta entre pessoas | A APOSTA só arrisca a própria Energia. Apostar contra outra pessoa traz perda e pressão. |
 | Missões diárias | Pedem abrir o aplicativo todo dia e distraem do objetivo. |
 | Ranking de Energia | Mistura jogo com desempenho e cria uma segunda classificação. |
-| Distância e eventos baseados em distância | Fora do escopo (`arquitetura.md` §19). |
+| Distância que pontua e eventos baseados em distância | Fora do escopo. A distância do Percurso só aparece no mapa, nos recordes e nas 3 conquistas de distância (`0084`). |
 
 ## 12. Questões em aberto
 

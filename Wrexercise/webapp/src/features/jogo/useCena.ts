@@ -28,6 +28,8 @@ export type TreinoAoVivo = {
   torcidas: number;
   /** Quando quem vê torceu por último: o botão "Torcer" espera o intervalo. */
   torcidaPorMimEm: string | null;
+  /** A distância até agora, quando o treino grava o Percurso (ADR 0084); `null` sem percurso. */
+  distanciaMetros: number | null;
 };
 
 export type Cena = {

@@ -108,6 +108,8 @@ export function origemDataCapturaLabel(
       return "Nome do print";
     case "Integracao":
       return "Movr";
+    case "Percurso":
+      return "Percurso gravado no app";
   }
 }
 

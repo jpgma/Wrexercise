@@ -17,6 +17,7 @@ import {
   useAtividade,
   useFilaAvaliacao,
 } from "@/features/atividades";
+import { PercursoAtividade } from "@/features/percurso";
 import { useProgresso } from "@/features/desafios";
 import { useResumoGrupo } from "@/features/progresso";
 import { ReacoesAtividade } from "@/features/reacoes";
@@ -263,6 +264,7 @@ export function RevisarPage() {
     avisos,
     latitude,
     longitude,
+    percurso,
   } = atividade.data;
   return (
     <div key={atividadeId} className="mx-auto max-w-xl animate-fade-in">
@@ -301,12 +303,16 @@ export function RevisarPage() {
               </p>
             </div>
           </div>
-          <LocalTreino
-            atividadeId={atividadeId}
-            latitude={latitude}
-            longitude={longitude}
-            className="mt-4"
-          />
+          {percurso ? (
+            <PercursoAtividade atividadeId={atividadeId} className="mt-4" />
+          ) : (
+            <LocalTreino
+              atividadeId={atividadeId}
+              latitude={latitude}
+              longitude={longitude}
+              className="mt-4"
+            />
+          )}
           {descricao && (
             <p className="mt-3 text-sm break-words">“{descricao}”</p>
           )}

@@ -650,11 +650,13 @@ Definir:
 
 A exclusão de dados deve considerar as relações históricas e as necessidades de auditoria.
 
+Os pontos do Percurso (`decisoes/0084-percurso-gps-no-treino-ao-vivo.md`) somem com a atividade (cancelar, expirar, apagar) e, por enquanto, ficam enquanto ela existir, inclusive nos backups. A exclusão de conta precisa apagá-los junto com o local do treino e o das evidências.
+
 Os vídeos (`decisoes/0058-video-como-evidencia.md`) pesam cerca de 25 vezes uma foto por minuto e ficam sem prazo, como as fotos. Se o disco do A14 ou a cota do Drive crescerem rápido, uma opção é guardar só a miniatura do vídeo depois do fim do desafio.
 
 ## Q030 — Como tratar dados pessoais em imagens?
 
-**Status:** PARCIALMENTE DECIDIDA (0052, 0061). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data do EXIF fica em coluna à parte. A localização só é enviada quando o autor escolhe mostrá-la ao grupo (0061), e então todo o grupo a vê. A retenção (Q029) continua aberta.
+**Status:** PARCIALMENTE DECIDIDA (0052, 0061, 0084). O arquivo guardado não tem EXIF, e a foto que o navegador não processa não é enviada. A data do EXIF fica em coluna à parte. A localização só é enviada quando o autor escolhe mostrá-la ao grupo (0061), e então todo o grupo a vê. O Percurso só é gravado quando o autor escolhe, e o grupo nunca vê os primeiros e os últimos 200 m; a imagem do percurso usa o trajeto aparado (0084). A retenção (Q029) continua aberta.
 
 Investigar:
 

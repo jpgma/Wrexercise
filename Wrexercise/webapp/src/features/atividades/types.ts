@@ -46,7 +46,23 @@ export type Evidencia = {
 };
 
 export type OrigemDataCaptura =
-  "Exif" | "Arquivo" | "Camera" | "Print" | "Integracao";
+  | "Exif"
+  | "Arquivo"
+  | "Camera"
+  | "Print"
+  | "Integracao"
+  /** A imagem do Percurso que o app gera ao terminar o treino (ADR 0084). */
+  | "Percurso";
+
+/** O recorde pessoal que o treino bateu (ADR 0084): a maior distância ou o melhor ritmo do tipo. */
+export type TipoRecorde = "Distancia" | "Ritmo";
+
+/** O resumo do Percurso na atividade e no Feed (ADR 0084). `velocidadeMedia` em m/s. */
+export type PercursoResumo = {
+  distanciaMetros: number;
+  velocidadeMedia: number | null;
+  recorde: TipoRecorde | null;
+};
 
 /** Avisos sobre a atividade (ADR 0052), vistos por todo o grupo. */
 export type TipoAviso =
@@ -85,6 +101,8 @@ export type AtividadeResumo = {
   miniaturaDuracaoMs: number | null;
   comentarios: number;
   avisos: TipoAviso[];
+  /** Só quando o treino gravou o Percurso (ADR 0084). */
+  percurso: PercursoResumo | null;
 };
 
 export type FiltroAtividades =
@@ -158,6 +176,11 @@ export type TreinoAtual = {
   appDuracaoSegundos: number | null;
   /** Quando o treino acabou no app; `null` enquanto ele continua lá. */
   appEndedAt: string | null;
+  /**
+   * O Percurso que este treino grava (ADR 0084), ou `null`. `ultimoSeq`: o último ponto já guardado no
+   * servidor (−1 sem nenhum); depois de recarregar, o aparelho continua do seguinte.
+   */
+  percurso: { ultimoSeq: number; distanciaMetros: number } | null;
 };
 
 export type TerminarTreinoData = {

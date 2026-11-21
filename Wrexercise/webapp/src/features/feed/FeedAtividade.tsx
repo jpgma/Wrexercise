@@ -1,4 +1,11 @@
-import { Camera, Clock, MessageCircle, Play } from "lucide-react";
+import {
+  Camera,
+  Clock,
+  MessageCircle,
+  Play,
+  Route,
+  Trophy,
+} from "lucide-react";
 import { Link } from "react-router";
 import { Avatar } from "@/components/Avatar";
 import { useSessao } from "@/features/autenticacao";
@@ -14,6 +21,11 @@ import {
   useTorcer,
   type AtividadeResumo,
 } from "@/features/atividades";
+import {
+  formatarDistancia,
+  formatarMedia,
+  textoRecorde,
+} from "@/features/percurso";
 import { tipoReacaoEmojis, tipoReacaoLabels } from "@/features/reacoes";
 import { getErrorMessage } from "@/services/api";
 
@@ -88,6 +100,7 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
     miniaturaDuracaoMs,
     comentarios,
     avisos,
+    percurso,
   } = atividade;
   const galeria = useGaleria(id);
   const aoVivo = situacaoVerificacao === "EmAndamento";
@@ -115,6 +128,23 @@ export function FeedAtividade({ atividade }: { atividade: AtividadeResumo }) {
               {/* O início já está no canto do cartão; uma contagem de minutos aqui ficaria parada. */}
               {aoVivo ? "treinando agora" : formatarDuracao(duracaoSegundos)}
             </p>
+            {percurso && percurso.distanciaMetros > 0 && (
+              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="chip">
+                  <Route aria-hidden="true" className="size-3.5" />
+                  {formatarDistancia(percurso.distanciaMetros)}
+                  {!aoVivo &&
+                    percurso.velocidadeMedia !== null &&
+                    ` · ${formatarMedia(tipo, percurso.velocidadeMedia)}`}
+                </span>
+                {percurso.recorde && (
+                  <span className="chip chip-game">
+                    <Trophy aria-hidden="true" className="size-3.5" />
+                    {textoRecorde(percurso.recorde, tipo === "Ciclismo")}
+                  </span>
+                )}
+              </p>
+            )}
             {descricao && (
               <p className="mt-2 line-clamp-2 text-sm break-words">
                 {descricao}

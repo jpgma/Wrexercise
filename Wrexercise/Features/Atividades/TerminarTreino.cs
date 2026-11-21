@@ -122,6 +122,9 @@ internal static class TerminarTreino
 
         await RecalcularAvisosDataAsync(connection, transaction, atividadeId, startedAt, duracao, cancellationToken);
 
+        // Diminuir a duração corta também o Percurso: o que veio depois do fim informado não conta (ADR 0084).
+        await ConsultasPercurso.RecalcularAsync(connection, transaction, atividadeId, cancellationToken);
+
         await RegistroAtividade.FinalizarAsync(
             connection,
             transaction,

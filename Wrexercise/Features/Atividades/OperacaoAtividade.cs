@@ -28,6 +28,8 @@ internal enum AtividadeOperacaoStatus
     CorrecaoNaoPermitida,
     TreinoEmAndamento,
     TreinoNaoEmAndamento,
+    PercursoNaoEncontrado,
+    PercursoCheio,
 }
 
 internal static class TipoEvidencia
@@ -125,6 +127,14 @@ internal static class OperacaoAtividade
             StatusCodes.Status409Conflict,
             "TREINO_NAO_EM_ANDAMENTO",
             "Este treino já terminou."),
+        AtividadeOperacaoStatus.PercursoNaoEncontrado => ApiProblem.Create(
+            StatusCodes.Status404NotFound,
+            "PERCURSO_NAO_ENCONTRADO",
+            "Este treino não tem percurso gravado."),
+        AtividadeOperacaoStatus.PercursoCheio => ApiProblem.Create(
+            StatusCodes.Status409Conflict,
+            "PERCURSO_CHEIO",
+            "O percurso chegou ao limite de pontos. O treino continua, mas o GPS parou de gravar."),
         _ => throw new ArgumentOutOfRangeException(nameof(status)),
     };
 

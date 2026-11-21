@@ -140,7 +140,8 @@ internal static class ObterCena
         await using var command = new NpgsqlCommand("""
             SELECT a.usuario_id, a.id, a.tipo, a.started_at,
                 (SELECT count(*)::int FROM torcidas t WHERE t.atividade_id = a.id),
-                (SELECT max(t.created_at) FROM torcidas t WHERE t.atividade_id = a.id AND t.usuario_id = $2)
+                (SELECT max(t.created_at) FROM torcidas t WHERE t.atividade_id = a.id AND t.usuario_id = $2),
+                (SELECT p.distancia_metros FROM percursos p WHERE p.atividade_id = a.id)
             FROM atividades a
             WHERE a.grupo_id = $1 AND a.situacao_verificacao = 'EmAndamento'
             """, connection);
@@ -156,7 +157,8 @@ internal static class ObterCena
                 reader.GetString(2),
                 TimestampLeitura.FromReader(reader, 3),
                 reader.GetInt32(4),
-                reader.IsDBNull(5) ? null : TimestampLeitura.FromReader(reader, 5));
+                reader.IsDBNull(5) ? null : TimestampLeitura.FromReader(reader, 5),
+                reader.IsDBNull(6) ? null : reader.GetInt32(6));
         }
 
         return treinos;

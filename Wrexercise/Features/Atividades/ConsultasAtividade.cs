@@ -4,7 +4,7 @@ namespace Wrexercise.Features.Atividades;
 
 internal static class ConsultasAtividade
 {
-    public const string SelectResumo = """
+    public const string SelectResumo = $"""
         SELECT a.id, a.grupo_id, g.nome, a.usuario_id, u.nome_exibicao, a.tipo,
             a.duracao_segundos, a.started_at, a.tipo_comprovacao, a.situacao_verificacao,
             (SELECT count(*)::int FROM evidencias_atividade e WHERE e.atividade_id = a.id),
@@ -16,11 +16,13 @@ internal static class ConsultasAtividade
              WHERE e.atividade_id = a.id AND e.ordem = 1 AND e.caminho_miniatura IS NOT NULL),
             (SELECT count(*)::int FROM comentarios c WHERE c.atividade_id = a.id),
             ARRAY(SELECT DISTINCT av.tipo FROM avisos_atividade av WHERE av.atividade_id = a.id ORDER BY av.tipo),
-            (SELECT e.duracao_ms FROM evidencias_atividade e WHERE e.atividade_id = a.id AND e.ordem = 1)
+            (SELECT e.duracao_ms FROM evidencias_atividade e WHERE e.atividade_id = a.id AND e.ordem = 1),
+            {ConsultasPercurso.ColunasResumo}
         FROM atividades a
         JOIN grupos g ON g.id = a.grupo_id
         JOIN usuarios u ON u.id = a.usuario_id
         JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $1 AND m.removed_at IS NULL
+        {ConsultasPercurso.JoinResumo}
         """;
 
     /// <summary>Fila de avaliação de alguém no grupo: <c>$1</c> é o usuário e <c>$2</c>, o grupo.</summary>
@@ -73,7 +75,8 @@ internal static class ConsultasAtividade
             reader.IsDBNull(16) ? null : BuildMiniaturaUrl(reader.GetGuid(0), reader.GetGuid(16)),
             reader.GetInt32(17),
             reader.GetFieldValue<string[]>(18),
-            reader.IsDBNull(19) ? null : reader.GetInt32(19));
+            reader.IsDBNull(19) ? null : reader.GetInt32(19),
+            ConsultasPercurso.ReadResumo(reader, 20, reader.GetString(5), reader.GetInt32(6), reader.GetString(9)));
 
     public static async Task InserirAvisoAsync(
         NpgsqlConnection connection,
@@ -109,14 +112,16 @@ internal static class ConsultasAtividade
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
-        await using var atividade = new NpgsqlCommand("""
+        await using var atividade = new NpgsqlCommand($"""
             SELECT a.id, a.grupo_id, g.nome, a.usuario_id, u.nome_exibicao, a.tipo,
                 a.duracao_segundos, a.started_at, a.descricao, a.tipo_comprovacao,
-                a.situacao_verificacao, a.submitted_at, m.papel, a.latitude, a.longitude
+                a.situacao_verificacao, a.submitted_at, m.papel, a.latitude, a.longitude,
+                {ConsultasPercurso.ColunasResumo}
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
             JOIN usuarios u ON u.id = a.usuario_id
             JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = $2 AND m.removed_at IS NULL
+            {ConsultasPercurso.JoinResumo}
             WHERE a.id = $1
             """, connection);
         atividade.Parameters.AddWithValue(atividadeId);
@@ -137,6 +142,7 @@ internal static class ConsultasAtividade
         string papel;
         double? latitude;
         double? longitude;
+        PercursoResumoResponse? percurso;
 
         await using (var reader = await atividade.ExecuteReaderAsync(cancellationToken))
         {
@@ -160,6 +166,7 @@ internal static class ConsultasAtividade
             papel = reader.GetString(12);
             latitude = reader.IsDBNull(13) ? null : reader.GetDouble(13);
             longitude = reader.IsDBNull(14) ? null : reader.GetDouble(14);
+            percurso = ConsultasPercurso.ReadResumo(reader, 15, tipo, duracao, situacao);
         }
 
         var evidencias = new List<EvidenciaResponse>();
@@ -261,6 +268,7 @@ internal static class ConsultasAtividade
             correcoes,
             latitude,
             longitude,
-            PrazoEvidencia.AutorPodeAnexar(autorId == usuarioId, situacao));
+            PrazoEvidencia.AutorPodeAnexar(autorId == usuarioId, situacao),
+            percurso);
     }
 }

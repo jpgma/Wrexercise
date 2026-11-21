@@ -4,6 +4,7 @@ import {
   Flame,
   Moon,
   Radio,
+  Route,
   Swords,
   X,
 } from "lucide-react";
@@ -16,6 +17,7 @@ import {
   intervaloTorcidaMs,
   useTorcer,
 } from "@/features/atividades";
+import { formatarDistancia, PercursoAtividade } from "@/features/percurso";
 import { usePerfilMembro } from "@/features/usuarios";
 import { getErrorMessage } from "@/services/api";
 import { EnfeiteIcone } from "./EnfeiteIcone";
@@ -51,6 +53,42 @@ function getTextoSono(desde: string): string {
 function getTextoAoVivo(desde: string): string {
   const segundos = (Date.now() - new Date(desde).getTime()) / 1000;
   return `Ao vivo há ${formatarDuracao(Math.max(60, segundos))}`;
+}
+
+/**
+ * O Percurso de quem treina ao vivo (ADR 0084): um selo com a distância que abre o mapa, para não tirar
+ * altura da praça e da Mão (gamificacao.md §3.5). O mapa se refaz a cada 30 s enquanto está aberto.
+ */
+function TrajetoAoVivo({
+  atividadeId,
+  distanciaMetros,
+  nome,
+}: {
+  atividadeId: string;
+  distanciaMetros: number;
+  nome: string;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="chip tap"
+        aria-label={`Ver o trajeto de ${nome}: ${formatarDistancia(distanciaMetros)} até agora`}
+        onClick={() => setAberto(true)}
+      >
+        <Route aria-hidden="true" className="size-3" />
+        {formatarDistancia(distanciaMetros)}
+      </button>
+      <Dialog
+        open={aberto}
+        title={`Trajeto de ${nome}`}
+        onClose={() => setAberto(false)}
+      >
+        {aberto && <PercursoAtividade atividadeId={atividadeId} aoVivo />}
+      </Dialog>
+    </>
+  );
 }
 
 function Dado({ icone, children }: { icone: ReactNode; children: ReactNode }) {
@@ -194,6 +232,13 @@ export function PainelFoco({
                   <Radio aria-hidden="true" className="size-3" />
                   {getTextoAoVivo(membro.treinoAoVivo.startedAt)}
                 </p>
+              )}
+              {membro.treinoAoVivo?.distanciaMetros != null && (
+                <TrajetoAoVivo
+                  atividadeId={membro.treinoAoVivo.atividadeId}
+                  distanciaMetros={membro.treinoAoVivo.distanciaMetros}
+                  nome={nome}
+                />
               )}
               {membro.dormindoDesde && (
                 <p className="chip">
