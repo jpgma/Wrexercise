@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using Wrexercise.Infrastructure.Authentication;
+using Wrexercise.Infrastructure.Files;
 
 namespace Wrexercise.Features.Reacoes;
 
@@ -28,5 +29,12 @@ internal static class ReacoesRoutes
         atividade.MapPost("/torcida", Torcer.HandleAsync);
         atividade.MapGet("/comentarios", Comentarios.ListarAsync);
         atividade.MapPost("/comentarios", Comentarios.CriarAsync).RequireRateLimiting(ComentariosPolicy);
+
+        // Comentário com foto ou vídeo (ADR 0083): o corpo maior só nesta rota.
+        atividade.MapPost("/comentarios/midia", ComentarComMidia.HandleAsync)
+            .RequireRateLimiting(ComentariosPolicy)
+            .AddEndpointFilter<LimiteUploadFilter>();
+        atividade.MapGet("/comentarios/{comentarioId:guid}/midia", ObterMidiaComentario.ArquivoAsync);
+        atividade.MapGet("/comentarios/{comentarioId:guid}/midia/miniatura", ObterMidiaComentario.MiniaturaAsync);
     }
 }

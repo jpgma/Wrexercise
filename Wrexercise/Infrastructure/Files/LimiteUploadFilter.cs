@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Http.Features;
-using Wrexercise.Infrastructure.Files;
 
-namespace Wrexercise.Features.Atividades;
+namespace Wrexercise.Infrastructure.Files;
 
-/// <summary>Permite corpo maior só nas rotas de upload: até 25 MB de vídeo (ou 5 MB de foto) mais a miniatura, mantendo 1 MB no restante da API.</summary>
+/// <summary>Permite corpo maior só nas rotas de upload (evidências e comentários com mídia): até 25 MB de vídeo (ou 5 MB de foto) mais a miniatura, mantendo 1 MB no restante da API.</summary>
 internal sealed class LimiteUploadFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(

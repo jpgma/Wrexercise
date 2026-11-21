@@ -46,6 +46,9 @@ internal static class IntegracoesRoutes
         doApp.MapGet("/treinos/{externalId}", ObterTreinoApp.HandleAsync);
         doApp.MapDelete("/treinos/{externalId}", CancelarTreinoApp.HandleAsync);
         doApp.MapPut("/treinos/{externalId}/fim", InformarFimTreinoApp.HandleAsync).AddEndpointFilter(LimiteResumo);
+
+        // O resumo que não chegou no fim, depois que a pessoa terminou aqui (ADR 0083).
+        doApp.MapPut("/treinos/{externalId}/resumo", AnexarResumoTreinoApp.HandleAsync).AddEndpointFilter(LimiteResumo);
     }
 
     /// <summary>A imagem do resumo e a miniatura; o resto da API continua com 1 MB.</summary>

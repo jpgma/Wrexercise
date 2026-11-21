@@ -221,6 +221,65 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Resumo_DepoisDeTerminadoSemFotos_EntraUmaVezComoAdicionadaDepois()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var app = await ConectarAsync(ana);
+        var treino = await LerAsync(await ComecarAsync(app, "treino-1", grupoId));
+        await RecuarInicioAsync(treino.AtividadeId, TimeSpan.FromMinutes(30));
+
+        // Enquanto o treino está aberto, o resumo vai pelo fim.
+        await ApiTestHost.AssertProblemAsync(
+            await PutResumoAsync(app, "treino-1"), HttpStatusCode.Conflict, "TREINO_EM_ANDAMENTO");
+
+        // O fim chegou sem a imagem, e a pessoa terminou sem fotos: a atividade é um registro manual.
+        await PutFimAsync(app, "treino-1", 1500, DateTimeOffset.UtcNow, comResumo: false);
+        var terminado = await ana.Client.PostAsJsonAsync(
+            $"/api/atividades/{treino.AtividadeId}/terminar",
+            new TerminarTreinoRequest(1500, null, TipoComprovacao.RegistroManual),
+            AppJsonContext.Default.TerminarTreinoRequest,
+            Token);
+        Assert.Equal(HttpStatusCode.OK, terminado.StatusCode);
+        var antes = await ObterAtividadeAsync(ana, treino.AtividadeId);
+
+        var anexado = await LerAsync(await PutResumoAsync(app, "treino-1"));
+        Assert.True(anexado.ResumoAnexado);
+        var repetido = await LerAsync(await PutResumoAsync(app, "treino-1"));
+        Assert.True(repetido.ResumoAnexado);
+
+        var depois = await ObterAtividadeAsync(ana, treino.AtividadeId);
+        var evidencia = Assert.Single(depois.Evidencias);
+        Assert.True(evidencia.AdicionadaDepois);
+        Assert.Equal(OrigemDataCaptura.Integracao, evidencia.OrigemDataCaptura);
+        Assert.Equal(TipoComprovacao.RegistroManual, depois.TipoComprovacao);
+        Assert.Equal(antes.SituacaoVerificacao, depois.SituacaoVerificacao);
+
+        // A repetição não deixa arquivo sobrando: só a imagem e a miniatura do primeiro envio.
+        Assert.Equal(2, Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories).Count());
+    }
+
+    [Fact]
+    public async Task Resumo_AtividadeAnulada_Recusado()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var app = await ConectarAsync(ana);
+        var treino = await LerAsync(await ComecarAsync(app, "treino-1", grupoId));
+        await RecuarInicioAsync(treino.AtividadeId, TimeSpan.FromMinutes(30));
+        await ana.Client.PostAsJsonAsync(
+            $"/api/atividades/{treino.AtividadeId}/terminar",
+            new TerminarTreinoRequest(1500, null, TipoComprovacao.RegistroManual),
+            AppJsonContext.Default.TerminarTreinoRequest,
+            Token);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Anulada' WHERE id = '{treino.AtividadeId}'");
+
+        await ApiTestHost.AssertProblemAsync(
+            await PutResumoAsync(app, "treino-1"), HttpStatusCode.Conflict, "ATIVIDADE_ENCERRADA");
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public async Task Cancelar_ApagaOTreinoAberto()
     {
         var ana = await _host.CreateUsuarioAsync();
@@ -312,6 +371,22 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
 
         return await app.PutAsync($"/api/integracoes/treinos/{externalId}/fim", form, Token);
     }
+
+    private static async Task<HttpResponseMessage> PutResumoAsync(HttpClient app, string externalId)
+    {
+        using var form = new MultipartFormDataContent();
+        var arquivo = new ByteArrayContent(JpegMinimo);
+        arquivo.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        form.Add(arquivo, "arquivo", "resumo.jpg");
+        var miniatura = new ByteArrayContent(JpegMinimo);
+        miniatura.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+        form.Add(miniatura, "miniatura", "miniatura.jpg");
+        return await app.PutAsync($"/api/integracoes/treinos/{externalId}/resumo", form, Token);
+    }
+
+    private static async Task<AtividadeResponse> ObterAtividadeAsync(TestUsuario usuario, Guid atividadeId) =>
+        (await usuario.Client.GetFromJsonAsync(
+            $"/api/atividades/{atividadeId}", AppJsonContext.Default.AtividadeResponse, Token))!;
 
     private static async Task<TreinoAppResponse> LerAsync(HttpResponseMessage response)
     {

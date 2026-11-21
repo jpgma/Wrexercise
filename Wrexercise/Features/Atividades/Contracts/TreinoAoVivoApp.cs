@@ -28,6 +28,15 @@ internal enum TreinoAppStatus
     Concluido,
     NaoEncontrado,
     NaoEmAndamento,
+
+    /// <summary>O treino ainda está aberto: o resumo vai pelo fim (ADR 0081).</summary>
+    EmAndamento,
+
+    /// <summary>A atividade foi anulada: nada mais entra nela (ADR 0083).</summary>
+    Encerrado,
+
+    /// <summary>A atividade já tem o máximo de evidências.</summary>
+    LimiteEvidencias,
 }
 
 /// <summary>
@@ -147,6 +156,96 @@ internal static class TreinoAoVivoApp
                 startedAt,
                 TreinoAoVivo.Decorridos(startedAt, agora),
                 cancellationToken);
+            usado = true;
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        var treino = await ObterAsync(dataSource, usuarioId, app, externalId, cancellationToken);
+        return (TreinoAppStatus.Concluido, treino, usado);
+    }
+
+    /// <summary>
+    /// O resumo que não chegou no fim (ADR 0083): depois que a pessoa terminou o treino aqui, o app ainda manda a
+    /// imagem, uma vez só. Entra como evidência <c>Integracao</c> com o selo "Adicionada depois": aparece na
+    /// atividade, mas não verifica nem muda a comprovação. Repetir não duplica.
+    /// </summary>
+    /// <returns>O status, o treino e se a imagem enviada entrou (senão, quem chama apaga os arquivos).</returns>
+    public static async Task<(TreinoAppStatus Status, TreinoAppSituacao? Treino, bool ResumoUsado)> AnexarResumoDepoisAsync(
+        NpgsqlDataSource dataSource,
+        Guid usuarioId,
+        string app,
+        string externalId,
+        ArquivoIntegracao resumo,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        Guid atividadeId;
+        string situacao;
+        DateTimeOffset startedAt;
+        int duracaoSegundos;
+        DateTimeOffset? appEndedAt;
+        int totalEvidencias;
+        bool temResumo;
+        await using (var load = new NpgsqlCommand("""
+            SELECT a.id, a.situacao_verificacao, a.started_at, a.duracao_segundos, a.app_ended_at,
+                (SELECT count(*)::int FROM evidencias_atividade e WHERE e.atividade_id = a.id),
+                EXISTS (SELECT 1 FROM evidencias_atividade e
+                        WHERE e.atividade_id = a.id AND e.origem_data_captura = $4)
+            FROM atividades a
+            WHERE a.usuario_id = $1 AND a.app = $2 AND a.app_external_id = $3
+            FOR UPDATE OF a
+            """, connection, transaction))
+        {
+            load.Parameters.AddWithValue(usuarioId);
+            load.Parameters.AddWithValue(app);
+            load.Parameters.AddWithValue(externalId);
+            load.Parameters.AddWithValue(OrigemDataCaptura.Integracao);
+            await using var reader = await load.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return (TreinoAppStatus.NaoEncontrado, null, false);
+            }
+
+            atividadeId = reader.GetGuid(0);
+            situacao = reader.GetString(1);
+            startedAt = reader.GetFieldValue<DateTimeOffset>(2);
+            duracaoSegundos = reader.GetInt32(3);
+            appEndedAt = reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4);
+            totalEvidencias = reader.GetInt32(5);
+            temResumo = reader.GetBoolean(6);
+        }
+
+        if (situacao == SituacaoVerificacao.EmAndamento)
+        {
+            return (TreinoAppStatus.EmAndamento, null, false);
+        }
+
+        if (situacao == SituacaoVerificacao.Anulada)
+        {
+            return (TreinoAppStatus.Encerrado, null, false);
+        }
+
+        var usado = false;
+        if (!temResumo)
+        {
+            if (totalEvidencias >= ValidacaoAtividade.MaxEvidencias)
+            {
+                return (TreinoAppStatus.LimiteEvidencias, null, false);
+            }
+
+            await EvidenciaIntegracao.InserirAsync(
+                connection,
+                transaction,
+                atividadeId,
+                resumo,
+                (short)(totalEvidencias + 1),
+                appEndedAt ?? startedAt.AddSeconds(duracaoSegundos),
+                startedAt,
+                duracaoSegundos,
+                cancellationToken,
+                adicionadaDepois: true);
             usado = true;
         }
 

@@ -1,4 +1,4 @@
-import { CalendarClock, Camera, FileImage, Video } from "lucide-react";
+import { CalendarClock, Camera, FileImage, History, Video } from "lucide-react";
 import type { LegendaGaleria } from "./GaleriaEvidencias";
 import {
   descreverMomentoCaptura,
@@ -92,6 +92,15 @@ export function DetalhesEvidencia({
             >
               <CalendarClock aria-hidden="true" className="size-3" />
               {captura.origem}
+            </span>
+          )}
+          {evidencia.adicionadaDepois && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-surface-muted px-2 py-0.5 text-2xs font-semibold text-foreground"
+              title="Mandada depois da avaliação: não contou para ela."
+            >
+              <History aria-hidden="true" className="size-3" />
+              Adicionada depois
             </span>
           )}
           {temLocal && <AtribuicaoMapa />}

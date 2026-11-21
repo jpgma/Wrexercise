@@ -15,6 +15,7 @@ internal sealed record CriarAtividadeRequest(
 /// autor escolheu mostrá-lo ao grupo; sem essa escolha, o navegador nem o envia (ADR 0061).
 /// <c>CapturadaEm</c> e <c>OrigemDataCaptura</c>: quando a foto ou o vídeo foi feito e de onde veio essa data
 /// (<c>Exif</c>, <c>Arquivo</c>, <c>Camera</c>, <c>Print</c>, <c>Integracao</c>; ADR 0052, 0080). Também é sinal, não prova.
+/// <c>AdicionadaDepois</c>: chegou depois do prazo da verificação e não contou para ela (ADR 0083).
 /// </summary>
 internal sealed record EvidenciaResponse(
     Guid Id,
@@ -27,7 +28,8 @@ internal sealed record EvidenciaResponse(
     double? Latitude,
     double? Longitude,
     DateTimeOffset? CapturadaEm,
-    string? OrigemDataCaptura);
+    string? OrigemDataCaptura,
+    bool AdicionadaDepois);
 
 internal sealed record AtividadeResumoResponse(
     Guid Id,
@@ -81,7 +83,9 @@ internal sealed record AtividadeResponse(
     IReadOnlyList<CorrecaoDuracaoResponse> Correcoes,
     // Onde o treino ao vivo começou, só quando a pessoa escolheu mostrar o local (ADR 0080).
     double? Latitude,
-    double? Longitude);
+    double? Longitude,
+    // O autor ainda manda fotos e vídeos por aqui; depois do prazo, com o selo "Adicionada depois" (ADR 0083).
+    bool AnexoPermitido);
 
 /// <summary>Uma correção da duração feita por um administrador (ADR 0068). Todo o grupo vê.</summary>
 internal sealed record CorrecaoDuracaoResponse(

@@ -9,7 +9,7 @@ const podera = [
   "Preparar um rascunho de cada treino, com o resumo em imagem",
   "Ver o nome dos seus grupos, para você escolher onde treinar ao vivo",
   "Começar o treino ao vivo no grupo escolhido e cancelar se você desistir",
-  "Mandar o resumo e o tempo do treino para você terminar aqui",
+  "Mandar o resumo e o tempo do treino, até depois de você terminar aqui",
 ];
 
 const naoPodera = [

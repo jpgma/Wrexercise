@@ -13,17 +13,13 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
   anexarEvidencia,
-  analisarVideo,
   CameraEvidencia,
-  duracaoMaximaS,
-  duracaoMinimaS,
   formatarCronometro,
   formatarDuracao,
   GaleriaEvidencias,
   getRotaTreino,
   marcarCapturaNoApp,
-  prepararEvidencia,
-  prepararVideo,
+  prepararMidia,
   tipoAtividadeIcones,
   tipoAtividadeLabels,
   treinoAtualKey,
@@ -36,7 +32,6 @@ import {
   useTreinoAtual,
   VideoNaoProcessadoError,
   type Atividade,
-  type EvidenciaPreparada,
   type LocalCaptura,
   type Torcida,
   type TreinoAtual,
@@ -422,29 +417,6 @@ function EvidenciasAoVivo({ treino }: { treino: TreinoAtual }) {
   const [erro, setErro] = useState<string | null>(null);
   const vagas = maximoDeEvidencias - treino.totalEvidencias;
 
-  const preparar = async (arquivo: File): Promise<EvidenciaPreparada> => {
-    if (!arquivo.type.startsWith("video/")) return prepararEvidencia(arquivo);
-    const analise = await analisarVideo(arquivo);
-    if (analise.duracao < duracaoMinimaS) {
-      throw new VideoNaoProcessadoError(
-        "O vídeo precisa ter pelo menos 2 segundos.",
-      );
-    }
-    if (analise.duracao > duracaoMaximaS + 0.5) {
-      throw new VideoNaoProcessadoError(
-        "Durante o treino, envie vídeos de até 1 minuto.",
-      );
-    }
-    return prepararVideo(
-      arquivo,
-      analise,
-      { inicio: 0, fim: analise.duracao },
-      {
-        onProgresso: (f) => setEnviando(`Preparando… ${Math.round(f * 100)}%`),
-      },
-    );
-  };
-
   // Durante o treino, a localização não sai do aparelho: quem quiser mostrar, registra depois.
   const enviar = async (
     lista: FileList | File[] | null,
@@ -460,7 +432,9 @@ function EvidenciasAoVivo({ treino }: { treino: TreinoAtual }) {
           : "Enviando…";
       setEnviando(rotulo);
       try {
-        const preparada = await preparar(arquivo);
+        const preparada = await prepararMidia(arquivo, (f) =>
+          setEnviando(`Preparando… ${Math.round(f * 100)}%`),
+        );
         const marcada = capturada
           ? marcarCapturaNoApp(preparada, capturada.em, capturada.local)
           : preparada;

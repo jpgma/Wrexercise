@@ -127,6 +127,21 @@ internal static class ErrosIntegracao
         "TREINO_NAO_EM_ANDAMENTO",
         "Este treino já terminou.");
 
+    public static IResult TreinoEmAndamento() => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "TREINO_EM_ANDAMENTO",
+        "Este treino ainda está aberto. Mande o resumo junto com o fim.");
+
+    public static IResult AtividadeEncerrada() => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "ATIVIDADE_ENCERRADA",
+        "Esta atividade foi anulada e não recebe mais fotos.");
+
+    public static IResult LimiteEvidencias() => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "LIMITE_EVIDENCIAS",
+        "Esta atividade já atingiu o número máximo de evidências.");
+
     public static IResult AppNaoEncontrado() => ApiProblem.Create(
         StatusCodes.Status404NotFound,
         "APP_NAO_ENCONTRADO",

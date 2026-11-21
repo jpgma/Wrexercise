@@ -166,7 +166,7 @@ internal static class ConsultasAtividade
         await using (var lista = new NpgsqlCommand(
             """
             SELECT id, ordem, origem_data_captura IS NOT DISTINCT FROM 'Camera', duracao_ms,
-                print, latitude, longitude, capturada_em, origem_data_captura
+                print, latitude, longitude, capturada_em, origem_data_captura, adicionada_depois
             FROM evidencias_atividade WHERE atividade_id = $1 ORDER BY ordem
             """,
             connection))
@@ -187,7 +187,8 @@ internal static class ConsultasAtividade
                     reader.IsDBNull(5) ? null : reader.GetDouble(5),
                     reader.IsDBNull(6) ? null : reader.GetDouble(6),
                     reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
-                    reader.IsDBNull(8) ? null : reader.GetString(8)));
+                    reader.IsDBNull(8) ? null : reader.GetString(8),
+                    reader.GetBoolean(9)));
             }
         }
 
@@ -259,6 +260,7 @@ internal static class ConsultasAtividade
             CorrecaoDuracao.Permitida(autorId == usuarioId, papel, situacao),
             correcoes,
             latitude,
-            longitude);
+            longitude,
+            PrazoEvidencia.AutorPodeAnexar(autorId == usuarioId, situacao));
     }
 }

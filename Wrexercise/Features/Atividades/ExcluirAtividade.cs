@@ -130,6 +130,24 @@ internal static class ExcluirAtividade
             }
         }
 
+        // Os comentários saem por cascata, mas os arquivos das fotos e vídeos deles, não (ADR 0083).
+        await using (var midias = new NpgsqlCommand("""
+            SELECT caminho_relativo, caminho_miniatura FROM comentarios
+            WHERE atividade_id = $1 AND caminho_relativo IS NOT NULL
+            """, connection, transaction))
+        {
+            midias.Parameters.AddWithValue(atividadeId);
+            await using var reader = await midias.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                arquivos.Add(reader.GetString(0));
+                if (!reader.IsDBNull(1))
+                {
+                    arquivos.Add(reader.GetString(1));
+                }
+            }
+        }
+
         // Revisores, reações, comentários, notificações e histórico saem por ON DELETE CASCADE.
         await using (var excluir = new NpgsqlCommand("DELETE FROM atividades WHERE id = $1", connection, transaction))
         {

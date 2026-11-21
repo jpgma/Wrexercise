@@ -60,16 +60,66 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AnexarEvidencia_RejectsRegistroManual()
+    public async Task AnexarEvidencia_RegistroManual_EntraDepoisSemMudarAComprovacao()
     {
         var ana = await _host.CreateUsuarioAsync();
         var grupoId = await _host.CreateGrupoAsync(ana);
-        var criada = await PostAtividadeAsync(ana, grupoId, Valid() with { TipoComprovacao = TipoComprovacao.RegistroManual });
-        var atividade = await criada.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+        var id = await CriarManualAsync(ana, grupoId);
 
-        var response = await PostEvidenciaAsync(ana, atividade!.Id);
+        var response = await PostEvidenciaAsync(ana, id);
 
-        await ApiTestHost.AssertProblemAsync(response, HttpStatusCode.Conflict, "COMPROVACAO_NAO_APLICAVEL");
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var atividade = await ObterAsync(ana, id);
+        Assert.Equal(TipoComprovacao.RegistroManual, atividade.TipoComprovacao);
+        Assert.True(Assert.Single(atividade.Evidencias).AdicionadaDepois);
+        Assert.True(atividade.AnexoPermitido);
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_DepoisDaVerificacaoComRevisores_EntraSemMudarASituacao()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var id = await CriarComFotoAsync(ana, grupoId);
+        Assert.Equal(HttpStatusCode.Created, (await PostEvidenciaAsync(ana, id, JpegVariante(1))).StatusCode);
+
+        foreach (var (situacao, variante) in new[] { ("EmRevisao", 2), ("Rejeitada", 3), ("Verificada", 4) })
+        {
+            await _host.ExecuteAsync(
+                $"UPDATE atividades SET situacao_verificacao = '{situacao}', verified_at = now() WHERE id = '{id}'");
+            var response = await PostEvidenciaAsync(ana, id, JpegVariante(variante));
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            Assert.Equal(situacao, (await ObterAsync(ana, id)).SituacaoVerificacao);
+        }
+
+        var evidencias = (await ObterAsync(ana, id)).Evidencias;
+        Assert.Equal([false, true, true, true], evidencias.Select(e => e.AdicionadaDepois));
+    }
+
+    [Fact]
+    public async Task AnexarEvidencia_Anulada_RecusadaENaoOferecida()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var id = await CriarComFotoAsync(ana, grupoId);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Anulada' WHERE id = '{id}'");
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostEvidenciaAsync(ana, id), HttpStatusCode.Conflict, "ATIVIDADE_ENCERRADA");
+        Assert.False((await ObterAsync(ana, id)).AnexoPermitido);
+    }
+
+    [Fact]
+    public async Task AnexoPermitido_SoParaOAutor()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var id = await CriarComFotoAsync(ana, grupoId);
+
+        Assert.True((await ObterAsync(ana, id)).AnexoPermitido);
+        Assert.False((await ObterAsync(bia, id)).AnexoPermitido);
     }
 
     [Fact]

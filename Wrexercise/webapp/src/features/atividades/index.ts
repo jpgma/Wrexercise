@@ -28,6 +28,8 @@ export {
   type TrechoVideo,
 } from "./prepararVideo";
 export { EvidenciasAtividade } from "./EvidenciasAtividade";
+export { AdicionarEvidencia } from "./AdicionarEvidencia";
+export { prepararMidia } from "./prepararMidia";
 export {
   apagarRascunhoRegistro,
   lerRascunhoRegistro,

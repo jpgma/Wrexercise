@@ -13,7 +13,6 @@ internal enum AtividadeOperacaoStatus
     EvidenciaNaoEncontrada,
     AcessoNegado,
     DadosInvalidos,
-    ComprovacaoNaoAplicavel,
     LimiteEvidencias,
     EvidenciaInvalida,
     AtividadeEncerrada,
@@ -69,10 +68,6 @@ internal static class OperacaoAtividade
         AtividadeOperacaoStatus.EvidenciaNaoEncontrada => EvidenciaNaoEncontrada(),
         AtividadeOperacaoStatus.AcessoNegado => GrupoAcesso.AcessoNegado(),
         AtividadeOperacaoStatus.DadosInvalidos => InvalidData(),
-        AtividadeOperacaoStatus.ComprovacaoNaoAplicavel => ApiProblem.Create(
-            StatusCodes.Status409Conflict,
-            "COMPROVACAO_NAO_APLICAVEL",
-            "Esta atividade não aceita evidências."),
         AtividadeOperacaoStatus.LimiteEvidencias => ApiProblem.Create(
             StatusCodes.Status409Conflict,
             "LIMITE_EVIDENCIAS",

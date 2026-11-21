@@ -21,6 +21,7 @@ import {
 import { resumirCaptura } from "./DetalhesEvidencia";
 import { MiniMapa } from "./MiniMapa";
 import { SeloCameraDoApp } from "./SeloCameraDoApp";
+import { SeloAdicionadaDepois } from "./SeloAdicionadaDepois";
 import { SeloPrint } from "./SeloPrint";
 import type { AtividadeResumo, Evidencia } from "./types";
 
@@ -322,6 +323,7 @@ function Galeria({
           </span>
           {evidencias?.[indice]?.gravadaNoApp && <SeloCameraDoApp />}
           {evidencias?.[indice]?.print && <SeloPrint />}
+          {evidencias?.[indice]?.adicionadaDepois && <SeloAdicionadaDepois />}
         </span>
         <button
           type="button"

@@ -6,7 +6,8 @@ namespace Wrexercise.Features.Atividades;
 
 /// <summary>
 /// A imagem do resumo de um app conectado vira evidência com a origem <c>Integracao</c> e a data do fim do
-/// treino no app: a do rascunho postado (ADR 0065) e a do treino ao vivo começado pelo app (ADR 0081).
+/// treino no app: a do rascunho postado (ADR 0065), a do treino ao vivo começado pelo app (ADR 0081) e a do
+/// resumo mandado depois que o treino terminou aqui (ADR 0083, com <c>adicionadaDepois</c>).
 /// </summary>
 internal static class EvidenciaIntegracao
 {
@@ -20,14 +21,15 @@ internal static class EvidenciaIntegracao
         DateTimeOffset endedAt,
         DateTimeOffset startedAt,
         int duracaoPeriodoSegundos,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool adicionadaDepois = false)
     {
         Guid evidenciaId;
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO evidencias_atividade (
                 atividade_id, caminho_relativo, tipo_mime, tamanho_bytes, sha256, ordem, caminho_miniatura,
-                capturada_em, origem_data_captura, print)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false)
+                capturada_em, origem_data_captura, print, adicionada_depois)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)
             RETURNING id
             """, connection, transaction))
         {
@@ -40,6 +42,7 @@ internal static class EvidenciaIntegracao
             insert.Parameters.AddWithValue(NpgsqlDbType.Text, (object?)arquivo.CaminhoMiniatura ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.TimestampTz, endedAt.ToUniversalTime());
             insert.Parameters.AddWithValue(OrigemDataCaptura.Integracao);
+            insert.Parameters.AddWithValue(adicionadaDepois);
             evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
         }
 

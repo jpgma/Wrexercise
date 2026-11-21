@@ -211,26 +211,24 @@ internal static class AnexarEvidencia
             return (AtividadeOperacaoStatus.AcessoNegado, null);
         }
 
-        if (tipoComprovacao == TipoComprovacao.RegistroManual)
-        {
-            return (AtividadeOperacaoStatus.ComprovacaoNaoAplicavel, null);
-        }
-
-        // Sem revisores, a primeira evidência já verifica a atividade: as seguintes ainda precisam entrar.
+        // Depois do prazo da verificação, a foto ainda entra, com o selo "Adicionada depois" (ADR 0083).
+        bool temRevisores;
         await using (var revisores = new NpgsqlCommand(
             "SELECT EXISTS (SELECT 1 FROM revisores_atividade WHERE atividade_id = $1)",
             connection,
             transaction))
         {
             revisores.Parameters.AddWithValue(atividadeId);
-            var temRevisores = (bool)(await revisores.ExecuteScalarAsync(cancellationToken))!;
-            // O treino ao vivo recebe fotos e vídeos enquanto acontece (ADR 0078).
-            if (situacao is not (SituacaoVerificacao.AguardandoFeedback or SituacaoVerificacao.EmAndamento)
-                && (temRevisores || situacao != SituacaoVerificacao.Verificada))
-            {
-                return (AtividadeOperacaoStatus.AtividadeEncerrada, null);
-            }
+            temRevisores = (bool)(await revisores.ExecuteScalarAsync(cancellationToken))!;
         }
+
+        var momento = PrazoEvidencia.Classificar(situacao, tipoComprovacao, temRevisores);
+        if (momento == MomentoEvidencia.Recusada)
+        {
+            return (AtividadeOperacaoStatus.AtividadeEncerrada, null);
+        }
+
+        var depois = momento == MomentoEvidencia.Depois;
 
         // Antes do limite: ao repetir o registro (ADR 0053), o navegador reenvia as fotos que já chegaram.
         string[] hashes = sinais.Sha256Original is { } original ? [salvo.Sha256, original] : [salvo.Sha256];
@@ -268,8 +266,9 @@ internal static class AnexarEvidencia
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO evidencias_atividade (
                 atividade_id, caminho_relativo, tipo_mime, tamanho_bytes, sha256, ordem, caminho_miniatura,
-                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude, duracao_ms, print)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                capturada_em, origem_data_captura, sha256_original, dhash, latitude, longitude, duracao_ms, print,
+                adicionada_depois)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING id
             """, connection, transaction))
         {
@@ -288,6 +287,7 @@ internal static class AnexarEvidencia
             insert.Parameters.AddWithValue(NpgsqlDbType.Double, (object?)sinais.Longitude ?? DBNull.Value);
             insert.Parameters.AddWithValue(NpgsqlDbType.Integer, (object?)salvo.DuracaoMs ?? DBNull.Value);
             insert.Parameters.AddWithValue(sinais.Print && salvo.DuracaoMs is null);
+            insert.Parameters.AddWithValue(depois);
             evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
         }
 
@@ -319,21 +319,24 @@ internal static class AnexarEvidencia
                 connection, transaction, atividadeId, TipoAviso.FotoParecida, evidenciaId, relacionada, cancellationToken);
         }
 
-        await using (var autoVerificar = new NpgsqlCommand("""
-            UPDATE atividades a
-            SET situacao_verificacao = 'Verificada', verified_at = coalesce(a.verified_at, now())
-            WHERE a.id = $1
-              AND a.situacao_verificacao <> 'EmAndamento'
-              AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = a.id)
-            """, connection, transaction))
+        if (!depois)
         {
-            autoVerificar.Parameters.AddWithValue(atividadeId);
-            var verificou = await autoVerificar.ExecuteNonQueryAsync(cancellationToken) > 0;
-
-            // As evidências seguintes de uma atividade já verificada não a concluem de novo.
-            if (verificou && situacao != SituacaoVerificacao.Verificada)
+            await using (var autoVerificar = new NpgsqlCommand("""
+                UPDATE atividades a
+                SET situacao_verificacao = 'Verificada', verified_at = coalesce(a.verified_at, now())
+                WHERE a.id = $1
+                  AND a.situacao_verificacao <> 'EmAndamento'
+                  AND NOT EXISTS (SELECT 1 FROM revisores_atividade r WHERE r.atividade_id = a.id)
+                """, connection, transaction))
             {
-                await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
+                autoVerificar.Parameters.AddWithValue(atividadeId);
+                var verificou = await autoVerificar.ExecuteNonQueryAsync(cancellationToken) > 0;
+
+                // As evidências seguintes de uma atividade já verificada não a concluem de novo.
+                if (verificou && situacao != SituacaoVerificacao.Verificada)
+                {
+                    await JogadasConcluidas.NotificarAsync(connection, transaction, atividadeId, cancellationToken);
+                }
             }
         }
 

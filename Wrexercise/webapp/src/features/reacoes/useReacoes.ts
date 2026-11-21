@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gruposKey, shouldRetry } from "@/features/grupos";
-import { getJson, postJson, putJson } from "@/services/api";
+import type { EvidenciaPreparada } from "@/features/atividades";
+import {
+  getJson,
+  postFormDataComProgresso,
+  postJson,
+  putJson,
+} from "@/services/api";
 import type {
   Comentario,
   ReacoesDetalhe,
@@ -60,13 +66,34 @@ export function useComentarios(atividadeId: string) {
   });
 }
 
+type NovoComentario = {
+  texto: string;
+  midia?: EvidenciaPreparada;
+  onProgresso?: (fracao: number) => void;
+};
+
 export function useComentar(atividadeId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (texto: string) =>
-      postJson<Comentario>(`/api/atividades/${atividadeId}/comentarios`, {
-        texto,
-      }),
+    // Com foto ou vídeo, o comentário vai em multipart, com a miniatura feita no navegador (ADR 0083).
+    mutationFn: ({ texto, midia, onProgresso }: NovoComentario) => {
+      if (!midia) {
+        return postJson<Comentario>(
+          `/api/atividades/${atividadeId}/comentarios`,
+          { texto },
+        );
+      }
+      const form = new FormData();
+      form.append("arquivo", midia.arquivo);
+      if (midia.miniatura)
+        form.append("miniatura", midia.miniatura, "miniatura.jpg");
+      if (texto) form.append("texto", texto);
+      return postFormDataComProgresso<Comentario>(
+        `/api/atividades/${atividadeId}/comentarios/midia`,
+        form,
+        onProgresso ?? (() => undefined),
+      );
+    },
     onSuccess: () => {
       // Inclui os comentários desta atividade; as listas do feed mostram o total.
       void queryClient.invalidateQueries({ queryKey: ["atividades"] });

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Wrexercise.Features.Atividades;
 using Wrexercise.Features.Atividades.Contracts;
@@ -11,6 +12,12 @@ namespace Wrexercise.IntegrationTests.Features.Reacoes;
 
 public sealed class ReacoesRoutesTests : IAsyncLifetime
 {
+    private static readonly byte[] JpegMinimo =
+    [
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+        0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xD9,
+    ];
+
     private ApiTestHost _host = null!;
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;
@@ -359,6 +366,108 @@ public sealed class ReacoesRoutesTests : IAsyncLifetime
         await ApiTestHost.AssertProblemAsync(get, HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
         var post = await PostComentarioAsync(estranha, atividadeId, "Oi");
         await ApiTestHost.AssertProblemAsync(post, HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
+    }
+
+    [Fact]
+    public async Task ComentarioComFoto_SemTexto_ListadoEServidoSoParaOGrupo()
+    {
+        var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(1);
+        await _host.ExecuteAsync($"UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now() WHERE id = '{atividadeId}'");
+
+        var response = await PostComentarioComMidiaAsync(ana, atividadeId, null);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var criado = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.ComentarioResponse, Token);
+        Assert.Null(criado!.Texto);
+        Assert.Equal("Foto", criado.Midia!.Tipo);
+        Assert.NotNull(criado.Midia.MiniaturaUrl);
+
+        var lista = await revisores[0].Client.GetFromJsonAsync(
+            $"/api/atividades/{atividadeId}/comentarios", AppJsonContext.Default.ComentariosResponse, Token);
+        var listado = Assert.Single(lista!.Comentarios);
+        Assert.Equal(criado.Midia, listado.Midia);
+
+        var arquivo = await revisores[0].Client.GetAsync(listado.Midia!.Url, Token);
+        Assert.Equal(HttpStatusCode.OK, arquivo.StatusCode);
+        Assert.Equal(JpegMinimo, await arquivo.Content.ReadAsByteArrayAsync(Token));
+        Assert.Equal(HttpStatusCode.OK, (await revisores[0].Client.GetAsync(listado.Midia.MiniaturaUrl, Token)).StatusCode);
+
+        var estranha = await _host.CreateUsuarioAsync("Estranha");
+        await ApiTestHost.AssertProblemAsync(
+            await estranha.Client.GetAsync(listado.Midia.Url, Token), HttpStatusCode.NotFound, "MIDIA_NAO_ENCONTRADA");
+        await ApiTestHost.AssertProblemAsync(
+            await PostComentarioComMidiaAsync(estranha, atividadeId, "Oi"), HttpStatusCode.NotFound, "ATIVIDADE_NAO_ENCONTRADA");
+        Assert.Equal(2, Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories).Count());
+    }
+
+    [Fact]
+    public async Task ComentarioComFoto_ComLegenda()
+    {
+        var (ana, atividadeId, _) = await CriarComRevisoresAsync(1);
+
+        var response = await PostComentarioComMidiaAsync(ana, atividadeId, "  O print que faltou  ");
+
+        var criado = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.ComentarioResponse, Token);
+        Assert.Equal("O print que faltou", criado!.Texto);
+        Assert.NotNull(criado.Midia);
+    }
+
+    [Fact]
+    public async Task ComentarioComMidia_SemArquivoOuLegendaLonga_Recusado()
+    {
+        var (ana, atividadeId, _) = await CriarComRevisoresAsync(1);
+
+        await ApiTestHost.AssertProblemAsync(
+            await PostComentarioComMidiaAsync(ana, atividadeId, "Oi", comArquivo: false),
+            HttpStatusCode.BadRequest,
+            "DADOS_INVALIDOS");
+        await ApiTestHost.AssertProblemAsync(
+            await PostComentarioComMidiaAsync(ana, atividadeId, new string('a', 501)),
+            HttpStatusCode.BadRequest,
+            "DADOS_INVALIDOS");
+        await ApiTestHost.AssertProblemAsync(
+            await PostComentarioComMidiaAsync(ana, atividadeId, null, arquivo: [0x00, 0x01, 0x02, 0x03]),
+            HttpStatusCode.BadRequest,
+            "MIDIA_INVALIDA");
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task ComentarioComFoto_SaiComAAtividadeApagada()
+    {
+        var (ana, atividadeId, revisores) = await CriarComRevisoresAsync(1);
+        (await PostComentarioComMidiaAsync(revisores[0], atividadeId, "Boa!")).EnsureSuccessStatusCode();
+
+        var excluida = await ana.Client.DeleteAsync($"/api/atividades/{atividadeId}", Token);
+
+        Assert.Equal(HttpStatusCode.NoContent, excluida.StatusCode);
+        Assert.Empty(Directory.EnumerateFiles(_host.EvidenciasDiretorio, "*", SearchOption.AllDirectories));
+    }
+
+    private static async Task<HttpResponseMessage> PostComentarioComMidiaAsync(
+        TestUsuario usuario,
+        Guid atividadeId,
+        string? texto,
+        bool comArquivo = true,
+        byte[]? arquivo = null)
+    {
+        using var form = new MultipartFormDataContent();
+        if (texto is not null)
+        {
+            form.Add(new StringContent(texto), "texto");
+        }
+
+        if (comArquivo)
+        {
+            var bytes = new ByteArrayContent(arquivo ?? JpegMinimo);
+            bytes.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+            form.Add(bytes, "arquivo", "foto.jpg");
+            var miniatura = new ByteArrayContent(JpegMinimo);
+            miniatura.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
+            form.Add(miniatura, "miniatura", "miniatura.jpg");
+        }
+
+        return await usuario.Client.PostAsync($"/api/atividades/{atividadeId}/comentarios/midia", form, Token);
     }
 
     private static Task<HttpResponseMessage> PostComentarioAsync(TestUsuario usuario, Guid atividadeId, string? texto) =>

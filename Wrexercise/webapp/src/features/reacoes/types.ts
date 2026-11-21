@@ -20,12 +20,22 @@ export type ReacoesDetalhe = {
   reacoes: ReacaoItem[];
 };
 
+/** Texto, uma foto ou um vídeo, ou os dois (ADR 0083): um deles sempre vem. */
 export type Comentario = {
   id: string;
   usuarioId: string;
   nomeExibicao: string;
-  texto: string;
+  texto: string | null;
   createdAt: string;
+  midia: ComentarioMidia | null;
+};
+
+export type ComentarioMidia = {
+  url: string;
+  miniaturaUrl: string | null;
+  tipo: "Foto" | "Video";
+  /** Só no vídeo. */
+  duracaoMs: number | null;
 };
 
 export type RevisaoAtividadeData = {

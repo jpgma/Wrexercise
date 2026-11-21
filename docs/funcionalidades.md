@@ -569,7 +569,7 @@ The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascu
 - The browser cannot send the origin `Integracao`.
 - If the review queue is not empty, the button "Começar avaliação" keeps the draft until the form opens again.
 - The Settings page shows "Apps conectados" when there is an active connection. "Desconectar" revokes the token.
-- The same token can also start a live workout (7.1.2) and list the groups of the user (ADR 0081): `GET /api/integracoes/grupos` returns `grupos` with `id` and `nome`, in the order that the user joined them. The page "Conectar o Movr" tells that Movr can see the group names and start the live workout. Movr cannot finish or post the workout, and cannot see the activities, the cheers or the comments.
+- The same token can also start a live workout (7.1.2) and list the groups of the user (ADR 0081): `GET /api/integracoes/grupos` returns `grupos` with `id` and `nome`, in the order that the user joined them. The page "Conectar o Movr" tells that Movr can see the group names and start the live workout. Movr cannot finish or post the workout, and cannot see the activities, the cheers or the comments. After the user finishes the workout, Movr can still send the summary image that did not arrive (7.1.2).
 
 ### 7.1.2. Live workout (`EmAndamento`)
 
@@ -606,6 +606,7 @@ A member can start a workout now and finish it later (ADR 0078). The record of a
   - `PUT /api/integracoes/treinos/{externalId}` with `{ "grupoId", "tipo", "latitude", "longitude" }` starts the live workout in that group. The location is optional and follows the rules of the browser start. The same blocks, the same limit of one live workout and the same `ComecouTreinar` notification apply. The response is `201` with `atividadeId`, `grupoId`, `grupoNome`, `situacao`, `url`, `startedAt`, `fimInformado` and `resumoAnexado`. `url` is `/grupos/{id}/treino` while the workout is `EmAndamento`, else `/atividades/{id}`.
   - The same `externalId` again returns the same workout with `200`. After the user finishes it, it returns `409 TREINO_NAO_EM_ANDAMENTO`. A live workout that the user started in the browser, in the same group, becomes the workout of the app. A live workout of a different `externalId`, or in a different group, returns `409 TREINO_EM_ANDAMENTO`.
   - `PUT /api/integracoes/treinos/{externalId}/fim` (multipart) with `duracaoSegundos` (the active time in Movr, without pauses, 1 to 86400), `endedAt` and, optionally, the summary image (`arquivo`, image only, maximum 5 MB) with a JPEG thumbnail (`miniatura`, maximum 100 KB). The workout stays `EmAndamento`. The server keeps the duration as a suggestion, with a maximum of the time since the start, and the end between the start and now. The image becomes evidence with the origin `Integracao` and the end as the capture date, one time only, if the workout has less than 10 items. Another request changes the suggestion and does not add the image again. A workout that is not `EmAndamento` returns `409 TREINO_NAO_EM_ANDAMENTO`. A deleted or expired workout returns `404 TREINO_NAO_ENCONTRADO`.
+  - `PUT /api/integracoes/treinos/{externalId}/resumo` (multipart) with the summary image (`arquivo`) and the JPEG thumbnail (`miniatura`), after the user finished the workout (ADR 0083). The image becomes late evidence (see 7.2) with the origin `Integracao` and the end in the app as the capture date (else the start plus the duration). It is added one time only: another request returns `200` and does not add it again. The response is the same as the start, with `resumoAnexado`. A workout that is still `EmAndamento` returns `409 TREINO_EM_ANDAMENTO`: the summary goes with the end. An `Anulada` activity returns `409 ATIVIDADE_ENCERRADA`, an activity with 10 items `409 LIMITE_EVIDENCIAS`.
   - `DELETE /api/integracoes/treinos/{externalId}` deletes the workout and its evidence while it is `EmAndamento` (`204`). After the end, it returns `409 TREINO_NAO_EM_ANDAMENTO` and the activity stays.
   - `GET /api/integracoes/treinos/{externalId}` returns the workout, or `404 TREINO_NAO_ENCONTRADO` after a cancel or an expiry.
   - `GET /api/atividades/em-andamento` also returns `app`, `appDuracaoSegundos` and `appEndedAt`. After the end in the app, the timer page shows "Movr: treino concluído · 42 min ativos. Põe as fotos e termine aqui." "Terminar treino" starts at the suggested minutes, with a maximum of the time since the start, and shows "Sugestão do Movr: 42 min (sem as pausas)." The user can make it smaller.
@@ -658,7 +659,10 @@ A member can start a workout now and finish it later (ADR 0078). The record of a
 - When the server refuses a file, it deletes all the files of that request. No temporary file stays on the disk.
 - The API returns `tipo` (`Foto` or `Video`) and `duracaoMs` (only for videos) for each evidence. Each item in the feed has `miniaturaDuracaoMs` when the first evidence is a video.
 - The server sends a video with support for `Range` requests. The `<video>` element needs this to go to a different position.
-- Only the author can attach evidence. The author can attach evidence only while the activity has the status `EmAndamento` or `AguardandoFeedback`. During a live workout, the first evidence does not verify the activity.
+- Only the author can attach evidence. During a live workout, the first evidence does not verify the activity.
+- On time: the status is `EmAndamento` or `AguardandoFeedback`, or `Verificada` without reviewers, and the proof method is not `RegistroManual`. Without reviewers, the first evidence on time verifies the activity.
+- Late evidence (ADR 0083): after that, the author can still attach images and videos, in all statuses except `Anulada` (`409 ATIVIDADE_ENCERRADA`), also to a `RegistroManual` activity. The server keeps `adicionada_depois = true`. Late evidence never verifies the activity, never changes the status and never changes the proof method. The limit of 10 items, the duplicate checks and the warnings (see 7.5) are the same.
+- The API returns `adicionadaDepois` for each evidence, and `anexoPermitido` for the activity (`true` for the author, except when the activity is `Anulada`). The activity page shows the button "Adicionar foto ou vídeo" to the author when `anexoPermitido` is `true`, the activity is not `EmAndamento` and it has less than 10 items. The text below it is "Esqueceu o print? Depois da avaliação, a foto entra com o selo “Adicionada depois” e não muda o resultado." The button sends each file immediately, without the location. Late evidence shows the label "Adicionada depois" below the evidence and in the full-screen gallery.
 - Nobody can replace evidence. Evidence is deleted only with its activity (see 7.6).
 - Only active members of the group can see the evidence.
 - The feed shows the thumbnail. The full image loads only when the user opens it. When the first evidence is a video, the thumbnail shows ▶ and the duration.
@@ -717,7 +721,7 @@ The system adds warnings to an activity. All members of the group see them, also
 - The author can delete his or her activity for 15 minutes after recording it (`submitted_at`), in each status but `Verificada` (ADR 0073). Reactions of all types do not stop this. The author can also delete an activity that is `EmRevisao`, `Rejeitada` or `Anulada` in these 15 minutes. If all the reviewers give `Kudos`, the status changes to `Verificada`, and then the author cannot delete.
 - The author can cancel a live workout (`EmAndamento`) at all times (see 7.1.2).
 - `DELETE /api/atividades/{id}`. Out of these limits, the API returns `409 EXCLUSAO_NAO_PERMITIDA`. A different member gets `403 ACESSO_NEGADO`.
-- The deletion is permanent. The system deletes the reviewers, reactions, comments, notifications, warnings, evidence and image files of the activity.
+- The deletion is permanent. The system deletes the reviewers, reactions, comments, notifications, warnings, evidence and image files of the activity, also the images and videos of the comments.
 - A `FotoParecida` warning of a different activity that links to the deleted activity stays, without the link.
 - After the deletion, the author can use the same photo again.
 - The activity response has `exclusaoPermitidaAte`: the time limit for the author, or `null`. The activity page shows "Registrou errado? Dá para apagar até HH:MM" and the button "Apagar" to the author. The button asks for a confirmation. After the deletion, the page shows "Atividade apagada." and opens the group feed.
@@ -802,10 +806,14 @@ An administrator can also change the status to `Anulada` (see 8.4).
 ### 8.5. Comments
 
 - Active members, also the author, can write comments on all activities. The status of the activity and the time do not change this.
-- A comment has a maximum of 500 characters.
+- A comment has text, one image or one video, or text and one image or video (ADR 0083). The text has a maximum of 500 characters.
+- `POST /api/atividades/{id}/comentarios` (JSON) sends text only. `POST /api/atividades/{id}/comentarios/midia` (multipart) sends `arquivo`, the JPEG thumbnail `miniatura` and, optionally, `texto`. The file limits of the evidence apply (see 7.2): an image of 5 MB, a video of 2 to 61 seconds and 25 MB, a thumbnail of 100 KB. A bad file returns `400 MIDIA_INVALIDA` or the video code of 7.2. Without a file, or with a text that is too long, the API returns `400 DADOS_INVALIDOS`.
+- The image or video of a comment is not evidence. It has no warnings, no duplicate check and no effect on the verification.
+- `GET /api/atividades/{id}/comentarios` returns `midia` for each comment (`url`, `miniaturaUrl`, `tipo` and `duracaoMs`, or `null`), and `texto` can be `null`. Only active members of the group can get the files (`GET …/comentarios/{comentarioId}/midia` and `…/midia/miniatura`). Otherwise the API returns `404 MIDIA_NAO_ENCONTRADA`.
 - Nobody can edit or delete a comment.
 - The system accepts a maximum of 20 comments each minute from one IP address.
-- The activity page shows the section "Comentários" with all comments, the oldest first. Each comment shows the author, the date and the time ("Hoje, 15:30", "Ontem, 07:10" or the date). The full date and time show when the user holds the pointer on it.
+- The activity page shows the section "Comentários" with all comments, the oldest first. Each comment shows the author, the date and the time ("Hoje, 15:30", "Ontem, 07:10" or the date). The full date and time show when the user holds the pointer on it. An image shows below the text. A video shows the player with the thumbnail and loads only when the user starts it.
+- Below the text field, a button with an image icon selects one image or video. The form shows the selected file with a button to remove it. "Comentar" is enabled with text, a file, or both. During the upload, the button shows the progress.
 
 ### 8.6. Review queue
 

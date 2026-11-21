@@ -1017,7 +1017,7 @@ GET  /api/atividades/{id}/evidencias/{evidenciaId}
 GET  /api/atividades/{id}/evidencias/{evidenciaId}/miniatura
 ```
 
-A lista do grupo aceita `?filtro=Minhas|Pendentes|Verificadas|EmRevisao` e `?autorId=`, aplicados no servidor para não quebrar a paginação por cursor. `para-avaliar` devolve o que ainda espera a reação de quem consulta, dentro da janela de 48 horas. Enquanto essa fila não estiver vazia, o `POST` recusa com `409 AVALIACOES_PENDENTES` (`docs/decisoes/0041-avaliar-antes-de-registrar.md`); as duas rotas usam o mesmo filtro SQL (`ConsultasAtividade.FiltroParaAvaliar`). A criação usa somente JSON; o upload de evidências usa `multipart/form-data` em rota separada. Permissões e regras em `docs/decisoes/0011-atividades.md`.
+A lista do grupo aceita `?filtro=Minhas|Pendentes|Verificadas|EmRevisao` e `?autorId=`, aplicados no servidor para não quebrar a paginação por cursor. `para-avaliar` devolve o que ainda espera a reação de quem consulta, dentro da janela de 48 horas. Enquanto essa fila não estiver vazia, o `POST` recusa com `409 AVALIACOES_PENDENTES` (`docs/decisoes/0041-avaliar-antes-de-registrar.md`); as duas rotas usam o mesmo filtro SQL (`ConsultasAtividade.FiltroParaAvaliar`). A criação usa somente JSON; o upload de evidências usa `multipart/form-data` em rota separada. Depois do prazo da verificação, o autor ainda anexa fotos e vídeos, que entram como "Adicionada depois" e não mudam a verificação (`docs/decisoes/0083-fotos-depois-e-comentarios-com-midia.md`). Permissões e regras em `docs/decisoes/0011-atividades.md`.
 
 ### 10.4.1. Usuários
 
@@ -1050,7 +1050,12 @@ GET  /api/atividades/{id}/reacoes
 POST /api/atividades/{id}/revisao
 GET  /api/atividades/{id}/comentarios
 POST /api/atividades/{id}/comentarios
+POST /api/atividades/{id}/comentarios/midia
+GET  /api/atividades/{id}/comentarios/{comentarioId}/midia
+GET  /api/atividades/{id}/comentarios/{comentarioId}/midia/miniatura
 ```
+
+Um comentário pode ter uma foto ou um vídeo, com ou sem texto. A mídia fica com as evidências, mas não é evidência (`decisoes/0083-fotos-depois-e-comentarios-com-midia.md`).
 
 A operação de reação deverá realizar inserção ou atualização da reação do usuário.
 
@@ -1087,7 +1092,7 @@ Requisitos:
 - Não utilizar nomes enviados pelo cliente como caminhos.
 - Não expor diretórios de armazenamento diretamente.
 - Exigir autorização para consultar evidências.
-- Implementar exclusão de arquivos associados a atividades removidas, respeitando as regras de retenção.
+- Implementar exclusão de arquivos associados a atividades removidas, respeitando as regras de retenção. A foto ou o vídeo de um comentário fica na mesma pasta e sai junto com a atividade (ADR 0083).
 
 As imagens deverão ser redimensionadas e comprimidas no cliente quando possível. Os vídeos são convertidos no navegador, com WebCodecs, para 720p (ADR 0058).
 

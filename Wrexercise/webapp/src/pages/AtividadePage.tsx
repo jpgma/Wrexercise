@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { SplashScreen } from "@/components/SplashScreen";
 import {
+  AdicionarEvidencia,
   AvisosAtividade,
   CorrigirDuracao,
   EvidenciasAtividade,
@@ -68,6 +69,7 @@ export function AtividadePage() {
     correcoes,
     latitude,
     longitude,
+    anexoPermitido,
   } = atividade.data;
 
   return (
@@ -148,6 +150,13 @@ export function AtividadePage() {
               permitida={correcaoPermitida}
               correcoes={correcoes}
             />
+            {/* O treino ao vivo recebe fotos pelo cronômetro (ADR 0078). */}
+            {anexoPermitido && situacaoVerificacao !== "EmAndamento" && (
+              <AdicionarEvidencia
+                atividadeId={id}
+                totalEvidencias={evidencias.length}
+              />
+            )}
           </div>
         </div>
 

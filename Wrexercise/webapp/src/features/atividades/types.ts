@@ -41,6 +41,8 @@ export type Evidencia = {
   /** Quando a foto ou o vídeo foi feito, e de onde veio essa data (ADR 0052, 0080). Sinal, não prova. */
   capturadaEm: string | null;
   origemDataCaptura: OrigemDataCaptura | null;
+  /** Chegou depois do prazo da verificação e não contou para ela (ADR 0083). */
+  adicionadaDepois: boolean;
 };
 
 export type OrigemDataCaptura =
@@ -110,6 +112,8 @@ export type Atividade = Omit<
   /** Onde o treino ao vivo começou, só quando a pessoa escolheu mostrar (ADR 0080). */
   latitude: number | null;
   longitude: number | null;
+  /** O autor ainda manda fotos e vídeos por aqui; depois do prazo, com o selo "Adicionada depois" (ADR 0083). */
+  anexoPermitido: boolean;
 };
 
 /** Uma correção da duração feita por um administrador (ADR 0068). */
