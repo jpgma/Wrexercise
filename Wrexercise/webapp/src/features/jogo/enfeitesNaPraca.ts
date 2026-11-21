@@ -38,6 +38,13 @@ const atlas = {
     ms: 140,
   },
   "zen-aberto": { linha: 23, esquerda: 1, largura: 38, altura: 18, ms: 160 },
+  "craque-sem-bola": {
+    linha: 24,
+    esquerda: 13,
+    largura: 20,
+    altura: 13,
+    ms: 240,
+  },
 } as const satisfies Record<string, DesenhoEnfeite>;
 
 export type DesenhoEnfeite = {
@@ -49,14 +56,44 @@ export type DesenhoEnfeite = {
 };
 
 /** O lado da célula do atlas e a quantidade de quadros por linha. */
-export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 24 } as const;
+export const atlasEnfeites = { celula: 40, quadros: 4, linhas: 25 } as const;
 
 /**
  * As linhas extras do atlas, que não são Enfeites do catálogo: outra forma de um Enfeite no treino ao vivo
- * (ADR 0082). O cachorro andando é de lado, para a direita; o tapete se abre do quadro 1 ao 4 e fica no 4.
+ * (ADR 0082). O cachorro andando é de lado, para a direita; o tapete se abre do quadro 1 ao 4 e fica no 4;
+ * os cones sem a bola ficam no chão enquanto a bola da cena passa entre eles.
  */
 export const cachorroAndando = atlas["andarilho-andando"];
 export const tapeteAberto = atlas["zen-aberto"];
+export const conesSemBola = atlas["craque-sem-bola"];
+
+/** Outra forma de um Enfeite no chão durante o treino ao vivo. */
+export type FormaEnfeite = "aberto" | "semBola";
+
+/**
+ * Nos cones (`craque`), em px da célula de 40×40: o centro da base de cada cone, da esquerda para a
+ * direita, e o da bola. Se a arte mudar, meça de novo em `saida/enfeites.png`.
+ */
+export const conesDoCraque: readonly Ponto[] = [
+  { x: 16, y: 39 },
+  { x: 22.5, y: 36 },
+  { x: 29, y: 33 },
+];
+export const bolaDoCraque: Ponto = { x: 9.5, y: 39 };
+
+/** A praça é mostrada em 2×. */
+const escalaPraca = 2;
+
+/** Um ponto da célula do atlas (px do mestre 1×) no chão da praça, para um Enfeite colocado. */
+export function getPontoNoEnfeite(e: EnfeiteColocado, p: Ponto): Ponto {
+  return {
+    x:
+      e.x +
+      escalaPraca * (p.x - e.desenho.esquerda) -
+      (e.desenho.largura * escalaPraca) / 2,
+    y: e.y - atlasEnfeites.celula * escalaPraca + escalaPraca * p.y,
+  };
+}
 
 /** O desenho de um Enfeite pela conquista do nível que aparece; `undefined` se o atlas não o tiver. */
 export function getDesenhoEnfeite(

@@ -6,7 +6,13 @@ import {
   type NomeAnimacao,
   quadroSoltura,
 } from "./animacoes";
-import type { EnfeiteColocado } from "./enfeitesNaPraca";
+import {
+  bolaDoCraque,
+  conesDoCraque,
+  type EnfeiteColocado,
+  type FormaEnfeite,
+  getPontoNoEnfeite,
+} from "./enfeitesNaPraca";
 import { objetosPraca } from "./ObjetosPraca";
 import type { MembroCena } from "./useCena";
 import type { Atuacao, Ponto } from "./useEncenacoes";
@@ -74,6 +80,16 @@ export type CachorroEmCena = {
   ms: number;
 };
 
+/**
+ * O Futebol sozinho com os cones: conduz a bola em zigue-zague, passando cada cone por um lado, a esta
+ * distância (px) da fileira e nesta velocidade (px por ms), com a bola este tanto à frente dos pés. No fim
+ * da fileira, faz embaixadinhas (2 ciclos de `futebol`) e volta.
+ */
+const LadoDoCone = 12;
+const VelocidadeConduzir = 0.05;
+const BolaNosPes = 7;
+const EmbaixadinhasCiclos = 2;
+
 /** O cachorro anda um pouco atrás de quem caminha (radianos na pista) e por fora dela (px). */
 const CachorroAtras = 0.05;
 const CachorroPorFora = 12;
@@ -82,8 +98,8 @@ export type TreinoNaPraca = {
   atuacoes: Map<string, Atuacao>;
   /** As chaves dos Enfeites que saem do chão enquanto alguém os usa (a bicicleta). */
   ocultos: Set<string>;
-  /** As chaves dos tapetes de ioga abertos por quem os usa. */
-  abertos: Set<string>;
+  /** A forma de cada Enfeite em uso, pela chave: o tapete aberto, os cones sem a bola. */
+  formas: Map<string, FormaEnfeite>;
   bolas: BolaEmCena[];
   cachorros: CachorroEmCena[];
 };
@@ -187,7 +203,7 @@ export function useTreinoNaPraca({
   const [atuacoes, setAtuacoes] = useState<Map<string, Atuacao>>(new Map());
   const [ocultos, setOcultos] = useState<Set<string>>(new Set());
   const [bolas, setBolas] = useState<Map<string, BolaEmCena>>(new Map());
-  const [abertos, setAbertos] = useState<Set<string>>(new Set());
+  const [formas, setFormas] = useState<Map<string, FormaEnfeite>>(new Map());
   const [cachorros, setCachorros] = useState<Map<string, CachorroEmCena>>(
     new Map(),
   );
@@ -262,8 +278,8 @@ export function useTreinoNaPraca({
     };
     const ocultar = (chaveEnfeite: string) =>
       setOcultos((atual) => new Set(atual).add(chaveEnfeite));
-    const abrir = (chaveEnfeite: string) =>
-      setAbertos((atual) => new Set(atual).add(chaveEnfeite));
+    const porForma = (chaveEnfeite: string, forma: FormaEnfeite) =>
+      setFormas((atual) => new Map(atual).set(chaveEnfeite, forma));
     const porCachorro = (id: string, para: Ponto, ms: number) =>
       setCachorros((atual) => {
         const antes = atual.get(id);
@@ -412,7 +428,7 @@ export function useTreinoNaPraca({
         direcao: "sul",
         z: Math.round(e.y) + 1,
       }),
-      (e) => abrir(e.chave),
+      (e) => porForma(e.chave, "aberto"),
     );
     noEnfeite("Luta", "luta", (e) => ({
       ponto: { x: getLados(e).esquerda - 12, y: e.y + 1 },
@@ -532,6 +548,86 @@ export function useTreinoNaPraca({
       depois(chegada + 100, () => passar(0));
     };
 
+    // Futebol sozinho com os cones: pega a bola deles e a conduz em zigue-zague, ida e volta.
+    const conduzirEntreOsCones = (id: string, cones: EnfeiteColocado) => {
+      const centros = conesDoCraque.map((p) => getPontoNoEnfeite(cones, p));
+      const bola = getPontoNoEnfeite(cones, bolaDoCraque);
+      const primeiro = centros[0]!;
+      const ultimo = centros[centros.length - 1]!;
+      const comprimento = distancia(primeiro, ultimo) || 1;
+      const rumo = {
+        x: (ultimo.x - primeiro.x) / comprimento,
+        y: (ultimo.y - primeiro.y) / comprimento,
+      };
+      // De través na fileira: cada cone fica de um lado, alternando.
+      const traves = { x: -rumo.y, y: rumo.x };
+      const ida: Ponto[] = [
+        { x: bola.x - rumo.x * BolaNosPes, y: bola.y - rumo.y * BolaNosPes },
+        ...centros.map((c, i) => {
+          const lado = (i % 2 === 0 ? 1 : -1) * LadoDoCone;
+          return { x: c.x + traves.x * lado, y: c.y + traves.y * lado };
+        }),
+        { x: ultimo.x + rumo.x * 16, y: ultimo.y + rumo.y * 16 },
+      ];
+      const chaveBola = `cones-${id}`;
+      const bolaNosPes = (p: Ponto, para: Ponto, ms: number): BolaEmCena => {
+        const d = distancia(p, para) || 1;
+        return {
+          x: p.x + ((para.x - p.x) / d) * BolaNosPes,
+          y: p.y + ((para.y - p.y) / d) * BolaNosPes,
+          virado: para.x >= p.x ? 1 : -1,
+          rolando: ms > 0,
+          ms,
+          curva: "linear",
+          linha: LinhaFutebol,
+        };
+      };
+      const conduzir = (caminho: Ponto[], i: number) => {
+        const de = caminho[i]!;
+        const para = caminho[i + 1];
+        if (!para) {
+          // No fim da fileira: a bola sobe para as embaixadinhas e volta aos pés para o caminho de volta.
+          porBola(chaveBola, null);
+          atuar(id, de, "futebol", "sul", 0);
+          const volta = [...caminho].reverse();
+          depois(
+            EmbaixadinhasCiclos *
+              animacoes.futebol.quadros *
+              animacoes.futebol.ms,
+            () => {
+              porBola(chaveBola, bolaNosPes(de, volta[1]!, 0));
+              depois(60, () => conduzir(volta, 0));
+            },
+          );
+          return;
+        }
+        const ms = Math.round(distancia(de, para) / VelocidadeConduzir);
+        atuar(id, para, "correr", getDirecao(de, para), ms);
+        // A bola vai na frente, sempre a um passo dos pés, rumo ao próximo ponto.
+        const depoisDele = caminho[i + 2];
+        porBola(
+          chaveBola,
+          depoisDele
+            ? bolaNosPes(para, depoisDele, ms)
+            : { ...bolaNosPes(de, para, ms), x: para.x, y: para.y },
+        );
+        depois(ms, () => conduzir(caminho, i + 1));
+      };
+      irAte(id, ida[0]!, () => {
+        // A bola sai do desenho dos cones e passa a ser a da cena, no mesmo lugar.
+        porForma(cones.chave, "semBola");
+        porBola(chaveBola, {
+          ...bola,
+          virado: 1,
+          rolando: false,
+          ms: 0,
+          curva: "linear",
+          linha: LinhaFutebol,
+        });
+        depois(60, () => conduzir(ida, 0));
+      });
+    };
+
     const futebol = porTipo("Futebol").map((m) => m.usuarioId);
     if (futebol.length >= 2) {
       trocarPasses(
@@ -540,10 +636,10 @@ export function useTreinoNaPraca({
         new Map(futebol.map((id) => [id, posicoes.get(id)!])),
       );
     } else {
-      noEnfeite("Futebol", "futebol", (e) => ({
-        ponto: { x: getLados(e).direita + 12, y: e.y + 2 },
-        direcao: "sul",
-      }));
+      for (const id of futebol) {
+        const cones = getEnfeiteDoTreino(enfeites, id, "Futebol");
+        if (cones) conduzirEntreOsCones(id, cones);
+      }
     }
 
     const volei = porTipo("Volei").map((m) => m.usuarioId);
@@ -634,7 +730,7 @@ export function useTreinoNaPraca({
       setAtuacoes(new Map());
       setOcultos(new Set());
       setBolas(new Map());
-      setAbertos(new Set());
+      setFormas(new Map());
       setCachorros(new Map());
     };
   }, [chave, pausado, reduzido]);
@@ -644,7 +740,7 @@ export function useTreinoNaPraca({
   return {
     atuacoes,
     ocultos,
-    abertos,
+    formas,
     bolas: listaBolas,
     cachorros: listaCachorros,
   };

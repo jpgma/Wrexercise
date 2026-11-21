@@ -3,8 +3,10 @@ import { hashFnv1a } from "@/components/folhaAvatar";
 import {
   atlasEnfeites,
   cachorroAndando,
+  conesSemBola,
   enfeiteAceso,
   type EnfeiteColocado,
+  type FormaEnfeite,
   tapeteAberto,
 } from "./enfeitesNaPraca";
 import type { CachorroEmCena } from "./useTreinoNaPraca";
@@ -23,7 +25,7 @@ export function EnfeiteNoChao({
   apagado,
   aceso,
   brilho,
-  aberto = false,
+  forma,
 }: {
   item: EnfeiteColocado;
   reduzido: boolean;
@@ -33,24 +35,36 @@ export function EnfeiteNoChao({
   aceso: boolean;
   /** É o Enfeite novo de quem vê a cena: brilha enquanto a encenação toca. */
   brilho: boolean;
-  /** O tapete de ioga em uso no treino ao vivo: abre-se uma vez e fica aberto (ADR 0082). */
-  aberto?: boolean;
+  /**
+   * No treino ao vivo (ADR 0082): o tapete de ioga em uso abre-se uma vez e fica aberto; os cones ficam
+   * sem a bola, parados, enquanto a bola da cena passa entre eles.
+   */
+  forma?: FormaEnfeite;
 }) {
   const { desenho } = item;
   const poste = item.enfeite.conquista.toLowerCase() === enfeiteAceso;
-  const ciclo = aberto
-    ? "enfeite-abrir"
-    : poste
-      ? aceso
-        ? "enfeite-aceso"
-        : ""
-      : "sprite-repete";
+  const ciclo =
+    forma === "aberto"
+      ? "enfeite-abrir"
+      : forma === "semBola"
+        ? ""
+        : poste
+          ? aceso
+            ? "enfeite-aceso"
+            : ""
+          : "sprite-repete";
   const quadros = poste ? 3 : atlasEnfeites.quadros;
   const meiaLargura = (desenho.largura * escala) / 2;
-  const atraso = aberto ? 0 : hashFnv1a(item.chave) % (quadros * desenho.ms);
-  // O tapete aberto fica no mesmo lugar: o quadro 1 da linha dele é o tapete da base.
-  const linha = aberto ? tapeteAberto.linha : desenho.linha;
-  const ms = aberto ? tapeteAberto.ms : desenho.ms;
+  const atraso = forma ? 0 : hashFnv1a(item.chave) % (quadros * desenho.ms);
+  // A outra forma fica no mesmo lugar da célula: só a linha do atlas muda.
+  const outra =
+    forma === "aberto"
+      ? tapeteAberto
+      : forma === "semBola"
+        ? conesSemBola
+        : null;
+  const linha = outra ? outra.linha : desenho.linha;
+  const ms = outra ? outra.ms : desenho.ms;
 
   return (
     <span

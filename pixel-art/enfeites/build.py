@@ -84,6 +84,13 @@ EXTRAS = [
     ("zen-aberto", 160, "tira-zen-aberto.png", "zen", 1.0),
 ]
 
+# Linhas derivadas por código, depois das extras: (nome no atlas, Enfeite de origem, x da célula onde o
+# objeto começa). O quadro 1 do Enfeite sem as colunas à esquerda de x, nos 4 quadros. Os cones sem a
+# bola: no Futebol ao vivo, a bola da cena sai dali e passa entre os cones (ADR 0082).
+DERIVADOS = [
+    ("craque-sem-bola", "craque", 13),
+]
+
 # Linhas de baixo (px da célula) que não se mexem: em todos os quadros, são as do quadro 1. O ChatGPT às
 # vezes redesenha a parte parada com 1 px de diferença, e o vaso tremeria junto com a planta.
 PARADO_EMBAIXO = {
@@ -159,7 +166,9 @@ def main():
     enfeites = ENFEITES[:len(bases)]
     extras = [e for e in EXTRAS if (AQUI / "fonte" / e[2]).exists() and BASE.exists()]
 
-    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * (len(enfeites) + len(extras))))
+    derivados = [d for d in DERIVADOS if d[1] in [c for c, _ in enfeites]]
+
+    atlas = Image.new("RGBA", (LADO * QUADROS, LADO * (len(enfeites) + len(extras) + len(derivados))))
     linhas_ts = []
     for linha, ((conquista, ms), base) in enumerate(zip(enfeites, bases)):
         tira = AQUI / "fonte" / f"tira-{linha + 1:02d}-{conquista}.png"
@@ -203,6 +212,17 @@ def main():
             f'  "{nome}": {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
             f'altura: {y1 - y0}, ms: {ms} }},')
 
+    for linha, (nome, origem, corte) in enumerate(derivados, start=len(enfeites) + len(extras)):
+        i = [c for c, _ in enfeites].index(origem)
+        quadro = atlas.crop((0, i * LADO, LADO, (i + 1) * LADO))
+        quadro.paste((0, 0, 0, 0), (0, 0, corte, LADO))
+        for coluna in range(QUADROS):
+            atlas.alpha_composite(quadro, (coluna * LADO, linha * LADO))
+        x0, y0, x1, y1 = quadro.getbbox()
+        linhas_ts.append(
+            f'  "{nome}": {{ linha: {linha}, esquerda: {x0}, largura: {x1 - x0}, '
+            f'altura: {y1 - y0}, ms: {dict(enfeites)[origem]} }},')
+
     atlas.save(AQUI / "saida" / "enfeites.png", optimize=True)
     shutil.copyfile(AQUI / "saida" / "enfeites.png", PUBLICO)
 
@@ -211,7 +231,7 @@ def main():
     fundo.resize((atlas.width * 4, atlas.height * 4), Image.NEAREST).save(AQUI / "preview" / "folha-4x.png")
 
     # Todas as linhas animadas lado a lado, 5 por linha, sobre o asfalto.
-    total = len(enfeites) + len(extras)
+    total = len(enfeites) + len(extras) + len(derivados)
     gif = []
     for coluna in range(QUADROS):
         quadro = Image.new("RGBA", (LADO * COLUNAS, LADO * -(-total // COLUNAS)), ASFALTO)
@@ -223,7 +243,8 @@ def main():
 
     print("\n// Cole em enfeitesNaPraca.ts (px do mestre 1×, dentro da célula de 40×40):")
     print("\n".join(linhas_ts))
-    print(f"\nsaida/enfeites.png {atlas.size}, {len(enfeites)} enfeites e {len(extras)} extras")
+    print(f"\nsaida/enfeites.png {atlas.size}, {len(enfeites)} enfeites, {len(extras)} extras e "
+          f"{len(derivados)} derivados")
 
 
 def _brilhar(base, de, ate):

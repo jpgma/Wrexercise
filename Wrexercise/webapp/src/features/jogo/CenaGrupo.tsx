@@ -1100,7 +1100,7 @@ function Praca({
                     reduzido={reduzido}
                     apagado={emFoco && !atuaNoFoco(item.usuarioId)}
                     aceso={isLuzAcesa(periodo)}
-                    aberto={treino.abertos.has(item.chave)}
+                    forma={treino.formas.get(item.chave)}
                     brilho={
                       encenacao.brilho &&
                       item.usuarioId === usuarioId &&

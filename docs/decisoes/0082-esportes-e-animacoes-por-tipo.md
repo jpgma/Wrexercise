@@ -70,7 +70,7 @@ A folha passa de 129 para 225 linhas (432 × 10 800). As folhas de 97 e de 129 l
   - Natação: dentro da piscininha, com a água cobrindo as pernas.
   - Yoga: no tapete, que se abre inteiro quando a pessoa chega e fica aberto até o fim do treino.
   - Calistenia: flexões nas paralelas enquanto espera a barra.
-  - Futebol: conduz a bola em zigue-zague entre os cones.
+  - Futebol: pega a bola dos cones e a conduz em zigue-zague entre eles, um cone de cada lado; no fim da fileira, faz embaixadinhas e volta. Enquanto isso, os cones ficam sem a bola (a linha `craque-sem-bola` do atlas, recortada por código).
   - Vôlei: ao lado da redinha.
   - Luta: de frente para o saco de pancada.
   - Outro esporte: chuta a bola no golzinho.
