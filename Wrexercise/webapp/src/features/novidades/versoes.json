@@ -1,5 +1,15 @@
 [
   {
+    "versao": "1.4.1",
+    "data": "2026-11-21",
+    "novidades": [
+      "Corrigido: na praça, quem nada agora aparece dentro da piscina 🏊",
+      "Corrigido: nas paralelas, o Avatar faz flexão de lado, com as mãos nas barras",
+      "Corrigido: a bola do vôlei não aparece mais na frente de quem está de costas",
+      "O selo AO VIVO encolhe pra um pontinho e deixa a praça livre"
+    ]
+  },
+  {
     "versao": "1.4.0",
     "data": "2026-11-21",
     "novidades": [

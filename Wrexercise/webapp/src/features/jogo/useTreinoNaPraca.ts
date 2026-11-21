@@ -55,6 +55,11 @@ const barra = (() => {
 const naTrave = { x: barra.x, y: barra.y - 8 * escala };
 /** À frente da barra, quem espera a vez faz flexões, lado a lado. */
 const EsperaDaBarra = { dy: 26, entre: 34 };
+/**
+ * As flexões nas paralelas, em px da praça: na direção `sudoeste`, as mãos ficam uns 10 px do mestre à
+ * esquerda da âncora, e as pegadas, uns 12 px acima da base do Enfeite. Os pés, mais acima, ficam atrás.
+ */
+const MaosNasParalelas = { dx: 10, dy: 28 };
 
 /** A pista das voltas: uma elipse por fora da dos avatares. */
 export type Pista = { cx: number; cy: number; rx: number; ry: number };
@@ -331,10 +336,11 @@ export function useTreinoNaPraca({
       ponto: { x: getLados(e).direita + 14, y: e.y + 2 },
       direcao: "sul",
     }));
-    // Dentro da piscina: a piscina fica na frente (a base dela é mais baixa) e cobre as pernas.
+    // Dentro da piscina: o Avatar fica na frente dela, e a água desenhada na animação cai sobre a da piscina.
     noEnfeite("Natacao", "natacao", (e) => ({
       ponto: { x: e.x, y: e.y - (e.desenho.altura * escala) / 3 },
       direcao: "sul",
+      z: Math.round(e.y) + 1,
     }));
     // Em cima do tapete e das paralelas: na frente deles, mesmo com os pés sobre o desenho.
     noEnfeite("Yoga", "yoga", (e) => ({
@@ -364,8 +370,12 @@ export function useTreinoNaPraca({
           }
           const paralelas = getEnfeiteDoTreino(enfeites, id, "Calistenia");
           const i = esperando.indexOf(id);
+          // Nas paralelas, olha para o sudoeste, de través nas duas barras, com as mãos nas pegadas.
           const ponto = paralelas
-            ? { x: paralelas.x, y: paralelas.y - 2 }
+            ? {
+                x: paralelas.x + MaosNasParalelas.dx,
+                y: paralelas.y - MaosNasParalelas.dy,
+              }
             : {
                 x:
                   barra.x +
@@ -373,7 +383,8 @@ export function useTreinoNaPraca({
                 y: barra.y + EsperaDaBarra.dy,
               };
           const z = paralelas ? Math.round(paralelas.y) + 1 : undefined;
-          irAte(id, ponto, () => atuar(id, ponto, "calistenia", "sul", 0, z));
+          const direcao: Direcao = paralelas ? "sudoeste" : "sul";
+          irAte(id, ponto, () => atuar(id, ponto, "calistenia", direcao, 0, z));
         });
         depois(TurnoBarraMs - (agora % TurnoBarraMs), turno);
       };
@@ -403,9 +414,12 @@ export function useTreinoNaPraca({
         });
         const virado: 1 | -1 = b.x >= a.x ? 1 : -1;
         const linha = esporte === "futebol" ? LinhaFutebol : LinhaVolei;
+        // A bola fica no lado para onde cada um olha: de costas (passe para o norte), atrás do corpo.
+        const d = distancia(a, b) || 1;
+        const passo = { x: ((b.x - a.x) / d) * 6, y: ((b.y - a.y) / d) * 6 };
         porBola(chaveBola, {
-          x: a.x + virado * 6,
-          y: a.y + 1,
+          x: a.x + passo.x,
+          y: a.y + passo.y,
           virado,
           rolando: false,
           ms: 0,
@@ -418,8 +432,8 @@ export function useTreinoNaPraca({
         );
         depois(contato, () =>
           porBola(chaveBola, {
-            x: b.x - virado * 6,
-            y: b.y + 1,
+            x: b.x - passo.x,
+            y: b.y - passo.y,
             virado,
             rolando: esporte === "futebol",
             ms: voo,

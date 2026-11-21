@@ -500,10 +500,23 @@ function BolhaAoVivo({
   deslocamento?: { transform?: string; transition: string };
 }) {
   const minutos = useMinutosDesde(startedAt);
+  // Depois de alguns segundos, a bolha encolhe até o ponto vermelho, para não cobrir a praça. Uma
+  // Torcida nova a abre de novo.
+  const [compacta, setCompacta] = useState(false);
+  const [torcidasVistas, setTorcidasVistas] = useState(torcidas);
+  if (torcidas !== torcidasVistas) {
+    setTorcidasVistas(torcidas);
+    setCompacta(false);
+  }
+  useEffect(() => {
+    if (compacta) return;
+    const t = window.setTimeout(() => setCompacta(true), BolhaAoVivoAbertaMs);
+    return () => window.clearTimeout(t);
+  }, [compacta]);
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-outline bg-surface px-1.5 text-2xs leading-tight font-semibold whitespace-nowrap shadow-sticker"
+      className="pointer-events-none absolute flex -translate-x-1/2 items-center rounded-full border-2 border-outline bg-surface px-1.5 text-2xs leading-tight font-semibold whitespace-nowrap shadow-sticker"
       style={{
         left: x,
         top: y,
@@ -514,14 +527,26 @@ function BolhaAoVivo({
       }}
     >
       <span
-        className={`size-1.5 rounded-full bg-danger ${reduzido ? "" : "motion-safe:animate-pulse"}`}
+        className={`size-1.5 shrink-0 rounded-full bg-danger ${reduzido ? "" : "motion-safe:animate-pulse"}`}
       />
-      AO VIVO
-      <span className="font-score">{minutos}′</span>
-      {torcidas > 0 && <span>📣{torcidas > 1 ? torcidas : ""}</span>}
+      <span
+        className={`flex items-center gap-1 overflow-hidden ${reduzido ? "" : "transition-[max-width,opacity,margin] duration-500 ease-out"}`}
+        style={{
+          maxWidth: compacta ? 0 : 120,
+          opacity: compacta ? 0 : 1,
+          marginLeft: compacta ? 0 : 4,
+        }}
+      >
+        AO VIVO
+        <span className="font-score">{minutos}′</span>
+        {torcidas > 0 && <span>📣{torcidas > 1 ? torcidas : ""}</span>}
+      </span>
     </span>
   );
 }
+
+/** Quanto tempo a bolha "AO VIVO" fica aberta antes de encolher até o ponto vermelho. */
+const BolhaAoVivoAbertaMs = 4000;
 
 /**
  * Sobre quem dorme e foi cutucado nas últimas 24 horas: o emoji da última cutucada e quantas foram,
