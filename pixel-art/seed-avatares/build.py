@@ -7,9 +7,14 @@ mantendo a luminosidade original, para preservar o sombreamento.
 
     python pixel-art/seed-avatares/build.py
 
-Grava scripts/seed/avatares/<nome>.png (usado pelo seed.bat) e saida/preview.png.
+Grava scripts/seed/avatares/<arquivo>.png (usado pelo seed.bat), a lista dos arquivos em
+scripts/seed/seed.sql e saida/preview.png. O arquivo tem 32 dígitos hexadecimais, como os que o app gera
+(ArmazenamentoAvatares): `5eed000` + n + o começo do MD5 da folha. O app manda o navegador guardar a folha
+como imutável, então o nome muda sempre que a folha muda.
 """
 import colorsys
+import hashlib
+import re
 import pathlib
 import sys
 
@@ -19,18 +24,19 @@ AQUI = pathlib.Path(__file__).resolve().parent
 RAIZ = AQUI.parents[1]
 BASE = RAIZ / "Wrexercise/webapp/public/avatar-base-masculino.png"
 DESTINO = RAIZ / "scripts/seed/avatares"
+SEED_SQL = RAIZ / "scripts/seed/seed.sql"
 
-# Nome do arquivo no seed: 32 dígitos hexadecimais, como os que o app gera (ArmazenamentoAvatares).
+# n: a pessoa em seed_pessoas (scripts/seed/seed.sql).
 # blusa e calca: (matiz em graus, saturação). cabelo: (matiz, saturação, fator de luminosidade).
 # pele: fator de luminosidade.
 PESSOAS = {
-    "ana": dict(arquivo="5eed0000000000000000000000000001", blusa=(350, 0.62), calca=(222, 0.38),
+    "ana": dict(n=1, blusa=(350, 0.62), calca=(222, 0.38),
                 cabelo=(265, 0.12, 0.75), pele=1.08),
-    "bruno": dict(arquivo="5eed0000000000000000000000000002", blusa=(172, 0.55), calca=(80, 0.18),
+    "bruno": dict(n=2, blusa=(172, 0.55), calca=(80, 0.18),
                   cabelo=(40, 0.60, 2.6), pele=0.78),
-    "carla": dict(arquivo="5eed0000000000000000000000000003", blusa=(275, 0.48), calca=(208, 0.45),
+    "carla": dict(n=3, blusa=(275, 0.48), calca=(208, 0.45),
                   cabelo=(14, 0.62, 1.7), pele=1.0),
-    "diego": dict(arquivo="5eed0000000000000000000000000004", blusa=(48, 0.75), calca=(0, 0.0),
+    "diego": dict(n=4, blusa=(48, 0.75), calca=(0, 0.0),
                   cabelo=(3, 0.25, 1.0), pele=0.6),
 }
 
@@ -79,18 +85,25 @@ def main():
     paleta = base.getpalette()
     cores = [tuple(paleta[i:i + 3]) for i in range(0, len(paleta), 3)]
     DESTINO.mkdir(parents=True, exist_ok=True)
+    for antigo in DESTINO.glob("5eed*.png"):
+        antigo.unlink()
 
     folhas = [base]
+    arquivos = []
     for nome, pessoa in PESSOAS.items():
         # O índice 0 é o transparente: fica como está.
         nova = [cores[0]] + [tingir(c, pessoa) for c in cores[1:]]
         folha = base.copy()
         folha.putpalette([v for c in nova for v in c])
-        png = DESTINO / f"{pessoa['arquivo']}.png"
-        folha.save(png, optimize=True, transparency=0)
+        tmp = DESTINO / "folha.tmp.png"
+        folha.save(tmp, optimize=True, transparency=0)
+        md5 = hashlib.md5(tmp.read_bytes()).hexdigest()
+        png = tmp.replace(DESTINO / f"5eed000{pessoa['n']}{md5[:24]}.png")
         verificar(png)
         print(f"{nome}: {png.relative_to(RAIZ)} ({png.stat().st_size} bytes)")
+        arquivos.append((pessoa["n"], png.name))
         folhas.append(folha)
+    gravar_lista(arquivos)
 
     # Pré-visualização: a linha de rotação (8 direções, 48 px) de cada folha, ampliada 4x.
     escala = 4
@@ -100,6 +113,17 @@ def main():
         prev.alpha_composite(linha, (0, i * 48 * escala))
     (AQUI / "saida").mkdir(exist_ok=True)
     prev.save(AQUI / "saida/preview.png")
+
+
+def gravar_lista(arquivos):
+    """Troca a lista de arquivos entre os marcadores do seed.sql."""
+    sql = SEED_SQL.read_text(encoding="utf-8")
+    linhas = ",\n".join(f"    ({n}, '{arquivo}')" for n, arquivo in arquivos)
+    novo, trocas = re.subn(r"(-- avatares:inicio).*?(\n\s*-- avatares:fim)", lambda m: m[1] + "\n" + linhas + m[2], sql,
+                           flags=re.S)
+    if trocas != 1:
+        sys.exit(f"{SEED_SQL}: marcadores avatares:inicio e avatares:fim não encontrados")
+    SEED_SQL.write_bytes(novo.encode("utf-8"))
 
 
 def verificar(png):

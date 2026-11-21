@@ -212,9 +212,20 @@ WHERE a.grupo_id = '5eed0000-0000-4000-8000-0000000000a0'
 -- ---------------------------------------------------------------------------------------------------------
 -- 4. Avatares tingidos (scripts/seed/avatares, copiados pelo seed.bat) e vitrines.
 -- ---------------------------------------------------------------------------------------------------------
+-- O nome do arquivo muda com o conteúdo da folha: o navegador guarda a folha como imutável, e um nome
+-- fixo deixaria a folha antiga no cache. A lista entre os marcadores é gravada pelo
+-- pixel-art/seed-avatares/build.py; não a edite à mão.
 INSERT INTO avatares (usuario_id, arquivo, vitrine, enfeites_vistos)
-SELECT p.id, '5eed000000000000000000000000000' || p.n || '.png', p.vitrine, p.vistos
-FROM seed_pessoas p;
+SELECT p.id, f.arquivo, p.vitrine, p.vistos
+FROM seed_pessoas p
+JOIN (VALUES
+    -- avatares:inicio
+    (1, '5eed000166b4c413b7e2537a0a18d8d2.png'),
+    (2, '5eed0002256a4b51585e19e3d6178dea.png'),
+    (3, '5eed0003842fc8ea7293c2cb21b0ecc0.png'),
+    (4, '5eed0004eda981f9a7b4cc8310ec29ec.png')
+    -- avatares:fim
+) AS f (n, arquivo) USING (n);
 
 -- Resumo para o seed.bat mostrar.
 SELECT p.nome, p.email, count(a.id) AS atividades_verificadas,

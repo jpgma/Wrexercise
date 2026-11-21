@@ -27,7 +27,7 @@ Cada conta tem cerca de 2.200 a 2.700 de Energia e entre 12 e 15 conquistas. As 
 
 - **Desafios:** "Projeto verão", encerrado, com 14 semanas, 3 treinos de 30 min. "Rumo aos 100", ativo, com 12 semanas, 4 dias de 40 min e a meta por tipo "Pedal ou corrida" (25 min).
 - **Atividades:** no máximo uma por dia e pessoa, todas `Verificada` e `RegistroManual`, de 20 semanas atrás até ontem. Segunda, terça, quinta e sábado são obrigatórios e cumprem as metas dos dois desafios. Nos outros dias, a atividade é sorteada. Parte das atividades tem "deu moral" dos colegas.
-- **Avatares:** `scripts/seed/avatares/5eed…000N.png`, copiados para `%LOCALAPPDATA%\Wrexercise\local\avatares`.
+- **Avatares:** `scripts/seed/avatares/5eed000N….png`, copiados para `%LOCALAPPDATA%\Wrexercise\local\avatares`. O nome termina com o começo do MD5 da folha: o app manda o navegador guardar a folha como imutável, então uma folha nova precisa de um nome novo. O `build.py` grava os nomes no `seed.sql`, e o `seed.bat` apaga as folhas `5eed*` antigas antes de copiar.
 
 O sorteio é fixo (vem de `md5`), então o seed é reproduzível. As datas são relativas a hoje: rodar de novo mantém o desafio ativo e as sequências em dia.
 

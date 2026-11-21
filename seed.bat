@@ -36,6 +36,8 @@ if defined RESET (
 
 echo ==^> Copiando os avatares tingidos para %AVATARES_DIR%
 if not exist "%AVATARES_DIR%" mkdir "%AVATARES_DIR%"
+rem O nome muda com a folha (pixel-art/seed-avatares/build.py): apaga as folhas de seeds anteriores.
+if exist "%AVATARES_DIR%\5eed*.png" del /q "%AVATARES_DIR%\5eed*.png"
 copy /y scripts\seed\avatares\*.png "%AVATARES_DIR%\" >nul
 if errorlevel 1 goto :fail
 
