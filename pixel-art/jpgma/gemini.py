@@ -1,8 +1,8 @@
-"""Quadros das animações de dormir do `jpgma` a partir das folhas geradas no Gemini.
+"""Quadros das animações de dormir e dos esportes do `jpgma` a partir das folhas geradas.
 
-Cada folha fica em fonte/gemini/<animacao>-<direcao>.png (por exemplo dormindo-south.png): uma
-grade de quadros sobre magenta, gerada com os prompts de prompts-gemini.md a partir de
-saida/referencia-gemini/<direcao>.png. É a versão do `jpgma` de
+Cada folha fica em fonte/gemini/<animacao>-<direcao>.png (dormir, prompts-gemini.md) ou em
+fonte/chatgpt/<animacao>-<direcao>.png (esportes, prompts-chatgpt.md): uma grade de quadros
+sobre magenta, gerada a partir de saida/referencia-gemini/<direcao>.png. É a versão do `jpgma` de
 pixel-art/base-masculino/gemini.py. Para cada folha, este script:
 - separa cada quadro do magenta e descarta as manchas soltas;
 - reduz todos com a mesma escala, a do quadro de calibração (a cópia da pose parada): a altura
@@ -12,7 +12,7 @@ pixel-art/base-masculino/gemini.py. Para cada folha, este script:
   pernas); os outros acompanham as pernas dele, e os sentados ficam sobre o primeiro sentado de
   `dormindo`, para a troca entre as animações não pular.
 
-Uso: python gemini.py [arquivo ...]   (sem argumentos: todas as folhas de fonte/gemini/)
+Uso: python gemini.py [arquivo ...]   (sem argumentos: as folhas de fonte/gemini/ e fonte/chatgpt/)
 Gera saida/gemini/<animacao>-<direcao>.png (os quadros lado a lado, 48×48 cada) e
 preview/gemini-<animacao>-<direcao>-6x.png (a pose parada e os quadros).
 """
@@ -26,25 +26,38 @@ from collections import deque
 from PIL import Image
 
 AQUI = pathlib.Path(__file__).resolve().parent
-FONTE = AQUI / "fonte" / "gemini"
+FONTES = [AQUI / "fonte" / "gemini", AQUI / "fonte" / "chatgpt"]
 SAIDA = AQUI / "saida" / "gemini"
 FOLHA = AQUI / "saida" / "jpgma.png"
 
 N = 48  # célula da folha
 DIRECOES = ["south", "southeast", "east", "northeast", "north", "northwest", "west", "southwest"]
 
-# As 18 cores do `jpgma` (PALETA do build.py); a primeira é o contorno.
+# As 18 cores do personagem `jpgma` (as 18 primeiras da PALETA do build.py); a primeira é o contorno.
 PALETA = [
     "#0e071b", "#150b0d", "#1c1215", "#1f1a21", "#282128", "#291a1b", "#2f2930", "#322c33",
     "#363037", "#392627", "#493334", "#8a523e", "#c26c4d", "#dcd1d9", "#e0855a", "#f7a972",
     "#e74647", "#702623",
 ]
 
-# Células de cada folha e a grade (colunas, linhas) por quantidade de células.
-QUADROS = {"dormindo": 4, "adormecer": 8, "acordar": 6, "levantar": 8}
-GRADES = {4: (2, 2), 6: (3, 2), 8: (4, 2)}
-# Célula de pé, cópia da referência, de onde saem a escala e o chão.
-CALIBRACAO = {"dormindo": 0, "adormecer": 0, "acordar": 0, "levantar": 7}
+# Células de cada folha e a grade (colunas, linhas) por quantidade de células. Nas dos esportes, a
+# 1ª é a pose parada (calibração) e, nas de 6 e 8, a última é outra cópia dela, que só fecha a grade.
+QUADROS = {
+    "dormindo": 4, "adormecer": 8, "acordar": 6, "levantar": 8,
+    "musculacao": 8, "ciclismo": 8, "natacao": 8, "yoga": 6, "calistenia": 6, "barra": 8,
+    "volei": 8, "manchete": 6, "futebol": 9, "chutar": 8, "luta": 8, "largada": 8,
+}
+GRADES = {4: (2, 2), 6: (3, 2), 8: (4, 2), 9: (3, 3)}
+# Célula de pé, cópia da referência, de onde saem a escala e o chão, quando não é a 1ª.
+CALIBRACAO = {"levantar": 7}
+# Cores dos objetos dos esportes, além das do `jpgma` (as mesmas do base masculino, da paleta dos
+# Enfeites). A bola de futebol usa o branco e o contorno do personagem.
+EXTRAS = {
+    "musculacao": ["#ff684a", "#c4432c"],
+    "ciclismo": ["#ff684a", "#c4432c", "#5f6783"],
+    "natacao": ["#4aa8ff", "#2f7fd6", "#a58cf4", "#4b35a6"],
+    "volei": ["#ffd34e", "#4aa8ff"],
+}
 # Células que ficam no chão da calibração, mesmo que o Gemini as desenhe 1 ou 2 px acima (as
 # outras guardam a altura em relação a ela: o 3º de `acordar` é o susto, no ar).
 NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 5), "levantar": range(8)}
@@ -76,7 +89,7 @@ MARRONS = {CORES[5], CORES[9], CORES[10]}  # cabelo e barba
 CINZAS = {CORES[3], CORES[4], CORES[6], CORES[7], CORES[8]}  # camiseta e calça
 
 
-def mais_proxima(p) -> tuple[int, int, int]:
+def mais_proxima(p, extras=()) -> tuple[int, int, int]:
     """A cor de PALETA mais próxima, sem trocar de material: o Gemini às vezes esquenta a folha,
     e aí a roupa cairia no marrom do cabelo e o cabelo no vermelho da boca. Vermelho só para
     bloco bem vermelho; marrom só para bloco quente, e cinza só para bloco neutro."""
@@ -85,7 +98,8 @@ def mais_proxima(p) -> tuple[int, int, int]:
     if r < 2.2 * max(g, b):
         fora |= VERMELHOS
     fora |= CINZAS if r >= 1.4 * g and b < 0.85 * r else MARRONS
-    return min((c for c in CORES if c not in fora), key=lambda c: sum((a - b) ** 2 for a, b in zip(p, c)))
+    cores = [c for c in CORES if c not in fora] + list(extras)
+    return min(cores, key=lambda c: sum((a - b) ** 2 for a, b in zip(p, c)))
 
 
 def mascara(px, x0, y0, w, h, area_min) -> set[tuple[int, int]]:
@@ -107,7 +121,7 @@ def mascara(px, x0, y0, w, h, area_min) -> set[tuple[int, int]]:
     return m
 
 
-def reduzir(px, x0, y0, m, bx, by, tw, th, escala) -> dict[tuple[int, int], tuple]:
+def reduzir(px, x0, y0, m, bx, by, tw, th, escala, extras) -> dict[tuple[int, int], tuple]:
     """Cor de cada bloco: a de PALETA mais próxima da média do miolo; vazio quando o bloco é
     mais magenta."""
     grade = {}
@@ -123,7 +137,7 @@ def reduzir(px, x0, y0, m, bx, by, tw, th, escala) -> dict[tuple[int, int], tupl
                         for k, v in enumerate(px[x0 + sx, y0 + sy]):
                             soma[k] += v
             if total and dentro >= total / 2:
-                grade[(tx, ty)] = mais_proxima(tuple(v / dentro for v in soma))
+                grade[(tx, ty)] = mais_proxima(tuple(v / dentro for v in soma), extras)
     return grade
 
 
@@ -182,7 +196,8 @@ def processar(arq: pathlib.Path) -> None:
         xs = [x for x, _ in m]
         ys = [y for _, y in m]
         celulas.append((x0, y0, m, min(xs), min(ys), max(xs) + 1, max(ys) + 1))
-    k = CALIBRACAO[animacao]
+    k = CALIBRACAO.get(animacao, 0)
+    extras = [rgb(c) for c in EXTRAS.get(animacao, [])]
     y1max = celulas[k][6]
     escala = (y1max - celulas[k][4]) / alt_ref
 
@@ -190,7 +205,7 @@ def processar(arq: pathlib.Path) -> None:
     grades = []
     for x0, y0, m, xmin, ymin, xmax, ymax in celulas:
         tw, th = round((xmax - xmin) / escala), round((ymax - ymin) / escala)
-        grades.append((desenhar(reduzir(px, x0, y0, m, xmin, ymin, tw, th, escala)), th))
+        grades.append((desenhar(reduzir(px, x0, y0, m, xmin, ymin, tw, th, escala, extras)), th))
 
     # 3. Posição na célula de 48: as pernas onde estão na `rotacao`; a altura acompanha a
     #    calibração pela linha do chão.
@@ -199,7 +214,7 @@ def processar(arq: pathlib.Path) -> None:
     quadros: list[dict] = [{} for _ in range(n)]
     for i in sorted(range(n), key=lambda i: (i != k, i)):
         grade, th = grades[i]
-        no_chao = i in NO_CHAO[animacao]
+        no_chao = i in NO_CHAO.get(animacao, ())
         dy = 0 if no_chao else round((celulas[i][6] - y1max) / escala)
         if no_chao:  # a limpeza pode tirar a linha de baixo: mede pelo desenho
             th = max(ty for _, ty in grade) + 1
@@ -208,7 +223,7 @@ def processar(arq: pathlib.Path) -> None:
         q = {(ox + tx, oy + ty): c for (tx, ty), c in grade.items()}
         # Os sentados ficam sobre o primeiro sentado (o de `dormindo`): o deslocamento que mais
         # repete as linhas de baixo dele.
-        if i in SENTADOS[animacao]:
+        if i in SENTADOS.get(animacao, ()):
             if sentado is None and animacao == "dormindo":
                 sentado = q
             elif sentado is not None:
@@ -243,9 +258,9 @@ def processar(arq: pathlib.Path) -> None:
 
 
 def main() -> None:
-    arquivos = [pathlib.Path(a) for a in sys.argv[1:]] or sorted(FONTE.glob("*.png"))
+    arquivos = [pathlib.Path(a) for a in sys.argv[1:]] or sorted(a for f in FONTES for a in f.glob("*.png"))
     if not arquivos:
-        raise SystemExit("nenhuma folha em fonte/gemini/")
+        raise SystemExit("nenhuma folha em fonte/gemini/ nem em fonte/chatgpt/")
     # `dormindo` primeiro: os sentados das outras animações se apoiam nele.
     for arq in sorted(arquivos, key=lambda a: not a.stem.startswith("dormindo-")):
         processar(arq)

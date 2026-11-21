@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 6192,
+  "altura": 10800,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -118,6 +118,78 @@
       "quadros": 8,
       "ms": 120,
       "origem": "Gemini"
+    },
+    "musculacao": {
+      "linha": 129,
+      "quadros": 6,
+      "ms": 120,
+      "origem": "ChatGPT"
+    },
+    "ciclismo": {
+      "linha": 137,
+      "quadros": 6,
+      "ms": 80,
+      "origem": "ChatGPT"
+    },
+    "natacao": {
+      "linha": 145,
+      "quadros": 6,
+      "ms": 110,
+      "origem": "ChatGPT"
+    },
+    "yoga": {
+      "linha": 153,
+      "quadros": 4,
+      "ms": 400,
+      "origem": "ChatGPT"
+    },
+    "calistenia": {
+      "linha": 161,
+      "quadros": 4,
+      "ms": 150,
+      "origem": "ChatGPT"
+    },
+    "barra": {
+      "linha": 169,
+      "quadros": 6,
+      "ms": 120,
+      "origem": "ChatGPT"
+    },
+    "volei": {
+      "linha": 177,
+      "quadros": 6,
+      "ms": 100,
+      "origem": "ChatGPT"
+    },
+    "manchete": {
+      "linha": 185,
+      "quadros": 4,
+      "ms": 100,
+      "origem": "ChatGPT"
+    },
+    "futebol": {
+      "linha": 193,
+      "quadros": 8,
+      "ms": 90,
+      "origem": "ChatGPT"
+    },
+    "chutar": {
+      "linha": 201,
+      "quadros": 6,
+      "ms": 80,
+      "origem": "ChatGPT"
+    },
+    "luta": {
+      "linha": 209,
+      "quadros": 6,
+      "ms": 80,
+      "origem": "ChatGPT"
+    },
+    "largada": {
+      "linha": 217,
+      "quadros": 6,
+      "ms": 120,
+      "origem": "ChatGPT"
     }
   },
   "paleta": [
@@ -138,7 +210,15 @@
     "#e0855a",
     "#f7a972",
     "#e74647",
-    "#702623"
+    "#702623",
+    "#ff684a",
+    "#c4432c",
+    "#5f6783",
+    "#4aa8ff",
+    "#2f7fd6",
+    "#a58cf4",
+    "#4b35a6",
+    "#ffd34e"
   ],
-  "sha256": "b74a788d3eeaa29f148f7c59c16069d52a04de1ae315fe2071d0ceeaf93d296b"
+  "sha256": "4a7e05c6f6cc71694faea16aa8ed82464261ac95d0cf12203443a929f7f6a077"
 }

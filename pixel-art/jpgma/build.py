@@ -1,7 +1,7 @@
 """Avatar `jpgma` em 8 direções (docs/decisoes/0039-avatar-em-8-direcoes.md, proposta).
 
 A fonte da verdade é fonte/jpgma.aseprite, editado à mão no Aseprite: um quadro de 48×48 por célula
-da folha, na ordem de ANIMACOES e depois de DORMIR (a `rotacao`, depois cada animação × 8 direções, uma tag
+da folha, na ordem de ANIMACOES, depois de DORMIR e de ESPORTES (a `rotacao`, depois cada animação × 8 direções, uma tag
 `animacao-direcao` por trecho). O build só lê esse arquivo, confere o formato e a paleta e monta a
 folha; ele nunca escreve no .aseprite.
 
@@ -10,11 +10,13 @@ Taking_Punch), com o ruído de cor levado para a paleta e recortadas de 64×64 p
 O `parado` (respiração) foi desenhado sobre a `rotacao`. Desde 2026-11-09, tudo se edita no .aseprite.
 
 As 4 animações de dormir (DORMIR) vêm do Gemini: o gemini.py reduz as folhas de fonte/gemini/ e o
-dormir.py acrescentou os quadros ao fim do .aseprite, uma vez (prompts em prompts-gemini.md).
+dormir.py acrescentou os quadros ao fim do .aseprite, uma vez (prompts em prompts-gemini.md). As 12
+dos esportes (ESPORTES) vêm do ChatGPT: o gemini.py reduz as folhas de fonte/chatgpt/ e o esportes.py
+acrescentou os quadros depois das de dormir, uma vez (prompts em prompts-chatgpt.md).
 
 Desde 2026-11-10, a folha padrão do aplicativo é o base masculino (pixel-art/base-masculino/). A folha
 do `jpgma` fica fora do bundle: saida/jpgma-importar.png é a mesma folha em PNG indexado, no formato de
-129 linhas, pronta para importar em /perfil/avatar. As animações que o `jpgma` não tem repetem as linhas
+225 linhas, pronta para importar em /perfil/avatar. As animações que o `jpgma` não tem repetem as linhas
 de outra (EMPRESTADAS), como o aplicativo fazia quando ela era a padrão.
 
 Uso: python build.py   (exige Pillow e o pixel-plugin configurado; ver docs/avatar-kit.md §6)
@@ -69,13 +71,31 @@ DORMIR = [
     ("acordar", 5, 110),
     ("levantar", 8, 120),
 ]
-TOTAL = len(DIRECOES) * (1 + sum(qt for _, qt, _ in ANIMACOES + DORMIR))
+# As 12 animações dos esportes (docs/decisoes/0082-esportes-e-animacoes-por-tipo.md), depois das de
+# dormir: (nome, quadros por direção, tempo por quadro em ms), os mesmos do base masculino.
+ESPORTES = [
+    ("musculacao", 6, 120),
+    ("ciclismo", 6, 80),
+    ("natacao", 6, 110),
+    ("yoga", 4, 400),
+    ("calistenia", 4, 150),
+    ("barra", 6, 120),
+    ("volei", 6, 100),
+    ("manchete", 4, 100),
+    ("futebol", 8, 90),
+    ("chutar", 6, 80),
+    ("luta", 6, 80),
+    ("largada", 6, 120),
+]
+TOTAL = len(DIRECOES) * (1 + sum(qt for _, qt, _ in ANIMACOES + DORMIR + ESPORTES))
 
-# As 16 cores do PixelLab e os dois vermelhos da boca.
+# As 16 cores do PixelLab, os dois vermelhos da boca e as cores dos objetos dos esportes (EXTRAS do
+# gemini.py: anilhas e bicicleta coral, aros cinza, água azul, óculos violeta e bola de vôlei amarela).
 PALETA = [
     "#0e071b", "#150b0d", "#1c1215", "#1f1a21", "#282128", "#291a1b", "#2f2930", "#322c33",
     "#363037", "#392627", "#493334", "#8a523e", "#c26c4d", "#dcd1d9", "#e0855a", "#f7a972",
     "#e74647", "#702623",
+    "#ff684a", "#c4432c", "#5f6783", "#4aa8ff", "#2f7fd6", "#a58cf4", "#4b35a6", "#ffd34e",
 ]
 
 
@@ -138,11 +158,12 @@ def montar(quadros: list[dict]) -> tuple[list[list[dict]], dict]:
         info = meta["animacoes"][origem]
         meta["animacoes"][nome] = {**info, "linha": len(linhas), "origem": origem}
         linhas.extend(linhas[info["linha"]:info["linha"] + len(DIRECOES)])
-    for nome, qt, ms in DORMIR:
-        meta["animacoes"][nome] = {"linha": len(linhas), "quadros": qt, "ms": ms, "origem": "Gemini"}
-        for _ in DIRECOES:
-            linhas.append(quadros[i:i + qt])
-            i += qt
+    for grupo, origem in ((DORMIR, "Gemini"), (ESPORTES, "ChatGPT")):
+        for nome, qt, ms in grupo:
+            meta["animacoes"][nome] = {"linha": len(linhas), "quadros": qt, "ms": ms, "origem": origem}
+            for _ in DIRECOES:
+                linhas.append(quadros[i:i + qt])
+                i += qt
     return linhas, meta
 
 
