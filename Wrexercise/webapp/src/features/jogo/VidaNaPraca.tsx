@@ -4,12 +4,12 @@ import type { BolaEmCena, FasePombo, PomboEmCena } from "./useVidaNaPraca";
 
 /**
  * Sprites de `ambiente.png` (pixel-art/ambiente/): células de 16 px, mostradas em 2×, 4 colunas e
- * 7 linhas. Linhas 0 a 2: pombo bicando, andando e voando; 3: bola; 4: luminárias; 5: o "Zzz" de
- * quem dorme; 6: a bolha de sonho.
+ * 9 linhas. Linhas 0 a 2: pombo bicando, andando e voando; 3: bola; 4: luminárias; 5: o "Zzz" de
+ * quem dorme; 6: a bolha de sonho; 7 e 8: as bolas de futebol e de vôlei do treino ao vivo.
  */
 const escala = 2;
 const celula = 16 * escala;
-const folha = { colunas: 4, linhas: 7 };
+const folha = { colunas: 4, linhas: 9 };
 /** Cada letra do "Zzz" sobe em 4 quadros. */
 const ZzzMs = 450;
 /** A bolha de sonho abre em 4 quadros e some no fim deles. */
@@ -107,11 +107,23 @@ export function Bola({ bola }: { bola: BolaEmCena }) {
         className="sombra-cena absolute"
         style={{ left: metade - 8, top: celula - 3, width: 16, height: 4 }}
       />
-      <Quadro
-        linha={3}
-        ms={bola.rolando ? 90 : undefined}
-        virado={bola.virado}
-      />
+      {/* No arco, só a bola sobe: a sombra fica no chão. A chave recomeça o arco a cada voo. */}
+      <span
+        key={`${bola.x},${bola.y}`}
+        className={`block ${bola.arco && bola.ms ? "bola-arco" : ""}`}
+        style={
+          {
+            "--arco": `${bola.arco ?? 0}px`,
+            "--ms": `${bola.ms}ms`,
+          } as CSSProperties
+        }
+      >
+        <Quadro
+          linha={bola.linha ?? 3}
+          ms={bola.rolando ? 90 : undefined}
+          virado={bola.virado}
+        />
+      </span>
     </span>
   );
 }

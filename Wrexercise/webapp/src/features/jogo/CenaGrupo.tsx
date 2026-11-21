@@ -52,6 +52,7 @@ import { useDespertos } from "./useDespertos";
 import { useEntrada } from "./useEntrada";
 import { type EfeitoFoco, useFoco } from "./useFoco";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
+import { type Pista, useTreinoNaPraca } from "./useTreinoNaPraca";
 import { useVidaNaPraca } from "./useVidaNaPraca";
 import { VitrineFoco } from "./VitrineFoco";
 import { isLuzAcesa, usePeriodoDoDia } from "./periodoDoDia";
@@ -136,14 +137,35 @@ function getRivaisEmCena(rivais: Rival[] | undefined): RivalEmCena[] {
     }));
 }
 
+/** Os raios da elipse para `n` membros: encolhe com menos gente, até o mínimo. */
+function getRaios(n: number) {
+  const fracao = Math.min(n, GrupoCheio) / GrupoCheio;
+  return {
+    raioX: Math.max(elipse.raioX.min, elipse.raioX.max * fracao),
+    raioY: Math.max(elipse.raioY.min, elipse.raioY.max * fracao),
+  };
+}
+
+/**
+ * A pista de quem dá voltas no treino ao vivo (Corrida, Caminhada, Ciclismo): por fora da elipse, sem
+ * sair da praça.
+ */
+function getPista(n: number): Pista {
+  const { raioX, raioY } = getRaios(n);
+  return {
+    cx: centroX,
+    cy: elipse.centroY,
+    rx: Math.min(raioX + 28, centroX - 16),
+    ry: Math.min(raioY + 22, altura - elipse.centroY - 14),
+  };
+}
+
 /** Quem vê a tela fica na frente (embaixo); os demais seguem a ordem de entrada ao redor. */
 function posicionar(membros: MembroCena[], usuarioId: string): Posicao[] {
   const n = membros.length;
   const { centroY } = elipse;
   if (n === 1) return [{ x: centroX, y: centroY }];
-  const fracao = Math.min(n, GrupoCheio) / GrupoCheio;
-  const raioX = Math.max(elipse.raioX.min, elipse.raioX.max * fracao);
-  const raioY = Math.max(elipse.raioY.min, elipse.raioY.max * fracao);
+  const { raioX, raioY } = getRaios(n);
   // Treino junto (ADR 0078): quem treina ao vivo fica lado a lado, logo depois de quem vê.
   const outros = membros
     .filter((m) => m.usuarioId !== usuarioId)
@@ -334,7 +356,7 @@ function AvatarCena({
           top: posicao.y - alturaCorpo * escala,
           width: corpo.largura * escala,
           height: (alturaCorpo + 1) * escala,
-          zIndex: Math.round(posicao.y + (atuacao?.dy ?? 0)),
+          zIndex: atuacao?.z ?? Math.round(posicao.y + (atuacao?.dy ?? 0)),
           ...deslocamento,
         }}
       >
@@ -406,7 +428,7 @@ function AvatarCena({
         </span>
       </button>
       {/* A bolha "AO VIVO" fica acima de tudo, até dos nomes: quem treina agora não some atrás de ninguém. */}
-      {aoVivo && !atuacao && (
+      {aoVivo && (!atuacao || atuacao.aoVivo) && (
         <BolhaAoVivo
           x={posicao.x}
           y={posicao.y - alturaCorpo * escala - 22}
@@ -414,6 +436,8 @@ function AvatarCena({
           torcidas={aoVivo.torcidas}
           reduzido={reduzido}
           apagado={apagado}
+          // Nas voltas e na barra, a bolha vai junto com o Avatar.
+          deslocamento={atuacao ? deslocamento : undefined}
         />
       )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
@@ -463,6 +487,7 @@ function BolhaAoVivo({
   torcidas,
   reduzido,
   apagado,
+  deslocamento,
 }: {
   x: number;
   y: number;
@@ -471,6 +496,8 @@ function BolhaAoVivo({
   reduzido: boolean;
   /** Durante o Foco em outra pessoa, a bolha apaga junto com o Avatar. */
   apagado: boolean;
+  /** O deslocamento do Avatar no treino ao vivo na praça. */
+  deslocamento?: { transform?: string; transition: string };
 }) {
   const minutos = useMinutosDesde(startedAt);
   return (
@@ -482,6 +509,8 @@ function BolhaAoVivo({
         top: y,
         zIndex: 1001,
         opacity: apagado ? 0.45 : undefined,
+        transform: deslocamento?.transform,
+        transition: deslocamento?.transition,
       }}
     >
       <span
@@ -900,10 +929,20 @@ function Praca({
     reduzido,
     comPombos: periodo !== "noite",
   });
+  const pista = useMemo(() => getPista(membros.length), [membros.length]);
+  const treino = useTreinoNaPraca({
+    membros,
+    posicoes: porUsuario,
+    enfeites,
+    pista,
+    pausado: aguardar,
+    reduzido,
+  });
   const getAtuacao = (id: string) =>
     entrada.atuacoes.get(id) ??
     foco.atuacoes.get(id) ??
     encenacao.atuacoes.get(id) ??
+    treino.atuacoes.get(id) ??
     vida.atuacoes.get(id);
   /** Quem atua na encenação, ou a carta que voa até alguém, mostra o nome. */
   const emEncenacao = (id: string) =>
@@ -1027,23 +1066,28 @@ function Praca({
                   }}
                 />
               ))}
-              {enfeites.map((item) => (
-                <EnfeiteNoChao
-                  key={item.chave}
-                  item={item}
-                  reduzido={reduzido}
-                  apagado={emFoco && !atuaNoFoco(item.usuarioId)}
-                  aceso={isLuzAcesa(periodo)}
-                  brilho={
-                    encenacao.brilho &&
-                    item.usuarioId === usuarioId &&
-                    enfeitesNovos.includes(item.enfeite.codigo)
-                  }
-                />
-              ))}
+              {enfeites
+                .filter((item) => !treino.ocultos.has(item.chave))
+                .map((item) => (
+                  <EnfeiteNoChao
+                    key={item.chave}
+                    item={item}
+                    reduzido={reduzido}
+                    apagado={emFoco && !atuaNoFoco(item.usuarioId)}
+                    aceso={isLuzAcesa(periodo)}
+                    brilho={
+                      encenacao.brilho &&
+                      item.usuarioId === usuarioId &&
+                      enfeitesNovos.includes(item.enfeite.codigo)
+                    }
+                  />
+                ))}
               <ObjetosPraca portaAberta={entrada.portaAberta} />
               {vida.pombo && <Pombo pombo={vida.pombo} />}
               {vida.bola && <Bola bola={vida.bola} />}
+              {treino.bolas.map((bola, i) => (
+                <Bola key={i} bola={bola} />
+              ))}
               <LuzDaPraca periodo={periodo} />
               {encenacao.carta && (
                 <CartaVoando

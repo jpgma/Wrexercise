@@ -529,7 +529,7 @@ A vitrine é uma lista de **códigos de Enfeite** (a família: `planta`, `kettle
 
 A Calistenia combina com a direção criativa: é o treino da praça. Por isso:
 
-- O chão da praça (§4.4) tem uma barra fixa num canto, como cenário.
+- O chão da praça (§4.4) tem uma barra fixa num canto. No treino ao vivo, quem faz Calistenia reveza nela, em turnos de 20 segundos, e quem espera faz flexões à frente dela ou nas próprias Paralelas (ADR 0082).
 - A conquista `PesoDoCorpo` libera as Paralelas, um Enfeite que conversa com a barra da praça.
 - Nenhuma carta ou missão favorece a Calistenia. Ela conta como qualquer outro tipo para VARIEDADE, para o bônus de tipo novo (§5.2) e para `Ecletico`.
 

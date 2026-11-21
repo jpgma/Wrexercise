@@ -26,6 +26,10 @@ export type BolaEmCena = {
   rolando: boolean;
   ms: number;
   curva: "linear" | "ease-out";
+  /** A linha da bola em `ambiente.png`: 3 (a da vida na praça), 7 (futebol) ou 8 (vôlei). */
+  linha?: number;
+  /** A bola voa num arco desta altura (px, negativa para cima) enquanto vai até `x`/`y`. */
+  arco?: number;
 };
 
 /**

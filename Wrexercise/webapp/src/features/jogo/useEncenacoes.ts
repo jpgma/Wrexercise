@@ -26,6 +26,10 @@ export type Atuacao = {
   oculto?: boolean;
   /** Segura a animação neste quadro, sem animar. */
   quadro?: number;
+  /** O treino ao vivo na praça (useTreinoNaPraca): a bolha "AO VIVO" acompanha o Avatar. */
+  aoVivo?: boolean;
+  /** Fica na frente de tudo que tem a base acima desta linha (um tapete, as paralelas). */
+  z?: number;
 };
 
 /** A carta em cena: voando entre dois pontos, saindo pelo lado ou caindo no lugar. */

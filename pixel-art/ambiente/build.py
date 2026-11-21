@@ -9,7 +9,8 @@ A posição na célula não vem da fonte, onde o Gemini moveu o pombo de um quad
 linha tem uma âncora fixa, para a animação não tremer.
 
 As linhas 5 (o "Zzz" de quem dorme) e 6 (a bolha de sonho) não vêm da fonte: são desenhadas aqui,
-como a bola.
+como a bola. As linhas 7 (a bola de futebol) e 8 (a de vôlei) também: são as bolas do treino ao vivo
+de Futebol, Vôlei e Outro esporte (docs/decisoes/0082-esportes-e-animacoes-por-tipo.md).
 
 Uso: python build.py   (gera saida/ambiente.png e preview/ambiente-4x.png;
 copie saida/ambiente.png para Wrexercise/webapp/public/ambiente.png)
@@ -27,7 +28,7 @@ from pixelstudio import Sprite, hex2rgba, nearest  # noqa: E402
 
 FONTE = AQUI / "fonte" / "folha.png"
 COLUNAS, LINHAS = 4, 5  # grade da fonte
-DESENHADAS = 2  # linhas 5 e 6, desenhadas aqui
+DESENHADAS = 4  # linhas 5 a 8, desenhadas aqui
 LADO = 16  # célula da saída
 BLOCO = 12.6  # px da fonte por pixel da saída
 
@@ -154,6 +155,57 @@ def bola(quadro):
     return im
 
 
+def contorno_da_bola(pintar):
+    """O contorno redondo de BOLA e o miolo pintado por `pintar(x, y, sombra)`, que devolve a cor."""
+    im = Image.new("RGBA", (9, 9), (0, 0, 0, 0))
+    for y, linha in enumerate(BOLA):
+        dentro = [x for x, c in enumerate(linha) if c == "#"]
+        for x, c in enumerate(linha):
+            if c == "#":
+                im.putpixel((x, y), hex2rgba("#14161f"))
+            elif dentro and dentro[0] < x < dentro[-1]:
+                im.putpixel((x, y), hex2rgba(pintar(x, y, x + y > 9)))  # luz do alto à esquerda
+    return im
+
+
+# Os 8 pontos da borda de dentro, no sentido horário a partir do alto.
+VOLTA = [(4, 1), (6, 2), (7, 4), (6, 6), (4, 7), (2, 6), (1, 4), (2, 2)]
+
+
+def bola_futebol(quadro):
+    """A bola de futebol de 9×9: giz, com o gomo escuro em cruz no centro e dois gomos opostos na borda.
+
+    Os da borda andam 45° por quadro no sentido horário, então a bola rola para a direita, como a
+    `bola()`. A cruz do centro não muda ao girar.
+    """
+    gomos = {(4, 4), (3, 4), (5, 4), (4, 3), (4, 5)}
+    gomos |= {VOLTA[(i + quadro) % 8] for i in (1, 5)}
+
+    def pintar(x, y, sombra):
+        if (x, y) in gomos:
+            return "#363c52"
+        return "#d6d0c0" if sombra else "#f5f1e8"
+
+    return contorno_da_bola(pintar)
+
+
+def bola_volei(quadro):
+    """A bola de vôlei de 9×9: amarela, com duas faixas azuis curvas que giram 45° por quadro."""
+    faixas = [
+        lambda x, y: x in (3, 6) or (x == 4 and y in (1, 7)),
+        lambda x, y: x + y in (7, 10),
+        lambda x, y: y in (3, 6) or (y == 4 and x in (1, 7)),
+        lambda x, y: x - y in (-2, 1),
+    ][quadro]
+
+    def pintar(x, y, sombra):
+        if faixas(x, y):
+            return "#4aa8ff"
+        return "#d9a02b" if sombra else "#ffd34e"
+
+    return contorno_da_bola(pintar)
+
+
 CONTORNO = "#14161f"
 GIZ = "#f5f1e8"
 
@@ -224,6 +276,11 @@ for lin in range(LINHAS + DESENHADAS):
             continue
         if lin == LINHAS + 1:
             saida.alpha_composite(sonho(col), (col * LADO, lin * LADO))
+            continue
+        if lin in (LINHAS + 2, LINHAS + 3):  # as bolas do treino, como a bola da linha 3
+            im = bola_futebol(col) if lin == LINHAS + 2 else bola_volei(col)
+            x, y = (LADO - im.width) // 2, LADO - im.height
+            saida.alpha_composite(im, (col * LADO + x, lin * LADO + y))
             continue
         im = bola(col) if lin == 3 else reduzir(caixa_da_celula(col, lin))
         x, y = ancorar(lin, im)
