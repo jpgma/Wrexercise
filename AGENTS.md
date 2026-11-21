@@ -66,7 +66,7 @@ Tipos de `Aviso` (ADR 0052, 0058): `FotoForaDoPeriodo`, `FotoSemData`, `FotoPare
 
 Tipos de `Evidencia` (ADR 0058): `Foto`, `Video`. Origens da data da captura: `Exif`, `Arquivo`, `Camera` (a câmera do aplicativo), `Print` (a data no nome de uma captura de tela, ADR 0060), `Integracao` (o fim do treino informado por um app conectado, ADR 0065; só o servidor a atribui).
 
-`Integracao` (ADR 0065): um app conectado (`AppConectado`, hoje só o Movr) prepara um `Rascunho` de atividade, com a imagem do resumo do treino. Quem posta é sempre a pessoa, no formulário. Situações do rascunho: `Pendente`, `Postada`, `Expirada`. Na interface: "Conectar o Movr", "Apps conectados", "Treino importado do Movr". Na interface, a evidência que é um print (pelo nome ou pelo tamanho da tela, coluna `print`) mostra o selo "Print".
+`Integracao` (ADR 0065): um app conectado (`AppConectado`, hoje só o Movr) prepara um `Rascunho` de atividade, com a imagem do resumo do treino. Quem posta é sempre a pessoa, no formulário. Situações do rascunho: `Pendente`, `Postada`, `Expirada`. Na interface: "Conectar o Movr", "Apps conectados", "Treino importado do Movr". O Movr também começa o treino ao vivo no grupo escolhido, informa o fim como sugestão e manda o resumo; quem termina é a pessoa (ADR 0081). Na interface: "Movr: treino concluído". Na interface, a evidência que é um print (pelo nome ou pelo tamanho da tela, coluna `print`) mostra o selo "Print".
 
 Na interface, `Kudos` aparece como "Dar moral" e "deu moral". Cada reação tem um símbolo fixo: 💪 `Kudos`, 🤨 `Suspeito`, ❌ `Rejeitar`.
 

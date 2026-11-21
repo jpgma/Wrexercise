@@ -1424,7 +1424,7 @@ Não implementar no MVP:
 
 - Rastreamento GPS.
 - Integração com wearables.
-- Integração com Strava. A única integração com outro app é a do Movr, por rascunhos que a pessoa posta (ver `decisoes/0065-integracao-movr-rascunhos.md`).
+- Integração com Strava. A única integração com outro app é a do Movr, por rascunhos que a pessoa posta e pelo treino ao vivo que a pessoa termina aqui (ver `decisoes/0065-integracao-movr-rascunhos.md` e `decisoes/0081-treino-ao-vivo-pelo-movr.md`).
 - Contagem automática de passos.
 - Monitoramento de frequência cardíaca.
 - Estimativa de calorias.

@@ -68,6 +68,8 @@ export function getTextoNotificacao({
       return `${primeiroNome(atorNome)} está torcendo por você 📣`;
     case "TreinoLongo":
       return "Ainda treinando? Termine ou ajuste o seu treino";
+    case "TreinoAppConcluido":
+      return "Seu treino do Movr acabou. Põe as fotos e termine aqui 📸";
   }
 }
 
@@ -78,7 +80,11 @@ export function getDestinoNotificacao({
 }: Notificacao): string {
   // O treino ao vivo aparece na praça do grupo; o de quem treina, no cronômetro (decisão 0078).
   if (tipo === "ComecouTreinar") return `/grupos/${grupoId}/inicio`;
-  if (tipo === "TreinoLongo" || tipo === "Torcida")
+  if (
+    tipo === "TreinoLongo" ||
+    tipo === "TreinoAppConcluido" ||
+    tipo === "Torcida"
+  )
     return `/grupos/${grupoId}/treino`;
   // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
   if (atividadeId === null) return `/grupos/${grupoId}/inicio`;

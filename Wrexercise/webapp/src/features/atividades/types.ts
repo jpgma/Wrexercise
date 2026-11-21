@@ -145,6 +145,12 @@ export type TreinoAtual = {
   totalEvidencias: number;
   /** As mais recentes primeiro. */
   torcidas: Torcida[];
+  /** O app conectado que começou o treino (ADR 0081), ou `null` quando começou aqui. */
+  app: "Movr" | null;
+  /** Tempo ativo informado pelo app ao acabar, sem pausas: só uma sugestão. */
+  appDuracaoSegundos: number | null;
+  /** Quando o treino acabou no app; `null` enquanto ele continua lá. */
+  appEndedAt: string | null;
 };
 
 export type TerminarTreinoData = {

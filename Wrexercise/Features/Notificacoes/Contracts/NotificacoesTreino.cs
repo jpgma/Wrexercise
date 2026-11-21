@@ -8,6 +8,9 @@ internal static class TipoNotificacaoTreino
     public const string ComecouTreinar = "ComecouTreinar";
     public const string Torcida = "Torcida";
     public const string TreinoLongo = "TreinoLongo";
+
+    /// <summary>O treino acabou no app conectado e continua aberto aqui (ADR 0081).</summary>
+    public const string TreinoAppConcluido = "TreinoAppConcluido";
 }
 
 /// <summary>Avisos do treino ao vivo (ADR 0078), gravados na transação de quem chamou.</summary>
@@ -81,6 +84,31 @@ internal static class NotificacoesTreino
                   WHERE n.atividade_id = a.id AND n.tipo = '{TipoNotificacaoTreino.TreinoLongo}')
             """, connection, transaction);
         command.Parameters.AddWithValue(aberto);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Lembra quem treinou no app conectado de terminar o treino aqui, uma vez por treino, um tempo depois
+    /// do fim informado pelo app (ADR 0081).
+    /// </summary>
+    /// <returns>Quantos lembretes foram gravados.</returns>
+    public static async Task<int> NotificarTreinosAppConcluidosAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction? transaction,
+        TimeSpan depoisDoFim,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand($"""
+            INSERT INTO notificacoes (usuario_id, grupo_id, atividade_id, tipo, ator_id)
+            SELECT a.usuario_id, a.grupo_id, a.id, '{TipoNotificacaoTreino.TreinoAppConcluido}', a.usuario_id
+            FROM atividades a
+            WHERE a.situacao_verificacao = 'EmAndamento'
+              AND a.app_ended_at <= now() - $1
+              AND NOT EXISTS (
+                  SELECT 1 FROM notificacoes n
+                  WHERE n.atividade_id = a.id AND n.tipo = '{TipoNotificacaoTreino.TreinoAppConcluido}')
+            """, connection, transaction);
+        command.Parameters.AddWithValue(depoisDoFim);
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

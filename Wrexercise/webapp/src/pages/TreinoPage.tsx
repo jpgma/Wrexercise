@@ -251,6 +251,19 @@ function Cronometro({
         <p className="truncate text-sm text-muted">{treino.grupoNome}</p>
       </div>
 
+      {treino.app && treino.appEndedAt && (
+        <p
+          role="status"
+          className="chip chip-success mt-3 w-full whitespace-normal"
+        >
+          {treino.app}: treino concluído
+          {treino.appDuracaoSegundos
+            ? ` · ${formatarDuracao(treino.appDuracaoSegundos)} ativos`
+            : ""}
+          . Põe as fotos e termine aqui.
+        </p>
+      )}
+
       <section
         aria-labelledby="treino-titulo"
         className="card-sticker relative mt-4 flex flex-col items-center overflow-hidden px-4 pt-6 pb-5 text-center"
@@ -636,7 +649,15 @@ function TerminarTreino({
   const [maximoMin] = useState(() =>
     Math.min(24 * 60, Math.max(1, Math.floor(segundos / 60))),
   );
-  const [minutos, setMinutos] = useState(maximoMin);
+  // Começado por um app que já acabou (ADR 0081): o tempo ativo dele vem sugerido, sem passar do decorrido.
+  const sugestaoMin =
+    treino.appEndedAt && treino.appDuracaoSegundos
+      ? Math.min(
+          maximoMin,
+          Math.max(1, Math.round(treino.appDuracaoSegundos / 60)),
+        )
+      : null;
+  const [minutos, setMinutos] = useState(sugestaoMin ?? maximoMin);
   const [descricao, setDescricao] = useState("");
   const longo = maximoMin * 60 > confirmarAcimaDeS;
   const [confirmado, setConfirmado] = useState(false);
@@ -711,7 +732,9 @@ function TerminarTreino({
         </button>
       </div>
       <p className="mt-1 text-xs text-muted">
-        Esqueceu de terminar na hora? Diminua até o tempo que você treinou.
+        {sugestaoMin !== null
+          ? `Sugestão do ${treino.app}: ${sugestaoMin} min (sem as pausas).`
+          : "Esqueceu de terminar na hora? Diminua até o tempo que você treinou."}
       </p>
 
       {longo && minutos === maximoMin && (

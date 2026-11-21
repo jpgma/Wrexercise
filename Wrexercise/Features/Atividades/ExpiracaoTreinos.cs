@@ -6,7 +6,8 @@ namespace Wrexercise.Features.Atividades;
 
 /// <summary>
 /// O treino ao vivo esquecido (ADR 0078): depois de 3 horas, um lembrete; depois de 24 horas, ele expira e
-/// sai, com as evidências, como se a pessoa o tivesse cancelado.
+/// sai, com as evidências, como se a pessoa o tivesse cancelado. O que acabou no app conectado ganha outro
+/// lembrete, 30 minutos depois do fim informado (ADR 0081).
 /// </summary>
 internal static class ExpiracaoTreinos
 {
@@ -19,6 +20,8 @@ internal static class ExpiracaoTreinos
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         var lembretes = await NotificacoesTreino.NotificarTreinosLongosAsync(
             connection, null, TreinoAoVivo.Lembrete, cancellationToken);
+        lembretes += await NotificacoesTreino.NotificarTreinosAppConcluidosAsync(
+            connection, null, TreinoAoVivo.LembreteApp, cancellationToken);
 
         var expirados = new List<Guid>();
         await using (var command = new NpgsqlCommand("""

@@ -1,5 +1,16 @@
 [
   {
+    "versao": "1.3.0",
+    "data": "2026-11-20",
+    "novidades": [
+      "Começou a treinar no Movr? A galera já te vê ao vivo aqui ⏱️",
+      "Acabou no Movr? O resumo chega no cronômetro pra você pôr as fotos",
+      "Terminar treino já vem com o tempo do Movr, sem as pausas",
+      "Esqueceu de terminar? Um aviso lembra 30 min depois do fim no Movr",
+      "Conectar o Movr agora mostra que ele vê o nome dos seus grupos"
+    ]
+  },
+  {
     "versao": "1.2.0",
     "data": "2026-11-20",
     "novidades": [

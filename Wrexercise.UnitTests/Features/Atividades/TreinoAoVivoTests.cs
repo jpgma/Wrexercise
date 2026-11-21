@@ -50,4 +50,20 @@ public class TreinoAoVivoTests
     [Fact]
     public void Correcao_TreinoAoVivoNaoSeCorrige() =>
         Assert.False(CorrecaoDuracao.SituacaoPermite(SituacaoVerificacao.EmAndamento));
+
+    [Theory]
+    [InlineData(1500, 1500)]
+    [InlineData(1800, 1800)]
+    [InlineData(2400, 1800)]
+    [InlineData(0, 1)]
+    public void SugestaoApp_FicaEntre1EODecorrido(int informada, int esperada) =>
+        Assert.Equal(esperada, TreinoAoVivo.SugestaoApp(informada, Inicio, Agora));
+
+    [Fact]
+    public void FimApp_FicaEntreOInicioEAgora()
+    {
+        Assert.Equal(Inicio, TreinoAoVivo.FimApp(Inicio.AddMinutes(-5), Inicio, Agora));
+        Assert.Equal(Agora, TreinoAoVivo.FimApp(Agora.AddMinutes(5), Inicio, Agora));
+        Assert.Equal(Agora.AddMinutes(-3), TreinoAoVivo.FimApp(Agora.AddMinutes(-3), Inicio, Agora));
+    }
 }

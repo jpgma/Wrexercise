@@ -18,7 +18,8 @@ export type Notificacao = {
     | "Cutucada"
     | "ComecouTreinar"
     | "Torcida"
-    | "TreinoLongo";
+    | "TreinoLongo"
+    | "TreinoAppConcluido";
   /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival e na Cutucada, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;

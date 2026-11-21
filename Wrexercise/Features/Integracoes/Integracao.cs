@@ -117,6 +117,16 @@ internal static class ErrosIntegracao
         "ATIVIDADE_MUITO_ANTIGA",
         "Registre atividades das últimas 48 horas.");
 
+    public static IResult TreinoNaoEncontrado() => ApiProblem.Create(
+        StatusCodes.Status404NotFound,
+        "TREINO_NAO_ENCONTRADO",
+        "O treino ao vivo foi cancelado ou expirou.");
+
+    public static IResult TreinoNaoEmAndamento() => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "TREINO_NAO_EM_ANDAMENTO",
+        "Este treino já terminou.");
+
     public static IResult AppNaoEncontrado() => ApiProblem.Create(
         StatusCodes.Status404NotFound,
         "APP_NAO_ENCONTRADO",

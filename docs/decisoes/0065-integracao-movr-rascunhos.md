@@ -36,6 +36,7 @@
 - **PWA:** `launch_handler.client_mode = navigate-existing` reaproveita a janela aberta quando o Movr abre outro link. O Android abre os links do escopo no PWA instalado (WebAPK); sem ele, no navegador.
 - **Configurações:** a seção "Apps conectados" lista as conexões ativas e permite desconectar.
 - **Grupo:** o app não vê os grupos da pessoa; a escolha do grupo é sempre no Wrexercise.
+  > **Atualização (0081):** o token também lista o nome dos grupos e começa o treino ao vivo no grupo escolhido no Movr. Postar e terminar continuam com a pessoa.
 
 ## Impacto
 

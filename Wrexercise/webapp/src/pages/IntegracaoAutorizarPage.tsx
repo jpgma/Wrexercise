@@ -7,16 +7,19 @@ import { getErrorMessage } from "@/services/api";
 
 const podera = [
   "Preparar um rascunho de cada treino, com o resumo em imagem",
-  "Saber se o rascunho já virou atividade",
+  "Ver o nome dos seus grupos, para você escolher onde treinar ao vivo",
+  "Começar o treino ao vivo no grupo escolhido e cancelar se você desistir",
+  "Mandar o resumo e o tempo do treino para você terminar aqui",
 ];
 
 const naoPodera = [
-  "Postar por você: quem envia é sempre você, aqui",
-  "Ver seus grupos ou as atividades da galera",
+  "Terminar ou postar por você: quem envia é sempre você, aqui",
+  "Ver as atividades, as torcidas ou os comentários da galera",
 ];
 
 /**
- * A pessoa permite que o Movr prepare rascunhos (ADR 0065). O app abre esta tela com o desafio do PKCE,
+ * A pessoa permite que o Movr prepare rascunhos (ADR 0065) e comece o treino ao vivo (ADR 0081). O app abre
+ * esta tela com o desafio do PKCE,
  * um `state` e o endereço de retorno; o código volta para o app por esse endereço.
  */
 export function IntegracaoAutorizarPage() {
@@ -83,7 +86,7 @@ export function IntegracaoAutorizarPage() {
       </div>
       <h1 className="mt-8 text-center text-3xl uppercase">Conectar o Movr</h1>
       <p className="mt-2 text-center text-muted">
-        Ao terminar um treino no Movr, você abre o registro daqui já preenchido.
+        Ao começar um treino no Movr, a galera já te vê treinando ao vivo aqui.
       </p>
 
       <section className="card mt-6 p-4">

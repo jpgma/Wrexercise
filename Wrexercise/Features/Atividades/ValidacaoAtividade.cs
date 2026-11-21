@@ -141,6 +141,9 @@ internal static class TreinoAoVivo
     /// <summary>Sem terminar até aqui, o servidor lembra a pessoa ("Ainda treinando?").</summary>
     public static readonly TimeSpan Lembrete = TimeSpan.FromHours(3);
 
+    /// <summary>O treino acabou no app e continua aberto aqui: o lembrete para terminar vem antes (ADR 0081).</summary>
+    public static readonly TimeSpan LembreteApp = TimeSpan.FromMinutes(30);
+
     /// <summary>Esquecido por mais que a duração máxima, o treino expira e sai, com as evidências.</summary>
     public static readonly TimeSpan Expiracao = TimeSpan.FromHours(24);
 
@@ -158,4 +161,15 @@ internal static class TreinoAoVivo
     /// <summary>Com evidências já enviadas, o treino não pode terminar como registro manual.</summary>
     public static bool IsValidComprovacaoFinal(string? tipo, int totalEvidencias) =>
         TipoComprovacao.IsValid(tipo) && (totalEvidencias == 0 || TipoComprovacao.ExigeEvidencia(tipo!));
+
+    /// <summary>
+    /// ADR 0081: a duração ativa que o app informa vira só sugestão, nunca maior que o tempo decorrido aqui
+    /// (os relógios do app e do servidor começam em momentos diferentes).
+    /// </summary>
+    public static int SugestaoApp(int informada, DateTimeOffset startedAt, DateTimeOffset agora) =>
+        Math.Clamp(informada, 1, Math.Max(1, Math.Min(Decorridos(startedAt, agora), 24 * 60 * 60)));
+
+    /// <summary>O fim informado pelo app fica entre o início do treino aqui e agora.</summary>
+    public static DateTimeOffset FimApp(DateTimeOffset informado, DateTimeOffset startedAt, DateTimeOffset agora) =>
+        informado < startedAt ? startedAt : informado > agora ? agora : informado;
 }

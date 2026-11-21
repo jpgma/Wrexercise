@@ -561,6 +561,7 @@ The user can connect the Movr app (ADR 0065). Movr then prepares a draft (`Rascu
 - The browser cannot send the origin `Integracao`.
 - If the review queue is not empty, the button "Começar avaliação" keeps the draft until the form opens again.
 - The Settings page shows "Apps conectados" when there is an active connection. "Desconectar" revokes the token.
+- The same token can also start a live workout (7.1.2) and list the groups of the user (ADR 0081): `GET /api/integracoes/grupos` returns `grupos` with `id` and `nome`, in the order that the user joined them. The page "Conectar o Movr" tells that Movr can see the group names and start the live workout. Movr cannot finish or post the workout, and cannot see the activities, the cheers or the comments.
 
 ### 7.1.2. Live workout (`EmAndamento`)
 
@@ -593,6 +594,14 @@ A member can start a workout now and finish it later (ADR 0078). The record of a
   - After the end, the `Avatar` celebrates and the page shows "Treino ao vivo, feito!".
 - "Cancelar treino" asks for a confirmation, then deletes the workout and its evidence. There is no penalty.
 - A background task runs each 5 minutes. After 3 hours, the author gets the notification `TreinoLongo` ("Ainda treinando? Termine ou ajuste o seu treino"), one time. After 24 hours, the server deletes the workout and its evidence.
+- Live workout from a connected app (ADR 0081). Only the token of 7.1.1 can use these routes. `externalId` is the workout ID in Movr.
+  - `PUT /api/integracoes/treinos/{externalId}` with `{ "grupoId", "tipo", "latitude", "longitude" }` starts the live workout in that group. The location is optional and follows the rules of the browser start. The same blocks, the same limit of one live workout and the same `ComecouTreinar` notification apply. The response is `201` with `atividadeId`, `grupoId`, `grupoNome`, `situacao`, `url`, `startedAt`, `fimInformado` and `resumoAnexado`. `url` is `/grupos/{id}/treino` while the workout is `EmAndamento`, else `/atividades/{id}`.
+  - The same `externalId` again returns the same workout with `200`. After the user finishes it, it returns `409 TREINO_NAO_EM_ANDAMENTO`. A live workout that the user started in the browser, in the same group, becomes the workout of the app. A live workout of a different `externalId`, or in a different group, returns `409 TREINO_EM_ANDAMENTO`.
+  - `PUT /api/integracoes/treinos/{externalId}/fim` (multipart) with `duracaoSegundos` (the active time in Movr, without pauses, 1 to 86400), `endedAt` and, optionally, the summary image (`arquivo`, image only, maximum 5 MB) with a JPEG thumbnail (`miniatura`, maximum 100 KB). The workout stays `EmAndamento`. The server keeps the duration as a suggestion, with a maximum of the time since the start, and the end between the start and now. The image becomes evidence with the origin `Integracao` and the end as the capture date, one time only, if the workout has less than 10 items. Another request changes the suggestion and does not add the image again. A workout that is not `EmAndamento` returns `409 TREINO_NAO_EM_ANDAMENTO`. A deleted or expired workout returns `404 TREINO_NAO_ENCONTRADO`.
+  - `DELETE /api/integracoes/treinos/{externalId}` deletes the workout and its evidence while it is `EmAndamento` (`204`). After the end, it returns `409 TREINO_NAO_EM_ANDAMENTO` and the activity stays.
+  - `GET /api/integracoes/treinos/{externalId}` returns the workout, or `404 TREINO_NAO_ENCONTRADO` after a cancel or an expiry.
+  - `GET /api/atividades/em-andamento` also returns `app`, `appDuracaoSegundos` and `appEndedAt`. After the end in the app, the timer page shows "Movr: treino concluído · 42 min ativos. Põe as fotos e termine aqui." "Terminar treino" starts at the suggested minutes, with a maximum of the time since the start, and shows "Sugestão do Movr: 42 min (sem as pausas)." The user can make it smaller.
+  - 30 minutes after the end in the app, the author gets the notification `TreinoAppConcluido` ("Seu treino do Movr acabou. Põe as fotos e termine aqui 📸"), one time. It opens the timer page.
 
 ### 7.2. Evidence
 
@@ -911,6 +920,7 @@ The system makes a notification for these events:
 | A member starts a live workout (see 7.1.2). Maximum one for each person and group in 12 hours. | The awake members, but not the author. | `ComecouTreinar` |
 | A member cheers for a live workout. | The author. | `Torcida` |
 | A live workout is open for 3 hours. | The author. | `TreinoLongo` |
+| A live workout ended in a connected app 30 minutes ago and is still open. | The author. | `TreinoAppConcluido` |
 
 - When an activity becomes `Verificada`, the author does not get a notification.
 - The system joins unread reactions and comments of one activity into one notification with a total.
@@ -925,7 +935,7 @@ The system makes a notification for these events:
 ### 11.1. Push notifications
 
 - The phone or the computer can show a notification from the system, also when the application is closed. This is a push notification.
-- These types make a push notification: `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada`, `Disputa`, `CartaRecebida`, `RivalEscolhido`, `Cutucada`, `ComecouTreinar` and `TreinoLongo`. The types `CartaAceita`, `CartaRecusada`, `JogadaConcluida` and `Torcida` show only in the list of the application. `ComecouTreinar` opens the home screen of the group. `TreinoLongo` and `Torcida` open the timer page.
+- These types make a push notification: `NovaAtividade`, `Reacao`, `Comentario`, `SituacaoAlterada`, `Disputa`, `CartaRecebida`, `RivalEscolhido`, `Cutucada`, `ComecouTreinar`, `TreinoLongo` and `TreinoAppConcluido`. The types `CartaAceita`, `CartaRecusada`, `JogadaConcluida` and `Torcida` show only in the list of the application. `ComecouTreinar` opens the home screen of the group. `TreinoLongo`, `TreinoAppConcluido` and `Torcida` open the timer page.
 - The title is the name of the group. The text is the same as in the list.
 - A background task sends new notifications each 30 seconds. It sends a notification only if it is not read, it changed less than 1 hour before, the user is still a member of the group and the user turned on push on one or more devices.
 - When a new reaction or comment adds to an unread notification, the device gets the notification again. The new notification replaces the old one on the screen and does not make a sound again.

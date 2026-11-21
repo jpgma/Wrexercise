@@ -38,18 +38,28 @@ internal static class IntegracoesRoutes
         var doApp = integracoes.MapGroup("").RequireTokenApp();
         doApp.MapDelete("/token", RevogarToken.HandleAsync);
         doApp.MapGet("/rascunhos/{externalId}", ObterSituacaoRascunho.HandleAsync);
-        doApp.MapPut("/rascunhos/{externalId}", SalvarRascunho.HandleAsync)
-            .AddEndpointFilter(async (invocation, next) =>
-            {
-                // A imagem do resumo e a miniatura; o resto da API continua com 1 MB.
-                var feature = invocation.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
-                if (feature is not null && !feature.IsReadOnly)
-                {
-                    feature.MaxRequestBodySize =
-                        ValidacaoMidiaEvidencia.MaxBytes + ValidacaoMidiaEvidencia.MaxBytesMiniatura + (16 * 1024);
-                }
+        doApp.MapPut("/rascunhos/{externalId}", SalvarRascunho.HandleAsync).AddEndpointFilter(LimiteResumo);
 
-                return await next(invocation);
-            });
+        // O treino ao vivo começado pelo app (ADR 0081): quem termina continua sendo a pessoa, aqui.
+        doApp.MapGet("/grupos", ListarGruposApp.HandleAsync);
+        doApp.MapPut("/treinos/{externalId}", ComecarTreinoApp.HandleAsync);
+        doApp.MapGet("/treinos/{externalId}", ObterTreinoApp.HandleAsync);
+        doApp.MapDelete("/treinos/{externalId}", CancelarTreinoApp.HandleAsync);
+        doApp.MapPut("/treinos/{externalId}/fim", InformarFimTreinoApp.HandleAsync).AddEndpointFilter(LimiteResumo);
+    }
+
+    /// <summary>A imagem do resumo e a miniatura; o resto da API continua com 1 MB.</summary>
+    private static async ValueTask<object?> LimiteResumo(
+        EndpointFilterInvocationContext invocation,
+        EndpointFilterDelegate next)
+    {
+        var feature = invocation.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (feature is not null && !feature.IsReadOnly)
+        {
+            feature.MaxRequestBodySize =
+                ValidacaoMidiaEvidencia.MaxBytes + ValidacaoMidiaEvidencia.MaxBytesMiniatura + (16 * 1024);
+        }
+
+        return await next(invocation);
     }
 }

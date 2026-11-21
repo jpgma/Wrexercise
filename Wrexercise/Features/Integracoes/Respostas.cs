@@ -1,3 +1,5 @@
+using Wrexercise.Features.Atividades.Contracts;
+
 namespace Wrexercise.Features.Integracoes;
 
 /// <summary>
@@ -24,4 +26,36 @@ internal static class RespostasIntegracao
             atividadeId is { } atividade ? $"/atividades/{atividade}" : $"/importar/{id}",
             atividadeId,
             expiresAt);
+
+    public static TreinoAppResponse BuildTreino(TreinoAppSituacao treino) =>
+        new(
+            treino.AtividadeId,
+            treino.GrupoId,
+            treino.GrupoNome,
+            treino.Situacao,
+            treino.Situacao == "EmAndamento"
+                ? $"/grupos/{treino.GrupoId}/treino"
+                : $"/atividades/{treino.AtividadeId}",
+            treino.StartedAt,
+            treino.FimInformado,
+            treino.ResumoAnexado);
 }
+
+/// <summary>
+/// O treino ao vivo que o app começou (ADR 0081). <c>Url</c> é o cronômetro enquanto está aberto e a
+/// atividade depois que a pessoa termina.
+/// </summary>
+internal sealed record TreinoAppResponse(
+    Guid AtividadeId,
+    Guid GrupoId,
+    string GrupoNome,
+    string Situacao,
+    string Url,
+    DateTimeOffset StartedAt,
+    bool FimInformado,
+    bool ResumoAnexado);
+
+/// <summary>Um grupo de quem conectou o app: só o nome e o identificador (ADR 0081).</summary>
+internal sealed record GrupoAppResponse(Guid Id, string Nome);
+
+internal sealed record GruposAppResponse(IReadOnlyList<GrupoAppResponse> Grupos);

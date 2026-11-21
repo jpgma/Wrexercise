@@ -2,6 +2,8 @@
 
 **Status:** DECIDIDA. Acrescenta ao registro de atividade (`0011`) um segundo jeito de registrar: começar agora e terminar depois. O registro de um treino já feito continua igual. Muda o limite de evidências de `0011` e `0058` (de 3 para 10).
 
+> **Atualização (0081):** o Movr também começa o treino ao vivo, informa o fim como sugestão e manda a imagem do resumo. Quem termina continua sendo a pessoa.
+
 ## Contexto
 
 - Até aqui, o treino só era registrado depois de feito. O grupo só via o colega quando ele postava, às vezes horas depois.

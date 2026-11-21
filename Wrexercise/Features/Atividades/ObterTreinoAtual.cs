@@ -14,11 +14,15 @@ internal sealed record TreinoAtualResponse(
     string Tipo,
     DateTimeOffset StartedAt,
     int TotalEvidencias,
-    IReadOnlyList<TorcidaResponse> Torcidas);
+    IReadOnlyList<TorcidaResponse> Torcidas,
+    string? App,
+    int? AppDuracaoSegundos,
+    DateTimeOffset? AppEndedAt);
 
 /// <summary>
 /// O treino ao vivo de quem consulta, em qualquer grupo (ADR 0078). Sem treino aberto, 204.
-/// O navegador usa a resposta para mostrar o cronômetro em qualquer tela e aparelho.
+/// O navegador usa a resposta para mostrar o cronômetro em qualquer tela e aparelho. Começado por um app
+/// conectado, traz o fim e a duração ativa que o app informou, como sugestão (ADR 0081).
 /// </summary>
 internal static class ObterTreinoAtual
 {
@@ -35,7 +39,8 @@ internal static class ObterTreinoAtual
         TreinoAtualResponse treino;
         await using (var command = new NpgsqlCommand("""
             SELECT a.id, a.grupo_id, g.nome, a.tipo, a.started_at,
-                (SELECT count(*)::int FROM evidencias_atividade e WHERE e.atividade_id = a.id)
+                (SELECT count(*)::int FROM evidencias_atividade e WHERE e.atividade_id = a.id),
+                a.app, a.app_duracao_segundos, a.app_ended_at
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
             JOIN membros_grupo m ON m.grupo_id = a.grupo_id AND m.usuario_id = a.usuario_id AND m.removed_at IS NULL
@@ -56,7 +61,10 @@ internal static class ObterTreinoAtual
                 reader.GetString(3),
                 reader.GetFieldValue<DateTimeOffset>(4),
                 reader.GetInt32(5),
-                []);
+                [],
+                reader.IsDBNull(6) ? null : reader.GetString(6),
+                reader.IsDBNull(7) ? null : reader.GetInt32(7),
+                reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8));
         }
 
         var torcidas = new List<TorcidaResponse>();

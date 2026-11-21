@@ -39,7 +39,7 @@ internal static class ComecarTreino
 
         var usuarioId = context.GetSessaoAtual().UsuarioId;
         var (status, atividadeId, repetida) = await ExecutarAsync(
-            dataSource, grupoId, usuarioId, request.Tipo!, local, cancellationToken);
+            dataSource, grupoId, usuarioId, request.Tipo!, local, null, cancellationToken);
         if (status != AtividadeOperacaoStatus.Concluida)
         {
             return OperacaoAtividade.ToResult(status);
@@ -54,12 +54,17 @@ internal static class ComecarTreino
                 statusCode: repetida ? StatusCodes.Status200OK : StatusCodes.Status201Created);
     }
 
-    private static async Task<(AtividadeOperacaoStatus Status, Guid Id, bool Repetida)> ExecutarAsync(
+    /// <summary>
+    /// Começa o treino. Com <paramref name="vinculo"/>, quem começa é um app conectado (ADR 0081): o mesmo
+    /// identificador devolve o mesmo treino, e o treino aberto pelo navegador no mesmo grupo passa a ser do app.
+    /// </summary>
+    internal static async Task<(AtividadeOperacaoStatus Status, Guid Id, bool Repetida)> ExecutarAsync(
         NpgsqlDataSource dataSource,
         Guid grupoId,
         Guid usuarioId,
         string tipo,
         (double Latitude, double Longitude)? local,
+        (string App, string ExternalId)? vinculo,
         CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -70,12 +75,47 @@ internal static class ComecarTreino
             return (AtividadeOperacaoStatus.GrupoNaoEncontrado, default, false);
         }
 
+        // O app repete o começo quando não recebeu a resposta: o treino dele já existe, aberto ou terminado.
+        if (vinculo is { } doApp
+            && await BuscarDoAppAsync(connection, transaction, usuarioId, doApp, cancellationToken) is { } existente)
+        {
+            return existente.Situacao == SituacaoVerificacao.EmAndamento
+                ? (AtividadeOperacaoStatus.Concluida, existente.Id, true)
+                : (AtividadeOperacaoStatus.TreinoNaoEmAndamento, default, false);
+        }
+
         // Um toque repetido no mesmo grupo devolve o treino já aberto, como a chave de idempotência do registro.
         if (await BuscarEmAndamentoAsync(connection, transaction, usuarioId, cancellationToken) is { } aberto)
         {
-            return aberto.GrupoId == grupoId
-                ? (AtividadeOperacaoStatus.Concluida, aberto.Id, true)
-                : (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
+            if (aberto.GrupoId != grupoId)
+            {
+                return (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
+            }
+
+            if (vinculo is not { } adotar)
+            {
+                return (AtividadeOperacaoStatus.Concluida, aberto.Id, true);
+            }
+
+            // O treino de outro treino do app continua dele; o aberto pelo navegador passa ao app.
+            if (aberto.App is not null)
+            {
+                return (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
+            }
+
+            await using (var vincular = new NpgsqlCommand(
+                "UPDATE atividades SET app = $2, app_external_id = $3 WHERE id = $1",
+                connection,
+                transaction))
+            {
+                vincular.Parameters.AddWithValue(aberto.Id);
+                vincular.Parameters.AddWithValue(adotar.App);
+                vincular.Parameters.AddWithValue(adotar.ExternalId);
+                await vincular.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return (AtividadeOperacaoStatus.Concluida, aberto.Id, true);
         }
 
         // As mesmas travas do registro: a fila de avaliação e a carta que espera resposta (decisão 0076).
@@ -93,8 +133,8 @@ internal static class ComecarTreino
         await using var insert = new NpgsqlCommand("""
             INSERT INTO atividades (
                 grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
-                situacao_verificacao, ao_vivo, latitude, longitude)
-            VALUES ($1, $2, $3, $4, now(), $5, 'EmAndamento', true, $6, $7)
+                situacao_verificacao, ao_vivo, latitude, longitude, app, app_external_id)
+            VALUES ($1, $2, $3, $4, now(), $5, 'EmAndamento', true, $6, $7, $8, $9)
             ON CONFLICT (usuario_id) WHERE situacao_verificacao = 'EmAndamento' DO NOTHING
             RETURNING id
             """, connection, transaction);
@@ -105,6 +145,8 @@ internal static class ComecarTreino
         insert.Parameters.AddWithValue(TipoComprovacao.Fotografia);
         insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Double, (object?)local?.Latitude ?? DBNull.Value);
         insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Double, (object?)local?.Longitude ?? DBNull.Value);
+        insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Text, (object?)vinculo?.App ?? DBNull.Value);
+        insert.Parameters.AddWithValue(NpgsqlTypes.NpgsqlDbType.Text, (object?)vinculo?.ExternalId ?? DBNull.Value);
         if (await insert.ExecuteScalarAsync(cancellationToken) is not Guid id)
         {
             // Outro toque ao mesmo tempo abriu o treino primeiro.
@@ -123,17 +165,37 @@ internal static class ComecarTreino
         && longitude is >= -180 and <= 180
         && !(latitude == 0 && longitude == 0);
 
-    private static async Task<(Guid Id, Guid GrupoId)?> BuscarEmAndamentoAsync(
+    private static async Task<(Guid Id, Guid GrupoId, string? App)?> BuscarEmAndamentoAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid usuarioId,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT id, grupo_id FROM atividades WHERE usuario_id = $1 AND situacao_verificacao = 'EmAndamento'
+            SELECT id, grupo_id, app FROM atividades WHERE usuario_id = $1 AND situacao_verificacao = 'EmAndamento'
             """, connection, transaction);
         command.Parameters.AddWithValue(usuarioId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? (reader.GetGuid(0), reader.GetGuid(1)) : null;
+        return await reader.ReadAsync(cancellationToken)
+            ? (reader.GetGuid(0), reader.GetGuid(1), reader.IsDBNull(2) ? null : reader.GetString(2))
+            : null;
+    }
+
+    private static async Task<(Guid Id, string Situacao)?> BuscarDoAppAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid usuarioId,
+        (string App, string ExternalId) vinculo,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand("""
+            SELECT id, situacao_verificacao FROM atividades
+            WHERE usuario_id = $1 AND app = $2 AND app_external_id = $3
+            """, connection, transaction);
+        command.Parameters.AddWithValue(usuarioId);
+        command.Parameters.AddWithValue(vinculo.App);
+        command.Parameters.AddWithValue(vinculo.ExternalId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? (reader.GetGuid(0), reader.GetString(1)) : null;
     }
 }

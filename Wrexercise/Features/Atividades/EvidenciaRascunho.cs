@@ -64,34 +64,17 @@ internal static class EvidenciaRascunho
             copias.Add(copiaMiniatura);
         }
 
-        Guid evidenciaId;
-        await using (var insert = new NpgsqlCommand("""
-            INSERT INTO evidencias_atividade (
-                atividade_id, caminho_relativo, tipo_mime, tamanho_bytes, sha256, ordem, caminho_miniatura,
-                capturada_em, origem_data_captura, print)
-            VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, false)
-            RETURNING id
-            """, connection, transaction))
-        {
-            insert.Parameters.AddWithValue(atividadeId);
-            insert.Parameters.AddWithValue(copia);
-            insert.Parameters.AddWithValue(tipoMime);
-            insert.Parameters.AddWithValue(tamanhoBytes);
-            insert.Parameters.AddWithValue(sha256);
-            insert.Parameters.Add(new NpgsqlParameter { Value = (object?)copiaMiniatura ?? DBNull.Value });
-            insert.Parameters.AddWithValue(endedAt);
-            insert.Parameters.AddWithValue(OrigemDataCaptura.Integracao);
-            evidenciaId = (Guid)(await insert.ExecuteScalarAsync(cancellationToken))!;
-        }
-
         // O formulário deixa mudar o início e a duração: a data do fim do treino ainda pode cair fora.
-        var avisoData = AvisosEvidencia.CalcularAvisoData(
-            startedAt, duracaoSegundos, endedAt, OrigemDataCaptura.Integracao, DateTimeOffset.UtcNow);
-        if (avisoData is not null)
-        {
-            await ConsultasAtividade.InserirAvisoAsync(
-                connection, transaction, atividadeId, avisoData, evidenciaId, null, cancellationToken);
-        }
+        await EvidenciaIntegracao.InserirAsync(
+            connection,
+            transaction,
+            atividadeId,
+            new ArquivoIntegracao(copia, tipoMime, tamanhoBytes, sha256, copiaMiniatura),
+            1,
+            endedAt,
+            startedAt,
+            duracaoSegundos,
+            cancellationToken);
 
         await using (var vincular = new NpgsqlCommand(
             "UPDATE rascunhos_atividade SET atividade_id = $1, updated_at = now() WHERE id = $2",

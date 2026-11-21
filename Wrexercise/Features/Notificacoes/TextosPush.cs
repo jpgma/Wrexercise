@@ -30,6 +30,7 @@ internal static class TextosPush
         "Cutucada",
         "ComecouTreinar",
         "TreinoLongo",
+        "TreinoAppConcluido",
     ];
 
     public static string GetTexto(AvisoPush aviso)
@@ -52,6 +53,7 @@ internal static class TextosPush
             "ComecouTreinar" => $"{nome} começou a treinar 🏋️ Bora torcer?",
             "Torcida" => $"{nome} está torcendo por você 📣",
             "TreinoLongo" => "Ainda treinando? Termine ou ajuste o seu treino",
+            "TreinoAppConcluido" => "Seu treino do Movr acabou. Põe as fotos e termine aqui 📸",
             _ => "Você tem uma nova notificação",
         };
     }
@@ -60,7 +62,7 @@ internal static class TextosPush
     {
         // O treino ao vivo aparece na praça do grupo; o de quem treina, no cronômetro (decisão 0078).
         _ when aviso.Tipo == "ComecouTreinar" => $"/grupos/{aviso.GrupoId}/inicio",
-        _ when aviso.Tipo is "TreinoLongo" or "Torcida" => $"/grupos/{aviso.GrupoId}/treino",
+        _ when aviso.Tipo is "TreinoLongo" or "TreinoAppConcluido" or "Torcida" => $"/grupos/{aviso.GrupoId}/treino",
         // As cartas, o Rival e a Cutucada aparecem na cena do grupo.
         null => $"/grupos/{aviso.GrupoId}/inicio",
         { } atividadeId when aviso.Tipo == "NovaAtividade" => $"/grupos/{aviso.GrupoId}/revisar/{atividadeId}",
