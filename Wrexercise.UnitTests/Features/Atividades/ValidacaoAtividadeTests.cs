@@ -7,6 +7,10 @@ public sealed class ValidacaoAtividadeTests
 {
     [Theory]
     [InlineData(TipoAtividade.Musculacao, true)]
+    [InlineData(TipoAtividade.Futebol, true)]
+    [InlineData(TipoAtividade.Volei, true)]
+    [InlineData(TipoAtividade.Luta, true)]
+    [InlineData("Vôlei", false)]
     [InlineData("musculacao", false)]
     public void TipoAtividade_RespeitaOContrato(string valor, bool valido) =>
         Assert.Equal(valido, TipoAtividade.IsValid(valor));

@@ -707,9 +707,12 @@ Tipos de atividade:
 - Caminhada.
 - Ciclismo.
 - Natação.
-- Esporte.
+- Futebol.
+- Vôlei.
+- Luta.
 - Yoga.
 - Calistenia.
+- Esporte (na interface, "Outro esporte"; ADR 0082).
 - Outro.
 
 Tipos de comprovação:

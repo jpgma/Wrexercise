@@ -38,7 +38,7 @@ public class ConquistasUsuarioTests
         var todas = ConquistasUsuario.Listar(
             new EstatisticasConquistas(0, 5, 3, TreinosPorTipo: new Dictionary<string, int> { ["Corrida"] = 25 }, DiasComTreino: 23));
 
-        Assert.Equal(19, todas.Count);
+        Assert.Equal(22, todas.Count);
         Assert.Equal((4, 4, true), Progresso(todas, "Sequencia4"));
         Assert.Equal((5, 8, false), Progresso(todas, "Sequencia8"));
         Assert.Equal((23, 50, false), Progresso(todas, "Treinos50"));

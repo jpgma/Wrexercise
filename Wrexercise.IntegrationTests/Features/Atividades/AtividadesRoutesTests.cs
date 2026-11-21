@@ -42,6 +42,23 @@ public sealed class AtividadesRoutesTests : IAsyncLifetime
         Assert.Empty(atividade.Evidencias);
     }
 
+    [Theory]
+    [InlineData(TipoAtividade.Futebol)]
+    [InlineData(TipoAtividade.Volei)]
+    [InlineData(TipoAtividade.Luta)]
+    public async Task Create_AceitaOsEsportesNovos(string tipo)
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+
+        var response = await PostAtividadeAsync(
+            ana, grupoId, Valid() with { Tipo = tipo, TipoComprovacao = TipoComprovacao.RegistroManual });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var atividade = await response.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+        Assert.Equal(tipo, atividade!.Tipo);
+    }
+
     [Fact]
     public async Task AnexarEvidencia_RejectsRegistroManual()
     {

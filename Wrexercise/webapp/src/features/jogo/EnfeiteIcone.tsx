@@ -19,7 +19,15 @@ export function EnfeiteIcone({
   style?: CSSProperties;
 }) {
   const desenho = getDesenhoEnfeite(conquista);
-  if (!desenho) return null;
+  // Conquista ainda sem desenho no atlas (Craque, Levantador, Faixa preta): guarda o lugar.
+  if (!desenho)
+    return (
+      <span
+        aria-hidden="true"
+        className={`inline-block ${className}`}
+        style={{ width: tamanho, height: tamanho, ...style }}
+      />
+    );
   const { celula, quadros, linhas } = atlasEnfeites;
   const maior = Math.max(desenho.largura, desenho.altura);
   // Escala inteira quando cabe, para os pixels ficarem iguais; fracionária só para encolher.

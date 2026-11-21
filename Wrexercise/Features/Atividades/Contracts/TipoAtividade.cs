@@ -8,6 +8,9 @@ internal static class TipoAtividade
     public const string Caminhada = "Caminhada";
     public const string Ciclismo = "Ciclismo";
     public const string Natacao = "Natacao";
+    public const string Futebol = "Futebol";
+    public const string Volei = "Volei";
+    public const string Luta = "Luta";
     public const string Esporte = "Esporte";
     public const string Yoga = "Yoga";
     public const string Calistenia = "Calistenia";
@@ -20,6 +23,9 @@ internal static class TipoAtividade
         Caminhada,
         Ciclismo,
         Natacao,
+        Futebol,
+        Volei,
+        Luta,
         Esporte,
         Yoga,
         Calistenia,

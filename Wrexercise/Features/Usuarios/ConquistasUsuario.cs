@@ -49,6 +49,9 @@ internal static class ConquistasUsuario
         (Tipos.Caminhada, "Andarilho", "Andarilho"),
         (Tipos.Ciclismo, "Ciclista", "Ciclista"),
         (Tipos.Natacao, "Peixe", "Peixe"),
+        (Tipos.Futebol, "Craque", "Craque"),
+        (Tipos.Volei, "Levantador", "Levantador"),
+        (Tipos.Luta, "FaixaPreta", "Faixa preta"),
         (Tipos.Esporte, "Boleiro", "Boleiro"),
         (Tipos.Yoga, "Zen", "Zen"),
         (Tipos.Calistenia, "PesoDoCorpo", "Peso do corpo"),
@@ -188,7 +191,10 @@ internal static class ConquistasUsuario
         Tipos.Caminhada => "caminhada",
         Tipos.Ciclismo => "ciclismo",
         Tipos.Natacao => "natação",
-        Tipos.Esporte => "esporte",
+        Tipos.Futebol => "futebol",
+        Tipos.Volei => "vôlei",
+        Tipos.Luta => "luta",
+        Tipos.Esporte => "outro esporte",
         Tipos.Yoga => "yoga",
         Tipos.Calistenia => "calistenia",
         _ => tipo,
@@ -206,6 +212,9 @@ internal static class Tipos
     public const string Caminhada = "Caminhada";
     public const string Ciclismo = "Ciclismo";
     public const string Natacao = "Natacao";
+    public const string Futebol = "Futebol";
+    public const string Volei = "Volei";
+    public const string Luta = "Luta";
     public const string Esporte = "Esporte";
     public const string Yoga = "Yoga";
     public const string Calistenia = "Calistenia";

@@ -5,22 +5,27 @@ import {
   Dumbbell,
   Flower2,
   Footprints,
-  PersonStanding,
+  HandFist,
   Trophy,
+  Volleyball,
   Waves,
   type LucideIcon,
 } from "lucide-react";
+import { BolaFutebol, PessoaCorrendo } from "./iconesProprios";
 import type { TipoAtividade } from "./types";
 
 export const tipoAtividadeIcones: Record<TipoAtividade, LucideIcon> = {
   Musculacao: Dumbbell,
-  Corrida: PersonStanding,
+  Corrida: PessoaCorrendo,
   Caminhada: Footprints,
   Ciclismo: Bike,
   Natacao: Waves,
-  Esporte: Trophy,
+  Futebol: BolaFutebol,
+  Volei: Volleyball,
+  Luta: HandFist,
   Yoga: Flower2,
   Calistenia: BicepsFlexed,
+  Esporte: Trophy,
   Outro: Activity,
 };
 

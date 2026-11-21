@@ -515,7 +515,7 @@ The group pages and the home page show one challenge. It is the active challenge
 
 An active member records an activity with these data:
 
-- Type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Esporte`, `Yoga`, `Calistenia` or `Outro`.
+- Type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Futebol`, `Volei`, `Luta`, `Yoga`, `Calistenia`, `Esporte` or `Outro`. The interface shows `Esporte` as "Outro esporte" (ADR 0082).
 - Start date and time. It cannot be more than 1 hour in the future. It cannot be more than 48 hours in the past: the API returns `400 ATIVIDADE_MUITO_ANTIGA`.
 - Duration: 1 minute to 24 hours.
 - Description: optional, maximum 500 characters.
@@ -887,7 +887,7 @@ Each locked achievement has the text `falta`, which tells what is missing: "Falt
 | 10, 50 and 100 training days | Number of days with a verified activity, in each group. Activities that started before 2026-11-09 count one each. |
 | Madrugador | 10 verified activities that started before 07:00 in the time zone of the group. |
 | `DesafioCompleto` | One `Encerrado` challenge in which the user met the goal in every week that counted for the user. |
-| `RatoDeAcademia`, `Corredor`, `Andarilho`, `Ciclista`, `Peixe`, `Boleiro`, `Zen`, `PesoDoCorpo` | 10 verified activities of one type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Esporte`, `Yoga` or `Calistenia`. The type `Outro` has no achievement. |
+| `RatoDeAcademia`, `Corredor`, `Andarilho`, `Ciclista`, `Peixe`, `Craque`, `Levantador`, `FaixaPreta`, `Boleiro`, `Zen`, `PesoDoCorpo` | 10 verified activities of one type: `Musculacao`, `Corrida`, `Caminhada`, `Ciclismo`, `Natacao`, `Futebol`, `Volei`, `Luta`, `Esporte`, `Yoga` or `Calistenia`. The type `Outro` has no achievement. The title of `FaixaPreta` is "Faixa preta". |
 | `Noturno` | 10 verified activities that started at 20:00 or later in the time zone of the group. |
 | `FimDeSemana` | 10 verified activities that started on Saturday or Sunday in the time zone of the group. |
 | `Ecletico` | Verified activities of 5 different types. The type `Outro` does not count. |
