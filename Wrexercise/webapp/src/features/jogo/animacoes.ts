@@ -103,7 +103,7 @@ export const animacoes = {
   manchete: { ...esporte(linhasFolha.manchete), quadroEstatico: 2 },
   futebol: { ...esporte(linhasFolha.futebol), quadroEstatico: 2 },
   chutar: { ...esporte(linhasFolha.chutar), quadroEstatico: 3 },
-  luta: { ...esporte(linhasFolha.luta), quadroEstatico: 2 },
+  luta: { ...esporte(linhasFolha.luta), quadroEstatico: 3 },
   // A largada toca uma vez: agacha no bloco e sai; depois vem `correr`.
   largada: {
     ...esporte(linhasFolha.largada),
