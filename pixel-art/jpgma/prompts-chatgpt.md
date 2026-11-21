@@ -12,6 +12,8 @@
 
 São 52 gerações, com as mesmas grades e tamanhos do base masculino.
 
+**Nordeste de costas:** em `volei` e `manchete`, o ChatGPT vira o nordeste de perfil. Acrescente ao fim do prompt "IMPORTANT VIEW: the reference shows the character from behind, in a three-quarter back view (…) Do not turn the character to a side profile or toward the viewer", e, se ainda sair de perfil, peça no mesmo chat para redesenhar de costas. Para trocar os quadros de uma direção depois do `esportes.py`, o `import_image` do pixel-mcp substitui a cel do quadro.
+
 ## 2. Prompts
 
 Cada prompt é completo: grade, personagem, objetos, ação e estilo num bloco só, pronto para colar.
