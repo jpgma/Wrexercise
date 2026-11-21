@@ -104,7 +104,7 @@ def main():
 
 def verificar(png):
     folha = Image.open(png)
-    if folha.size != (432, 4656) or png.stat().st_size > 1000 * 1024:
+    if folha.size != (432, 10800) or png.stat().st_size > 1000 * 1024:
         sys.exit(f"{png}: fora do formato ({folha.size}, {png.stat().st_size} bytes)")
 
 

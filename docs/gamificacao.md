@@ -202,9 +202,9 @@ A arte padrão é o personagem do template CC0 *2D Platformer Character Template
 ### 4.3. Importação
 
 - O editor em `/perfil/avatar` tem três botões: **Exportar folha** (baixa a folha atual, importada ou padrão), **Exportar guia** (uma camada com a grade, o nome de cada linha e a âncora, gerada no navegador) e **Importar folha**. Antes de salvar, ele mostra uma prévia das 8 direções na animação escolhida.
-- O aplicativo só confere o tamanho (432×6192, ou 432×4656 sem as animações de dormir): o desenho é livre.
+- O aplicativo só confere o tamanho (432×10800; ou as versões anteriores, 432×6192 sem as animações dos esportes e 432×4656 também sem as de dormir): o desenho é livre.
 - O navegador envia como veio um PNG RGBA de 8 bits ou com paleta indexada, sem `acTL`. Qualquer outra imagem do tamanho certo é re-codificada num canvas como PNG RGBA.
-- O servidor confere de novo: assinatura PNG, cabeçalho `IHDR` com 432×6192 ou 432×4656, RGBA de 8 bits ou paleta indexada, sem `acTL` (APNG), nada depois do `IEND` e no máximo 1000 KB. O arquivo é recusado se algo falhar.
+- O servidor confere de novo: assinatura PNG, cabeçalho `IHDR` com 432×10800, 432×6192 ou 432×4656, RGBA de 8 bits ou paleta indexada, sem `acTL` (APNG), nada depois do `IEND` e no máximo 1000 KB. O arquivo é recusado se algo falhar.
 - O arquivo fica no disco, em `/dados/avatares/`, com nome aleatório, no mesmo padrão das evidências (`arquitetura.md` §11). Nada de nomes vindos do cliente.
 - Só membros de um grupo em comum podem baixar a folha. A resposta usa `Content-Type: image/png` e `X-Content-Type-Options: nosniff`.
 - A pessoa pode voltar ao avatar padrão a qualquer momento.

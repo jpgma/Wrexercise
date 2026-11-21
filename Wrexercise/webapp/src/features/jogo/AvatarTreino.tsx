@@ -3,11 +3,26 @@ import type { NomeAnimacao } from "./animacoes";
 import { SpriteAvatar } from "./SpriteAvatar";
 import { useMovimentoReduzido } from "./useMovimentoReduzido";
 
-/** A animação de quem treina ao vivo, pelo tipo do treino (ADR 0078). Igual à da praça. */
+/**
+ * A animação de quem treina ao vivo, pelo tipo do treino (ADR 0078, 0082): a do esporte, sozinho e com
+ * o objeto genérico. Na praça, quem tem o Enfeite do tipo no chão vai até ele e o usa. "Outro
+ * esporte" e `Outro` fazem o `treinando`.
+ */
+const animacaoDoTipo: Record<string, NomeAnimacao> = {
+  Musculacao: "musculacao",
+  Corrida: "correr",
+  Caminhada: "andar",
+  Ciclismo: "ciclismo",
+  Natacao: "natacao",
+  Futebol: "futebol",
+  Volei: "volei",
+  Luta: "luta",
+  Yoga: "yoga",
+  Calistenia: "calistenia",
+};
+
 export function getAnimacaoDoTreino(tipo: string): NomeAnimacao {
-  if (tipo === "Corrida") return "correr";
-  if (tipo === "Caminhada") return "andar";
-  return "treinando";
+  return animacaoDoTipo[tipo] ?? "treinando";
 }
 
 /**

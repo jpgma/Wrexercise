@@ -40,6 +40,19 @@ export const linhasFolha = {
   adormecer: { linha: 105, quadros: 8, ms: 140 },
   acordar: { linha: 113, quadros: 5, ms: 110 },
   levantar: { linha: 121, quadros: 8, ms: 120 },
+  // As 12 dos esportes (ADR 0082): só na folha de 225 linhas (formatoFolha.linhasSemEsportes).
+  musculacao: { linha: 129, quadros: 6, ms: 120 },
+  ciclismo: { linha: 137, quadros: 6, ms: 80 },
+  natacao: { linha: 145, quadros: 6, ms: 110 },
+  yoga: { linha: 153, quadros: 4, ms: 400 },
+  calistenia: { linha: 161, quadros: 4, ms: 150 },
+  barra: { linha: 169, quadros: 6, ms: 120 },
+  volei: { linha: 177, quadros: 6, ms: 100 },
+  manchete: { linha: 185, quadros: 4, ms: 100 },
+  futebol: { linha: 193, quadros: 8, ms: 90 },
+  chutar: { linha: 201, quadros: 6, ms: 80 },
+  luta: { linha: 209, quadros: 6, ms: 80 },
+  largada: { linha: 217, quadros: 6, ms: 120 },
 } as const;
 
 export type Animacao = {
@@ -51,7 +64,16 @@ export type Animacao = {
   repete: boolean;
   /** Quadro mostrado quando o movimento é reduzido: o que melhor identifica a pose. */
   quadroEstatico: number;
+  /** Numa folha antiga, sem a linha desta animação, toca esta outra no lugar (sem ela, `parado`, parado). */
+  reserva?: "treinando";
 };
+
+/** As animações dos esportes repetem e, numa folha sem elas, viram `treinando`. */
+function esporte<T extends { linha: number; quadros: number; ms: number }>(
+  linhas: T,
+) {
+  return { ...linhas, repete: true, reserva: "treinando" } as const;
+}
 
 // `comemorando` usa a linha `comemorar`. `correr` é a entrada na praça (docs/gamificacao.md §3.4).
 export const animacoes = {
@@ -71,6 +93,23 @@ export const animacoes = {
   adormecer: { ...linhasFolha.adormecer, repete: false, quadroEstatico: 7 },
   acordar: { ...linhasFolha.acordar, repete: false, quadroEstatico: 1 },
   levantar: { ...linhasFolha.levantar, repete: false, quadroEstatico: 7 },
+  musculacao: { ...esporte(linhasFolha.musculacao), quadroEstatico: 3 },
+  ciclismo: { ...esporte(linhasFolha.ciclismo), quadroEstatico: 0 },
+  natacao: { ...esporte(linhasFolha.natacao), quadroEstatico: 2 },
+  yoga: { ...esporte(linhasFolha.yoga), quadroEstatico: 2 },
+  calistenia: { ...esporte(linhasFolha.calistenia), quadroEstatico: 2 },
+  barra: { ...esporte(linhasFolha.barra), quadroEstatico: 3 },
+  volei: { ...esporte(linhasFolha.volei), quadroEstatico: 2 },
+  manchete: { ...esporte(linhasFolha.manchete), quadroEstatico: 2 },
+  futebol: { ...esporte(linhasFolha.futebol), quadroEstatico: 2 },
+  chutar: { ...esporte(linhasFolha.chutar), quadroEstatico: 3 },
+  luta: { ...esporte(linhasFolha.luta), quadroEstatico: 2 },
+  // A largada toca uma vez: agacha no bloco e sai; depois vem `correr`.
+  largada: {
+    ...esporte(linhasFolha.largada),
+    repete: false,
+    quadroEstatico: 1,
+  },
 } as const satisfies Record<string, Animacao>;
 
 export type NomeAnimacao = keyof typeof animacoes;

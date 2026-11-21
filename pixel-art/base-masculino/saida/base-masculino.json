@@ -1,6 +1,6 @@
 {
   "largura": 432,
-  "altura": 6192,
+  "altura": 10800,
   "celula": 48,
   "ancora": {
     "x": 24,
@@ -101,7 +101,81 @@
       "linha": 121,
       "quadros": 8,
       "ms": 120
+    },
+    "musculacao": {
+      "linha": 129,
+      "quadros": 6,
+      "ms": 120
+    },
+    "ciclismo": {
+      "linha": 137,
+      "quadros": 6,
+      "ms": 80
+    },
+    "natacao": {
+      "linha": 145,
+      "quadros": 6,
+      "ms": 110
+    },
+    "yoga": {
+      "linha": 153,
+      "quadros": 4,
+      "ms": 400
+    },
+    "calistenia": {
+      "linha": 161,
+      "quadros": 4,
+      "ms": 150
+    },
+    "barra": {
+      "linha": 169,
+      "quadros": 6,
+      "ms": 120
+    },
+    "volei": {
+      "linha": 177,
+      "quadros": 6,
+      "ms": 100
+    },
+    "manchete": {
+      "linha": 185,
+      "quadros": 4,
+      "ms": 100
+    },
+    "futebol": {
+      "linha": 193,
+      "quadros": 8,
+      "ms": 90
+    },
+    "chutar": {
+      "linha": 201,
+      "quadros": 6,
+      "ms": 80
+    },
+    "luta": {
+      "linha": 209,
+      "quadros": 6,
+      "ms": 80
+    },
+    "largada": {
+      "linha": 217,
+      "quadros": 6,
+      "ms": 120
     }
   },
-  "sha256": "6c73699ba7d991965960a24b7a0ba706c5ec448ba6cd68808aa5afe7bbc7f1be"
+  "provisorias": [
+    "barra",
+    "calistenia",
+    "chutar",
+    "ciclismo",
+    "futebol",
+    "largada",
+    "luta",
+    "manchete",
+    "musculacao",
+    "natacao",
+    "volei",
+    "yoga"
+  ],
+  "sha256": "e35d96e4353e8927ac91a9c3a4c483798e76f3dd09f90606336536e7a247a8c5"
 }

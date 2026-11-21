@@ -8,11 +8,16 @@ public class ValidacaoFolhaAvatarTests
     public void FolhaNoFormato_EhValida() => Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar()));
 
     [Fact]
+    public void FolhaSemAsAnimacoesDosEsportes_ContinuaValida() =>
+        Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(altura: ValidacaoFolhaAvatar.AlturaSemEsportes)));
+
+    [Fact]
     public void FolhaSemAsAnimacoesDeDormir_ContinuaValida() =>
         Assert.True(ValidacaoFolhaAvatar.IsValida(PngFolha.Criar(altura: ValidacaoFolhaAvatar.AlturaSemDormir)));
 
     [Theory]
-    [InlineData(431, 6192)]
+    [InlineData(431, 10800)]
+    [InlineData(432, 10799)]
     [InlineData(432, 6191)]
     [InlineData(432, 4655)]
     [InlineData(432, 2352)] // a primeira versão da folha em 8 direções, só com 6 animações

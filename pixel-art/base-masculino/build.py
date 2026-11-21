@@ -57,9 +57,32 @@ ANIMACOES = [
     ("adormecer", 8, 140),
     ("acordar", 5, 110),
     ("levantar", 8, 120),
+    # As 12 dos esportes (ADR 0082), no fim: a folha de 129 linhas, sem elas, continua aceita.
+    ("musculacao", 6, 120),
+    ("ciclismo", 6, 80),
+    ("natacao", 6, 110),
+    ("yoga", 4, 400),
+    ("calistenia", 4, 150),
+    ("barra", 6, 120),
+    ("volei", 6, 100),
+    ("manchete", 4, 100),
+    ("futebol", 8, 90),
+    ("chutar", 6, 80),
+    ("luta", 6, 80),
+    ("largada", 6, 120),
 ]
 COLUNAS = max(qt for _, qt, _ in ANIMACOES)  # 9
-LINHAS = 1 + 8 * len(ANIMACOES)  # 129
+LINHAS = 1 + 8 * len(ANIMACOES)  # 225
+
+# Animações desenhadas numa direção só, que vale para as outras: a barra fica sempre de frente, sob a
+# barra da praça; a largada é de lado (o oeste é o leste espelhado, pelo montar.py).
+UMA_DIRECAO = {
+    "barra": {tag: "south" for tag in TAGS},
+    "largada": {tag: "west" if "west" in tag else "east" for tag in TAGS},
+}
+# Enquanto o .aseprite não tem a arte de um esporte, a linha repete os quadros de `treinando`
+# (prompts-chatgpt.md). Some sozinho quando a tag existir.
+PROVISORIAS = {nome for nome, _, _ in ANIMACOES[ANIMACOES.index(("musculacao", 6, 120)):]}
 
 
 def ler_tags() -> dict[str, list[Image.Image]]:
@@ -107,11 +130,17 @@ def montar(tags: dict) -> tuple[list[list[Image.Image]], dict]:
         "direcoes": DIRECOES,
         "animacoes": {"rotacao": {"linha": 0, "quadros": 1, "ms": None}},
     }
+    provisorias = set()
     for nome, qt, ms in ANIMACOES:
         meta["animacoes"][nome] = {"linha": len(linhas), "quadros": qt, "ms": ms}
         for d, tag in zip(DIRECOES, TAGS):
-            chave = f"{nome}-{tag}"
+            chave = f"{nome}-{UMA_DIRECAO.get(nome, {}).get(tag, tag)}"
             quadros = tags.get(chave)
+            if quadros is None and nome in PROVISORIAS:
+                provisorias.add(nome)
+                treino = tags[f"treinando-{tag}"]
+                linhas.append([celula(treino[i % len(treino)], f"{nome} provisória {tag}") for i in range(qt)])
+                continue
             if quadros is None or len(quadros) != qt:
                 sys.exit(f"tag {chave}: esperado {qt} quadros; veio {len(quadros or [])}")
             if tags[chave + ":ms"] != [ms]:
@@ -119,6 +148,9 @@ def montar(tags: dict) -> tuple[list[list[Image.Image]], dict]:
             linhas.append([celula(q, f"{chave} quadro {i + 1}") for i, q in enumerate(quadros)])
     # Ponto entre os pés: centro da célula, na linha mais baixa da rotação de frente.
     meta["ancora"]["y"] = linhas[0][0].getbbox()[3] - 1
+    meta["provisorias"] = sorted(provisorias)
+    if provisorias:
+        print(f"provisórias (cópia de treinando): {', '.join(sorted(provisorias))}")
     return linhas, meta
 
 
@@ -138,7 +170,7 @@ def escrever_previews(folha: Image.Image, linhas: list[list[Image.Image]], meta:
     folha.crop((12, 10, 36, 34)).resize((24 * 8, 24 * 8), Image.NEAREST).save(prev / "retrato.png")
     # Um GIF por animação, com as 8 direções lado a lado, em 3×.
     for nome, info in meta["animacoes"].items():
-        if nome == "rotacao":
+        if nome == "rotacao" or nome in meta.get("provisorias", []):
             continue
         quadros = []
         for i in range(info["quadros"]):

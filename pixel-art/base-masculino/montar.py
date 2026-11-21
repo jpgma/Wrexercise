@@ -56,6 +56,19 @@ ANIMACOES = [
     ("adormecer", "gemini", 140),
     ("acordar", "gemini", 110),
     ("levantar", "gemini", 120),
+    # Os esportes (ADR 0082): fonte/chatgpt/ reduzida pelo gemini.py (prompts-chatgpt.md).
+    ("musculacao", "gemini", 120),
+    ("ciclismo", "gemini", 80),
+    ("natacao", "gemini", 110),
+    ("yoga", "gemini", 400),
+    ("calistenia", "gemini", 150),
+    ("barra", "gemini", 120),
+    ("volei", "gemini", 100),
+    ("manchete", "gemini", 100),
+    ("futebol", "gemini", 90),
+    ("chutar", "gemini", 80),
+    ("luta", "gemini", 80),
+    ("largada", "gemini", 120),
 ]
 
 # Quadros da tira do gemini.py que entram na tag, em ordem: um índice da própria tira ou
@@ -69,6 +82,12 @@ SEQUENCIA = {
     "acordar": [("dormindo", 1), 2, 3, 4, 5],
     "levantar": [("dormindo", 1), 1, 2, 3, 4, 5, 6, 7],
 }
+# Os esportes (prompts-chatgpt.md): o 1º quadro da tira é a calibração (a pose parada), e o último,
+# nas folhas de 6 e 8 células, uma cópia dela que fecha a grade. A tag leva só a animação.
+for _animacao, _quadros in [("musculacao", 6), ("ciclismo", 6), ("natacao", 6), ("yoga", 4),
+                            ("calistenia", 4), ("barra", 6), ("volei", 6), ("manchete", 4),
+                            ("futebol", 8), ("chutar", 6), ("luta", 6), ("largada", 6)]:
+    SEQUENCIA[_animacao] = list(range(1, _quadros + 1))
 
 
 def fatiar(folha: Image.Image) -> list[Image.Image]:

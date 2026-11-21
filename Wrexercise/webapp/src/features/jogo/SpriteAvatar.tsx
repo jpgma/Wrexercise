@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import {
+  type Animacao,
   animacoes,
   direcoes,
   folha as formato,
@@ -36,11 +37,19 @@ export function SpriteAvatar({
   style,
   onFim,
 }: SpriteAvatarProps) {
-  // Uma folha sem a linha da animação (a de 97 linhas não tem as de dormir) mostra `parado`, parado.
-  const semLinha =
-    animacoes[animacao].linha + direcoes.length > useLinhasDaFolha(folha);
-  const { linha, quadros, ms, repete, quadroEstatico } =
-    animacoes[semLinha ? "parado" : animacao];
+  // Uma folha sem a linha da animação (a de 129 linhas não tem as dos esportes, e a de 97, nem as de
+  // dormir) toca a `reserva` da animação, ou mostra `parado`, parado, quando ela não tem reserva.
+  const linhas = useLinhasDaFolha(folha);
+  const temLinha = (nome: NomeAnimacao) =>
+    animacoes[nome].linha + direcoes.length <= linhas;
+  const { reserva } = animacoes[animacao] as Animacao;
+  const usada: NomeAnimacao = temLinha(animacao)
+    ? animacao
+    : reserva && temLinha(reserva)
+      ? reserva
+      : "parado";
+  const semLinha = usada === "parado" && animacao !== "parado";
+  const { linha, quadros, ms, repete, quadroEstatico } = animacoes[usada];
   const parar = estatico || semLinha;
   const celula = formato.celula * escala;
 
@@ -55,7 +64,7 @@ export function SpriteAvatar({
           width: celula,
           height: celula,
           backgroundImage: `url(${folha})`,
-          // Só a largura: a altura acompanha, e serve às folhas de 97 e de 129 linhas.
+          // Só a largura: a altura acompanha, e serve às folhas de 97, 129 e 225 linhas.
           backgroundSize: `${celula * formato.colunas}px auto`,
           backgroundPositionX: parar
             ? `${-(semLinha ? 0 : (quadro ?? quadroEstatico)) * celula}px`

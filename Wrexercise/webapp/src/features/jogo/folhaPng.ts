@@ -4,7 +4,8 @@ import { formatoFolha } from "@/components/folhaAvatar";
 export const folhaImportada = {
   largura: formatoFolha.colunas * formatoFolha.celula,
   altura: formatoFolha.linhas * formatoFolha.celula,
-  /** A folha sem as animações de dormir, que continua aceita. */
+  /** As versões anteriores, que continuam aceitas: sem os esportes e, a mais antiga, sem dormir. */
+  alturaSemEsportes: formatoFolha.linhasSemEsportes * formatoFolha.celula,
   alturaSemDormir: formatoFolha.linhasSemDormir * formatoFolha.celula,
   /** Abaixo de 1 MiB, para caber no limite do corpo da API com o envelope multipart. */
   maxBytes: 1000 * 1024,
@@ -52,16 +53,20 @@ function isAceitaComoVeio(bytes: Uint8Array): boolean {
  * é gravado de novo num canvas, como PNG RGBA.
  */
 export async function prepararFolha(arquivo: File): Promise<Blob> {
-  const { largura, altura, alturaSemDormir, maxBytes } = folhaImportada;
+  const { largura, altura, alturaSemEsportes, alturaSemDormir, maxBytes } =
+    folhaImportada;
   const imagem = await createImageBitmap(arquivo).catch(() => {
     throw new Error("Não foi possível abrir essa imagem. Use um arquivo PNG.");
   });
   // Lidos antes do close(): depois dele, o bitmap informa 0×0.
   const { width, height } = imagem;
-  if (width !== largura || (height !== altura && height !== alturaSemDormir)) {
+  if (
+    width !== largura ||
+    ![altura, alturaSemEsportes, alturaSemDormir].includes(height)
+  ) {
     imagem.close();
     throw new Error(
-      `A folha precisa ter exatamente ${largura}×${altura} px (ou ${largura}×${alturaSemDormir}, sem as animações de dormir). Esta tem ${width}×${height} px.`,
+      `A folha precisa ter exatamente ${largura}×${altura} px (ou ${largura}×${alturaSemEsportes} e ${largura}×${alturaSemDormir}, as versões anteriores). Esta tem ${width}×${height} px.`,
     );
   }
 

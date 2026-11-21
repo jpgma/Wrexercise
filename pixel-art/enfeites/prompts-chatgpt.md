@@ -2,7 +2,7 @@
 
 > Prompts para gerar no ChatGPT (geração de imagem) os 19 Enfeites (`docs/gamificacao.md` §9.1), apoiados no chão da praça e animados (`docs/decisoes/0050-enfeites-no-chao.md`). As imagens geradas são só a **fonte**: elas vão para `fonte/`, e o `build.py` recorta cada objeto, o reduz à escala do mestre da praça, o ajusta à paleta `wrexercise` e monta o atlas `saida/enfeites.png` (4 quadros × 19 linhas de 40×40), copiado para `webapp/public/`. Nunca copie uma imagem gerada direto para `saida/` ou `webapp/public/`.
 >
-> **Estado:** completo. A folha-base está em `fonte/base.png`; as tiras 01–03, 09–14 e 16–19 estão em `fonte/`; os Enfeites 04–08 e 15 brilham por código (`BRILHO`). Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
+> **Estado:** os 19 da primeira folha estão completos; os 3 Enfeites da folha-base 2 (prompt 3) e o cachorro andando (prompt 4) ainda não foram gerados (ADR 0082). A folha-base está em `fonte/base.png`; as tiras 01–03, 09–14 e 16–19 estão em `fonte/`; os Enfeites 04–08 e 15 brilham por código (`BRILHO`). Sem `fonte/base.png`, o `build.py` usa os ícones antigos de `fonte/folha.png` (do Gemini).
 
 ## Como usar
 
@@ -133,6 +133,73 @@ pixels) and loops smoothly from frame 4 back to frame 1.
 | 17 | a street lamp post | frame 1 lamp OFF exactly as attached; frames 2, 3 and 4 the glass is lit yellow #ffd34e with a chalk core, and the brightness flickers slightly (2 full, 3 one row dimmer #d9a02b, 4 full). The pole never changes. |
 | 18 | a portable party speaker | it pulses to music: 1 rest, 2 the woofer cone pushes out 1 px and the coral light is on, 3 rest, 4 the woofer pushes out and the whole body squashes down 1 px. |
 | 19 | a gym duffel bag with a water bottle | a light glint slides down the water bottle: 1 none, 2 top, 3 middle, 4 bottom; the bag stays still. |
+
+## Prompt 3 — folha-base 2: os Enfeites de Futebol, Vôlei e Luta (1536×1024, paisagem)
+
+Os Enfeites de `Craque`, `Levantador` e `FaixaPreta` (`docs/decisoes/0082-esportes-e-animacoes-por-tipo.md`). Ficam numa segunda folha, para não refazer as 19 da primeira. A escala precisa ser a mesma: por isso, a folha traz também o **poste de luz** (o objeto 17), que serve de régua. O `build.py` mede o poste, tira a escala dele e o descarta.
+
+Anexe `fonte/base.png` e comece com "Use the attached sheet only as the style and scale reference.". Salve em `fonte/base-2.png`.
+
+```text
+Use the attached sheet only as the style and scale reference.
+Create a 1536×1024 landscape sprite sheet of EXACTLY 4 pixel-art objects that stand on the floor of
+a small urban square, in a single row of 4 equal cells (each cell 384×1024), left to right. Each
+object is centered horizontally in its cell, with its base resting on an invisible line at the
+same height in all cells, about 3/4 down the image, with a wide magenta margin around it.
+
+All objects share ONE scale, the SAME as the attached sheet: a standing adult person would be 40
+art pixels tall, and each art pixel is a 6×6 block. The sizes below are width × height in art
+pixels.
+
+1. (14×40) The SAME city street lamp post as in the attached sheet, lamp OFF: it is only the size
+   ruler.
+2. (30×14) Football training: three small coral training cones (#ff684a, shadow #c4432c) in a
+   short diagonal zigzag line, and a chalk-and-dark football resting beside the first cone.
+3. (34×26) A small beach-volleyball net: two grey posts on small bases, a chalk net with a dark
+   mesh pattern and a coral top band between them, and a yellow-and-blue volleyball (#ffd34e,
+   #4aa8ff) resting at the foot of one post.
+4. (16×36) A punching bag on a free-standing floor stand: a dark grey stand with a round base, an
+   arm at the top, a short chain, and a hanging violet bag (#7957e8, shadow #4b35a6) with a chalk
+   band.
+```
+
+(cole o bloco de estilo)
+
+### Tiras dos Enfeites novos (prompt 2)
+
+Use o prompt 2 com o recorte de cada objeto, como os outros. O `NN` continua a numeração.
+
+| NN | `{NOME}` | `{MOVIMENTO}` |
+|---:|---|---|
+| 20 | three training cones with a football | the ball rocks between the cones: 1 rest, 2 rolls 1 px right, 3 rest, 4 rolls 1 px left; the cones never move. |
+| 21 | a small beach-volleyball net with a ball | the net sways in the wind: 1 rest, 2 the net bellies 1 px right, 3 rest, 4 the net bellies 1 px left; the posts and the ball never move. |
+| 22 | a punching bag on a floor stand | the bag swings gently on its chain: 1 still, 2 the bag tilts 1 px right at the bottom, 3 still, 4 tilts 1 px left; the stand never moves. |
+
+### Prompt 4 — o cachorro andando (1024×1024, um chat novo, anexando `preview/recorte-10-andarilho.png`, gerado por `python build.py --recortes`)
+
+Na Caminhada ao vivo, o cachorro (`Andarilho`) sai do lugar e anda ao lado do Avatar (ADR 0082). Ele precisa de uma tira de caminhada, de lado. O lado esquerdo sai espelhado. Salve em `fonte/tira-cachorro-andando.png`.
+
+```text
+The attached image is one pixel-art object on a magenta background: a small brown dog sitting,
+with a coral collar.
+Create a 1024×1024 image with a 4-frame walk cycle of EXACTLY this dog, in a 2×2 grid of equal
+512×512 cells: frame 1 top-left, frame 2 top-right, frame 3 bottom-left, frame 4 bottom-right. No
+borders or lines between cells.
+
+The dog is now standing on its four legs and walking to the RIGHT, seen from the side, the same
+dog: the same colors, the same collar, the same pixel scale (6×6 blocks per art pixel) and the
+same head size as in the attachment. It walks in place: it stays in the same position in every
+cell, centered horizontally, with its paws on the same line near the bottom of the cell.
+Frame 1: front-right and back-left legs forward, the tail up.
+Frame 2: all legs under the body, the body 1 px higher, the tail to the left.
+Frame 3: front-left and back-right legs forward, the tail up.
+Frame 4: all legs under the body, the body 1 px higher, the tail to the right.
+The ears bounce 1 px with the steps. The cycle loops smoothly from frame 4 back to frame 1.
+```
+
+(cole o bloco de estilo)
+
+**Ainda não feito no `build.py`** (fica para quando as fontes existirem, `docs/decisoes/0082-esportes-e-animacoes-por-tipo.md`, Impacto): ler `fonte/base-2.png` com a escala do poste, acrescentar as linhas 20 a 22 ao atlas e uma linha para o cachorro andando, e imprimir a lista nova para `enfeitesNaPraca.ts`.
 
 ## Conferência antes de salvar em `fonte/`
 

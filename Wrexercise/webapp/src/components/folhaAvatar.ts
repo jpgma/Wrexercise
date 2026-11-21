@@ -8,8 +8,10 @@ export const formatoFolha = {
   /** Lado da célula, em px. */
   celula: 48,
   colunas: 9,
-  linhas: 129,
-  /** A folha anterior, sem as 4 animações de dormir, continua aceita: no lugar delas, `parado`. */
+  linhas: 225,
+  /** A folha anterior, sem as 12 animações dos esportes (ADR 0082): no lugar delas, `treinando`. */
+  linhasSemEsportes: 129,
+  /** A folha mais antiga, sem as 4 animações de dormir, continua aceita: no lugar delas, `parado`. */
   linhasSemDormir: 97,
   /** Ponto entre os pés, igual em todos os quadros. */
   ancora: { x: 24, y: 44 },
@@ -19,7 +21,7 @@ export const formatoFolha = {
   retrato: { x: 12, y: 10, lado: 24 },
 } as const;
 
-/** Quantas linhas tem cada folha já carregada: as importadas podem ter 97 ou 129. */
+/** Quantas linhas tem cada folha já carregada: as importadas podem ter 97, 129 ou 225. */
 const linhasPorFolha = new Map<string, number>();
 const medindo = new Set<string>();
 const ouvintes = new Set<() => void>();

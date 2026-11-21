@@ -37,6 +37,19 @@ QUADROS = {
     "parado": 4, "andar": 8, "correr": 8, "treinando": 6, "alongar": 4, "olhar": 4,
     "arremessar": 6, "receber": 6, "aceitar": 4, "recusar": 3, "provocar": 4, "comemorar": 8,
     "dormindo": 4, "adormecer": 8, "acordar": 6, "levantar": 8,
+    # Os esportes (ADR 0082), gerados no ChatGPT (prompts-chatgpt.md) e salvos em fonte/chatgpt/. A
+    # folha tem a pose parada (calibração) no 1º quadro, os quadros da animação e, nas de 6 e 8
+    # células, uma 2ª cópia da pose parada no fim, para fechar a grade: o montar.py usa só o meio.
+    "musculacao": 8, "ciclismo": 8, "natacao": 8, "yoga": 6, "calistenia": 6, "barra": 8,
+    "volei": 8, "manchete": 6, "futebol": 9, "chutar": 8, "luta": 8, "largada": 8,
+}
+# Cores dos objetos dos esportes, além das do personagem (a paleta wrexercise dos Enfeites): sem elas,
+# a água, a bola e a bicicleta virariam pele ou roupa. O branco e o preto da bola já estão na paleta.
+EXTRAS = {
+    "musculacao": ["#ff684a", "#c4432c"],  # anilhas de borracha coral
+    "ciclismo": ["#ff684a", "#c4432c", "#5f6783"],  # quadro coral e aros cinza (a bicicleta do Enfeite)
+    "natacao": ["#4aa8ff", "#2f7fd6", "#a58cf4"],  # água, sombra da água e óculos de natação
+    "volei": ["#ffd34e", "#4aa8ff"],  # a bola de vôlei amarela e azul
 }
 # Quadros que ficam no chão do 1º, mesmo que o Gemini os desenhe 1 ou 2 px acima: as poses
 # sentadas de dormir (prompts-gemini.md §4, "Dormir"). O 3º de `acordar` é o susto, no ar.
@@ -44,7 +57,7 @@ NO_CHAO = {"dormindo": range(4), "adormecer": range(8), "acordar": (0, 1, 3, 4, 
 # Quadro de pé, cópia da referência, de onde saem a escala e o chão, quando não é o 1º.
 CALIBRACAO = {"levantar": 7}
 # Colunas e linhas da grade por quantidade de quadros (prompts-gemini.md §4).
-GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2)}
+GRADES = {3: (3, 1), 4: (2, 2), 6: (3, 2), 8: (4, 2), 9: (3, 3)}
 
 MANCHA = 0.5  # componente com menos que esta fração de um bloco é mancha solta
 MARGEM = 0.2  # fração do bloco ignorada em cada borda ao votar a cor (fica só o miolo)
@@ -201,7 +214,8 @@ def processar(arq: pathlib.Path) -> None:
     px = img.load()
     cw, ch = img.width // cols, img.height // linhas
 
-    paleta = [hex_rgb(c) for c in PALETA.values()] + [CONTORNO]
+    # As cores dos objetos vêm antes do contorno, que é sempre o último (permitidas).
+    paleta = [hex_rgb(c) for c in list(PALETA.values()) + EXTRAS.get(animacao, [])] + [CONTORNO]
     calibrada = calibrar(px, img.width, img.height, paleta)
     cache: dict[tuple, tuple] = {}
 
