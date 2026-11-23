@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Wrexercise.Features.Atividades;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Autenticacao;
 using Wrexercise.Features.Convites;
 using Wrexercise.Features.Desafios;

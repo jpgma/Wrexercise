@@ -65,7 +65,8 @@ internal static class ComecarTreino
     /// <summary>
     /// Começa o treino. Com <paramref name="vinculo"/>, quem começa é um app conectado (ADR 0081): o mesmo
     /// identificador devolve o mesmo treino, e o treino aberto pelo navegador no mesmo grupo passa a ser do app.
-    /// <paramref name="gravarPercurso"/>: cria o Percurso vazio (ADR 0084); nunca num treino começado pelo app.
+    /// <paramref name="gravarPercurso"/>: cria o Percurso vazio (ADR 0084); no treino do app, o Percurso que o app
+    /// grava e manda (ADR 0085), também no treino do navegador que o app adota.
     /// </summary>
     internal static async Task<(AtividadeOperacaoStatus Status, Guid Id, bool Repetida)> ExecutarAsync(
         NpgsqlDataSource dataSource,
@@ -124,6 +125,11 @@ internal static class ComecarTreino
                 await vincular.ExecuteNonQueryAsync(cancellationToken);
             }
 
+            if (gravarPercurso)
+            {
+                await CriarPercursoAsync(connection, transaction, aberto.Id, cancellationToken);
+            }
+
             await transaction.CommitAsync(cancellationToken);
             return (AtividadeOperacaoStatus.Concluida, aberto.Id, true);
         }
@@ -163,12 +169,9 @@ internal static class ComecarTreino
             return (AtividadeOperacaoStatus.TreinoEmAndamento, default, false);
         }
 
-        if (gravarPercurso && vinculo is null)
+        if (gravarPercurso)
         {
-            await using var percurso = new NpgsqlCommand(
-                "INSERT INTO percursos (atividade_id) VALUES ($1)", connection, transaction);
-            percurso.Parameters.AddWithValue(id);
-            await percurso.ExecuteNonQueryAsync(cancellationToken);
+            await CriarPercursoAsync(connection, transaction, id, cancellationToken);
         }
 
         await NotificacoesTreino.NotificarComecouTreinarAsync(connection, transaction, id, cancellationToken);
@@ -215,5 +218,20 @@ internal static class ComecarTreino
         command.Parameters.AddWithValue(vinculo.ExternalId);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         return await reader.ReadAsync(cancellationToken) ? (reader.GetGuid(0), reader.GetString(1)) : null;
+    }
+
+    /// <summary>O Percurso vazio do treino; o que já existe (o navegador gravando) fica como está.</summary>
+    private static async Task CriarPercursoAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid atividadeId,
+        CancellationToken cancellationToken)
+    {
+        await using var percurso = new NpgsqlCommand(
+            "INSERT INTO percursos (atividade_id) VALUES ($1) ON CONFLICT (atividade_id) DO NOTHING",
+            connection,
+            transaction);
+        percurso.Parameters.AddWithValue(atividadeId);
+        await percurso.ExecuteNonQueryAsync(cancellationToken);
     }
 }

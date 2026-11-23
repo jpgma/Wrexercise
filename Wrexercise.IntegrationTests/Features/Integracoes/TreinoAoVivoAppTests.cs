@@ -98,6 +98,71 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Percurso_OAppGravaEMandaOsPontosSemOLocalDeInicio()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var app = await ConectarAsync(ana);
+
+        var criado = await LerAsync(await ComecarComPercursoAsync(app, "corrida-1", grupoId, TipoAtividade.Corrida));
+        Assert.Equal(-1, criado.PercursoUltimoSeq);
+        Assert.True(await _host.ScalarAsync<bool>(
+            "SELECT latitude IS NULL FROM atividades WHERE id = $1", criado.AtividadeId));
+        await RecuarInicioAsync(criado.AtividadeId, TimeSpan.FromMinutes(5));
+
+        // 3 m/s para o norte, um ponto por segundo, como o Movr grava.
+        var lote = Reta(0, 61, 3, DateTimeOffset.UtcNow.AddSeconds(-120));
+        var primeiro = await EnviarPontosAsync(app, "corrida-1", lote);
+        var repetido = await EnviarPontosAsync(app, "corrida-1", lote);
+
+        Assert.Equal(HttpStatusCode.OK, primeiro.StatusCode);
+        var resposta = await repetido.Content.ReadFromJsonAsync(AppJsonContext.Default.PontosPercursoResponse, Token);
+        Assert.Equal(60, resposta!.UltimoSeq);
+        Assert.Equal(61, resposta.TotalPontos);
+        Assert.InRange(resposta.DistanciaMetros, 150, 185);
+
+        var situacao = await app.GetFromJsonAsync(
+            "/api/integracoes/treinos/corrida-1", AppJsonContext.Default.TreinoAppResponse, Token);
+        Assert.Equal(60, situacao!.PercursoUltimoSeq);
+    }
+
+    [Fact]
+    public async Task Percurso_SemPercursoOuSemTreino_Recusa()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var app = await ConectarAsync(ana);
+
+        // Calistenia não tem percurso, mesmo pedindo.
+        var treino = await LerAsync(await ComecarComPercursoAsync(app, "treino-1", grupoId, TipoAtividade.Calistenia));
+        Assert.Null(treino.PercursoUltimoSeq);
+        var lote = Reta(0, 5, 3, DateTimeOffset.UtcNow);
+
+        await ApiTestHost.AssertProblemAsync(
+            await EnviarPontosAsync(app, "treino-1", lote), HttpStatusCode.NotFound, "PERCURSO_NAO_ENCONTRADO");
+        await ApiTestHost.AssertProblemAsync(
+            await EnviarPontosAsync(app, "outro", lote), HttpStatusCode.NotFound, "TREINO_NAO_ENCONTRADO");
+        await ApiTestHost.AssertProblemAsync(
+            await EnviarPontosAsync(app, "treino-1", []), HttpStatusCode.BadRequest, "DADOS_INVALIDOS");
+    }
+
+    [Fact]
+    public async Task Percurso_DepoisDeTerminadoAquiRecusaOsPontos()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var app = await ConectarAsync(ana);
+        var treino = await LerAsync(await ComecarComPercursoAsync(app, "caminhada-1", grupoId, TipoAtividade.Caminhada));
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET situacao_verificacao = 'AguardandoFeedback' WHERE id = '{treino.AtividadeId}'");
+
+        await ApiTestHost.AssertProblemAsync(
+            await EnviarPontosAsync(app, "caminhada-1", Reta(0, 5, 3, DateTimeOffset.UtcNow)),
+            HttpStatusCode.Conflict,
+            "TREINO_NAO_EM_ANDAMENTO");
+    }
+
+    [Fact]
     public async Task Comecar_RecusaOutroTreinoAberto()
     {
         var ana = await _host.CreateUsuarioAsync();
@@ -346,6 +411,40 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
             new ComecarTreinoAppRequest(grupoId, TipoAtividade.Calistenia, latitude, longitude),
             AppJsonContext.Default.ComecarTreinoAppRequest,
             Token);
+
+    private static Task<HttpResponseMessage> ComecarComPercursoAsync(
+        HttpClient app,
+        string externalId,
+        Guid grupoId,
+        string tipo) =>
+        app.PutAsJsonAsync(
+            $"/api/integracoes/treinos/{externalId}",
+            new ComecarTreinoAppRequest(grupoId, tipo, -23.55, -46.63, GravarPercurso: true),
+            AppJsonContext.Default.ComecarTreinoAppRequest,
+            Token);
+
+    private static Task<HttpResponseMessage> EnviarPontosAsync(
+        HttpClient app,
+        string externalId,
+        PontoPercursoRequest[] pontos) =>
+        app.PutAsJsonAsync(
+            $"/api/integracoes/treinos/{externalId}/percurso/pontos",
+            new EnviarPontosPercursoRequest(pontos),
+            AppJsonContext.Default.EnviarPontosPercursoRequest,
+            Token);
+
+    /// <summary>Pontos para o norte, a <paramref name="metros"/> por segundo, com precisão de 5 m.</summary>
+    private static PontoPercursoRequest[] Reta(int seqInicial, int total, double metros, DateTimeOffset de) =>
+        Enumerable.Range(0, total)
+            .Select(i => new PontoPercursoRequest(
+                seqInicial + i,
+                de.AddSeconds(i),
+                -23.55 + (i * metros / (6_371_000 * Math.PI / 180)),
+                -46.63,
+                5,
+                null,
+                0))
+            .ToArray();
 
     private static async Task<HttpResponseMessage> PutFimAsync(
         HttpClient app,

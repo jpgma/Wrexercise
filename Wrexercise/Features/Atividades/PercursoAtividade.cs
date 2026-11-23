@@ -20,17 +20,23 @@ internal readonly record struct BboxPercurso(double LatMin, double LonMin, doubl
 /// <summary>Uma parcial: o trecho de <c>Metros</c> (1 km, ou 5 km no Ciclismo; a última pode ser menor).</summary>
 internal sealed record ParcialPercurso(int Metros, int Segundos);
 
-/// <summary>O que o servidor calcula de um percurso, sempre a partir dos pontos crus.</summary>
+/// <summary>
+/// O que o servidor calcula de um percurso, sempre a partir dos pontos crus. <c>Segmentos</c> é o desenho; os
+/// números vêm do algoritmo v1 (<see cref="MetricasPercurso"/>, ADR 0085).
+/// </summary>
 internal sealed record CalculoPercurso(
     IReadOnlyList<SegmentoPercurso> Segmentos,
     int DistanciaMetros,
     double? VelocidadeMaxima,
-    int? GanhoElevacaoMetros);
+    int? GanhoElevacaoMetros,
+    IReadOnlyList<ParcialPercurso> Parciais);
 
 /// <summary>
 /// Regras puras do Percurso (ADR 0084). Os pontos vêm do navegador e podem ser forjados: a distância aparece para o
-/// grupo, mas nunca conta para o progresso, a Energia ou a classificação. A cópia em TypeScript para a estimativa ao
-/// vivo fica em <c>webapp/src/features/percurso/calculo.ts</c>, com as mesmas constantes.
+/// grupo, mas nunca conta para o progresso, a Energia ou a classificação. Os números (distância, velocidade máxima,
+/// subida e parciais) vêm de <see cref="MetricasPercurso"/>, o algoritmo v1 que o Movr também usa (ADR 0085); aqui
+/// ficam o desenho (trechos, aparo, simplificação) e os limites. A cópia em TypeScript para a estimativa ao vivo
+/// fica em <c>webapp/src/features/percurso/calculo.ts</c>.
 /// </summary>
 internal static class PercursoAtividade
 {
@@ -43,21 +49,8 @@ internal static class PercursoAtividade
     /// <summary>Mais tempo que isso sem ponto vira lacuna: a tela apagou, o app saiu da frente ou o sinal caiu.</summary>
     public static readonly TimeSpan Lacuna = TimeSpan.FromSeconds(30);
 
-    /// <summary>
-    /// Parado, o GPS treme alguns metros. Só conta o deslocamento a partir disso, ou a partir da precisão média dos
-    /// dois pontos, se for maior: um GPS de 8 metros que oscila de um lado a outro não soma distância.
-    /// </summary>
-    public const double DeslocamentoMinimoMetros = 5;
-
-    /// <summary>O deslocamento mínimo entre dois pontos para contar distância.</summary>
-    public static double LimiarDeslocamento(PontoPercurso a, PontoPercurso b) =>
-        Math.Max(DeslocamentoMinimoMetros, (a.Precisao + b.Precisao) / 2);
-
     /// <summary>Quantos pontos seguidos e coerentes entre si, depois de um salto, viram um trecho novo.</summary>
     public const int PontosParaRelocar = 3;
-
-    /// <summary>A janela mínima da velocidade máxima: nunca entre dois pontos soltos.</summary>
-    public static readonly TimeSpan JanelaVelocidadeMaxima = TimeSpan.FromSeconds(10);
 
     public const int MaxPontosPorAtividade = 20_000;
     public const int MaxPontosPorLote = 500;
@@ -76,9 +69,6 @@ internal static class PercursoAtividade
         TipoAtividade.Corrida => 10,
         _ => 25,
     };
-
-    /// <summary>O tamanho de cada parcial: 1 km, ou 5 km no Ciclismo.</summary>
-    public static int MetrosPorParcial(string tipo) => tipo == TipoAtividade.Ciclismo ? 5000 : 1000;
 
     /// <summary>A distância mínima para um recorde: 1 km, ou 5 km no Ciclismo.</summary>
     public static int MetrosMinimosRecorde(string tipo) => tipo == TipoAtividade.Ciclismo ? 5000 : 1000;
@@ -107,19 +97,27 @@ internal static class PercursoAtividade
         && ponto.Em >= startedAt.AddSeconds(-60)
         && ponto.Em <= agora.AddSeconds(60);
 
-    /// <summary>Tudo o que o resumo guarda, a partir dos pontos crus e do período do treino.</summary>
+    /// <summary>
+    /// Tudo o que o resumo guarda, a partir dos pontos crus e do período do treino. O desenho sai de
+    /// <see cref="Filtrar"/>; os números, do algoritmo v1 sobre os mesmos pontos do período, na ordem do <c>Seq</c>.
+    /// </summary>
     public static CalculoPercurso Calcular(
         IEnumerable<PontoPercurso> pontos,
         string tipo,
         DateTimeOffset inicio,
         DateTimeOffset fim)
     {
-        var segmentos = Filtrar(pontos, tipo, inicio, fim);
+        var lista = pontos as IReadOnlyCollection<PontoPercurso> ?? pontos.ToList();
+        var segmentos = Filtrar(lista, tipo, inicio, fim);
+        var metricas = MetricasPercurso.Calcular(
+            lista.Where(p => p.Em >= inicio && p.Em <= fim).OrderBy(p => p.Seq),
+            tipo);
         return new CalculoPercurso(
             segmentos,
-            (int)Math.Round(Distancia(segmentos)),
-            VelocidadeMaxima(segmentos),
-            GanhoElevacao(segmentos));
+            (int)Math.Round(metricas.DistanciaMetros),
+            metricas.VelocidadeMaxima(),
+            metricas.GanhoElevacao is { } ganho ? (int)Math.Round(ganho) : null,
+            metricas.Parciais());
     }
 
     /// <summary>
@@ -206,177 +204,6 @@ internal static class PercursoAtividade
     {
         var segundos = (b.Em - a.Em).TotalSeconds;
         return segundos <= 0 ? double.PositiveInfinity : Haversine(a, b) / segundos;
-    }
-
-    /// <summary>
-    /// Os pontos de cada trecho que contam para a distância: o próximo só conta a 5 metros ou mais do último que
-    /// contou (ou à precisão média, se maior), para que o tremor do GPS parado não some quilômetros.
-    /// </summary>
-    private static List<PontoPercurso> PontosContados(SegmentoPercurso segmento)
-    {
-        var contados = new List<PontoPercurso> { segmento.Pontos[0] };
-        foreach (var ponto in segmento.Pontos.Skip(1))
-        {
-            if (Haversine(contados[^1], ponto) >= LimiarDeslocamento(contados[^1], ponto))
-            {
-                contados.Add(ponto);
-            }
-        }
-
-        // O último ponto marca o fim do trecho no tempo, mesmo parado.
-        if (contados[^1] != segmento.Pontos[^1])
-        {
-            contados.Add(segmento.Pontos[^1]);
-        }
-
-        return contados;
-    }
-
-    /// <summary>A soma dos trechos, em metros. A distância entre dois trechos nunca conta.</summary>
-    public static double Distancia(IReadOnlyList<SegmentoPercurso> segmentos)
-    {
-        var total = 0.0;
-        foreach (var segmento in segmentos)
-        {
-            var contados = PontosContados(segmento);
-            for (var i = 1; i < contados.Count; i++)
-            {
-                total += Haversine(contados[i - 1], contados[i]);
-            }
-        }
-
-        return total;
-    }
-
-    /// <summary>A maior velocidade média numa janela de 10 segundos ou mais, em m/s; <c>null</c> sem janela.</summary>
-    public static double? VelocidadeMaxima(IReadOnlyList<SegmentoPercurso> segmentos)
-    {
-        double? maxima = null;
-        foreach (var segmento in segmentos)
-        {
-            var contados = PontosContados(segmento);
-            var acumulado = new double[contados.Count];
-            for (var i = 1; i < contados.Count; i++)
-            {
-                acumulado[i] = acumulado[i - 1] + Haversine(contados[i - 1], contados[i]);
-            }
-
-            var j = 0;
-            for (var i = 0; i < contados.Count; i++)
-            {
-                if (j < i)
-                {
-                    j = i;
-                }
-
-                while (j < contados.Count && contados[j].Em - contados[i].Em < JanelaVelocidadeMaxima)
-                {
-                    j++;
-                }
-
-                if (j >= contados.Count)
-                {
-                    break;
-                }
-
-                var velocidade = (acumulado[j] - acumulado[i]) / (contados[j].Em - contados[i].Em).TotalSeconds;
-                if (maxima is null || velocidade > maxima)
-                {
-                    maxima = velocidade;
-                }
-            }
-        }
-
-        return maxima;
-    }
-
-    /// <summary>
-    /// A subida acumulada, em metros, aproximada: a altitude do GPS oscila muito. Média móvel de 5 pontos e só
-    /// conta uma subida de 3 metros ou mais. <c>null</c> quando menos da metade dos pontos tem altitude.
-    /// </summary>
-    public static int? GanhoElevacao(IReadOnlyList<SegmentoPercurso> segmentos)
-    {
-        var total = segmentos.Sum(s => s.Pontos.Count);
-        var comAltitude = segmentos.Sum(s => s.Pontos.Count(p => p.Altitude is not null));
-        if (total == 0 || comAltitude * 2 < total)
-        {
-            return null;
-        }
-
-        const int janela = 5;
-        const double histerese = 3;
-        var ganho = 0.0;
-        foreach (var segmento in segmentos)
-        {
-            var altitudes = segmento.Pontos.Where(p => p.Altitude is not null).Select(p => p.Altitude!.Value).ToList();
-            if (altitudes.Count < janela)
-            {
-                continue;
-            }
-
-            double? referencia = null;
-            for (var i = 0; i + janela <= altitudes.Count; i++)
-            {
-                var media = altitudes.Skip(i).Take(janela).Average();
-                if (referencia is not { } r)
-                {
-                    referencia = media;
-                }
-                else if (media - r >= histerese)
-                {
-                    ganho += media - r;
-                    referencia = media;
-                }
-                else if (r - media >= histerese)
-                {
-                    referencia = media;
-                }
-            }
-        }
-
-        return (int)Math.Round(ganho);
-    }
-
-    /// <summary>
-    /// As parciais de 1 km (5 km no Ciclismo), com o tempo em movimento de cada uma: as lacunas não contam. O tempo
-    /// da parcial é interpolado no ponto exato da marca. A última fica com o que sobrou, se passar de 50 metros.
-    /// </summary>
-    public static IReadOnlyList<ParcialPercurso> Parciais(IReadOnlyList<SegmentoPercurso> segmentos, string tipo)
-    {
-        var tamanho = MetrosPorParcial(tipo);
-        var parciais = new List<ParcialPercurso>();
-        var metrosNaParcial = 0.0;
-        var segundosNaParcial = 0.0;
-
-        foreach (var segmento in segmentos)
-        {
-            var contados = PontosContados(segmento);
-            for (var i = 1; i < contados.Count; i++)
-            {
-                var metros = Haversine(contados[i - 1], contados[i]);
-                var segundos = (contados[i].Em - contados[i - 1].Em).TotalSeconds;
-                while (metros > 0 && metrosNaParcial + metros >= tamanho)
-                {
-                    var falta = tamanho - metrosNaParcial;
-                    var fracao = falta / metros;
-                    parciais.Add(new ParcialPercurso(tamanho, (int)Math.Round(segundosNaParcial + segundos * fracao)));
-                    metros -= falta;
-                    segundos -= segundos * fracao;
-                    metrosNaParcial = 0;
-                    segundosNaParcial = 0;
-                }
-
-                metrosNaParcial += metros;
-                segundosNaParcial += segundos;
-            }
-        }
-
-        if (metrosNaParcial >= 50)
-        {
-            parciais.Add(new ParcialPercurso((int)Math.Round(metrosNaParcial), (int)Math.Round(segundosNaParcial)));
-        }
-
-        return parciais;
     }
 
     /// <summary>

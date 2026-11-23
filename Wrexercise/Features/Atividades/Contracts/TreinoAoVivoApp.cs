@@ -13,7 +13,10 @@ internal sealed record ArquivoIntegracao(
     string Sha256,
     string? CaminhoMiniatura);
 
-/// <summary>O treino ao vivo começado por um app conectado, como o app o vê (ADR 0081).</summary>
+/// <summary>
+/// O treino ao vivo começado por um app conectado, como o app o vê (ADR 0081). <c>PercursoUltimoSeq</c>: com o
+/// Percurso (ADR 0085), o maior <c>seq</c> já guardado (−1 sem nenhum); <c>null</c> quando o treino não grava.
+/// </summary>
 internal sealed record TreinoAppSituacao(
     Guid AtividadeId,
     Guid GrupoId,
@@ -21,7 +24,8 @@ internal sealed record TreinoAppSituacao(
     string Situacao,
     DateTimeOffset StartedAt,
     bool FimInformado,
-    bool ResumoAnexado);
+    bool ResumoAnexado,
+    int? PercursoUltimoSeq);
 
 internal enum TreinoAppStatus
 {
@@ -45,7 +49,11 @@ internal enum TreinoAppStatus
 /// </summary>
 internal static class TreinoAoVivoApp
 {
-    /// <summary>Coordenadas malformadas não impedem o treino: ele só começa sem local.</summary>
+    /// <summary>
+    /// Coordenadas malformadas não impedem o treino: ele só começa sem local. Com <paramref name="gravarPercurso"/>
+    /// na Corrida, na Caminhada e no Ciclismo, o treino ganha o Percurso que o app grava (ADR 0085) e, como no
+    /// navegador, o ponto de início não é guardado.
+    /// </summary>
     /// <returns>O erro do começo (os mesmos do navegador), ou o treino e se ele foi criado agora.</returns>
     public static async Task<(IResult? Erro, TreinoAppSituacao? Treino, bool Criado)> ComecarAsync(
         NpgsqlDataSource dataSource,
@@ -56,13 +64,15 @@ internal static class TreinoAoVivoApp
         double? longitude,
         string app,
         string externalId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool gravarPercurso = false)
     {
-        var local = ComecarTreino.IsLocalValido(latitude, longitude)
+        gravarPercurso = gravarPercurso && PercursoAtividade.IsTipoComPercurso(tipo);
+        var local = !gravarPercurso && ComecarTreino.IsLocalValido(latitude, longitude)
             ? (latitude!.Value, longitude!.Value)
             : ((double, double)?)null;
         var (status, _, repetida) = await ComecarTreino.ExecutarAsync(
-            dataSource, grupoId, usuarioId, tipo, local, (app, externalId), cancellationToken);
+            dataSource, grupoId, usuarioId, tipo, local, (app, externalId), cancellationToken, gravarPercurso);
         if (status != AtividadeOperacaoStatus.Concluida)
         {
             return (OperacaoAtividade.ToResult(status), null, false);
@@ -254,6 +264,63 @@ internal static class TreinoAoVivoApp
         return (TreinoAppStatus.Concluido, treino, usado);
     }
 
+    /// <summary>
+    /// Um lote de pontos do Percurso gravado pelo app (ADR 0085), com as mesmas regras e limites do navegador
+    /// (<c>EnviarPontosPercurso</c>). Só vale enquanto o treino está aberto e se o app pediu o percurso ao começar.
+    /// </summary>
+    /// <returns>
+    /// <see cref="TreinoAppStatus.NaoEncontrado"/> sem o treino; senão, o erro das regras do Percurso
+    /// (<c>TREINO_NAO_EM_ANDAMENTO</c>, <c>PERCURSO_NAO_ENCONTRADO</c>, <c>PERCURSO_CHEIO</c>) ou a resposta.
+    /// </returns>
+    public static async Task<(TreinoAppStatus Status, IResult? Erro, PontosPercursoResponse? Resposta)> EnviarPontosPercursoAsync(
+        NpgsqlDataSource dataSource,
+        Guid usuarioId,
+        string app,
+        string externalId,
+        IReadOnlyList<PontoPercursoRequest> lote,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        Guid atividadeId;
+        string situacao;
+        DateTimeOffset startedAt;
+        int? totalPontos;
+        await using (var load = new NpgsqlCommand("""
+            SELECT a.id, a.situacao_verificacao, a.started_at, p.total_pontos
+            FROM atividades a
+            LEFT JOIN percursos p ON p.atividade_id = a.id
+            WHERE a.usuario_id = $1 AND a.app = $2 AND a.app_external_id = $3
+            FOR UPDATE OF a
+            """, connection, transaction))
+        {
+            load.Parameters.AddWithValue(usuarioId);
+            load.Parameters.AddWithValue(app);
+            load.Parameters.AddWithValue(externalId);
+            await using var reader = await load.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken))
+            {
+                return (TreinoAppStatus.NaoEncontrado, null, null);
+            }
+
+            atividadeId = reader.GetGuid(0);
+            situacao = reader.GetString(1);
+            startedAt = reader.GetFieldValue<DateTimeOffset>(2);
+            totalPontos = reader.IsDBNull(3) ? null : reader.GetInt32(3);
+        }
+
+        var (status, resposta) = await EnviarPontosPercurso.GravarAsync(
+            connection, transaction, atividadeId, situacao, startedAt, totalPontos, lote, cancellationToken);
+        if (status != AtividadeOperacaoStatus.Concluida)
+        {
+            return (TreinoAppStatus.Concluido, OperacaoAtividade.ToResult(status), null);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return (TreinoAppStatus.Concluido, null, resposta);
+    }
+
     /// <summary>Cancela o treino do app enquanto ele está aberto. Os arquivos saem depois do commit.</summary>
     public static async Task<(TreinoAppStatus Status, List<string> Arquivos)> CancelarAsync(
         NpgsqlDataSource dataSource,
@@ -307,9 +374,13 @@ internal static class TreinoAoVivoApp
         await using var command = dataSource.CreateCommand("""
             SELECT a.id, a.grupo_id, g.nome, a.situacao_verificacao, a.started_at, a.app_ended_at IS NOT NULL,
                 EXISTS (SELECT 1 FROM evidencias_atividade e
-                        WHERE e.atividade_id = a.id AND e.origem_data_captura = $4)
+                        WHERE e.atividade_id = a.id AND e.origem_data_captura = $4),
+                CASE WHEN p.atividade_id IS NULL THEN NULL
+                     ELSE (SELECT coalesce(max(pp.seq), -1) FROM pontos_percurso pp WHERE pp.atividade_id = a.id)
+                END
             FROM atividades a
             JOIN grupos g ON g.id = a.grupo_id
+            LEFT JOIN percursos p ON p.atividade_id = a.id
             WHERE a.usuario_id = $1 AND a.app = $2 AND a.app_external_id = $3
             """);
         command.Parameters.AddWithValue(usuarioId);
@@ -325,7 +396,8 @@ internal static class TreinoAoVivoApp
                 reader.GetString(3),
                 reader.GetFieldValue<DateTimeOffset>(4),
                 reader.GetBoolean(5),
-                reader.GetBoolean(6))
+                reader.GetBoolean(6),
+                reader.IsDBNull(7) ? null : reader.GetInt32(7))
             : null;
     }
 

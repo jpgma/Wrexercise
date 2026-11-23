@@ -1,29 +1,16 @@
 using Npgsql;
 using NpgsqlTypes;
+using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Json;
 
 namespace Wrexercise.Features.Atividades;
 
-/// <summary>Um ponto do GPS. <c>Seq</c> e <c>Segmento</c> vêm do aparelho: o segmento muda a cada reinício da gravação.</summary>
-internal sealed record PontoPercursoRequest(
-    int? Seq,
-    DateTimeOffset? Em,
-    double? Latitude,
-    double? Longitude,
-    double? Precisao,
-    double? Altitude,
-    int? Segmento);
-
-internal sealed record EnviarPontosPercursoRequest(IReadOnlyList<PontoPercursoRequest>? Pontos);
-
-/// <summary><c>UltimoSeq</c>: o maior <c>seq</c> guardado, para o aparelho continuar daí depois de recarregar.</summary>
-internal sealed record PontosPercursoResponse(int UltimoSeq, int DistanciaMetros, int TotalPontos);
-
 /// <summary>
 /// Um lote de pontos do Percurso durante o treino ao vivo (ADR 0084). Só o autor, só com o treino aberto e só se
 /// ele escolheu gravar o percurso. Repetir o lote não duplica nada; pontos inválidos são descartados em silêncio.
-/// As coordenadas nunca vão para o log.
+/// As coordenadas nunca vão para o log. O app conectado manda pelo mesmo caminho (<see cref="GravarAsync"/>,
+/// ADR 0085).
 /// </summary>
 internal static class EnviarPontosPercurso
 {
@@ -34,7 +21,7 @@ internal static class EnviarPontosPercurso
         NpgsqlDataSource dataSource,
         CancellationToken cancellationToken)
     {
-        if (request.Pontos is not { Count: > 0 and <= PercursoAtividade.MaxPontosPorLote } lote)
+        if (!IsLoteValido(request))
         {
             return OperacaoAtividade.InvalidData();
         }
@@ -77,14 +64,44 @@ internal static class EnviarPontosPercurso
             return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.AcessoNegado);
         }
 
+        var (status, resposta) = await GravarAsync(
+            connection, transaction, id, situacao, startedAt, totalPontos, request.Pontos!, cancellationToken);
+        if (status != AtividadeOperacaoStatus.Concluida)
+        {
+            return OperacaoAtividade.ToResult(status);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return Results.Json(resposta, AppJsonContext.Default.PontosPercursoResponse);
+    }
+
+    /// <summary>Um lote com 1 a 500 pontos.</summary>
+    public static bool IsLoteValido(EnviarPontosPercursoRequest request) =>
+        request.Pontos is { Count: > 0 and <= PercursoAtividade.MaxPontosPorLote };
+
+    /// <summary>
+    /// Guarda os pontos válidos de um treino já carregado (e bloqueado) por quem chama e refaz o resumo. Quem chama
+    /// faz o commit quando o status é <see cref="AtividadeOperacaoStatus.Concluida"/>.
+    /// </summary>
+    /// <param name="totalPontos">Os pontos já guardados, ou <c>null</c> quando o treino não grava percurso.</param>
+    public static async Task<(AtividadeOperacaoStatus Status, PontosPercursoResponse? Resposta)> GravarAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid id,
+        string situacao,
+        DateTimeOffset startedAt,
+        int? totalPontos,
+        IReadOnlyList<PontoPercursoRequest> lote,
+        CancellationToken cancellationToken)
+    {
         if (situacao != SituacaoVerificacao.EmAndamento)
         {
-            return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.TreinoNaoEmAndamento);
+            return (AtividadeOperacaoStatus.TreinoNaoEmAndamento, null);
         }
 
         if (totalPontos is not { } total)
         {
-            return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.PercursoNaoEncontrado);
+            return (AtividadeOperacaoStatus.PercursoNaoEncontrado, null);
         }
 
         var agora = DateTimeOffset.UtcNow;
@@ -97,7 +114,7 @@ internal static class EnviarPontosPercurso
 
         if (total + validos.Count > PercursoAtividade.MaxPontosPorAtividade)
         {
-            return OperacaoAtividade.ToResult(AtividadeOperacaoStatus.PercursoCheio);
+            return (AtividadeOperacaoStatus.PercursoCheio, null);
         }
 
         if (validos.Count > 0)
@@ -128,24 +145,16 @@ internal static class EnviarPontosPercurso
 
         var calculo = await ConsultasPercurso.RecalcularAsync(connection, transaction, id, cancellationToken);
 
-        int ultimoSeq;
-        int guardados;
-        await using (var resumo = new NpgsqlCommand(
+        await using var resumo = new NpgsqlCommand(
             "SELECT coalesce(max(seq), -1), count(*)::int FROM pontos_percurso WHERE atividade_id = $1",
             connection,
-            transaction))
-        {
-            resumo.Parameters.AddWithValue(id);
-            await using var reader = await resumo.ExecuteReaderAsync(cancellationToken);
-            await reader.ReadAsync(cancellationToken);
-            ultimoSeq = reader.GetInt32(0);
-            guardados = reader.GetInt32(1);
-        }
-
-        await transaction.CommitAsync(cancellationToken);
-        return Results.Json(
-            new PontosPercursoResponse(ultimoSeq, calculo?.DistanciaMetros ?? 0, guardados),
-            AppJsonContext.Default.PontosPercursoResponse);
+            transaction);
+        resumo.Parameters.AddWithValue(id);
+        await using var reader = await resumo.ExecuteReaderAsync(cancellationToken);
+        await reader.ReadAsync(cancellationToken);
+        return (
+            AtividadeOperacaoStatus.Concluida,
+            new PontosPercursoResponse(reader.GetInt32(0), calculo?.DistanciaMetros ?? 0, reader.GetInt32(1)));
     }
 
     private static PontoPercurso? ToPonto(PontoPercursoRequest p) =>

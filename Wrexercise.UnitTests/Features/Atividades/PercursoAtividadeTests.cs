@@ -52,12 +52,19 @@ public class PercursoAtividadeTests
         Assert.InRange(metros, 99.9, 100.1);
     }
 
+    /// <summary>
+    /// O algoritmo v1 (ADR 0085) desconta das cordas o ruído que a precisão anuncia: pontos sintéticos perfeitos,
+    /// sem ruído nenhum, ficam até uns 6% abaixo da reta. Os percursos de referência, com ruído de verdade, ficam
+    /// perto da verdade (<see cref="MetricasPercursoTests"/>).
+    /// </summary>
+    private const double DescontoPontosPerfeitos = 0.94;
+
     [Fact]
     public void Calcular_SomaAReta()
     {
         // 1 km em 200 passos de 5 m (a cada 5 s: 1 m/s, uma caminhada).
         var calculo = PercursoAtividade.Calcular(Reta(201, 5), "Caminhada", Inicio, Fim);
-        Assert.InRange(calculo.DistanciaMetros, 995, 1005);
+        Assert.InRange(calculo.DistanciaMetros, 1000 * DescontoPontosPerfeitos, 1005);
         Assert.Single(calculo.Segmentos);
     }
 
@@ -89,20 +96,32 @@ public class PercursoAtividadeTests
         var calculo = PercursoAtividade.Calcular([.. antes, .. depois], "Caminhada", Inicio, Fim);
 
         Assert.Equal(2, calculo.Segmentos.Count);
-        // O salto de 2 km não conta: só os dois trechos de 45 m.
-        Assert.InRange(calculo.DistanciaMetros, 85, 95);
+        // O salto de 2 km não conta: no máximo os dois trechos de 45 m.
+        Assert.InRange(calculo.DistanciaMetros, 40, 95);
     }
 
     [Fact]
-    public void Filtrar_LacunaSemPontoNaoContaDistancia()
+    public void Lacuna_AteDoisMinutosComVelocidadePlausivelSomaAReta()
     {
         var antes = Reta(10, 5);
-        // A tela apagou 2 min; a pessoa andou 300 m nesse tempo.
+        // Um túnel (ou a tela apagada) por 2 min; a pessoa andou 300 m nesse tempo.
         var depois = Reta(10, 5, seqInicial: 10, metrosIniciais: 345, de: Inicio.AddSeconds(45 + 120));
         var calculo = PercursoAtividade.Calcular([.. antes, .. depois], "Corrida", Inicio, Fim);
 
+        // O desenho continua com dois trechos (a lacuna tracejada); a distância soma a reta de 300 m.
         Assert.Equal(2, calculo.Segmentos.Count);
-        Assert.InRange(calculo.DistanciaMetros, 85, 95);
+        Assert.InRange(calculo.DistanciaMetros, 300, 395);
+    }
+
+    [Fact]
+    public void Lacuna_MaisDeDoisMinutosNaoContaDistancia()
+    {
+        var antes = Reta(10, 5);
+        var depois = Reta(10, 5, seqInicial: 10, metrosIniciais: 345, de: Inicio.AddSeconds(45 + 180));
+        var calculo = PercursoAtividade.Calcular([.. antes, .. depois], "Corrida", Inicio, Fim);
+
+        Assert.Equal(2, calculo.Segmentos.Count);
+        Assert.InRange(calculo.DistanciaMetros, 0, 95);
     }
 
     [Fact]
@@ -139,8 +158,8 @@ public class PercursoAtividadeTests
         var completo = PercursoAtividade.Calcular(pontos, "Caminhada", Inicio, Fim);
         var cortado = PercursoAtividade.Calcular(pontos, "Caminhada", Inicio, Inicio.AddMinutes(10));
 
-        Assert.InRange(completo.DistanciaMetros, 1795, 1805);
-        Assert.InRange(cortado.DistanciaMetros, 595, 605);
+        Assert.InRange(completo.DistanciaMetros, 1800 * DescontoPontosPerfeitos, 1805);
+        Assert.InRange(cortado.DistanciaMetros, 600 * DescontoPontosPerfeitos, 605);
     }
 
     [Fact]
@@ -148,13 +167,12 @@ public class PercursoAtividadeTests
     {
         // 5,3 km a 10 m a cada 3 s (3,33 m/s).
         var pontos = Reta(531, 10, segundos: 3);
-        var parciais = PercursoAtividade.Parciais(
-            PercursoAtividade.Filtrar(pontos, "Corrida", Inicio, Fim), "Corrida");
+        var parciais = PercursoAtividade.Calcular(pontos, "Corrida", Inicio, Fim).Parciais;
 
         Assert.Equal(6, parciais.Count);
         Assert.All(parciais.Take(5), p => Assert.Equal(1000, p.Metros));
-        Assert.All(parciais.Take(5), p => Assert.InRange(p.Segundos, 299, 301));
-        Assert.InRange(parciais[5].Metros, 295, 305);
+        Assert.All(parciais.Take(5), p => Assert.InRange(p.Segundos, 299, 300 / DescontoPontosPerfeitos));
+        Assert.InRange(parciais[5].Metros, 1, 305);
     }
 
     [Fact]
@@ -162,10 +180,10 @@ public class PercursoAtividadeTests
     {
         // 12 km a 20 m a cada 3 s.
         var pontos = Reta(601, 20, segundos: 3);
-        var parciais = PercursoAtividade.Parciais(
-            PercursoAtividade.Filtrar(pontos, "Ciclismo", Inicio, Fim), "Ciclismo");
+        var parciais = PercursoAtividade.Calcular(pontos, "Ciclismo", Inicio, Fim).Parciais;
 
-        Assert.Equal([5000, 5000, 2000], parciais.Select(p => (int)Math.Round(p.Metros / 10.0) * 10));
+        Assert.Equal([5000, 5000], parciais.Take(2).Select(p => p.Metros));
+        Assert.InRange(parciais[2].Metros, 2000 - (12_000 * (1 - DescontoPontosPerfeitos)), 2000);
     }
 
     [Fact]
@@ -174,17 +192,17 @@ public class PercursoAtividadeTests
         // A 1 m/s, um ponto pula 10 m a mais e volta: uma janela de 10 s ou mais dilui o pico.
         var pontos = Reta(60, 5);
         pontos[30] = pontos[30] with { Latitude = pontos[30].Latitude + 10 / MetrosPorGrau };
-        var maxima = PercursoAtividade.VelocidadeMaxima(PercursoAtividade.Filtrar(pontos, "Corrida", Inicio, Fim));
+        var maxima = PercursoAtividade.Calcular(pontos, "Corrida", Inicio, Fim).VelocidadeMaxima;
 
         Assert.NotNull(maxima);
-        Assert.InRange(maxima.Value, 0.9, 2.5);
+        Assert.InRange(maxima.Value, 1 * DescontoPontosPerfeitos * 0.8, 2.5);
     }
 
     [Fact]
     public void GanhoElevacao_RuidoNoPlanoDaZero()
     {
         var pontos = Reta(100, 5).Select((p, i) => p with { Altitude = 800 + (i % 2 == 0 ? 2 : -2) }).ToList();
-        Assert.Equal(0, PercursoAtividade.GanhoElevacao(PercursoAtividade.Filtrar(pontos, "Corrida", Inicio, Fim)));
+        Assert.Equal(0, PercursoAtividade.Calcular(pontos, "Corrida", Inicio, Fim).GanhoElevacaoMetros);
     }
 
     [Fact]
@@ -192,7 +210,7 @@ public class PercursoAtividadeTests
     {
         var pontos = Reta(100, 5).Select((p, i) => p with { Altitude = 800 + i * 0.5 }).ToList();
         Assert.InRange(
-            PercursoAtividade.GanhoElevacao(PercursoAtividade.Filtrar(pontos, "Corrida", Inicio, Fim))!.Value,
+            PercursoAtividade.Calcular(pontos, "Corrida", Inicio, Fim).GanhoElevacaoMetros!.Value,
             45,
             50);
     }
@@ -200,7 +218,7 @@ public class PercursoAtividadeTests
     [Fact]
     public void GanhoElevacao_SemAltitudeEhNulo()
     {
-        Assert.Null(PercursoAtividade.GanhoElevacao(PercursoAtividade.Filtrar(Reta(20, 5), "Corrida", Inicio, Fim)));
+        Assert.Null(PercursoAtividade.Calcular(Reta(20, 5), "Corrida", Inicio, Fim).GanhoElevacaoMetros);
     }
 
     [Fact]
@@ -214,7 +232,7 @@ public class PercursoAtividadeTests
         var ultimo = segmentos[^1].Pontos[^1];
         Assert.All(pontos, p => Assert.True(PercursoAtividade.Haversine(primeiro, p) > 200));
         Assert.All(pontos, p => Assert.True(PercursoAtividade.Haversine(ultimo, p) > 200));
-        Assert.InRange(PercursoAtividade.Distancia(aparado), 590, 600);
+        Assert.InRange(PercursoAtividade.Haversine(pontos[0], pontos[^1]), 590, 600);
     }
 
     [Fact]

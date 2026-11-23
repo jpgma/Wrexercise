@@ -47,6 +47,9 @@ internal static class IntegracoesRoutes
         doApp.MapDelete("/treinos/{externalId}", CancelarTreinoApp.HandleAsync);
         doApp.MapPut("/treinos/{externalId}/fim", InformarFimTreinoApp.HandleAsync).AddEndpointFilter(LimiteResumo);
 
+        // O Percurso que o app grava no treino ao vivo de Corrida, Caminhada e Ciclismo (ADR 0085).
+        doApp.MapPut("/treinos/{externalId}/percurso/pontos", EnviarPontosPercursoApp.HandleAsync);
+
         // O resumo que não chegou no fim, depois que a pessoa terminou aqui (ADR 0083).
         doApp.MapPut("/treinos/{externalId}/resumo", AnexarResumoTreinoApp.HandleAsync).AddEndpointFilter(LimiteResumo);
     }

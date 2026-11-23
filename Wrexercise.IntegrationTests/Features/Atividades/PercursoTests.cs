@@ -73,7 +73,8 @@ public sealed class PercursoTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, primeiro.StatusCode);
         Assert.Equal(40, resposta!.UltimoSeq);
         Assert.Equal(41, resposta.TotalPontos);
-        Assert.InRange(resposta.DistanciaMetros, 195, 205);
+        // O algoritmo v1 (ADR 0085) desconta o ruído que a precisão anuncia: pontos perfeitos ficam uns 6% abaixo.
+        Assert.InRange(resposta.DistanciaMetros, 180, 205);
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public sealed class PercursoTests : IAsyncLifetime
         var terminada = await LerAsync(await TerminarAsync(ana, treino.Id, 600));
 
         Assert.NotNull(terminada.Percurso);
-        Assert.InRange(terminada.Percurso!.DistanciaMetros, 570, 600);
+        Assert.InRange(terminada.Percurso!.DistanciaMetros, 540, 605);
     }
 
     [Fact]
@@ -243,7 +244,7 @@ public sealed class PercursoTests : IAsyncLifetime
             $"/api/grupos/{grupoId}/cena", AppJsonContext.Default.CenaResponse, Token);
 
         var membro = cena!.Membros.Single(m => m.UsuarioId == ana.Id);
-        Assert.InRange(membro.TreinoAoVivo!.DistanciaMetros!.Value, 45, 55);
+        Assert.InRange(membro.TreinoAoVivo!.DistanciaMetros!.Value, 30, 55);
     }
 
     /// <summary>Pontos para o norte, a <paramref name="metros"/> por ponto, com precisão de 5 m.</summary>

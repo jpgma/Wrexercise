@@ -75,7 +75,7 @@ internal static class ObterPercurso
                 duracao > 0 && calculo.DistanciaMetros > 0 ? (double)calculo.DistanciaMetros / duracao : null,
                 calculo.VelocidadeMaxima,
                 calculo.GanhoElevacaoMetros,
-                PercursoAtividade.Parciais(calculo.Segmentos, percurso.Tipo)
+                calculo.Parciais
                     .Select(p => new ParcialResponse(p.Metros, p.Segundos))
                     .ToList(),
                 percurso.Recorde),

@@ -10,6 +10,7 @@ import { usePercurso } from "./usePercurso";
 const textoEstado: Record<GravacaoPercurso["estado"], string | null> = {
   gravando: null,
   parado: "O percurso está sendo gravado em outro aparelho.",
+  noApp: "O Movr está gravando o percurso deste treino.",
   semSinal: "Procurando o sinal do GPS…",
   semPermissao:
     "Sem permissão de localização. Permita nas configurações do navegador para gravar o percurso.",
@@ -110,7 +111,7 @@ export function PercursoAoVivo({
         tela apagada, o GPS pausa e o trecho fica tracejado.
       </p>
 
-      {gravacao.estado !== "parado" && (
+      {gravacao.estado !== "parado" && gravacao.estado !== "noApp" && (
         <button
           type="button"
           className="btn-ghost mt-2 w-full"

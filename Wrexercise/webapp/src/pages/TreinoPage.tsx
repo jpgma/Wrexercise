@@ -221,8 +221,12 @@ function Cronometro({
     atividadeId: treino.atividadeId,
     tipo: treino.tipo,
     percurso: treino.percurso,
+    app: treino.app,
   });
-  const gravando = treino.percurso !== null && gravacao.estado !== "parado";
+  const gravando =
+    treino.percurso !== null &&
+    gravacao.estado !== "parado" &&
+    gravacao.estado !== "noApp";
 
   const [telaAcesa, setTelaAcesa] = useState(false);
   useTelaAcesa(telaAcesa || gravando);

@@ -24,6 +24,7 @@ const DESLOCAMENTOS: [number, number][] = [
 const textoGps: Record<GravacaoPercurso["estado"], string> = {
   gravando: "GPS gravando",
   parado: "Gravando em outro aparelho",
+  noApp: "Gravando no Movr",
   semSinal: "Sem sinal do GPS",
   semPermissao: "GPS sem permissão",
   indisponivel: "Sem GPS",

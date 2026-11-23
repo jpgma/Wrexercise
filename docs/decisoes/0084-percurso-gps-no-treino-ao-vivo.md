@@ -1,6 +1,6 @@
 # 0084 — Percurso: o GPS no treino ao vivo
 
-**Status:** DECIDIDA. Reabre o item "Rastreamento GPS" de `arquitetura.md` §19 e revê a regra de `gamificacao.md` §9.1 de que nenhuma conquista usa distância. Complementa as ADRs 0061, 0078 e 0080.
+**Status:** DECIDIDA. Reabre o item "Rastreamento GPS" de `arquitetura.md` §19 e revê a regra de `gamificacao.md` §9.1 de que nenhuma conquista usa distância. Complementa as ADRs 0061, 0078 e 0080. O cálculo dos números e o percurso do Movr mudaram na ADR 0085.
 
 ## Contexto
 

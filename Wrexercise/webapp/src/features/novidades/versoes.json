@@ -1,5 +1,14 @@
 [
   {
+    "versao": "1.7.0",
+    "data": "2026-11-22",
+    "novidades": [
+      "Treino ao vivo do Movr agora mostra o percurso no mapa pro grupo 🗺️",
+      "Distância do percurso mais precisa: parado no lugar, o GPS não soma nada",
+      "Túnel ou tela apagada por pouco tempo não fazem mais o percurso perder km"
+    ]
+  },
+  {
     "versao": "1.6.0",
     "data": "2026-11-21",
     "novidades": [

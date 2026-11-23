@@ -33,6 +33,8 @@ type Buffer = {
 export type EstadoGravacao =
   /** Este aparelho não grava (o treino começou em outro aparelho). */
   | "parado"
+  /** O app conectado (Movr) grava o percurso deste treino (ADR 0085): nenhum navegador grava. */
+  | "noApp"
   | "gravando"
   /** O GPS ainda não firmou, ou a precisão está ruim. */
   | "semSinal"
@@ -92,10 +94,13 @@ export function useGravacaoPercurso({
   atividadeId,
   tipo,
   percurso,
+  app,
 }: {
   atividadeId: string;
   tipo: TipoAtividade;
   percurso: { ultimoSeq: number; distanciaMetros: number } | null;
+  /** O app conectado que começou o treino: ele grava o percurso, e o navegador só mostra. */
+  app: string | null;
 }): GravacaoPercurso {
   // Até o primeiro ponto chegar, o GPS está procurando o sinal.
   const [estado, setEstado] = useState<EstadoGravacao>("semSinal");
@@ -106,7 +111,9 @@ export function useGravacaoPercurso({
     percurso?.distanciaMetros ?? 0,
   );
   const [pendentes, setPendentes] = useState<PontoPercurso[]>([]);
-  const [aqui, setAqui] = useState<boolean | null>(null);
+  const [aquiNoBuffer, setAqui] = useState<boolean | null>(null);
+  // O treino do app conectado (ou adotado por ele) nunca grava no navegador.
+  const aqui = app ? false : aquiNoBuffer;
 
   const buffer = useRef<Buffer | null>(null);
   const watch = useRef<number | null>(null);
@@ -234,6 +241,8 @@ export function useGravacaoPercurso({
   // Descobre se este aparelho é o que grava, e continua de onde parou.
   useEffect(() => {
     if (!temPercurso) return;
+    // O treino passou para o app (ou começou nele): o navegador não grava.
+    if (app) return;
     let ativo = true;
     void lerBuffer(atividadeId).then((lido) => {
       if (!ativo) return;
@@ -257,7 +266,7 @@ export function useGravacaoPercurso({
     };
     // O último ponto do servidor só importa na primeira leitura.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atividadeId, temPercurso, salvar]);
+  }, [atividadeId, temPercurso, salvar, app]);
 
   // Grava com a tela à mostra; ao sair, guarda tudo; ao voltar, um trecho novo.
   useEffect(() => {
@@ -320,15 +329,19 @@ export function useGravacaoPercurso({
     }
   }, [enviarUmaVez, pararGps]);
 
-  const distancia =
-    distanciaServidor + distanciaLocal(pendentes, tipo, ultimoEnviado);
+  // Sem gravar aqui, a distância é a do servidor, que a consulta do treino atualiza.
+  const distancia = aqui
+    ? distanciaServidor + distanciaLocal(pendentes, tipo, ultimoEnviado)
+    : (percurso?.distanciaMetros ?? distanciaServidor);
 
   return {
-    estado: !aqui
-      ? "parado"
-      : "geolocation" in navigator
-        ? estado
-        : "indisponivel",
+    estado: app
+      ? "noApp"
+      : !aqui
+        ? "parado"
+        : "geolocation" in navigator
+          ? estado
+          : "indisponivel",
     distancia,
     pendentes,
     gravarAqui,

@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Percursos de referência do algoritmo v1, os mesmos do Movr (ADR 0085). -->
+    <None Include="Features\Atividades\Percursos\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Wrexercise\Wrexercise.csproj" />
   </ItemGroup>
 

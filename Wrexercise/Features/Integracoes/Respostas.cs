@@ -38,12 +38,14 @@ internal static class RespostasIntegracao
                 : $"/atividades/{treino.AtividadeId}",
             treino.StartedAt,
             treino.FimInformado,
-            treino.ResumoAnexado);
+            treino.ResumoAnexado,
+            treino.PercursoUltimoSeq);
 }
 
 /// <summary>
 /// O treino ao vivo que o app começou (ADR 0081). <c>Url</c> é o cronômetro enquanto está aberto e a
-/// atividade depois que a pessoa termina.
+/// atividade depois que a pessoa termina. <c>PercursoUltimoSeq</c>: o treino grava o Percurso que o app manda
+/// (ADR 0085) e este é o maior <c>seq</c> já guardado (−1 sem nenhum); <c>null</c> sem percurso.
 /// </summary>
 internal sealed record TreinoAppResponse(
     Guid AtividadeId,
@@ -53,7 +55,8 @@ internal sealed record TreinoAppResponse(
     string Url,
     DateTimeOffset StartedAt,
     bool FimInformado,
-    bool ResumoAnexado);
+    bool ResumoAnexado,
+    int? PercursoUltimoSeq);
 
 /// <summary>Um grupo de quem conectou o app: só o nome e o identificador (ADR 0081).</summary>
 internal sealed record GrupoAppResponse(Guid Id, string Nome);

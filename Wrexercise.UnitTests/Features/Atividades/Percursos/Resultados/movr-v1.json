@@ -1,0 +1,178 @@
+{
+  "bad-accuracy": {
+    "distanceMeters": 2030.3,
+    "movingSeconds": 1419,
+    "maxSpeedMps": 1.56,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 702
+      },
+      {
+        "meters": 1000,
+        "seconds": 768
+      },
+      {
+        "meters": 30,
+        "seconds": 18
+      }
+    ]
+  },
+  "climb": {
+    "distanceMeters": 2024,
+    "movingSeconds": 1526,
+    "maxSpeedMps": 1.45,
+    "elevationGainMeters": 48.6,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 773
+      },
+      {
+        "meters": 1000,
+        "seconds": 744
+      },
+      {
+        "meters": 24,
+        "seconds": 21
+      }
+    ]
+  },
+  "noisy-run": {
+    "distanceMeters": 5070.1,
+    "movingSeconds": 1514.5,
+    "maxSpeedMps": 3.87,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 304
+      },
+      {
+        "meters": 1000,
+        "seconds": 290
+      },
+      {
+        "meters": 1000,
+        "seconds": 304
+      },
+      {
+        "meters": 1000,
+        "seconds": 302
+      },
+      {
+        "meters": 1000,
+        "seconds": 300
+      },
+      {
+        "meters": 70,
+        "seconds": 23
+      }
+    ]
+  },
+  "pause-segments": {
+    "distanceMeters": 2051.9,
+    "movingSeconds": 1426,
+    "maxSpeedMps": 1.58,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 682
+      },
+      {
+        "meters": 1000,
+        "seconds": 707
+      },
+      {
+        "meters": 52,
+        "seconds": 39
+      }
+    ]
+  },
+  "ride": {
+    "distanceMeters": 20032.8,
+    "movingSeconds": 2858,
+    "maxSpeedMps": 7.74,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 5000,
+        "seconds": 713
+      },
+      {
+        "meters": 5000,
+        "seconds": 714
+      },
+      {
+        "meters": 5000,
+        "seconds": 711
+      },
+      {
+        "meters": 5000,
+        "seconds": 714
+      },
+      {
+        "meters": 33,
+        "seconds": 5
+      }
+    ]
+  },
+  "stopped-walk-jitter": {
+    "distanceMeters": 1022.6,
+    "movingSeconds": 762,
+    "maxSpeedMps": 1.5,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 993
+      },
+      {
+        "meters": 23,
+        "seconds": 21
+      }
+    ]
+  },
+  "straight-walk": {
+    "distanceMeters": 2009.1,
+    "movingSeconds": 1417,
+    "maxSpeedMps": 1.58,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 720
+      },
+      {
+        "meters": 1000,
+        "seconds": 704
+      },
+      {
+        "meters": 9,
+        "seconds": 5
+      }
+    ]
+  },
+  "tunnel-gap": {
+    "distanceMeters": 2995,
+    "movingSeconds": 999,
+    "maxSpeedMps": 3.26,
+    "elevationGainMeters": null,
+    "splits": [
+      {
+        "meters": 1000,
+        "seconds": 338
+      },
+      {
+        "meters": 1000,
+        "seconds": 334
+      },
+      {
+        "meters": 995,
+        "seconds": 328
+      }
+    ]
+  }
+}
