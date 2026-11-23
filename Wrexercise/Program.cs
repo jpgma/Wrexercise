@@ -81,6 +81,7 @@ builder.Services.AddHostedService<EncerramentoRevisoesBackgroundService>();
 builder.Services.AddHostedService<LimpezaAvataresBackgroundService>();
 builder.Services.AddHostedService<EnvioPushBackgroundService>();
 builder.Services.AddHostedService<ExpiracaoTreinosBackgroundService>();
+builder.Services.AddHostedService<CartasNaoCumpridasBackgroundService>();
 
 var app = builder.Build();
 

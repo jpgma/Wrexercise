@@ -5,18 +5,24 @@ using Wrexercise.Infrastructure.Database;
 namespace Wrexercise.Features.Progresso.Contracts;
 
 /// <summary>Um desafio já iniciado de um grupo de que a pessoa é ou foi membro.</summary>
+/// <param name="DataFim">O último dia que conta: o fim do desafio ou, se cancelado, o dia do cancelamento.</param>
 /// <param name="SemanasCumpridas">Índices (a partir de 0) das semanas em que a pessoa cumpriu a meta.</param>
+/// <param name="Cancelado">
+/// Cancelado depois de começar: as semanas cumpridas até o cancelamento continuam valendo (decisão 0088), mas ele
+/// nunca é concluído.
+/// </param>
 internal sealed record DesafioDaPessoa(
     DateOnly DataInicio,
     DateOnly DataFim,
     DateOnly EntradaLocal,
     bool Encerrado,
-    IReadOnlyList<int> SemanasCumpridas)
+    IReadOnlyList<int> SemanasCumpridas,
+    bool Cancelado = false)
 {
-    /// <summary>Encerrado, com todas as semanas que contavam para a pessoa cumpridas.</summary>
+    /// <summary>Encerrado sem cancelamento, com todas as semanas que contavam para a pessoa cumpridas.</summary>
     public bool IsConcluido()
     {
-        if (!Encerrado)
+        if (!Encerrado || Cancelado)
         {
             return false;
         }
@@ -50,7 +56,8 @@ internal static class DesafiosDaPessoa
 {
     /// <summary>
     /// Os desafios já iniciados dos grupos de que a pessoa é ou foi membro, com as semanas em que
-    /// cumpriu a meta, pelas mesmas regras de elegibilidade da classificação.
+    /// cumpriu a meta, pelas mesmas regras de elegibilidade da classificação. Um desafio cancelado depois de
+    /// começar entra até o dia do cancelamento (decisão 0088): a Energia das semanas cumpridas não some.
     /// </summary>
     public static async Task<List<DesafioDaPessoa>> LoadAsync(
         NpgsqlConnection connection,
@@ -58,16 +65,19 @@ internal static class DesafiosDaPessoa
         Guid usuarioId,
         CancellationToken cancellationToken)
     {
-        var desafios = new Dictionary<Guid, (DateOnly Inicio, DateOnly Fim, DateOnly Entrada, bool Encerrado)>();
-        await using (var command = new NpgsqlCommand("""
-            SELECT d.id, d.data_inicio, d.data_fim,
+        var desafios =
+            new Dictionary<Guid, (DateOnly Inicio, DateOnly Fim, DateOnly Entrada, bool Encerrado, bool Cancelado)>();
+        await using (var command = new NpgsqlCommand($"""
+            SELECT d.id, d.data_inicio,
+                CASE WHEN d.cancelled_at IS NULL THEN d.data_fim ELSE least(d.data_fim, {DiaDoCancelamentoSql}) END,
                 (m.joined_at AT TIME ZONE g.fuso_horario)::date,
-                (now() AT TIME ZONE g.fuso_horario)::date > d.data_fim
+                d.cancelled_at IS NOT NULL OR (now() AT TIME ZONE g.fuso_horario)::date > d.data_fim,
+                d.cancelled_at IS NOT NULL
             FROM desafios d
             JOIN grupos g ON g.id = d.grupo_id
             JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = $1
-            WHERE d.cancelled_at IS NULL
-              AND d.data_inicio <= (now() AT TIME ZONE g.fuso_horario)::date
+            WHERE d.data_inicio <= (now() AT TIME ZONE g.fuso_horario)::date
+              AND (d.cancelled_at IS NULL OR d.data_inicio <= {DiaDoCancelamentoSql})
             """, connection, transaction))
         {
             command.Parameters.AddWithValue(usuarioId);
@@ -78,7 +88,8 @@ internal static class DesafiosDaPessoa
                     reader.GetFieldValue<DateOnly>(1),
                     reader.GetFieldValue<DateOnly>(2),
                     reader.GetFieldValue<DateOnly>(3),
-                    reader.GetBoolean(4));
+                    reader.GetBoolean(4),
+                    reader.GetBoolean(5));
             }
         }
 
@@ -106,11 +117,18 @@ internal static class DesafiosDaPessoa
         }
 
         return desafios
-            .Select(d => new DesafioDaPessoa(d.Value.Inicio, d.Value.Fim, d.Value.Entrada, d.Value.Encerrado, cumpridas[d.Key]))
+            .Select(d => new DesafioDaPessoa(
+                d.Value.Inicio, d.Value.Fim, d.Value.Entrada, d.Value.Encerrado, cumpridas[d.Key], d.Value.Cancelado))
             .ToList();
     }
 
-    /// <summary>As atividades verificadas da pessoa ($1), por desafio, dia e tipo.</summary>
+    /// <summary>O dia do cancelamento do desafio <c>d</c>, no fuso do grupo <c>g</c>.</summary>
+    private const string DiaDoCancelamentoSql = "(d.cancelled_at AT TIME ZONE g.fuso_horario)::date";
+
+    /// <summary>
+    /// As atividades verificadas da pessoa ($1), por desafio, dia e tipo. No desafio cancelado, só os dias até o
+    /// cancelamento (decisão 0088).
+    /// </summary>
     private const string DiasPorTipoSql = $"""
                 SELECT d.id AS desafio_id, a.usuario_id,
                     {ContagensAtividadeDesafio.DiaSql} AS dia,
@@ -120,13 +138,14 @@ internal static class DesafiosDaPessoa
                     sum(a.duracao_segundos) AS segundos_verificados,
                     sum(a.duracao_segundos) AS segundos_provisorios
                 FROM atividades a
-                JOIN desafios d ON d.grupo_id = a.grupo_id AND d.cancelled_at IS NULL
+                JOIN desafios d ON d.grupo_id = a.grupo_id
                 JOIN grupos g ON g.id = d.grupo_id
                 JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.usuario_id = a.usuario_id
                 WHERE a.usuario_id = $1
                   AND a.situacao_verificacao = 'Verificada'
                   AND {ContagensAtividadeDesafio.DiaSql} >= d.data_inicio
                   AND {ContagensAtividadeDesafio.DiaSql} <= d.data_fim
+                  AND (d.cancelled_at IS NULL OR {ContagensAtividadeDesafio.DiaSql} <= {DiaDoCancelamentoSql})
                   AND d.data_inicio + {ContagensAtividadeDesafio.IndiceSemanaSql} * 7 >= (m.joined_at AT TIME ZONE g.fuso_horario)::date
                 GROUP BY d.id, a.usuario_id, d.duracao_minima_segundos, a.tipo,
                     {ContagensAtividadeDesafio.DiaSql}, {ContagensAtividadeDesafio.IndiceSemanaSql}

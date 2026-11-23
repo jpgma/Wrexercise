@@ -2,6 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { CenaGrupo } from "./CenaGrupo";
+import {
+  adiarChegada,
+  limparChegadaAdiada,
+  useChegadaAdiada,
+} from "./chegadaAdiada";
 import type { DestinoChegada } from "./PainelChegada";
 import {
   buscarPendentes,
@@ -43,7 +48,8 @@ export function useCartaEsperando(): boolean {
 
 /**
  * O portão da Chegada (decisão 0076): com uma carta recebida esperando resposta, qualquer tela leva à
- * Chegada dela, a mais antiga primeiro. Com um treino ao vivo aberto, ela espera o treino terminar. Ao voltar para o aplicativo com o formulário de treino aberto,
+ * Chegada dela, a mais antiga primeiro. Com um treino ao vivo aberto, ou com as cartas deixadas para
+ * depois do treino (decisão 0086), ela espera o treino terminar. Ao voltar para o aplicativo com o formulário de treino aberto,
  * a pessoa não é tirada dele: o servidor recusa o registro e o formulário leva à Chegada. Sem dados
  * (erro, sem rede), nada bloqueia.
  */
@@ -55,6 +61,14 @@ export function PortaoChegada({ pausado = false }: { pausado?: boolean }) {
   const primeira = pendentes.data?.[0];
   const ultimaTela = useRef<string | null>(null);
   const primeiraCarga = useRef(true);
+  const adiada = useChegadaAdiada(pendentes.data?.map((p) => p.id));
+  const estavaPausado = useRef(pausado);
+
+  // "Responder depois do treino" (decisão 0086) vale até o treino ao vivo acabar ou a pessoa ir responder.
+  useEffect(() => {
+    if (emChegada || (estavaPausado.current && !pausado)) limparChegadaAdiada();
+    estavaPausado.current = pausado;
+  }, [emChegada, pausado]);
 
   useEffect(() => {
     if (!pendentes.data) return;
@@ -63,7 +77,7 @@ export function PortaoChegada({ pausado = false }: { pausado?: boolean }) {
     ultimaTela.current = location.key;
     primeiraCarga.current = false;
     // Durante o treino ao vivo, a carta espera o fim: o cronômetro mostra que ela chegou (decisão 0078).
-    if (!primeira || emChegada || pausado) return;
+    if (!primeira || emChegada || pausado || adiada) return;
     if (!permitido && isFormularioDeTreino(location.pathname)) return;
     void navigate(getRota(primeira), {
       replace: true,
@@ -76,6 +90,7 @@ export function PortaoChegada({ pausado = false }: { pausado?: boolean }) {
     primeira,
     emChegada,
     pausado,
+    adiada,
     location.key,
     location.pathname,
     location.search,
@@ -105,6 +120,14 @@ export function ChegadaPagina({
   const voltar = (location.state as EstadoChegada | null)?.voltar;
 
   const concluir = async (destino: DestinoChegada) => {
+    if (destino === "adiada") {
+      // Todas as cartas pendentes ficam para depois do treino; uma carta nova traz a Chegada de volta.
+      const pendentes =
+        queryClient.getQueryData<JogadaPendente[]>(pendentesKey);
+      adiarChegada(pendentes?.map((p) => p.id) ?? [jogadaId]);
+      void navigate(voltar ?? `/grupos/${grupoId}/inicio`, { replace: true });
+      return;
+    }
     const destinoFinal =
       destino === "treino" && !(voltar && isFormularioDeTreino(voltar))
         ? `/grupos/${grupoId}/atividades/nova`

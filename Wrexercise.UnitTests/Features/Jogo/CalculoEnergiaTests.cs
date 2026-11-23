@@ -32,6 +32,41 @@ public class CalculoEnergiaTests
     [Fact]
     public void SemNada_NaoGanhaEnergia() => Assert.Equal(0, CalculoEnergia.Calcular([], []).Total);
 
+    // Decisão 0088: o desafio cancelado mantém a Energia das semanas cumpridas até o cancelamento.
+
+    [Fact]
+    public void DesafioCancelado_MantemSemanasESequencia_SemConcluir()
+    {
+        var cancelado = Desafio([0, 1, 2, 3], encerrado: true) with { Cancelado = true };
+
+        var ganha = CalculoEnergia.Calcular([], [cancelado]);
+
+        Assert.Equal(4 * CalculoEnergia.PorMeta, ganha.Metas);
+        Assert.Equal(25, ganha.Sequencias);
+        Assert.Equal(0, ganha.Desafios);
+    }
+
+    [Fact]
+    public void DesafioCancelado_SemanaQueCruzaOutraJaPaga_NaoPagaDeNovo()
+    {
+        // O cancelado começou numa segunda e cumpriu a semana 0; o novo começou na quarta da mesma semana.
+        var cancelado = Desafio([0], encerrado: true) with { Cancelado = true };
+        var novo = Desafio([0], inicio: Segunda.AddDays(2));
+
+        Assert.Equal(CalculoEnergia.PorMeta, CalculoEnergia.Calcular([], [cancelado, novo]).Metas);
+        // Sem cruzar: a semana seguinte do novo começa 9 dias depois.
+        Assert.Equal(
+            2 * CalculoEnergia.PorMeta,
+            CalculoEnergia.Calcular([], [cancelado, Desafio([1], inicio: Segunda.AddDays(2))]).Metas);
+    }
+
+    [Fact]
+    public void DesafiosNaoCancelados_ContamComoAntes() =>
+        // Dois grupos com a mesma semana: paga uma vez; semanas de início diferente continuam pagando.
+        Assert.Equal(
+            2 * CalculoEnergia.PorMeta,
+            CalculoEnergia.Calcular([], [Desafio([0]), Desafio([0]), Desafio([0], inicio: Segunda.AddDays(2))]).Metas);
+
     [Fact]
     public void Despertador_CadaDespertarRende5()
     {

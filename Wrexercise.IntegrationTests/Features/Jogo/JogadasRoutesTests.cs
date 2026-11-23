@@ -238,6 +238,88 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Recusada_DevolveMetadeAQuemEnviou_EAvisaQuanto()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
+
+        // Decisão 0087: 35 / 2 = 17, para quem enviou; quem recusou não recebe nada.
+        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Devolucoes);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Devolucoes);
+        Assert.Equal(17, Assert.Single(await GetJogadasAsync(ana, grupoId)).Devolucao);
+        Assert.Equal(0, Assert.Single(await GetJogadasAsync(bia, grupoId)).Devolucao);
+        Assert.Equal(1L, await _host.CountAsync(
+            $"SELECT count(*) FROM notificacoes WHERE jogada_id = '{jogadaId}' AND tipo = 'CartaRecusada' AND energia = 17"));
+    }
+
+    [Fact]
+    public async Task NaoCumprida_DevolveMetade_EOServicoAvisaUmaVez()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 5);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+        await PostAtividadeAsync(bia, grupoId, TipoAtividade.Corrida);
+        // O envio e o aceite usam o relógio do banco, e o treino, o do teste: recuá-los deixa a ordem certa.
+        await _host.ExecuteAsync($"""
+            UPDATE jogadas SET enviada_em = enviada_em - interval '1 hour', respondida_em = respondida_em - interval '1 hour'
+            WHERE id = '{jogadaId}'
+            """);
+
+        Assert.Equal(SituacaoJogada.Falhou, Assert.Single(await GetJogadasAsync(ana, grupoId)).Situacao);
+        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Devolucoes);
+
+        Assert.Equal(1, await CartasNaoCumpridas.ProcessarAsync(_host.DataSource, Token));
+        Assert.Equal(0, await CartasNaoCumpridas.ProcessarAsync(_host.DataSource, Token));
+        Assert.Equal(1L, await _host.CountAsync(
+            $"SELECT count(*) FROM notificacoes WHERE jogada_id = '{jogadaId}' AND tipo = 'CartaNaoCumprida' AND situacao = 'Falhou' AND energia = 17 AND usuario_id = '{ana.Id}'"));
+    }
+
+    [Fact]
+    public async Task Expirada_OServicoAvisaQuemEnviou_SoDepoisDoInicio()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var vencida = await JogarAsync(ana, grupoId, (await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade)).Id, bia.Id);
+        await _host.ExecuteAsync(
+            $"UPDATE jogadas SET enviada_em = now() - interval '50 hours', expira_em = now() - interval '2 hours' WHERE id = '{vencida}'");
+
+        Assert.Equal(1, await CartasNaoCumpridas.ProcessarAsync(_host.DataSource, Token));
+        Assert.Equal(1L, await _host.CountAsync(
+            $"SELECT count(*) FROM notificacoes WHERE jogada_id = '{vencida}' AND tipo = 'CartaNaoCumprida' AND situacao = 'Expirada'"));
+
+        // Uma carta que venceu antes do início dos avisos não vira aviso, mas a Energia volta do mesmo jeito.
+        await _host.ExecuteAsync($"DELETE FROM notificacoes WHERE jogada_id = '{vencida}'");
+        await _host.ExecuteAsync(
+            $"UPDATE jogadas SET enviada_em = '2026-11-19T12:00:00-03', expira_em = '2026-11-21T12:00:00-03' WHERE id = '{vencida}'");
+        Assert.Equal(0, await CartasNaoCumpridas.ProcessarAsync(_host.DataSource, Token));
+        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Devolucoes);
+    }
+
+    [Fact]
+    public async Task AntesDas8_TreinoDaNoite_ForaDaJanela_NaoFalha()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.AntesDas8);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+        var atividade = await PostAtividadeAsync(bia, grupoId);
+
+        // O prazo é 08:00 de dois dias depois: enviada e aceita às 17:00 do dia do envio, treino às 19:00.
+        await _host.ExecuteAsync(
+            $"UPDATE jogadas SET enviada_em = expira_em - interval '39 hours', respondida_em = expira_em - interval '38 hours 50 minutes' WHERE id = '{jogadaId}'");
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET started_at = (SELECT expira_em - interval '37 hours' FROM jogadas WHERE id = '{jogadaId}') WHERE id = '{atividade.Id}'");
+
+        // Decisão 0086: o treino da noite está fora da janela da ANTES DAS 8. Não conta nem faz falhar.
+        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).FadigaRestante);
+    }
+
+    [Fact]
     public async Task CartaSemResposta_BloqueiaTreinoNovoEmQualquerGrupo()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
@@ -258,6 +340,40 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
         await PostAtividadeAsync(bia, outroGrupoId);
+    }
+
+    [Fact]
+    public async Task CartaSemResposta_PermiteTreinoAoVivo_QueNuncaFazFalhar()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        // O último treino da Bia é corrida: a VARIEDADE pede outro tipo.
+        await InserirTreinoAsync(bia, grupoId, TipoAtividade.Corrida, "Verificada", 5);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        var jogadaId = await JogarAsync(ana, grupoId, carta.Id, bia.Id);
+
+        // Decisão 0086: "Responder depois do treino". O treino ao vivo começa com a carta sem resposta.
+        var comecado = await bia.Client.PostAsJsonAsync(
+            $"/api/grupos/{grupoId}/atividades/em-andamento",
+            new ComecarTreinoRequest(TipoAtividade.Corrida),
+            AppJsonContext.Default.ComecarTreinoRequest,
+            Token);
+        Assert.True(comecado.IsSuccessStatusCode);
+        var treino = await comecado.Content.ReadFromJsonAsync(AppJsonContext.Default.AtividadeResponse, Token);
+        await _host.ExecuteAsync(
+            $"UPDATE atividades SET started_at = now() - interval '40 minutes' WHERE id = '{treino!.Id}'");
+        var terminado = await bia.Client.PostAsJsonAsync(
+            $"/api/atividades/{treino.Id}/terminar",
+            new TerminarTreinoRequest(1800, null, TipoComprovacao.RegistroManual),
+            AppJsonContext.Default.TerminarTreinoRequest,
+            Token);
+        Assert.Equal(HttpStatusCode.OK, terminado.StatusCode);
+        // A carta chegou antes do treino: ele fica entre o envio e o aceite.
+        await _host.ExecuteAsync($"UPDATE jogadas SET enviada_em = now() - interval '2 hours' WHERE id = '{jogadaId}'");
+
+        // O treino começou antes do aceite: não cumpre (é corrida), mas também não faz falhar.
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Aceita")).StatusCode);
+        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
+        Assert.Equal(0, (await GetEnergiaAsync(bia)).FadigaRestante);
     }
 
     [Fact]
@@ -610,11 +726,10 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
             AppJsonContext.Default.ReacaoRequest,
             Token)).EnsureSuccessStatusCode();
 
-        // O envio recuado pode cair antes de ObjetivoCarta.InicioProximoTreino (regra antiga: segue valendo) ou
-        // depois (decisão 0075: o próximo treino falhou). Nos dois casos, nada é pago.
-        Assert.Contains(
-            Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao,
-            new[] { SituacaoJogada.Aceita, SituacaoJogada.Falhou });
+        // O envio recuado pode cair antes de ObjetivoCarta.InicioProximoTreino (regra antiga) ou depois. Nos dois
+        // casos a carta segue valendo: na regra do próximo treino, a segunda-feira está fora da janela da FIM DE
+        // SEMANA e não faz falhar (decisão 0086). Nada é pago.
+        Assert.Equal(SituacaoJogada.Aceita, Assert.Single(await GetJogadasAsync(bia, grupoId)).Situacao);
         Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Jogadas);
         Assert.Equal(0, await ContarNotificacoesAsync(ana, "JogadaConcluida"));
     }

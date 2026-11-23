@@ -336,11 +336,11 @@ export function MaoJogo({
   } else if (escolhida && previa.data) {
     contexto = getPrevia(nome, escolhida, fundida, previa.data);
   } else if (escolhida && fundida) {
-    contexto = `${getEfeitoFusao(escolhida, fundida)} As cartas não voltam.`;
+    contexto = `${getEfeitoFusao(escolhida, fundida)} As cartas não voltam; sem cumprir, metade do preço volta.`;
   } else if (escolhida) {
     contexto = !alvo
       ? `${getEfeitoComNome(escolhida)} Toque num colega.`
-      : `${getEfeitoComNome(escolhida)} A carta não volta.`;
+      : `${getEfeitoComNome(escolhida)} A carta não volta; sem cumprir, metade do preço volta.`;
   } else if (!recebe) {
     contexto = `${nome} não recebe cartas.`;
   } else if (bloqueio && mao.length > 0) {

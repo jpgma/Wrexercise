@@ -48,6 +48,29 @@ internal sealed record JogadaCarregada(
     /// e continua sendo de quem a comprou.
     /// </summary>
     public bool IsCartaDoRemetente => OrigemId is null;
+
+    /// <summary>
+    /// Antes de <see cref="EstadoJogo.InicioCartaPermanente"/> (decisão 0074), a Provocação recusada ou expirada
+    /// voltava para a Mão de quem enviou.
+    /// </summary>
+    public bool VoltouPelaRegraAntiga => Situacao switch
+    {
+        SituacaoJogada.Recusada => Estado.RespondidaEm < EstadoJogo.InicioCartaPermanente,
+        SituacaoJogada.Expirada => Estado.ExpiraEm < EstadoJogo.InicioCartaPermanente,
+        _ => false,
+    };
+
+    /// <summary>
+    /// A Energia que volta para quem enviou quando a carta não é cumprida (decisão 0087): metade do preço, ou da
+    /// soma na Fusão. Só para quem comprou a Provocação: a Jogada do DESAFIO DUPLO não devolve nada. A carta que
+    /// voltou para a Mão pela regra antiga também não.
+    /// </summary>
+    public int Devolucao =>
+        IsCartaDoRemetente
+        && Situacao is SituacaoJogada.Recusada or SituacaoJogada.Falhou or SituacaoJogada.Expirada
+        && !VoltouPelaRegraAntiga
+            ? CalculoEnergia.GetDevolucao(Preco + PrecoFusao)
+            : 0;
 }
 
 /// <summary>O que fica fixado no objetivo de uma Jogada: a duração-alvo e o tipo a evitar.</summary>

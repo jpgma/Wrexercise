@@ -87,6 +87,12 @@ internal static class ResponderJogada
 
         await UpdateAsync(connection, transaction, id, request, mudanca, cancellationToken);
 
+        // Recusada, a carta devolve metade do preço a quem enviou (decisão 0087): o aviso mostra quanto.
+        var devolucao = request.Resposta == SituacaoJogada.RespostaRecusada
+            ? (await Jogadas.LoadAsync(connection, transaction, usuarioId, usuarioId, cancellationToken))
+                .FirstOrDefault(j => j.Id == id)?.Devolucao
+            : null;
+
         await NotificacoesJogada.NotificarAsync(
             connection,
             transaction,
@@ -96,7 +102,8 @@ internal static class ResponderJogada
             request.Resposta == SituacaoJogada.RespostaAceita
                 ? TipoNotificacaoJogada.CartaAceita
                 : TipoNotificacaoJogada.CartaRecusada,
-            cancellationToken);
+            cancellationToken,
+            devolucao);
 
         // Respondida, a carta deixa de pedir resposta no aviso "Topa?" (decisão 0076).
         await NotificacoesJogada.MarcarLidasAsync(

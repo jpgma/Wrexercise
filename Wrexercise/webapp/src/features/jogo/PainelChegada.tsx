@@ -3,8 +3,11 @@ import { PainelResposta, type RespostaEnviada } from "./RespostaCarta";
 import { primeiroNome } from "./textosCartas";
 import type { Jogada } from "./useCartas";
 
-/** Para onde a pessoa vai depois da Chegada: registrar o treino ou seguir para onde estava. */
-export type DestinoChegada = "treino" | "depois";
+/**
+ * Para onde a pessoa vai depois da Chegada: registrar o treino, seguir para onde estava, ou deixar a
+ * resposta para depois do treino (decisão 0086).
+ */
+export type DestinoChegada = "treino" | "depois" | "adiada";
 
 /**
  * O painel da Chegada, embaixo da praça, no lugar da Mão (decisão 0076). Enquanto a carta voa, fica
@@ -130,6 +133,17 @@ export function PainelChegada({
         onRespondida={onRespondida}
         onEncerrada={() => onConcluir("depois")}
       />
+      <button
+        type="button"
+        className="btn-ghost mt-3 min-h-11 w-full text-sm"
+        onClick={() => onConcluir("adiada")}
+      >
+        Responder depois do treino
+      </button>
+      <p className="mt-1 text-center text-xs text-muted">
+        Dá pra começar um treino ao vivo agora: ele não faz a carta falhar. O
+        prazo não muda.
+      </p>
     </section>
   );
 }

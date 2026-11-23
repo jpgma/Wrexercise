@@ -125,6 +125,32 @@ export function getObjetivoCurto(jogada: Jogada): string {
 }
 
 /**
+ * Qual treino decide a carta (decisões 0075 e 0086): o próximo depois do aceite, dentro da janela da
+ * carta. Fora da janela, o treino não conta e não faz falhar.
+ */
+export function getVez(codigos: CodigoCarta[]): string {
+  const cedo = codigos.includes("AntesDas8");
+  const fimDeSemana = codigos.includes("FimDeSemana");
+  if (cedo && fimDeSemana)
+    return "o próximo treino no sábado ou no domingo que começar antes das 8h";
+  if (cedo) return "o próximo treino que começar antes das 8h";
+  if (fimDeSemana) return "o próximo treino no sábado ou no domingo";
+  return "o próximo treino";
+}
+
+/** Os códigos de uma Jogada: a carta e, na Fusão, a segunda. */
+export function getCodigos(jogada: Jogada): CodigoCarta[] {
+  return jogada.cartaFusao
+    ? [jogada.objetivo, jogada.cartaFusao.codigo]
+    : [jogada.objetivo];
+}
+
+/** Quem enviou recebe metade do preço de volta se a carta não for cumprida (decisão 0087). */
+export function getDevolucao(precos: number[]): number {
+  return Math.floor(precos.reduce((soma, preco) => soma + preco, 0) / 2);
+}
+
+/**
  * O que a carta vai pedir ao colega, antes do arremesso, com o que cada um ganha e o prazo. Repete o
  * nome em vez de um pronome: o aplicativo não sabe o gênero de ninguém.
  */
@@ -143,7 +169,11 @@ export function getPrevia(
   const pedido = objetivo.startsWith("Um ")
     ? `de um ${objetivo.slice(3)}`
     : objetivo.charAt(0).toLowerCase() + objetivo.slice(1);
-  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}, no próximo treino depois de aceitar. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}. Se não, você perde ${fusao ? "as cartas" : "a carta"}.`;
+  const codigos = fusao ? [carta.codigo, fusao.codigo] : [carta.codigo];
+  const devolucao = getDevolucao(
+    fusao ? [carta.preco, fusao.preco] : [carta.preco],
+  );
+  return `${fusao ? "FUSÃO: " : ""}${nome} vai precisar ${pedido}. Vale ${getVez(codigos)} depois do aceite. Se cumprir: ${nome} +${previa.recompensaDestinatario} EN, você +${previa.recompensaRemetente} EN · até ${formatarPrazoCurto(previa.expiraEm)}. Se não, você recebe +${devolucao} EN de volta.`;
 }
 
 /** A linha da Mão com uma carta escolhida e ainda sem prévia: o nome, que a carta pequena não mostra, e o efeito. */

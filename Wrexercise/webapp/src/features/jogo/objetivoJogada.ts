@@ -26,13 +26,31 @@ function terminaAte8(treino: TreinoPrevisto): boolean {
 }
 
 /**
+ * Por que o treino está fora da janela da carta (decisão 0086), ou `null` se está dentro. A ANTES
+ * DAS 8 só olha treinos que começam antes das 8h, e a FIM DE SEMANA, treinos no sábado ou no
+ * domingo. Na Fusão, o treino precisa estar na janela das duas cartas.
+ */
+function getForaDaJanela(
+  codigos: CodigoCarta[],
+  treino: TreinoPrevisto,
+): string | null {
+  if (codigos.includes("AntesDas8") && treino.inicio.getHours() >= 8)
+    return "começa depois das 8h";
+  const dia = treino.inicio.getDay();
+  if (codigos.includes("FimDeSemana") && dia !== 0 && dia !== 6)
+    return "não é no fim de semana";
+  return null;
+}
+
+/**
  * Se o treino do formulário cumpre uma carta aceita, e por que não. É só uma orientação antes de
  * postar: repete em poucas linhas a regra de `SituacaoJogada.cs` e usa o fuso do aparelho, e não o
  * do grupo. Quem decide é o servidor, depois que o treino é verificado.
  *
  * Só o próximo treino depois do aceite vale (decisão 0075): um treino no prazo que não cumpre faz a
  * carta falhar. Um treino que começou depois que a carta chegou e antes do aceite conta se cumpre e
- * nunca faz falhar (decisão 0076). Um treino fora do prazo não conta e não faz falhar.
+ * nunca faz falhar (decisão 0076). Um treino fora do prazo ou fora da janela da carta (decisão 0086)
+ * não conta e não faz falhar.
  */
 export function getAvisoCarta(
   jogada: Jogada,
@@ -69,6 +87,13 @@ export function getAvisoCarta(
       cumpre: false,
       falha: false,
       texto: `Não conta pra carta de ${nome}: está fora do prazo.`,
+    };
+  const foraDaJanela = antesDoAceite ? null : getForaDaJanela(codigos, treino);
+  if (foraDaJanela)
+    return {
+      cumpre: false,
+      falha: false,
+      texto: `Não conta pra carta de ${nome}: ${foraDaJanela}. A carta continua valendo.`,
     };
   if (
     codigos.includes("Variedade") &&

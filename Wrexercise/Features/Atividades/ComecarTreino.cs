@@ -1,7 +1,6 @@
 using Npgsql;
 using Wrexercise.Features.Atividades.Contracts;
 using Wrexercise.Features.Grupos.Contracts;
-using Wrexercise.Features.Jogo.Contracts;
 using Wrexercise.Features.Notificacoes.Contracts;
 using Wrexercise.Infrastructure.Authentication;
 using Wrexercise.Infrastructure.Json;
@@ -134,15 +133,11 @@ internal static class ComecarTreino
             return (AtividadeOperacaoStatus.Concluida, aberto.Id, true);
         }
 
-        // As mesmas travas do registro: a fila de avaliação e a carta que espera resposta (decisão 0076).
+        // A mesma trava do registro: a fila de avaliação. A carta que espera resposta não impede começar (decisão
+        // 0086: "Responder depois do treino"): o treino começa antes do aceite, então nunca faz a carta falhar.
         if (await ConsultasAtividade.ExistemParaAvaliarAsync(connection, transaction, grupoId, usuarioId, cancellationToken))
         {
             return (AtividadeOperacaoStatus.AvaliacoesPendentes, default, false);
-        }
-
-        if (await CartasSemResposta.ExistsAsync(connection, transaction, usuarioId, cancellationToken))
-        {
-            return (AtividadeOperacaoStatus.CartaSemResposta, default, false);
         }
 
         // A comprovação provisória aceita fotos durante o treino; a pessoa escolhe a final ao terminar.

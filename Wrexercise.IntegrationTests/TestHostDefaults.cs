@@ -23,7 +23,8 @@ internal static class TestHostDefaults
                         service.ImplementationType == typeof(EncerramentoRevisoesBackgroundService)
                         || service.ImplementationType == typeof(LimpezaAvataresBackgroundService)
                         || service.ImplementationType == typeof(EnvioPushBackgroundService)
-                        || service.ImplementationType == typeof(ExpiracaoTreinosBackgroundService))
+                        || service.ImplementationType == typeof(ExpiracaoTreinosBackgroundService)
+                        || service.ImplementationType == typeof(CartasNaoCumpridasBackgroundService))
                     .ToList();
                 foreach (var service in periodicos)
                 {

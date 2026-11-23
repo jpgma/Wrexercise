@@ -137,7 +137,7 @@ export function LojaCartas() {
 
       <SecaoLoja
         titulo="Provocações"
-        descricao="Jogue para um colega tocando no avatar dele. A carta jogada não volta: se ele cumprir, você recebe o preço de volta."
+        descricao="Jogue para um colega tocando no avatar dele. A carta jogada não volta: se ele cumprir, você recebe o preço de volta; se não, metade."
         cartas={catalogo.filter((c) => c.tipo === "Provocacao")}
         saldo={saldo}
         maoCheia={maoCheia}

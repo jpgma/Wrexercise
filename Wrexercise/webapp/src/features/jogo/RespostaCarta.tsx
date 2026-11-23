@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { ApiError, getErrorMessage } from "@/services/api";
 import { IconeCarta } from "./CartaJogo";
-import { objetivoCurto } from "./textosCartas";
+import {
+  getCodigos,
+  getDevolucao,
+  getVez,
+  objetivoCurto,
+} from "./textosCartas";
 import {
   type CodigoProvocacao,
   type CodigoResposta,
@@ -217,7 +222,7 @@ export function PainelResposta({
       >
         {jogada.jaCumpre
           ? "Seu treino já cumpre esta carta. Aceite e ganhe!"
-          : "Vale o próximo treino depois do aceite. Já treinou depois que a carta chegou? Se cumprir, vale também."}
+          : `Vale ${getVez(getCodigos(jogada))} depois do aceite. Já treinou depois que a carta chegou? Se cumprir, vale também.`}
       </p>
       {responder.isError && (
         <p role="alert" className="form-error mt-3">
@@ -243,7 +248,13 @@ export function PainelResposta({
           : "Recusar · FADIGA: 3 treinos com −50% EN"}
       </button>
       <p className="mt-1 text-center text-xs text-muted">
-        Recusando, quem enviou perde a carta.
+        {jogada.desafioDuplo
+          ? "Recusando, o desafio devolvido acaba."
+          : `Recusando, quem enviou recebe metade de volta: +${getDevolucao(
+              jogada.cartaFusao
+                ? [jogada.carta.preco, jogada.cartaFusao.preco]
+                : [jogada.carta.preco],
+            )} EN.`}
       </p>
       <AceitarComResposta
         jogada={jogada}

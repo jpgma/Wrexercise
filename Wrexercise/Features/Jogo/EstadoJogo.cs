@@ -37,14 +37,7 @@ internal sealed record EstadoJogo(
     /// </summary>
     public bool IsGasta(Guid cartaId) =>
         Jogadas.Any(j => j.CartaRespostaId == cartaId
-            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && !VoltouPelaRegraAntiga(j)));
-
-    private static bool VoltouPelaRegraAntiga(JogadaCarregada jogada) => jogada.Situacao switch
-    {
-        SituacaoJogada.Recusada => jogada.Estado.RespondidaEm < InicioCartaPermanente,
-        SituacaoJogada.Expirada => jogada.Estado.ExpiraEm < InicioCartaPermanente,
-        _ => false,
-    };
+            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && !j.VoltouPelaRegraAntiga));
 
     /// <summary>
     /// Trava as linhas dos usuários até o fim da transação, sempre na mesma ordem, para evitar deadlock.
@@ -90,10 +83,13 @@ internal sealed record EstadoJogo(
             .Select(j => j.ToRecompensa(j.DestinatarioId == usuarioId))
             .ToList();
 
+        // Decisão 0087: metade do preço volta para quem enviou a carta não cumprida.
+        var devolucoes = jogadas.Where(j => j.RemetenteId == usuarioId).Sum(j => j.Devolucao);
+
         var despertares = await LoadDespertaresAsync(connection, transaction, usuarioId, cancellationToken);
 
         var ganha = CalculoEnergia.Calcular(
-            atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga, despertares);
+            atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga, despertares, devolucoes);
         return new EstadoJogo(usuarioId, ganha, cartas, jogadas, fadiga.Restantes);
     }
 

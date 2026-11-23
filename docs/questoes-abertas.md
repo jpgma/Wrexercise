@@ -742,6 +742,18 @@ Investigar:
 - O que acontece com as folhas já importadas.
 - Tamanho do avatar na cena.
 
+## Q035 — O Rival vencido num desafio cancelado deve render Energia?
+
+**Status:** ABERTA. Levantada com `decisoes/0088-desafio-cancelado-mantem-energia.md`.
+
+A `0088` mantém a Energia das semanas e das sequências de um desafio cancelado, até o dia do cancelamento. O Rival da semana (`decisoes/0038-rival-da-semana.md`) ainda ignora os desafios cancelados (`Rivais.cs`): quem venceu o Rival numa semana de um desafio que depois foi cancelado perde os 15 EN.
+
+Investigar:
+
+- Se o Rival de uma semana já encerrada antes do cancelamento deve continuar valendo.
+- O que acontece com o Rival da semana em curso no cancelamento.
+- Se a regra deve ser a mesma da meta: só o que foi cumprido até o dia do cancelamento.
+
 ---
 
 # 11. Critérios para encerrar a pesquisa

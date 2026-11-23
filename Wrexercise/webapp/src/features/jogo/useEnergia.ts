@@ -15,6 +15,8 @@ export type DetalhamentoEnergia = {
   fadiga: number;
   /** O que rendeu acordar colegas com a Cutucada. */
   despertador: number;
+  /** Metade do preço das cartas enviadas e não cumpridas (decisão 0087). */
+  devolucoes: number;
 };
 
 export type Energia = {

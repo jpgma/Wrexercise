@@ -32,6 +32,15 @@ public class DesafioDaPessoaTests
         Assert.False(Desafio([], entrada: Segunda.AddDays(60)).IsConcluido());
 
     [Fact]
+    public void IsConcluido_DesafioCancelado_NuncaConclui() =>
+        Assert.False((Desafio([0, 1, 2, 3]) with { Cancelado = true }).IsConcluido());
+
+    [Fact]
+    public void GetMelhorSequencia_ContaODesafioCancelado() =>
+        // Decisão 0088: a sequência cumprida até o cancelamento continua valendo.
+        Assert.Equal(3, DesafiosDaPessoa.GetMelhorSequencia([Desafio([0, 1, 2]) with { Cancelado = true }]));
+
+    [Fact]
     public void GetMelhorSequencia_PegaOMelhorDesafio() =>
         Assert.Equal(3, DesafiosDaPessoa.GetMelhorSequencia([Desafio([0, 2]), Desafio([1, 2, 3])]));
 }

@@ -23,7 +23,9 @@ export function getTextoNotificacao({
   total,
   cutucada,
   cutucadaTexto,
+  energia,
 }: Notificacao): string {
+  const deVolta = energia ? ` · +${energia} EN de volta` : "";
   switch (tipo) {
     case "NovaAtividade":
       return `${primeiroNome(atorNome)} registrou um treino. Dá uma olhada!`;
@@ -49,7 +51,11 @@ export function getTextoNotificacao({
     case "CartaAceita":
       return `${primeiroNome(atorNome)} aceitou a sua carta`;
     case "CartaRecusada":
-      return `${primeiroNome(atorNome)} recusou a sua carta. Ela voltou para a sua Mão`;
+      return `${primeiroNome(atorNome)} recusou a sua carta${deVolta}`;
+    case "CartaNaoCumprida":
+      return situacao === "Expirada"
+        ? `A sua carta para ${primeiroNome(atorNome)} venceu${deVolta}`
+        : `${primeiroNome(atorNome)} não cumpriu a sua carta${deVolta}`;
     case "JogadaConcluida":
       return `${primeiroNome(atorNome)} cumpriu a sua carta. Energia para os dois!`;
     case "RivalEscolhido":

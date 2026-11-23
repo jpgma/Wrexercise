@@ -35,6 +35,7 @@ internal sealed record CenaResponse(Guid GrupoId, IReadOnlyList<MembroCenaRespon
 /// <summary>A Energia ganha por origem. A soma é a Energia ganha total.</summary>
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo ou zero.</param>
 /// <param name="Despertador">O que rendeu acordar colegas com a Cutucada.</param>
+/// <param name="Devolucoes">Metade do preço das cartas enviadas e não cumpridas (decisão 0087).</param>
 internal sealed record EnergiaDetalhamentoResponse(
     int Atividades,
     int Bonus,
@@ -44,7 +45,8 @@ internal sealed record EnergiaDetalhamentoResponse(
     int Jogadas,
     int Rivais,
     int Fadiga = 0,
-    int Despertador = 0);
+    int Despertador = 0,
+    int Devolucoes = 0);
 
 /// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (0 a 3).</param>
 internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento, int FadigaRestante = 0);
@@ -109,6 +111,9 @@ internal sealed record RivaisResponse(
 /// <param name="JaCumpre">
 /// Na carta recebida que espera resposta: um treino feito depois que ela chegou já cumpre o objetivo (decisão 0076).
 /// </param>
+/// <param name="Devolucao">
+/// Para quem enviou: a Energia que voltou da carta recusada, não cumprida ou expirada (decisão 0087). Senão, 0.
+/// </param>
 internal sealed record JogadaResponse(
     Guid Id,
     Guid GrupoId,
@@ -131,7 +136,8 @@ internal sealed record JogadaResponse(
     CartaCatalogoResponse? CartaFusao,
     int Recompensa,
     DateTimeOffset? RespondidaEm,
-    bool JaCumpre);
+    bool JaCumpre,
+    int Devolucao = 0);
 
 internal sealed record JogadasResponse(IReadOnlyList<JogadaResponse> Jogadas);
 

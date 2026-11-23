@@ -23,6 +23,7 @@ internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool A
 
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo (decisão 0059).</param>
 /// <param name="Despertador">O que rendeu acordar colegas com a Cutucada (decisão 0063).</param>
+/// <param name="Devolucoes">Metade do preço das cartas enviadas e não cumpridas (decisão 0087).</param>
 internal sealed record EnergiaGanha(
     int Atividades,
     int Bonus,
@@ -32,9 +33,11 @@ internal sealed record EnergiaGanha(
     int Jogadas = 0,
     int Rivais = 0,
     int Fadiga = 0,
-    int Despertador = 0)
+    int Despertador = 0,
+    int Devolucoes = 0)
 {
-    public int Total => Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga + Despertador;
+    public int Total =>
+        Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga + Despertador + Devolucoes;
 }
 
 /// <summary>
@@ -86,13 +89,15 @@ internal static class CalculoEnergia
     /// </param>
     /// <param name="diasComFadiga">Os dias pagos que rendem só metade da base (<see cref="Fadiga"/>).</param>
     /// <param name="despertares">Quantos colegas cutucados voltaram a treinar (<see cref="Despertador"/>).</param>
+    /// <param name="devolucoes">A soma das devoluções das cartas enviadas e não cumpridas (<see cref="GetDevolucao"/>).</param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
         IReadOnlyList<DesafioDaPessoa> desafios,
         IReadOnlyList<RecompensaJogada>? jogadas = null,
         int rivaisVencidos = 0,
         int diasComFadiga = 0,
-        int despertares = 0)
+        int despertares = 0,
+        int devolucoes = 0)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -108,8 +113,15 @@ internal static class CalculoEnergia
             (jogadas ?? []).Sum(GetRecompensa),
             rivaisVencidos * ResultadoRival.Energia,
             -diasComFadiga * Fadiga.Desconto,
-            despertares * PorDespertar);
+            despertares * PorDespertar,
+            devolucoes);
     }
+
+    /// <summary>
+    /// Quem enviou uma carta recusada, não cumprida ou expirada recebe metade do preço de volta, arredondada para
+    /// baixo (decisão 0087). Na Fusão, metade da soma das duas Provocações.
+    /// </summary>
+    public static int GetDevolucao(int preco) => preco / 2;
 
     /// <summary>
     /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou recebe o preço de volta (decisão 0074).
@@ -212,12 +224,28 @@ internal static class CalculoEnergia
         return antigas + dias;
     }
 
-    /// <summary>A meta paga uma vez por semana, mesmo cumprida em vários grupos ou desafios.</summary>
-    private static int CountSemanasCumpridas(IReadOnlyList<DesafioDaPessoa> desafios) =>
-        desafios
-            .SelectMany(d => d.SemanasCumpridas.Select(indice => d.DataInicio.AddDays(indice * 7)))
-            .Distinct()
-            .Count();
+    /// <summary>
+    /// A meta paga uma vez por semana, mesmo cumprida em vários grupos ou desafios. A semana de um desafio
+    /// cancelado (decisão 0088) só paga se não cruza uma semana já paga: um desafio criado depois do
+    /// cancelamento, começando em outro dia da semana, não paga os mesmos dias duas vezes.
+    /// </summary>
+    private static int CountSemanasCumpridas(IReadOnlyList<DesafioDaPessoa> desafios)
+    {
+        static IEnumerable<DateOnly> Inicios(IEnumerable<DesafioDaPessoa> lista) =>
+            lista.SelectMany(d => d.SemanasCumpridas.Select(indice => d.DataInicio.AddDays(indice * 7)));
+
+        var pagas = Inicios(desafios.Where(d => !d.Cancelado)).Distinct().ToList();
+        foreach (var inicio in Inicios(desafios.Where(d => d.Cancelado)).Distinct().Order())
+        {
+            // Duas semanas de 7 dias se cruzam quando começam a menos de 7 dias uma da outra.
+            if (!pagas.Any(paga => Math.Abs(paga.DayNumber - inicio.DayNumber) < 7))
+            {
+                pagas.Add(inicio);
+            }
+        }
+
+        return pagas.Count;
+    }
 
     private static DateOnly GetSegunda(DateOnly dia) =>
         dia.AddDays(-(((int)dia.DayOfWeek + 6) % 7));

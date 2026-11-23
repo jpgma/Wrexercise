@@ -85,6 +85,30 @@ public sealed class EnergiaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task DesafioCancelado_MantemAEnergiaDaSemana_SoAteOCancelamento()
+    {
+        var ana = await _host.CreateUsuarioAsync();
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        await IniciarDesafioAsync(ana, grupoId);
+        await PostAtividadeAsync(ana, grupoId);
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
+            WHERE usuario_id = '{ana.Id}'
+            """);
+
+        // Decisão 0088: cancelado hoje, a semana cumprida hoje continua rendendo.
+        await _host.ExecuteAsync($"UPDATE desafios SET cancelled_at = now() WHERE grupo_id = '{grupoId}'");
+        var energia = await GetEnergiaAsync(ana);
+        Assert.Equal(CalculoEnergia.PorMeta, energia.Detalhamento.Metas);
+        Assert.Equal(0, energia.Detalhamento.Desafios);
+
+        // Cancelado dois dias antes: o treino é depois do cancelamento e não conta para o desafio.
+        await _host.ExecuteAsync(
+            $"UPDATE desafios SET cancelled_at = now() - interval '2 days' WHERE grupo_id = '{grupoId}'");
+        Assert.Equal(0, (await GetEnergiaAsync(ana)).Detalhamento.Metas);
+    }
+
+    [Fact]
     public async Task SoContaAsAtividadesDeQuemConsulta()
     {
         var ana = await _host.CreateUsuarioAsync();

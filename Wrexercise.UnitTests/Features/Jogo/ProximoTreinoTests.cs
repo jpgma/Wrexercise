@@ -313,6 +313,121 @@ public class ProximoTreinoTests
         Assert.False(JogadasConcluidas.ConcluiAgora(Jogada(), id, [(id, AntesDoAceite(tipo: "Corrida"))]));
     }
 
+    // Decisão 0086: só o treino na janela da carta é o próximo treino; fora dela, não conta nem faz falhar.
+
+    private static readonly DateTimeOffset FimDoDomingo = Em(30, 0);
+
+    [Fact]
+    public void AntesDas8_TreinoDaNoite_NaoContaNemFalha()
+    {
+        var (situacao, falhouEm) = SituacaoJogada.Avaliar(
+            Jogada(CodigoCarta.AntesDas8), [Atividade(dia: 23, hora: 19)], Em(23, 21));
+
+        Assert.Equal(SituacaoJogada.Aceita, situacao);
+        Assert.Null(falhouEm);
+    }
+
+    [Fact]
+    public void AntesDas8_NoiteEDepoisManhaCedo_Concluida() =>
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.AntesDas8),
+                [Atividade(dia: 23, hora: 19, registro: 4), Atividade(dia: 24, hora: 6, registro: 16)],
+                Em(24, 9)));
+
+    [Fact]
+    public void AntesDas8_ManhaQueTerminaDepoisDas8_Falha() =>
+        Assert.Equal(
+            SituacaoJogada.Falhou,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.AntesDas8),
+                [Atividade(dia: 23, hora: 19, registro: 4), Atividade(dia: 24, hora: 7, minuto: 30, registro: 17)],
+                Em(24, 9)));
+
+    [Fact]
+    public void AntesDas8_SoTreinosForaDaJanela_ExpiraNoPrazo() =>
+        Assert.Equal(
+            SituacaoJogada.Expirada,
+            SituacaoJogada.Calcular(
+                Jogada(CodigoCarta.AntesDas8),
+                [Atividade(dia: 23, hora: 19, registro: 4), Atividade(dia: 24, hora: 18, registro: 27)],
+                Prazo.AddMinutes(1)));
+
+    [Fact]
+    public void FimDeSemana_TreinosNaSemana_NaoFalham_EOSabadoDecide()
+    {
+        var jogada = Jogada(CodigoCarta.FimDeSemana, prazo: FimDoDomingo);
+        List<AtividadeJogada> semana = [Atividade(dia: 24, registro: 20), Atividade(dia: 26, registro: 68)];
+
+        Assert.Equal(SituacaoJogada.Aceita, SituacaoJogada.Calcular(jogada, semana, Em(27, 12)));
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(jogada, [.. semana, Atividade(dia: 28, registro: 116)], Em(28, 13)));
+        Assert.Equal(SituacaoJogada.Expirada, SituacaoJogada.Calcular(jogada, semana, FimDoDomingo.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void Fusao_FimDeSemanaEAntesDas8_SoSabadoOuDomingoAntesDas8()
+    {
+        var jogada = Jogada(CodigoCarta.FimDeSemana, fusao: CodigoCarta.AntesDas8, prazo: FimDoDomingo);
+        List<AtividadeJogada> fora =
+        [
+            Atividade(dia: 24, hora: 6, registro: 14), // terça cedo: fora da FIM DE SEMANA
+            Atividade(dia: 28, hora: 10, registro: 120), // sábado às 10h: fora da ANTES DAS 8
+        ];
+
+        Assert.Equal(SituacaoJogada.Aceita, SituacaoJogada.Calcular(jogada, fora, Em(28, 12)));
+        Assert.Equal(
+            SituacaoJogada.Concluida,
+            SituacaoJogada.Calcular(
+                jogada, [.. fora, Atividade(dia: 29, hora: 6, minuto: 30, duracao: 1800, registro: 140)], Em(29, 9)));
+    }
+
+    [Fact]
+    public void Fusao_Mais10MinEFimDeSemana_SabadoCurtoFalha()
+    {
+        var jogada = Jogada(CodigoCarta.Mais10Min, alvo: 4200, fusao: CodigoCarta.FimDeSemana, prazo: FimDoDomingo);
+
+        Assert.Equal(
+            SituacaoJogada.Falhou,
+            SituacaoJogada.Calcular(
+                jogada,
+                [Atividade(dia: 24, duracao: 1800, registro: 20), Atividade(dia: 28, duracao: 1800, registro: 116)],
+                Em(28, 13)));
+    }
+
+    [Fact]
+    public void Variedade_ContinuaFalhandoEmQualquerHorario() =>
+        Assert.Equal(
+            SituacaoJogada.Falhou,
+            SituacaoJogada.Calcular(Jogada(), [Atividade(tipo: "Corrida", dia: 23, hora: 19)], Em(23, 21)));
+
+    [Fact]
+    public void AntesDas8_JogadaAntiga_TreinoDaNoiteAindaNaoFalha_RegraAntiga()
+    {
+        // Na regra antiga não há próximo treino: nada faz falhar, só o prazo.
+        var antiga = Jogada(CodigoCarta.AntesDas8, envio: Em(19, 15), prazo: Em(21, 8));
+
+        Assert.Equal(
+            SituacaoJogada.Aceita,
+            SituacaoJogada.Calcular(antiga, [Atividade(dia: 19, hora: 19)], Em(19, 21)));
+    }
+
+    [Fact]
+    public void ConcluiAgora_TreinoForaDaJanelaAntes_NaoAtrapalha()
+    {
+        var noite = Guid.NewGuid();
+        var manha = Guid.NewGuid();
+        List<(Guid, AtividadeJogada)> candidatas =
+        [
+            (noite, Atividade(dia: 23, hora: 19, registro: 4)),
+            (manha, Atividade(dia: 24, hora: 6, registro: 16)),
+        ];
+
+        Assert.True(JogadasConcluidas.ConcluiAgora(Jogada(CodigoCarta.AntesDas8), manha, candidatas));
+    }
+
     [Fact]
     public void JaCumpre_CartaSemResposta()
     {

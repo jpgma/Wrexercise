@@ -63,12 +63,9 @@ export function useComecarTreino(grupoId: string) {
       }),
     onSuccess: () => invalidarTudo(queryClient),
     onError: (error) => {
-      // As mesmas travas do registro: a fila de avaliação e a carta sem resposta (decisão 0076).
+      // A mesma trava do registro: a fila de avaliação. A carta sem resposta não impede começar (decisão 0086).
       if (error instanceof ApiError && error.code === "AVALIACOES_PENDENTES") {
         void queryClient.invalidateQueries({ queryKey: ["grupos"] });
-      }
-      if (error instanceof ApiError && error.code === "CARTA_SEM_RESPOSTA") {
-        void queryClient.invalidateQueries({ queryKey: ["jogo", "pendentes"] });
       }
       if (error instanceof ApiError && error.code === "TREINO_EM_ANDAMENTO") {
         void queryClient.invalidateQueries({ queryKey: treinoAtualKey });

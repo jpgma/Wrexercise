@@ -19,7 +19,8 @@ export type Notificacao = {
     | "ComecouTreinar"
     | "Torcida"
     | "TreinoLongo"
-    | "TreinoAppConcluido";
+    | "TreinoAppConcluido"
+    | "CartaNaoCumprida";
   /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival e na Cutucada, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;
@@ -34,6 +35,8 @@ export type Notificacao = {
   cutucada: string | null;
   /** Só na `Cutucada` `Livre`: o texto que quem cutucou escreveu. */
   cutucadaTexto: string | null;
+  /** Só em `CartaRecusada` e `CartaNaoCumprida`: a Energia que voltou para quem enviou (decisão 0087). */
+  energia: number | null;
 };
 
 const notificacoesKey = ["notificacoes"] as const;

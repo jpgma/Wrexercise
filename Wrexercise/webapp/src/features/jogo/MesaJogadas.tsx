@@ -7,10 +7,12 @@ import {
   formatarDiaDoPrazo,
   formatarPrazo,
   formatarPrazoCurto,
+  getCodigos,
   getNomeJogada,
   getObjetivo,
   getObjetivoCurto,
   getSeloSituacao,
+  getVez,
   primeiroNome,
 } from "./textosCartas";
 import { type Jogada, useJogadas } from "./useCartas";
@@ -63,6 +65,11 @@ export function CabecalhoJogada({ jogada }: { jogada: Jogada }) {
               {jogada.cartaResposta.nome}
             </span>
           )}
+          {!jogada.recebida && jogada.devolucao > 0 && (
+            <span className="chip chip-success">
+              +{jogada.devolucao} EN de volta
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-sm text-muted">{getObjetivo(jogada)}</p>
         {jogada.cartaFusao && !encerrada && (
@@ -78,8 +85,9 @@ export function CabecalhoJogada({ jogada }: { jogada: Jogada }) {
         )}
         {jogada.recebida && jogada.situacao === "Aceita" && (
           <p className="mt-1 text-xs text-muted">
-            Vale o próximo treino. Um treino feito depois que a carta chegou e
-            antes do aceite também vale, se cumprir.
+            Vale {getVez(getCodigos(jogada))}. Os treinos fora disso não contam
+            nem fazem falhar. Um treino feito depois que a carta chegou e antes
+            do aceite também vale, se cumprir.
           </p>
         )}
         {jogada.recebida && jogada.situacao === "Falhou" && (
@@ -87,14 +95,12 @@ export function CabecalhoJogada({ jogada }: { jogada: Jogada }) {
             O próximo treino não cumpriu a carta.
           </p>
         )}
-        {!jogada.recebida &&
-          !jogada.desafioDuplo &&
-          encerrada &&
-          jogada.situacao !== "Concluida" && (
-            <p className="mt-1 text-xs text-muted">
-              Carta perdida: ela não volta para a Mão.
-            </p>
-          )}
+        {!jogada.recebida && jogada.devolucao > 0 && (
+          <p className="mt-1 text-xs text-muted">
+            A carta não volta para a Mão, mas metade do preço voltou pra você em
+            EN.
+          </p>
+        )}
         {jogada.recebida && aposta && !encerrada && (
           <p className="mt-1 text-xs font-semibold text-game">
             Apostado: cumprindo, você ganha {jogada.recompensa} EN.

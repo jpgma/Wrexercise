@@ -161,4 +161,49 @@ public class EstadoJogoTests
         Assert.Equal(84, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: true)));
         Assert.Equal(70, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: false)));
     }
+
+    // Decisão 0087: a carta recusada, não cumprida ou expirada devolve metade do preço a quem enviou.
+
+    [Theory]
+    [InlineData(SituacaoJogada.Recusada, 15)]
+    [InlineData(SituacaoJogada.Falhou, 15)]
+    [InlineData(SituacaoJogada.Expirada, 15)]
+    [InlineData(SituacaoJogada.Enviada, 0)]
+    [InlineData(SituacaoJogada.Aceita, 0)]
+    [InlineData(SituacaoJogada.AguardandoVerificacao, 0)]
+    [InlineData(SituacaoJogada.Concluida, 0)]
+    public void Devolucao_MetadeSoQuandoNaoCumprida(string situacao, int devolucao) =>
+        Assert.Equal(devolucao, Jogada(Eu, Colega, Guid.NewGuid(), situacao).Devolucao);
+
+    [Fact]
+    public void Devolucao_Fusao_MetadeDaSoma_ArredondadaParaBaixo()
+    {
+        // 30 + 40 = 70 → 35. Com 35 + 40 = 75 → 37.
+        Assert.Equal(35, Jogada(Eu, Colega, Guid.NewGuid(), SituacaoJogada.Falhou, cartaFusaoId: Guid.NewGuid()).Devolucao);
+        Assert.Equal(37, CalculoEnergia.GetDevolucao(75));
+        Assert.Equal(22, CalculoEnergia.GetDevolucao(45));
+    }
+
+    [Fact]
+    public void Devolucao_DesafioDuplo_NaoDevolve() =>
+        Assert.Equal(0, Jogada(Colega, Eu, Guid.NewGuid(), SituacaoJogada.Falhou, origemId: Guid.NewGuid()).Devolucao);
+
+    [Theory]
+    [InlineData(SituacaoJogada.Recusada)]
+    [InlineData(SituacaoJogada.Expirada)]
+    public void Devolucao_CartaQueVoltouPelaRegraAntiga_NaoDevolve(string situacao)
+    {
+        var antes = EstadoJogo.InicioCartaPermanente.AddDays(-7);
+
+        Assert.Equal(0, Jogada(Eu, Colega, Guid.NewGuid(), situacao, envio: antes).Devolucao);
+    }
+
+    [Fact]
+    public void Devolucao_EntraNoTotalDaEnergia()
+    {
+        var ganha = CalculoEnergia.Calcular([], [], devolucoes: 15);
+
+        Assert.Equal(15, ganha.Devolucoes);
+        Assert.Equal(15, ganha.Total);
+    }
 }

@@ -160,14 +160,15 @@ internal static class ObjetivoCarta
     }
 
     /// <summary>
-    /// O próximo treino (decisão 0075): o primeiro registrado entre os que começaram depois do aceite ou, em
-    /// +10 MIN e +20 MIN fora da Fusão, todos os de depois do aceite no dia dele. Só ele pode fazer a Jogada falhar.
+    /// O próximo treino (decisão 0075): o primeiro registrado entre os que começaram depois do aceite, dentro da
+    /// janela da carta (decisão 0086), ou, em +10 MIN e +20 MIN fora da Fusão, todos os de depois do aceite no dia
+    /// dele. Só ele pode fazer a Jogada falhar.
     /// </summary>
     public static IReadOnlyList<AtividadeJogada> GetProximoTreino(
         JogadaEstado jogada,
         IEnumerable<AtividadeJogada> atividades)
     {
-        var depois = atividades.Where(a => !a.AntesDoAceite).ToList();
+        var depois = atividades.Where(a => !a.AntesDoAceite && IsNaJanela(jogada, a)).ToList();
         if (depois.Count == 0)
         {
             return [];
@@ -219,6 +220,23 @@ internal static class ObjetivoCarta
         var falhouEm = new DateTimeOffset(DateTime.SpecifyKind(fimDoDia, DateTimeKind.Unspecified), deslocamento);
         return falhouEm < jogada.ExpiraEm ? falhouEm : null;
     }
+
+    /// <summary>
+    /// A janela da carta (decisão 0086): se o momento do treino permite cumprir o objetivo. Um treino fora dela não
+    /// é o próximo treino: não conta nem faz falhar. A ANTES DAS 8 pede um treino que comece antes das 08:00, e a
+    /// FIM DE SEMANA, um treino no sábado ou no domingo. As outras cartas aceitam qualquer treino. Na Fusão, o treino
+    /// precisa estar na janela das duas cartas.
+    /// </summary>
+    public static bool IsNaJanela(JogadaEstado jogada, AtividadeJogada atividade) =>
+        IsNaJanela(jogada.Codigo, atividade)
+        && (jogada.CodigoFusao is not { } fusao || IsNaJanela(fusao, atividade));
+
+    private static bool IsNaJanela(string codigo, AtividadeJogada atividade) => codigo switch
+    {
+        CodigoCarta.AntesDas8 => atividade.InicioLocal.Hour < 8,
+        CodigoCarta.FimDeSemana => atividade.InicioLocal.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
+        _ => true,
+    };
 
     private static bool SomaODia(JogadaEstado jogada) =>
         jogada.CodigoFusao is null && jogada.Codigo is CodigoCarta.Mais10Min or CodigoCarta.Mais20Min;

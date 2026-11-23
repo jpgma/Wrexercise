@@ -72,7 +72,8 @@ internal static class ListarJogadas
                     : null,
                 CalculoEnergia.GetRecompensa(x.Jogada.ToRecompensa(comoDestinatario: true)),
                 x.Jogada.Estado.RespondidaEm,
-                x.Jogada.DestinatarioId == usuarioId && x.Jogada.JaCumpre))
+                x.Jogada.DestinatarioId == usuarioId && x.Jogada.JaCumpre,
+                x.Jogada.RemetenteId == usuarioId ? x.Jogada.Devolucao : 0))
             .ToList();
 
         return Results.Json(new JogadasResponse(resposta), AppJsonContext.Default.JogadasResponse);

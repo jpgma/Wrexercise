@@ -1,5 +1,15 @@
 [
   {
+    "versao": "1.8.0",
+    "data": "2026-11-23",
+    "novidades": [
+      "ANTES DAS 8 e FIM DE SEMANA: treino fora da janela da carta não faz falhar",
+      "Carta chegou na hora do treino? Responda depois do treino ao vivo 🏋️",
+      "Carta recusada, não cumprida ou vencida devolve metade do preço a quem jogou 🃏",
+      "Desafio cancelado não tira mais a Energia das semanas cumpridas"
+    ]
+  },
+  {
     "versao": "1.7.0",
     "data": "2026-11-22",
     "novidades": [

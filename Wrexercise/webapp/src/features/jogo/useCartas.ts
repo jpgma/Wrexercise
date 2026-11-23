@@ -73,6 +73,11 @@ export type Jogada = {
    * Aceitando, ela é cumprida na hora (decisão 0076).
    */
   jaCumpre: boolean;
+  /**
+   * Na carta enviada que foi recusada, não cumprida ou que expirou: a Energia que voltou para quem
+   * enviou, metade do preço (decisão 0087). Senão, 0.
+   */
+  devolucao: number;
 };
 
 /** Uma carta recebida que espera resposta, em qualquer grupo: a Chegada (decisão 0076). */
