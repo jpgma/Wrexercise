@@ -184,7 +184,7 @@ public sealed class PercursoTests : IAsyncLifetime
         var grupoId = await _host.CreateGrupoAsync(ana);
         await _host.AddMembroAsync(grupoId, nome: "Bia");
         var treino = await LerAsync(await ComecarAsync(ana, grupoId, TipoAtividade.Corrida, true));
-        await RecuarInicioAsync(treino.Id, TimeSpan.FromMinutes(20));
+        await RecuarInicioAsync(treino.Id, TimeSpan.FromMinutes(20) + FolgaRelogio);
 
         var aoVivo = await PostImagemAsync(ana, treino.Id);
         await TerminarAsync(ana, treino.Id, 1200);
@@ -209,7 +209,7 @@ public sealed class PercursoTests : IAsyncLifetime
         var ana = await _host.CreateUsuarioAsync();
         var grupoId = await _host.CreateGrupoAsync(ana);
         var treino = await LerAsync(await ComecarAsync(ana, grupoId, TipoAtividade.Corrida, false));
-        await RecuarInicioAsync(treino.Id, TimeSpan.FromMinutes(20));
+        await RecuarInicioAsync(treino.Id, TimeSpan.FromMinutes(20) + FolgaRelogio);
         await TerminarAsync(ana, treino.Id, 1200);
 
         var response = await PostImagemAsync(ana, treino.Id);
@@ -267,6 +267,13 @@ public sealed class PercursoTests : IAsyncLifetime
 
     private static string Tile(Guid atividadeId, TileMapa tile) =>
         $"/api/atividades/{atividadeId}/percurso/mapa/{tile.Zoom}/{tile.X}/{tile.Y}";
+
+    /// <summary>
+    /// Folga para terminar com exatamente o tempo recuado: o início vem do relógio do banco (<c>now()</c>), o fim
+    /// do relógio do servidor, e o tempo decorrido é arredondado para baixo. Sem ela, alguns milissegundos de
+    /// diferença viram 1199 s e o término é recusado.
+    /// </summary>
+    private static readonly TimeSpan FolgaRelogio = TimeSpan.FromSeconds(5);
 
     private Task RecuarInicioAsync(Guid atividadeId, TimeSpan quanto) =>
         _host.ExecuteAsync($"""

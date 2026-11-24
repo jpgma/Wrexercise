@@ -239,7 +239,7 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
         var grupoId = await _host.CreateGrupoAsync(ana);
         var app = await ConectarAsync(ana);
         var treino = await LerAsync(await ComecarAsync(app, "treino-1", grupoId));
-        await RecuarInicioAsync(treino.AtividadeId, TimeSpan.FromMinutes(10));
+        await RecuarInicioAsync(treino.AtividadeId, TimeSpan.FromMinutes(10) + FolgaRelogio);
 
         Assert.Equal(HttpStatusCode.OK, (await PutFimAsync(
             app, "treino-1", 3600, DateTimeOffset.UtcNow, comResumo: false)).StatusCode);
@@ -393,6 +393,13 @@ public sealed class TreinoAoVivoAppTests : IAsyncLifetime
             _host.Services.GetRequiredService<NpgsqlDataSource>(),
             _host.Services.GetRequiredService<ArmazenamentoEvidencias>(),
             Token);
+
+    /// <summary>
+    /// Folga para conferir a sugestão contra o tempo recuado: o início vem do relógio do banco (<c>now()</c>), o
+    /// fim do relógio do servidor, e o tempo decorrido é arredondado para baixo. Sem ela, alguns milissegundos de
+    /// diferença viram 599 s.
+    /// </summary>
+    private static readonly TimeSpan FolgaRelogio = TimeSpan.FromSeconds(5);
 
     private Task RecuarInicioAsync(Guid atividadeId, TimeSpan quanto) =>
         _host.ExecuteAsync($"""
