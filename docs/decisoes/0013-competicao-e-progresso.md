@@ -1,6 +1,6 @@
 # 0013 — Competição, classificação e resumo
 
-**Status:** DECIDIDA. Parcialmente substituída pela decisão 0016 (adesão tardia e SQL de contagens).
+**Status:** DECIDIDA. Parcialmente substituída pela decisão 0016 (adesão tardia e SQL de contagens) e pela 0090 (ordem de desempate, sequência e posição dividida).
 
 ## Contexto
 
@@ -33,12 +33,12 @@ A Fase 7 precisa de classificação, histórico semanal, sequências de metas cu
 
 **Classificação (§8.5)**
 
-Ordem de desempate:
+Ordem de desempate (revista pela 0090, que acrescenta o tempo e as atividades verificadas e troca o nome pela posição dividida):
 
 1. Semanas com meta cumprida (verificadas ≥ meta da semana).
 2. Total de sessões verificadas no desafio.
 3. Sequência atual: semanas consecutivas cumpridas, da semana mais recente para trás.
-4. `nome_exibicao`, depois `usuario_id`.
+4. ~~`nome_exibicao`, depois `usuario_id`.~~ Ver 0090.
 
 A semana corrente entra nas contagens como as demais (meta só com verificadas).
 
@@ -80,6 +80,8 @@ indice_semana = ((started_at AT TIME ZONE fuso)::date - data_inicio) / 7
 ```
 
 Query agregada padrão: `GROUP BY usuario_id, indice_semana`. Progresso da semana atual filtra `indice_semana` da semana corrente ou restringe datas da semana.
+
+Os totais de desempate da 0090 (tempo e quantidade das atividades `Verificada`) usam o mesmo `FromElegiveisSql`, em `ContagensDesafio.LoadTotaisVerificadosAsync`.
 
 Alterações neste SQL exigem atualizar este ADR e os testes de progresso/classificação.
 

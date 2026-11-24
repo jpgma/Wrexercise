@@ -40,6 +40,7 @@ import {
   useSairDoGrupo,
 } from "@/features/grupos";
 import {
+  ComoFuncionaClassificacao,
   ListaClassificacao,
   useResumoGrupo,
   type ClassificacaoParticipante,
@@ -191,6 +192,7 @@ function DesafioEmDestaque({
             : "A classificação aparece com o primeiro dia de treino verificado."}
         </p>
       )}
+      <ComoFuncionaClassificacao />
 
       {d.situacao === "Ativo" && semanaAtual && objetivoDaSemana > 0 && (
         <p className="mt-3 text-sm text-muted">

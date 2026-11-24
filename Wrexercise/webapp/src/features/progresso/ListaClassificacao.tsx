@@ -9,6 +9,7 @@ const primeiroNome = (nome: string) => nome.trim().split(/\s+/)[0] ?? nome;
 /**
  * A classificação do desafio inteiro. Cada linha mostra os números que decidem a ordem (semanas
  * cumpridas e dias verificados) e, embaixo do nome, por que a pessoa está à frente da seguinte.
+ * O tempo e as atividades só aparecem nesse texto, quando decidem (ADR 0090).
  */
 export function ListaClassificacao({
   participantes,
@@ -19,10 +20,18 @@ export function ListaClassificacao({
   usuarioId: string | undefined;
   grupoId: string;
 }) {
+  // Quem entrou no meio disputou menos semanas que os demais: a linha mostra "X de Y semanas".
+  const maisSemanas = Math.max(
+    0,
+    ...participantes.map((p) => p.semanasDisputadas),
+  );
+
   return (
     <ol className="card divide-y divide-border overflow-hidden">
       {participantes.map((item, indice) => {
         const voce = item.usuarioId === usuarioId;
+        const entrouDepois =
+          item.semanasDisputadas > 0 && item.semanasDisputadas < maisSemanas;
         const seguinte = participantes[indice + 1];
         const motivo =
           seguinte &&
@@ -63,7 +72,11 @@ export function ListaClassificacao({
                     {item.semanasCumpridas}
                   </span>{" "}
                   <span className="text-xs text-muted">
-                    {item.semanasCumpridas === 1 ? "semana" : "semanas"}
+                    {entrouDepois
+                      ? `de ${item.semanasDisputadas} ${item.semanasDisputadas === 1 ? "semana" : "semanas"}`
+                      : item.semanasCumpridas === 1
+                        ? "semana"
+                        : "semanas"}
                   </span>
                 </p>
                 <p className="flex items-center justify-end gap-1 text-xs text-muted">

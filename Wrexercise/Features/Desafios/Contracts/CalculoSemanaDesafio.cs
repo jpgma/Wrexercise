@@ -50,11 +50,18 @@ internal static class CalculoSemanaDesafio
         return GetIndiceSemana(inicio, hoje > fim ? fim : hoje);
     }
 
-    /// <summary>Semanas cumpridas em sequência, da mais recente para trás.</summary>
-    public static int GetSequenciaAtual(IReadOnlyList<bool> cumpridas, int indiceRecente)
+    /// <summary>
+    /// Semanas cumpridas em sequência, da mais recente para trás (ADR 0090). A semana em andamento só
+    /// entra depois de cumprida: até lá, a sequência conta a partir da semana anterior, para não zerar
+    /// toda segunda-feira.
+    /// </summary>
+    public static int GetSequenciaAtual(IReadOnlyList<bool> cumpridas, int indiceRecente, bool semanaRecenteEmAndamento)
     {
+        var inicio = semanaRecenteEmAndamento && indiceRecente >= 0 && !cumpridas[indiceRecente]
+            ? indiceRecente - 1
+            : indiceRecente;
         var sequencia = 0;
-        for (var indice = indiceRecente; indice >= 0 && cumpridas[indice]; indice--)
+        for (var indice = inicio; indice >= 0 && cumpridas[indice]; indice--)
         {
             sequencia++;
         }

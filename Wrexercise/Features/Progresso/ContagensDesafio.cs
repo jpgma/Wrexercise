@@ -52,13 +52,13 @@ internal static class ContagensDesafio
             reader.GetFieldValue<DateOnly>(6));
     }
 
-    public static async Task<IReadOnlyList<(Guid UsuarioId, string NomeExibicao)>> LoadParticipantesAsync(
+    public static async Task<IReadOnlyList<ParticipanteDesafio>> LoadParticipantesAsync(
         NpgsqlConnection connection,
         Guid desafioId,
         CancellationToken cancellationToken)
     {
         await using var command = new NpgsqlCommand("""
-            SELECT m.usuario_id, u.nome_exibicao
+            SELECT m.usuario_id, u.nome_exibicao, (m.joined_at AT TIME ZONE g.fuso_horario)::date
             FROM desafios d
             JOIN grupos g ON g.id = d.grupo_id
             JOIN membros_grupo m ON m.grupo_id = d.grupo_id AND m.removed_at IS NULL
@@ -69,14 +69,44 @@ internal static class ContagensDesafio
             """, connection);
         command.Parameters.AddWithValue(desafioId);
 
-        var participantes = new List<(Guid, string)>();
+        var participantes = new List<ParticipanteDesafio>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            participantes.Add((reader.GetGuid(0), reader.GetString(1)));
+            participantes.Add(new ParticipanteDesafio(
+                reader.GetGuid(0),
+                reader.GetString(1),
+                reader.GetFieldValue<DateOnly>(2)));
         }
 
         return participantes;
+    }
+
+    /// <summary>
+    /// O tempo e a quantidade das atividades verificadas de cada pessoa que valem para o desafio, os
+    /// desempates depois da sequência (ADR 0090). Mesma elegibilidade das contagens de dias.
+    /// </summary>
+    public static async Task<Dictionary<Guid, TotaisVerificados>> LoadTotaisVerificadosAsync(
+        NpgsqlConnection connection,
+        Guid desafioId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = new NpgsqlCommand($"""
+            SELECT a.usuario_id, coalesce(sum(a.duracao_segundos), 0)::int, count(*)::int
+            {ContagensAtividadeDesafio.FromElegiveisSql}
+              AND a.situacao_verificacao = 'Verificada'
+            GROUP BY a.usuario_id
+            """, connection);
+        command.Parameters.AddWithValue(desafioId);
+
+        var totais = new Dictionary<Guid, TotaisVerificados>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            totais[reader.GetGuid(0)] = new TotaisVerificados(reader.GetInt32(1), reader.GetInt32(2));
+        }
+
+        return totais;
     }
 
     public static async Task<Dictionary<(Guid UsuarioId, int IndiceSemana), (int Verificadas, int Pendentes)>> LoadMatrizAsync(

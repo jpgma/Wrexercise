@@ -70,14 +70,15 @@ export function RegrasDesafio({ desafio }: { desafio: Desafio }) {
         Só contam os treinos <strong>verificados</strong> pelo grupo
       </Regra>
       <Regra icon={Trophy}>
-        Ganha quem cumprir a meta em <strong>mais semanas</strong>. No empate,
-        vale quem tem mais dias verificados e, depois, a maior sequência de
-        semanas
+        Ganha quem cumprir a meta em <strong>mais semanas</strong>. No empate:
+        mais dias verificados, maior sequência atual, mais tempo de treino e
+        mais atividades. Empatou em tudo, divide a posição
       </Regra>
       <Regra icon={UserPlus}>
         {desafio.totalParticipantes}{" "}
         {desafio.totalParticipantes === 1 ? "participante" : "participantes"}.
-        Quem entra no meio conta a partir da primeira semana completa
+        Quem entra no meio conta a partir da primeira semana completa; as
+        semanas antes contam como 0
       </Regra>
       <Regra icon={Globe}>
         Horários no fuso {desafio.fusoHorario.replaceAll("_", " ")}

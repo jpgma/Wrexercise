@@ -35,23 +35,28 @@ internal static class ObterResumoGrupo
 
         var participantes = await ContagensDesafio.LoadParticipantesAsync(connection, destacado.Id, cancellationToken);
         var matriz = await ContagensDesafio.LoadMatrizAsync(connection, destacado.Id, cancellationToken);
+        var totais = await ContagensDesafio.LoadTotaisVerificadosAsync(connection, destacado.Id, cancellationToken);
 
         var ranking = ClassificacaoDesafio.CalcularRanking(
             participantes,
             matriz,
+            totais,
             desafio.DataInicio,
             desafio.DataFim,
             desafio.Hoje,
             desafio.SessoesPorSemana);
         var ativo = destacado.Situacao == SituacaoDesafio.Ativo;
 
-        var classificacao = ranking.Select((item, index) => new ClassificacaoResumoItemResponse(
-            index + 1,
+        var classificacao = ranking.Select(item => new ClassificacaoResumoItemResponse(
+            item.Posicao,
             item.UsuarioId,
             item.NomeExibicao,
             item.SemanasCumpridas,
             item.SessoesVerificadas,
-            item.SequenciaSemanas)).ToList();
+            item.SequenciaSemanas,
+            item.SegundosVerificados,
+            item.AtividadesVerificadas,
+            item.SemanasDisputadas)).ToList();
 
         ProgressoResumoResponse? meuProgresso = null;
         if (!desafio.Cancelado)

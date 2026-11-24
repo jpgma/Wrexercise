@@ -95,7 +95,14 @@ public class ConquistasUsuarioTests
     [InlineData(2, 3)]
     [InlineData(3, 0)]
     public void GetSequenciaAtual_ParaNaPrimeiraFalha(int indiceRecente, int esperado) =>
-        Assert.Equal(esperado, CalculoSemanaDesafio.GetSequenciaAtual([true, true, true, false], indiceRecente));
+        Assert.Equal(esperado, CalculoSemanaDesafio.GetSequenciaAtual([true, true, true, false], indiceRecente, false));
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(2, 3)]
+    [InlineData(3, 3)]
+    public void GetSequenciaAtual_SemanaEmAndamentoSemMeta_ContaDaAnterior(int indiceRecente, int esperado) =>
+        Assert.Equal(esperado, CalculoSemanaDesafio.GetSequenciaAtual([true, true, true, false], indiceRecente, true));
 
     [Theory]
     [InlineData(8, "Faltam 2 treinos no fim de semana")]

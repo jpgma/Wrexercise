@@ -1,11 +1,14 @@
+import { formatarDuracao } from "@/features/atividades";
 import type { ClassificacaoParticipante } from "./types";
 
 type Estatisticas = Pick<
   ClassificacaoParticipante,
-  | "nomeExibicao"
+  | "posicao"
   | "semanasCumpridas"
   | "sessoesVerificadas"
   | "sequenciaSemanas"
+  | "segundosVerificados"
+  | "atividadesVerificadas"
 >;
 
 const plural = (n: number, singular: string, varios: string) =>
@@ -13,7 +16,8 @@ const plural = (n: number, singular: string, varios: string) =>
 
 /**
  * Por que uma pessoa está à frente da seguinte, pelo critério que decidiu: semanas cumpridas, dias
- * verificados, sequência e, por fim, o nome (mesma ordem de `ClassificacaoDesafio.CalcularRanking`).
+ * verificados, sequência, tempo verificado e atividades verificadas (mesma ordem de
+ * `ClassificacaoDesafio.CalcularRanking`, ADR 0090). Quem empata em tudo divide a posição.
  * `nomeDeBaixo` já vem pronto: o primeiro nome ou "você".
  */
 export function explicarVantagem(
@@ -21,6 +25,9 @@ export function explicarVantagem(
   abaixo: Estatisticas,
   nomeDeBaixo: string,
 ): string {
+  if (acima.posicao === abaixo.posicao) {
+    return `Empate em tudo com ${nomeDeBaixo}: mesma posição`;
+  }
   const semanas = acima.semanasCumpridas - abaixo.semanasCumpridas;
   if (semanas > 0) {
     return `${plural(semanas, "semana", "semanas")} à frente de ${nomeDeBaixo}`;
@@ -32,5 +39,11 @@ export function explicarVantagem(
   if (acima.sequenciaSemanas > abaixo.sequenciaSemanas) {
     return `Empate em semanas e dias, sequência maior que ${nomeDeBaixo}`;
   }
-  return `Empate total com ${nomeDeBaixo} (ordem alfabética)`;
+  const segundos = acima.segundosVerificados - abaixo.segundosVerificados;
+  if (segundos > 0) {
+    const tempo = segundos < 60 ? "menos de 1 min" : formatarDuracao(segundos);
+    return `Empate em semanas, dias e sequência, ${tempo} a mais de treino que ${nomeDeBaixo}`;
+  }
+  const atividades = acima.atividadesVerificadas - abaixo.atividadesVerificadas;
+  return `Empate até no tempo, ${plural(atividades, "atividade", "atividades")} a mais que ${nomeDeBaixo}`;
 }

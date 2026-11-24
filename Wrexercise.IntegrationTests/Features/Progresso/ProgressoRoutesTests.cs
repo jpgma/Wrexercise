@@ -276,7 +276,7 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
             WHERE id = '{desafioId}'
             """);
 
-        // Bia treinou na semana passada e Ana nesta: empatadas, Ana passa na frente pelo nome.
+        // Bia treinou na semana passada e Ana nesta: empatadas em tudo, dividem o 1º lugar (ADR 0090).
         await PostAtividadeAsync(bia, grupoId, 3600);
         await _host.ExecuteAsync($"""
             UPDATE atividades SET started_at = started_at - interval '7 days'
@@ -291,10 +291,40 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
         var resumo = await GetResumoAsync(caio, grupoId);
 
         Assert.Equal(["Ana", "Bia", "Caio", "Duda"], resumo.Classificacao.Select(c => c.NomeExibicao));
+        Assert.Equal([1, 1, 3, 3], resumo.Classificacao.Select(c => c.Posicao));
         Assert.Equal(new ProximoClassificacaoResponse("Treinos", "Bia", 2), resumo.Proximo);
         Assert.Equal(
-            new ProximoClassificacaoResponse("Lider", "Bia", 0),
+            new ProximoClassificacaoResponse("EmpateLider", "Bia", 0),
             (await GetResumoAsync(ana, grupoId)).Proximo);
+    }
+
+    [Fact]
+    public async Task Classificacao_DesempataPeloTempoVerificado_SemContarPendentes()
+    {
+        var ana = await _host.CreateUsuarioAsync("Ana");
+        var grupoId = await _host.CreateGrupoAsync(ana);
+        var bia = await _host.AddMembroAsync(grupoId, nome: "Bia");
+        var desafioId = await CreateDesafioAsync(ana, grupoId);
+        await IniciarAsync(desafioId);
+
+        await PostAtividadeAsync(ana, grupoId, 3600);
+        await PostAtividadeAsync(ana, grupoId, 1800);
+        await VerificarTudoAsync(grupoId);
+        await PostAtividadeAsync(bia, grupoId, 5400);
+        await VerificarTudoAsync(grupoId);
+        // O treino de 30 min de Ana volta a esperar avaliação: não pode desempatar.
+        await _host.ExecuteAsync($"""
+            UPDATE atividades SET situacao_verificacao = 'AguardandoFeedback', verified_at = NULL
+            WHERE usuario_id = '{ana.Id}' AND duracao_segundos = 1800
+            """);
+
+        var participantes = (await GetClassificacaoAsync(ana, desafioId)).Participantes;
+
+        // Mesmas semanas, dias e sequência: Bia tem mais tempo verificado.
+        Assert.Equal(["Bia", "Ana"], participantes.Select(p => p.NomeExibicao));
+        Assert.Equal([1, 2], participantes.Select(p => p.Posicao));
+        Assert.Equal((5400, 1), (participantes[0].SegundosVerificados, participantes[0].AtividadesVerificadas));
+        Assert.Equal((3600, 1), (participantes[1].SegundosVerificados, participantes[1].AtividadesVerificadas));
     }
 
     [Fact]
@@ -341,7 +371,17 @@ public sealed class ProgressoRoutesTests : IAsyncLifetime
 
         var resumo = await GetResumoAsync(bia, grupoId);
         Assert.False(resumo.MeuProgresso!.ContaNestaSemana);
+
+        // Na classificação, Bia ainda não disputou nenhuma semana; Ana já disputa a atual.
+        var classificacao = await GetClassificacaoAsync(bia, desafioId);
+        Assert.Equal(1, classificacao.Participantes.Single(p => p.NomeExibicao == "Ana").SemanasDisputadas);
+        Assert.Equal(0, classificacao.Participantes.Single(p => p.NomeExibicao == "Bia").SemanasDisputadas);
     }
+
+    private Task VerificarTudoAsync(Guid grupoId) => _host.ExecuteAsync($"""
+        UPDATE atividades SET situacao_verificacao = 'Verificada', verified_at = now()
+        WHERE grupo_id = '{grupoId}'
+        """);
 
     /// <summary>Mínimo de 20 min para Corrida e de 30 min para Caminhada e Ciclismo; 60 min para os outros tipos.</summary>
     private static readonly MetaPorTipoRequest[] MetasCorridaECardio =

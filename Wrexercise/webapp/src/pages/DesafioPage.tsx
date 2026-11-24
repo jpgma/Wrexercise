@@ -22,6 +22,7 @@ import {
 } from "@/features/desafios";
 import {
   LinhaParticipante,
+  ComoFuncionaClassificacao,
   ListaClassificacao,
   useClassificacao,
   useHistoricoSemanal,
@@ -108,6 +109,7 @@ function ClassificacaoSection({ desafio }: { desafio: Desafio }) {
             A classificação aparece com o primeiro dia de treino verificado.
           </p>
         ))}
+      <ComoFuncionaClassificacao />
     </>
   );
 }

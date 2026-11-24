@@ -181,7 +181,7 @@ internal static class ObterPerfilMembro
             semanaAtual?.Participou ?? false,
             cumpridas.Count(cumprida => cumprida),
             semanasDisputadas,
-            CalculoSemanaDesafio.GetSequenciaAtual(cumpridas, indiceRecente),
+            CalculoSemanaDesafio.GetSequenciaAtual(cumpridas, indiceRecente, atual is not null),
             semanas);
     }
 }

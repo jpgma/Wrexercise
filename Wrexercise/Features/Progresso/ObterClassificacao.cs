@@ -23,27 +23,27 @@ internal static class ObterClassificacao
 
         var participantes = await ContagensDesafio.LoadParticipantesAsync(connection, id, cancellationToken);
         var matriz = await ContagensDesafio.LoadMatrizAsync(connection, id, cancellationToken);
+        var totais = await ContagensDesafio.LoadTotaisVerificadosAsync(connection, id, cancellationToken);
 
         var ranking = ClassificacaoDesafio.CalcularRanking(
             participantes,
             matriz,
+            totais,
             desafio.DataInicio,
             desafio.DataFim,
             desafio.Hoje,
             desafio.SessoesPorSemana);
 
-        var resposta = new List<ClassificacaoParticipanteResponse>();
-        for (var posicao = 0; posicao < ranking.Count; posicao++)
-        {
-            var item = ranking[posicao];
-            resposta.Add(new ClassificacaoParticipanteResponse(
-                posicao + 1,
-                item.UsuarioId,
-                item.NomeExibicao,
-                item.SemanasCumpridas,
-                item.SessoesVerificadas,
-                item.SequenciaSemanas));
-        }
+        var resposta = ranking.Select(item => new ClassificacaoParticipanteResponse(
+            item.Posicao,
+            item.UsuarioId,
+            item.NomeExibicao,
+            item.SemanasCumpridas,
+            item.SessoesVerificadas,
+            item.SequenciaSemanas,
+            item.SegundosVerificados,
+            item.AtividadesVerificadas,
+            item.SemanasDisputadas)).ToList();
 
         return Results.Ok(new ClassificacaoResponse(
             desafio.SessoesPorSemana,

@@ -93,13 +93,19 @@ export function getDisputa({
         titulo: "Na liderança!",
         detalhe:
           quantidade > 0
-            ? `${plural(quantidade, "treino", "treinos")} à frente de ${nome}.`
+            ? `${plural(quantidade, "dia", "dias")} de treino à frente de ${nome}.`
             : "Você está em 1º no desafio.",
       };
+    case "EmpateLider":
+      return {
+        titulo: "Empate no topo!",
+        detalhe: `Você divide o 1º lugar com ${nome}.`,
+      };
     case "Treinos":
+      // A unidade é o dia: dois treinos no mesmo dia contam um só.
       return {
         titulo: "Na cola!",
-        detalhe: `${quantidade === 1 ? "Falta" : "Faltam"} ${plural(quantidade, "treino", "treinos")} para passar ${nome}.`,
+        detalhe: `${quantidade === 1 ? "Falta" : "Faltam"} ${plural(quantidade, "dia", "dias")} de treino para passar ${nome}.`,
       };
     case "Meta":
       return {

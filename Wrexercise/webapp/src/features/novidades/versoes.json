@@ -1,5 +1,17 @@
 [
   {
+    "versao": "1.10.0",
+    "data": "2026-11-24",
+    "novidades": [
+      "Empate na classificação agora vai pro tempo de treino, não pro nome",
+      "Empatou em tudo? Os dois ficam na mesma posição 🤝",
+      "A sequência 🔥 não some mais toda segunda-feira",
+      "Novo: \"Como funciona a classificação\" explica cada regra",
+      "Quem entrou no meio vê \"X de Y semanas\" na classificação",
+      "\"Faltam N dias de treino\": dois treinos no mesmo dia contam um"
+    ]
+  },
+  {
     "versao": "1.9.0",
     "data": "2026-11-24",
     "novidades": [

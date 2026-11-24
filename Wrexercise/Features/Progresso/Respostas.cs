@@ -6,7 +6,10 @@ internal sealed record ClassificacaoParticipanteResponse(
     string NomeExibicao,
     int SemanasCumpridas,
     int SessoesVerificadas,
-    int SequenciaSemanas);
+    int SequenciaSemanas,
+    int SegundosVerificados,
+    int AtividadesVerificadas,
+    int SemanasDisputadas);
 
 internal sealed record ClassificacaoResponse(
     int SessoesPorSemana,
@@ -48,7 +51,10 @@ internal sealed record ClassificacaoResumoItemResponse(
     string NomeExibicao,
     int SemanasCumpridas,
     int SessoesVerificadas,
-    int SequenciaSemanas);
+    int SequenciaSemanas,
+    int SegundosVerificados,
+    int AtividadesVerificadas,
+    int SemanasDisputadas);
 
 internal sealed record ResumoGrupoResponse(
     Guid GrupoId,

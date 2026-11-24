@@ -1,10 +1,15 @@
 export type ClassificacaoParticipante = {
+  /** Quem empata em tudo divide a posição: 1, 2, 2, 4 (ADR 0090). */
   posicao: number;
   usuarioId: string;
   nomeExibicao: string;
   semanasCumpridas: number;
   sessoesVerificadas: number;
   sequenciaSemanas: number;
+  segundosVerificados: number;
+  atividadesVerificadas: number;
+  /** Semanas do desafio, até a atual, em que a pessoa já contava. */
+  semanasDisputadas: number;
 };
 
 export type Classificacao = {
@@ -54,17 +59,10 @@ export type ResumoGrupo = {
   proximo: ProximoClassificacao | null;
 };
 
-export type ClassificacaoResumoItem = {
-  posicao: number;
-  usuarioId: string;
-  nomeExibicao: string;
-  semanasCumpridas: number;
-  sessoesVerificadas: number;
-  sequenciaSemanas: number;
-};
+export type ClassificacaoResumoItem = ClassificacaoParticipante;
 
 export type ProximoClassificacao = {
-  tipo: "Lider" | "Treinos" | "Meta" | "Semanas";
+  tipo: "Lider" | "EmpateLider" | "Treinos" | "Meta" | "Semanas";
   nomeExibicao: string;
   quantidade: number;
 };
