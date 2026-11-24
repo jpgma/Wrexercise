@@ -10,5 +10,8 @@
   "enabledPlugins": {
     "pixel-plugin@pixel-plugin": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": false
+  },
+  "worktree": {
+    "bgIsolation": "none"
   }
 }
