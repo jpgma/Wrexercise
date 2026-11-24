@@ -268,6 +268,23 @@ export function getLimiteEnvio(jogadas: Jogada[]): string | null {
 }
 
 /**
+ * A Revanche (decisão 0089): a última carta de quem vê para o alvo foi recusada, então dá pra mandar
+ * outra sem esperar as 24 horas.
+ */
+export function temRevanche(jogadas: Jogada[], alvoId: string): boolean {
+  const ultima = jogadas
+    .filter((j) => !j.recebida && j.destinatarioId === alvoId)
+    .reduce<Jogada | undefined>(
+      (mais, j) =>
+        !mais || Date.parse(j.enviadaEm) > Date.parse(mais.enviadaEm)
+          ? j
+          : mais,
+      undefined,
+    );
+  return ultima?.situacao === "Recusada";
+}
+
+/**
  * Por que quem vê não pode jogar uma carta no alvo agora, pelas Jogadas deste grupo, ou `null`. O
  * servidor confere de novo com as Jogadas de todos os grupos: aqui só se evita um arremesso que já
  * se sabe recusado.
@@ -282,6 +299,7 @@ export function getBloqueioJogada(
   if (jogadas.some((j) => ativa(j) && j.destinatarioId === alvoId))
     return `Você já tem uma carta aberta com ${nome}.`;
   if (
+    !temRevanche(jogadas, alvoId) &&
     jogadas.some(
       (j) =>
         !j.recebida &&

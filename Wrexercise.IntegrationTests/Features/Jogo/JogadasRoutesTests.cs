@@ -238,7 +238,7 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Recusada_DevolveMetadeAQuemEnviou_EAvisaQuanto()
+    public async Task Recusada_DevolveOPrecoInteiroAQuemEnviou_EAvisaQuanto()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
@@ -246,13 +246,13 @@ public sealed class JogadasRoutesTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
 
-        // Decisão 0087: 35 / 2 = 17, para quem enviou; quem recusou não recebe nada.
-        Assert.Equal(17, (await GetEnergiaAsync(ana)).Detalhamento.Devolucoes);
+        // Decisão 0089: a recusa devolve os 35 inteiros a quem enviou; quem recusou não recebe nada.
+        Assert.Equal(35, (await GetEnergiaAsync(ana)).Detalhamento.Devolucoes);
         Assert.Equal(0, (await GetEnergiaAsync(bia)).Detalhamento.Devolucoes);
-        Assert.Equal(17, Assert.Single(await GetJogadasAsync(ana, grupoId)).Devolucao);
+        Assert.Equal(35, Assert.Single(await GetJogadasAsync(ana, grupoId)).Devolucao);
         Assert.Equal(0, Assert.Single(await GetJogadasAsync(bia, grupoId)).Devolucao);
         Assert.Equal(1L, await _host.CountAsync(
-            $"SELECT count(*) FROM notificacoes WHERE jogada_id = '{jogadaId}' AND tipo = 'CartaRecusada' AND energia = 17"));
+            $"SELECT count(*) FROM notificacoes WHERE jogada_id = '{jogadaId}' AND tipo = 'CartaRecusada' AND energia = 35"));
     }
 
     [Fact]

@@ -1,7 +1,13 @@
 namespace Wrexercise.Features.Jogo;
 
 /// <summary>Uma Jogada já existente, do ponto de vista dos limites de envio.</summary>
-internal sealed record JogadaLimite(Guid RemetenteId, Guid DestinatarioId, DateTimeOffset EnviadaEm, string Situacao);
+/// <param name="RespondidaEm">Quando foi respondida: a recusa desde a decisão 0089 libera a Revanche.</param>
+internal sealed record JogadaLimite(
+    Guid RemetenteId,
+    Guid DestinatarioId,
+    DateTimeOffset EnviadaEm,
+    string Situacao,
+    DateTimeOffset? RespondidaEm = null);
 
 /// <summary>
 /// Os limites de envio (docs/gamificacao.md §6.3). Ficam em constantes para ajustar depois de observar o uso.
@@ -34,9 +40,10 @@ internal static class LimitesJogada
             return ErroPar;
         }
 
-        if (jogadas.Any(j => j.RemetenteId == remetenteId
-            && j.DestinatarioId == destinatarioId
-            && agora - j.EnviadaEm < IntervaloMesmaPessoa))
+        if (!TemRevanche(remetenteId, destinatarioId, jogadas)
+            && jogadas.Any(j => j.RemetenteId == remetenteId
+                && j.DestinatarioId == destinatarioId
+                && agora - j.EnviadaEm < IntervaloMesmaPessoa))
         {
             return ErroRecente;
         }
@@ -53,4 +60,14 @@ internal static class LimitesJogada
 
         return null;
     }
+
+    /// <summary>
+    /// A Revanche (decisão 0089): a última carta do remetente para esta pessoa foi recusada, então ele pode mandar
+    /// outra sem esperar as 24 horas. Vale uma vez: a carta da Revanche passa a ser a última.
+    /// </summary>
+    public static bool TemRevanche(Guid remetenteId, Guid destinatarioId, IReadOnlyList<JogadaLimite> jogadas) =>
+        jogadas
+            .Where(j => j.RemetenteId == remetenteId && j.DestinatarioId == destinatarioId)
+            .MaxBy(j => j.EnviadaEm) is { Situacao: SituacaoJogada.Recusada, RespondidaEm: { } respondidaEm }
+        && respondidaEm >= Fadiga.InicioRegras2;
 }

@@ -6,7 +6,7 @@ import { ComoJogar } from "./ComoJogar";
 import { MesaJogadas } from "./MesaJogadas";
 import { getProximoPasso } from "./proximoPasso";
 import { FadigaExplicada, SaldoEnergia } from "./SaldoEnergia";
-import { useAvisoFadiga } from "./useEnergia";
+import { useAvisoFadiga, useEnergia } from "./useEnergia";
 import {
   getBloqueioJogada,
   getEfeitoComNome,
@@ -15,6 +15,7 @@ import {
   getPrevia,
   podeFundir,
   primeiroNome,
+  temRevanche,
 } from "./textosCartas";
 import {
   type CartaMao,
@@ -248,6 +249,7 @@ export function MaoJogo({
   const loja = useLoja();
   const jogadas = useJogadas(grupoId);
   useAvisoFadiga();
+  const fadiga = useEnergia().data?.fadigaRestante ?? 0;
   // A Mão remonta a cada Foco: o instante da abertura basta para o limite de 24 horas.
   const [agora] = useState(() => Date.now());
   const mao = loja.data?.mao ?? [];
@@ -255,12 +257,21 @@ export function MaoJogo({
   const comRival = alvo !== null && podeRival;
   const recebe = alvo?.recebeCartas ?? true;
   const nome = alvo ? primeiroNome(alvo.nomeExibicao) : "";
-  // Fora do Foco, só o limite que vale para qualquer colega; no Foco, também os do alvo.
-  const bloqueio = !alvo
-    ? getLimiteEnvio(jogadas.data ?? [])
-    : recebe
-      ? getBloqueioJogada(jogadas.data ?? [], alvo.usuarioId, nome, agora)
-      : null;
+  // Com FADIGA, nada de Provocação (decisão 0089). Fora do Foco, só o limite que vale para qualquer
+  // colega; no Foco, também os do alvo.
+  const bloqueio =
+    fadiga > 0
+      ? `Sem gás: quem não aguenta, não provoca. ${fadiga === 1 ? "Falta 1 treino" : `Faltam ${fadiga} treinos`} pra recarregar.`
+      : !alvo
+        ? getLimiteEnvio(jogadas.data ?? [])
+        : recebe
+          ? getBloqueioJogada(jogadas.data ?? [], alvo.usuarioId, nome, agora)
+          : null;
+  const revanche =
+    !!alvo &&
+    !bloqueio &&
+    recebe &&
+    temRevanche(jogadas.data ?? [], alvo.usuarioId);
   const jogavel = (c: CartaMao) =>
     recebe && !bloqueio && c.tipo === "Provocacao";
   const total = mao.length + (comRival ? 1 : 0) + (mao.length < limite ? 1 : 0);
@@ -345,6 +356,8 @@ export function MaoJogo({
     contexto = `${nome} não recebe cartas.`;
   } else if (bloqueio && mao.length > 0) {
     contexto = bloqueio;
+  } else if (revanche && mao.length > 0) {
+    contexto = `${nome} recusou a sua carta. Revanche liberada: dá pra mandar outra agora!`;
   }
   // Fora do Foco e sem nada escolhido, a linha sugere o próximo passo; a contagem vira um selo.
   const proximoPasso =

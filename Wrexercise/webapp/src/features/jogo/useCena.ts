@@ -18,6 +18,20 @@ export type MembroCena = {
   cutucadoPorMimEm: string | null;
   /** O treino ao vivo deste membro (ADR 0078); `null` quando não treina agora. */
   treinoAoVivo: TreinoAoVivo | null;
+  /** A FADIGA deste membro, que todo o grupo vê (decisão 0089); `null` sem FADIGA. */
+  fadiga: FadigaMembro | null;
+};
+
+export type MotivoFadiga = "Recusa" | "Falha" | "Expiracao";
+
+export type FadigaMembro = {
+  /** Quantos treinos verificados faltam para recarregar (1 a 5). */
+  restantes: number;
+  motivo: MotivoFadiga | null;
+  /** O nome da carta, só quando a Jogada é deste grupo. */
+  carta: string | null;
+  /** Quem mandou a carta, só quando a Jogada é deste grupo. */
+  remetenteNome: string | null;
 };
 
 export type TreinoAoVivo = {

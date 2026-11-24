@@ -35,6 +35,7 @@ internal static class ObterCena
         var comMeta = await LoadComMetaCumpridaAsync(connection, grupoId, membros, cancellationToken);
         var cutucadas = await LoadCutucadasAsync(connection, grupoId, usuarioId, cancellationToken);
         var aoVivo = await LoadTreinosAoVivoAsync(connection, grupoId, usuarioId, cancellationToken);
+        var fadigas = await LoadFadigasAsync(connection, grupoId, membros, cancellationToken);
 
         var agora = DateTimeOffset.UtcNow;
         var resposta = membros
@@ -55,11 +56,57 @@ internal static class ObterCena
                     dorme ? m.AcordadoEm : null,
                     cutucado is null ? null : new CutucadasMembroResponse(cutucado.Total, cutucado.UltimoTipo),
                     cutucado?.PorMimEm,
-                    treino);
+                    treino,
+                    fadigas.GetValueOrDefault(m.UsuarioId));
             })
             .ToList();
 
         return Results.Json(new CenaResponse(grupoId, resposta), AppJsonContext.Default.CenaResponse);
+    }
+
+    /// <summary>
+    /// A FADIGA de cada membro no modo Jogo (decisão 0089): só quem joga recebe cartas. A FADIGA vale em todos os
+    /// grupos da pessoa, mas a carta e quem a mandou só aparecem se a Jogada for deste grupo.
+    /// </summary>
+    private static async Task<Dictionary<Guid, FadigaMembroResponse>> LoadFadigasAsync(
+        NpgsqlConnection connection,
+        Guid grupoId,
+        IReadOnlyList<MembroCena> membros,
+        CancellationToken cancellationToken)
+    {
+        var nomes = membros.ToDictionary(m => m.UsuarioId, m => m.NomeExibicao);
+        var fadigas = new Dictionary<Guid, FadigaMembroResponse>();
+        foreach (var membro in membros.Where(m => m.ModoJogo))
+        {
+            var jogadas = await Jogadas.LoadAsync(connection, null, membro.UsuarioId, membro.UsuarioId, cancellationToken);
+            if (!jogadas.Any(j => Fadiga.GetGatilho(j, membro.UsuarioId) is not null))
+            {
+                continue;
+            }
+
+            var dias = await EstadoJogo.LoadDiasVerificadosAsync(connection, null, membro.UsuarioId, cancellationToken);
+            var fadiga = Fadiga.Calcular(jogadas, dias, membro.UsuarioId);
+            if (fadiga.Restantes == 0)
+            {
+                continue;
+            }
+
+            var jogada = jogadas.FirstOrDefault(j => j.Id == fadiga.Causa?.JogadaId && j.GrupoId == grupoId);
+            fadigas[membro.UsuarioId] = new FadigaMembroResponse(
+                fadiga.Restantes,
+                fadiga.Causa?.Motivo.ToString(),
+                jogada is null ? null : GetNomeCarta(jogada),
+                jogada is null ? null : nomes.GetValueOrDefault(jogada.RemetenteId));
+        }
+
+        return fadigas;
+    }
+
+    private static string? GetNomeCarta(JogadaCarregada jogada)
+    {
+        var nome = CatalogoCartas.Find(jogada.CodigoCarta)?.Nome;
+        var fusao = jogada.Estado.CodigoFusao is { } codigo ? CatalogoCartas.Find(codigo)?.Nome : null;
+        return fusao is null ? nome : $"{nome} + {fusao}";
     }
 
     /// <summary>

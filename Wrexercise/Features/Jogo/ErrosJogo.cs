@@ -45,6 +45,14 @@ internal static class ErrosJogo
         "DESTINATARIO_FORA_DO_JOGO",
         "Esta pessoa não está no modo Jogo.");
 
+    /// <summary>Com FADIGA, ninguém provoca (decisão 0089).</summary>
+    public static IResult FadigaAtiva(int restantes) => ApiProblem.Create(
+        StatusCodes.Status409Conflict,
+        "FADIGA_ATIVA",
+        restantes == 1
+            ? "Quem não aguenta, não provoca: falta 1 treino pra recarregar."
+            : $"Quem não aguenta, não provoca: faltam {restantes} treinos pra recarregar.");
+
     public static IResult JogadaNaoEncontrada() => ApiProblem.Create(
         StatusCodes.Status404NotFound,
         "JOGADA_NAO_ENCONTRADA",

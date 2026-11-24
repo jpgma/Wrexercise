@@ -14,7 +14,7 @@ No Jogo, os membros do grupo aparecem como avatares em pixel-art, numa praça. O
 2. **Recompensa constância.** O único critério de desempenho é a duração relativa à meta do grupo, e só em cartas opcionais (+10 MIN e +20 MIN).
 3. **Ninguém prejudica ninguém.** Nenhuma interação remove Energia de outra pessoa, invalida atividades ou dificulta a meta de outra pessoa. A FADIGA (§5.4) só reduz a Energia futura de quem recusou, deixou expirar ou não cumpriu uma carta, nunca a já ganha.
 4. **Simples e discreto.** Nada de missões diárias nem lembretes automáticos: o aplicativo nunca cobra ninguém sozinho. A Cutucada (§3.5, `decisoes/0063-cutucada.md`) é permitida porque parte de um amigo, de propósito, e só para quem dorme. A única aposta é a carta APOSTA, que só arrisca a Energia de quem a joga.
-5. **Toda carta faz algo que não dá para fazer de graça.** Recusar uma carta não custa Energia, mas dá FADIGA a quem recusa: os próximos 3 treinos rendem metade da base (§5.4, `decisoes/0059-fadiga.md`).
+5. **Toda carta faz algo que não dá para fazer de graça.** Recusar uma carta não custa Energia, mas dá FADIGA a quem recusa: os próximos 3 treinos rendem metade da base, o grupo vê a bateria fraca e a pessoa não provoca até recarregar (§5.4, `decisoes/0059-fadiga.md`, `decisoes/0089-fadiga-visivel-e-recusa-com-peso.md`).
 6. **Tudo calculado no servidor**, a partir dos dados que já existem sempre que possível.
 7. **A classificação continua igual.** A Energia não aparece no ranking e não existe ranking de Energia.
 
@@ -247,7 +247,8 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Jogada concluída, para quem enviou (§6.4) | 1 × o preço da carta |
 | Fusão concluída, para quem recebeu (§6.5) | a soma dos dois preços + 20% (com APOSTA, 2 × a soma + 20% da soma) |
 | Fusão concluída, para quem enviou (§6.5) | 1 × a soma dos dois preços, sem o bônus |
-| Jogada `Recusada`, `Falhou` ou `Expirada`, para quem enviou (§6.4) | metade do preço, arredondada para baixo (Fusão: metade da soma) |
+| Jogada `Falhou` ou `Expirada`, para quem enviou (§6.4) | metade do preço, arredondada para baixo (Fusão: metade da soma) |
+| Jogada `Recusada`, para quem enviou (§6.4, decisão 0089) | o preço inteiro (Fusão: a soma) |
 
 - As sequências seguem a mesma regra das conquistas: a melhor sequência num único desafio, sem somar desafios. Cada marco paga **uma vez por pessoa**, então as sequências rendem no máximo 175 EN no total.
 - **Desafio concluído:** um desafio `Encerrado` com todas as semanas que contavam para a pessoa cumpridas. Paga uma vez por desafio.
@@ -307,8 +308,13 @@ A regra fica numa função pura (`CalculoEnergia`), que recebe as atividades de 
 Recusar uma carta precisa ter uma consequência, sem tirar Energia já ganha e sem dificultar o treino (`decisoes/0059-fadiga.md`).
 
 - **Quando aparece:** para quem **recebeu** uma Provocação, quando a Jogada fica `Recusada`, `Expirada` ou `Falhou`. Vale para a recusa, para a carta que expira sem resposta, para a carta aceita sem treino no prazo e para a carta cujo próximo treino não cumpriu o objetivo (§6.4, `decisoes/0075-proximo-treino-e-antes-das-8.md`). Quem enviou nunca recebe FADIGA.
-- **Efeito:** os próximos **3 dias com atividade verificada**, em cada grupo, rendem metade da base: 5 EN em vez de 10 (metade, arredondada para baixo). Cada dia gasta uma carga, qualquer que seja a Energia dele. Depois da terceira, a FADIGA some.
-- **Não acumula nem renova:** um gatilho com a FADIGA ativa não muda nada. Não expira com o tempo: só treinos verificados a removem.
+- **Efeito:** os próximos **dias com atividade verificada**, em cada grupo, rendem metade da base: 5 EN em vez de 10 (metade, arredondada para baixo). Cada dia gasta uma carga, qualquer que seja a Energia dele. Sem cargas, a FADIGA some.
+- **Cargas** (`decisoes/0089-fadiga-visivel-e-recusa-com-peso.md`): a recusa e a expiração sem resposta dão 3; a carta aceita e não cumprida dá 2.
+- **Acúmulo:** só a recusa com FADIGA ativa soma 1 carga, até 5. Falha ou expiração com FADIGA ativa não muda nada. Não expira com o tempo: só treinos verificados a removem.
+- **Redenção:** cumprir uma Provocação recebida tira 1 carga na hora.
+- **Sem gás para provocar:** com FADIGA, a pessoa não joga Provocação nem Fusão (`FADIGA_ATIVA`). Respostas e Loja continuam liberadas.
+- **O grupo vê:** na praça, a bateria fraca e as cargas ao lado do nome, o avatar sem cor e mais lento e uma gota de suor; no Foco, "Sem gás · N treinos pra recarregar" e o motivo, com a carta e quem a mandou quando a Jogada é do grupo. A bateria pisca quando recarrega, e um ⚡ aparece quando zera.
+- Antes de `Fadiga.InicioRegras2` (24/11/2026), vale a regra antiga: 3 cargas para tudo, sem acúmulo e sem redenção.
 - **Não muda:** bônus por atividade, meta semanal, sequências, desafios, recompensas de Jogada, Rival, progresso oficial, classificação e estatísticas. A Energia já ganha também não diminui.
 - **Cálculo na leitura**, como o resto da Energia, numa função pura (`Fadiga`): os gatilhos (`respondida_em` da recusa, `expira_em` da expiração, e o registro do próximo treino ou o fim do dia dele quando a Jogada `Falhou`) e os dias verificados, cada um no `verified_at` da primeira atividade verificada dele, seguem em ordem de tempo. Um dia só tem FADIGA se foi verificado depois do gatilho, então nenhuma leitura anterior pagou a base inteira a ele. Não há coluna nova, e repetir requisições não aplica a FADIGA duas vezes.
 - Um dia verificado e depois anulado gasta a carga dele, sem render. Assim, a carga não passa para outro dia já pago.
@@ -367,7 +373,7 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - Diante de uma Provocação, o destinatário pode:
   - **Aceitar**, de graça;
   - **Aceitar com uma Resposta** da própria Mão (DESAFIO DUPLO, APOSTA, PRAZO EXTRA ou MUDANÇA DE PLANOS), no máximo uma por Jogada;
-  - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito. Recusar é um toque só: o custo fica no próprio botão ("Recusar · FADIGA: 3 treinos com −50% EN"), na Chegada e na Mesa. Quem enviou recebe metade do preço de volta (§6.4), e o texto da Chegada diz "Recusando, quem enviou recebe metade de volta: +N EN." (em DESAFIO DUPLO: "Recusando, o desafio devolvido acaba.").
+  - **Recusar**, de graça, mas com FADIGA (§5.4). Deixar a carta expirar sem resposta tem o mesmo efeito. Recusar é um toque só: o custo fica no próprio botão ("Recusar · FADIGA: 3 treinos com −50% EN", "Recusar · FADIGA +1: N treinos com −50% EN" ou "Recusar · FADIGA já no máximo (5)"), na Chegada e na Mesa. Quem enviou recebe o preço inteiro de volta e ganha a Revanche (§6.4, decisão 0089), e o texto da Chegada diz "Recusando, quem enviou recebe tudo de volta (+N EN) e ganha uma revanche. E você fica sem jogar Provocações até recarregar." (em DESAFIO DUPLO: "Recusando, o desafio devolvido acaba.").
 - Antes da resposta, a Chegada e a Mesa dizem se um treino já feito depois que a carta chegou cumpre o objetivo ("Seu treino já cumpre esta carta. Aceite e ganhe!").
 - Responder grava `vista_em` e marca como lido o aviso `CartaRecebida` da carta.
 - Uma Jogada criada por DESAFIO DUPLO não aceita outro DESAFIO DUPLO.
@@ -383,6 +389,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 | Jogada ativa de uma pessoa para outra (por sentido) | 1 |
 | Jogada nova para a mesma pessoa | 1 a cada 24 horas |
 
+- **Revanche** (decisão 0089): se a última carta do remetente para essa pessoa foi recusada, ele pode mandar outra sem esperar as 24 horas, uma vez. A Mão avisa: "Revanche liberada: dá pra mandar outra agora!".
+- **Com FADIGA**, ninguém joga Provocação nem Fusão (`FADIGA_ATIVA`, §5.4).
 - **Jogada ativa**, para esses limites: `Enviada` ou `Aceita`. Uma Jogada `AguardandoVerificacao` libera a vaga, mesmo com a atividade em `EmRevisao`.
 - Os limites só são conferidos ao enviar. Se uma atividade for rejeitada e a Jogada voltar a `Aceita`, a contagem pode passar do máximo por um tempo.
 - Os limites ficam em constantes no código, fáceis de ajustar depois de observar o uso.

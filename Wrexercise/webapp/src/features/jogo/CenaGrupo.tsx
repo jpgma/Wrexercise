@@ -297,6 +297,28 @@ function AvatarCena({
     };
   }, [dormindo, reduzido, sorteio]);
 
+  // FADIGA (decisão 0089): a bateria pisca quando um treino recarrega uma carga, e o ⚡ aparece ao zerar.
+  const restantes = membro.fadiga?.restantes ?? 0;
+  const [restantesAntes, setRestantesAntes] = useState(restantes);
+  const [recarga, setRecarga] = useState<{
+    chave: number;
+    cheia: boolean;
+  } | null>(null);
+  if (restantes !== restantesAntes) {
+    setRestantesAntes(restantes);
+    if (restantes < restantesAntes) {
+      setRecarga((r) => ({
+        chave: (r?.chave ?? 0) + 1,
+        cheia: restantes === 0,
+      }));
+    }
+  }
+  useEffect(() => {
+    if (!recarga) return;
+    const t = window.setTimeout(() => setRecarga(null), RecargaMs);
+    return () => window.clearTimeout(t);
+  }, [recarga]);
+
   const aoVivo = membro.treinoAoVivo;
   const animacao: NomeAnimacao =
     atuacao?.animacao ??
@@ -311,6 +333,8 @@ function AvatarCena({
           : membro.pose);
   /** O "Zzz" e a bolha só aparecem com o avatar sentado, dormindo. */
   const sono = animacao === "dormindo";
+  /** Sem gás: sem cor e mais lento, fora do treino ao vivo e das encenações. */
+  const cansado = restantes > 0 && !aoVivo && !atuacao;
   const direcao = atuacao?.direcao ?? getDirecao(posicao, centro);
   const deslocamento = {
     transform: atuacao
@@ -331,6 +355,10 @@ function AvatarCena({
     rival === "escolhido" && "seu Rival da semana",
     rival === "escolheu" && "escolheu você como Rival",
     aoVivo && "treinando ao vivo agora",
+    restantes > 0 &&
+      (restantes === 1
+        ? "sem gás: 1 treino pra recarregar"
+        : `sem gás: ${restantes} treinos pra recarregar`),
     membro.cutucadas &&
       (membro.cutucadas.total === 1
         ? "cutucado 1 vez hoje"
@@ -404,7 +432,19 @@ function AvatarCena({
               top: -corpo.topo * escala,
             }}
             onFim={() => setVariacao(null)}
+            cansado={cansado}
           />
+          {cansado && !sono && (
+            <span
+              className="gota-suor pointer-events-none absolute text-xs leading-none"
+              style={{
+                left: (ancora.x - corpo.esquerda) * escala + 6,
+                top: -2,
+              }}
+            >
+              💧
+            </span>
+          )}
           {sono &&
             (sonhando ? (
               <BolhaSonho
@@ -441,7 +481,7 @@ function AvatarCena({
         />
       )}
       {/* Os nomes ficam numa camada acima de todos os avatares: ninguém esconde o nome de outro. */}
-      {(nomeVisivel || medalha || rival) && (
+      {(nomeVisivel || medalha || rival || restantes > 0 || recarga) && (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute -translate-x-1/2 rounded bg-surface/85 px-1 text-2xs leading-tight font-semibold whitespace-nowrap text-foreground"
@@ -458,11 +498,50 @@ function AvatarCena({
               className={`inline size-3 align-[-2px] ${rival === "escolhido" ? "rounded-sm bg-game p-px text-on-game" : "text-game"}`}
             />
           )}
-          {(medalha || rival) && nomeVisivel && " "}
+          {restantes > 0 && (
+            <BateriaFraca
+              key={recarga?.chave ?? 0}
+              restantes={restantes}
+              piscando={!!recarga && !reduzido}
+            />
+          )}
+          {restantes === 0 && recarga?.cheia && (
+            <span className={reduzido ? "" : "bateria-recarga"}>⚡</span>
+          )}
+          {(medalha || rival || restantes > 0) && nomeVisivel && " "}
           {nomeVisivel && primeiroNome}
         </span>
       )}
     </>
+  );
+}
+
+/** Quanto tempo a bateria pisca, ou o ⚡ fica, depois de uma recarga. */
+const RecargaMs = 2500;
+
+/** A bateria fraca da FADIGA ao lado do nome (decisão 0089), com as cargas que faltam. */
+function BateriaFraca({
+  restantes,
+  piscando,
+}: {
+  restantes: number;
+  piscando: boolean;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center align-[-2px] ${piscando ? "bateria-recarga" : ""}`}
+    >
+      <img
+        src="/fadiga.png"
+        alt=""
+        width={12}
+        height={12}
+        className="[image-rendering:pixelated]"
+      />
+      <span className="font-score text-2xs font-normal text-danger">
+        {restantes}
+      </span>
+    </span>
   );
 }
 

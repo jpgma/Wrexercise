@@ -95,13 +95,15 @@ internal sealed record JogadaEstado(
 /// Começou depois que a carta chegou e antes do aceite (ou a carta ainda espera resposta): conta se cumpre o
 /// objetivo e nunca faz a Jogada falhar (decisão 0076).
 /// </param>
+/// <param name="VerificadaEm">O <c>verified_at</c>: marca quando a carta foi cumprida (decisão 0089).</param>
 internal sealed record AtividadeJogada(
     DateTime InicioLocal,
     string Tipo,
     int DuracaoSegundos,
     bool Verificada,
     DateTimeOffset RegistradaEm = default,
-    bool AntesDoAceite = false);
+    bool AntesDoAceite = false,
+    DateTimeOffset? VerificadaEm = null);
 
 /// <summary>Se as atividades de uma Jogada cumprem o objetivo da carta.</summary>
 internal static class ObjetivoCarta

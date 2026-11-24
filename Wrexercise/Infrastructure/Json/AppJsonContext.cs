@@ -104,6 +104,7 @@ namespace Wrexercise.Infrastructure.Json;
 [JsonSerializable(typeof(MembroCenaResponse))]
 [JsonSerializable(typeof(CutucadasMembroResponse))]
 [JsonSerializable(typeof(TreinoAoVivoResponse))]
+[JsonSerializable(typeof(FadigaMembroResponse))]
 [JsonSerializable(typeof(CutucarRequest))]
 [JsonSerializable(typeof(CutucadaResponse))]
 [JsonSerializable(typeof(ProgressoResumoResponse))]

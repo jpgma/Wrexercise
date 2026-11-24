@@ -34,7 +34,7 @@ const passos: { titulo: string; texto: string; icone: ReactNode }[] = [
   {
     titulo: "Cumpriu, os dois ganham",
     texto:
-      "Quem cumpre leva o valor da carta, e quem jogou recebe o preço de volta. Recusar, não cumprir ou deixar vencer dá FADIGA, e quem jogou recebe metade de volta.",
+      "Quem cumpre leva o valor da carta, e quem jogou recebe o preço de volta. Recusar, não cumprir ou deixar vencer dá FADIGA: o grupo vê a bateria fraca e você fica sem provocar até recarregar.",
     icone: <IconeCarta codigo="Aposta" />,
   },
 ];
@@ -45,7 +45,9 @@ const resumo = [
   "Provocação: você joga num colega e dá um objetivo para o próximo treino dele, com prazo. Na ANTES DAS 8 e na FIM DE SEMANA, só conta o treino na janela da carta.",
   "Carta recebida: ela aparece assim que você abre o app. Responda na hora ou depois do treino. Um treino feito depois que ela chegou vale, se cumprir.",
   "Resposta: você usa ao aceitar uma Provocação.",
-  "Cumpriu: os dois ganham EN. Recusou, não cumpriu ou venceu o prazo: FADIGA, e quem jogou recebe metade do preço de volta.",
+  "Cumpriu: os dois ganham EN, e uma carta cumprida recarrega 1 treino da FADIGA. Não cumpriu ou venceu o prazo: FADIGA, e quem jogou recebe metade do preço de volta.",
+  "Recusou: FADIGA (+1 treino se já estiver cansado, até 5). Quem jogou recebe tudo de volta e ganha uma revanche, sem esperar 24 horas.",
+  "Com FADIGA, você não joga Provocações até recarregar treinando.",
 ];
 
 /**

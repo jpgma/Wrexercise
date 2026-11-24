@@ -49,7 +49,7 @@ public sealed class FadigaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AceitarEFalhar_DaFadiga()
+    public async Task AceitarEFalhar_DaFadigaMaisLeve()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var jogadaId = await JogarAsync(ana, grupoId, bia);
@@ -63,7 +63,8 @@ public sealed class FadigaRoutesTests : IAsyncLifetime
             WHERE id = '{jogadaId}'
             """);
 
-        Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
+        // Decisão 0089: quem tentou e não cumpriu fica com 2 cargas, não 3.
+        Assert.Equal(Fadiga.CargasFalha, (await GetEnergiaAsync(bia)).FadigaRestante);
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public sealed class FadigaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SegundaRecusaComFadigaAtiva_NaoAcumulaNemRenova()
+    public async Task SegundaRecusaComFadigaAtiva_SomaUmaCarga()
     {
         var (ana, bia, grupoId) = await CriarParAsync();
         var cris = await _host.AddMembroAsync(grupoId, nome: "Cris");
@@ -104,7 +105,85 @@ public sealed class FadigaRoutesTests : IAsyncLifetime
         var segunda = await JogarAsync(cris, grupoId, bia);
         Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, segunda, "Recusada")).StatusCode);
 
-        Assert.Equal(Fadiga.Cargas - 1, (await GetEnergiaAsync(bia)).FadigaRestante);
+        // Decisão 0089: 3 − 1 treino + 1 da segunda recusa.
+        Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
+    }
+
+    [Fact]
+    public async Task ComFadiga_NaoJogaProvocacao_MasOGrupoVeABateria()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        await JogoTestes.DarEnergiaAsync(_host, bia, grupoId, 6);
+        var jogadaId = await JogarAsync(ana, grupoId, bia);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, jogadaId, "Recusada")).StatusCode);
+
+        var carta = await JogoTestes.ComprarAsync(bia, CodigoCarta.Variedade);
+        await ApiTestHost.AssertProblemAsync(
+            await bia.Client.PostAsJsonAsync(
+                $"/api/grupos/{grupoId}/jogadas",
+                new JogarCartaRequest(carta.Id, ana.Id),
+                AppJsonContext.Default.JogarCartaRequest,
+                Token),
+            HttpStatusCode.Conflict,
+            "FADIGA_ATIVA");
+
+        var cena = (await ana.Client.GetFromJsonAsync(
+            $"/api/grupos/{grupoId}/cena", AppJsonContext.Default.CenaResponse, Token))!;
+        var fadiga = Assert.Single(cena.Membros, m => m.UsuarioId == bia.Id).Fadiga;
+        Assert.Equal(new FadigaMembroResponse(Fadiga.Cargas, "Recusa", "VARIEDADE", "Ana"), fadiga);
+        Assert.Null(Assert.Single(cena.Membros, m => m.UsuarioId == ana.Id).Fadiga);
+    }
+
+    [Fact]
+    public async Task Recusa_LiberaUmaRevancheSemEsperar24Horas()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var primeira = await JogarAsync(ana, grupoId, bia);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, primeira, "Recusada")).StatusCode);
+
+        // A Revanche: Ana manda outra carta logo depois da recusa.
+        var revanche = await JogarAsync(ana, grupoId, bia);
+
+        // Uma vez só: a carta da Revanche passa a ser a última e, sem nova recusa, o limite de 24 horas volta.
+        await _host.ExecuteAsync($"""
+            UPDATE jogadas SET enviada_em = now() - interval '1 hour' WHERE id = '{primeira}';
+            UPDATE jogadas SET enviada_em = now() - interval '30 minutes', expira_em = now() - interval '1 second'
+            WHERE id = '{revanche}';
+            """);
+        var carta = await JogoTestes.ComprarAsync(ana, CodigoCarta.Variedade);
+        await ApiTestHost.AssertProblemAsync(
+            await ana.Client.PostAsJsonAsync(
+                $"/api/grupos/{grupoId}/jogadas",
+                new JogarCartaRequest(carta.Id, bia.Id),
+                AppJsonContext.Default.JogarCartaRequest,
+                Token),
+            HttpStatusCode.Conflict,
+            "JOGADA_RECENTE");
+    }
+
+    [Fact]
+    public async Task CumprirUmaCarta_TiraUmaCarga()
+    {
+        var (ana, bia, grupoId) = await CriarParAsync();
+        var primeira = await JogarAsync(ana, grupoId, bia);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, primeira, "Recusada")).StatusCode);
+        var segunda = await JogarAsync(ana, grupoId, bia);
+        Assert.Equal(HttpStatusCode.NoContent, (await PutRespostaAsync(bia, segunda, "Aceita")).StatusCode);
+
+        // O próximo treino, verificado, cumpre a VARIEDADE (sem treino anterior, qualquer tipo vale): gasta uma
+        // carga pelo dia e tira outra pela carta cumprida.
+        await _host.ExecuteAsync($"""
+            INSERT INTO atividades (
+                grupo_id, usuario_id, tipo, duracao_segundos, started_at, tipo_comprovacao,
+                situacao_verificacao, verified_at, created_at)
+            VALUES ('{grupoId}', '{bia.Id}', 'Outro', 1800, now() + interval '1 minute', 'RegistroManual',
+                'Verificada', now() + interval '2 minutes', now())
+            """);
+
+        var jogadas = (await bia.Client.GetFromJsonAsync(
+            $"/api/grupos/{grupoId}/jogadas", AppJsonContext.Default.JogadasResponse, Token))!;
+        Assert.Equal(SituacaoJogada.Concluida, jogadas.Jogadas.Single(j => j.Id == segunda).Situacao);
+        Assert.Equal(Fadiga.Cargas - 2, (await GetEnergiaAsync(bia)).FadigaRestante);
     }
 
     [Fact]

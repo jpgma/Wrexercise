@@ -1,6 +1,6 @@
 # 0059 — FADIGA: consequência por recusar ou falhar uma carta
 
-**Status:** DECIDIDA. Muda o princípio 5 de `gamificacao.md` §1.1 ("recusar é sempre grátis e não tem consequência") e complementa `0033-regras-de-energia-e-jogadas.md`, `0035-cartas-e-jogadas.md` e `0040-meta-diaria.md`.
+**Status:** DECIDIDA. Complementada por `0089-fadiga-visivel-e-recusa-com-peso.md` (cargas por motivo, acúmulo da recusa, redenção, bloqueio de Provocações e FADIGA visível ao grupo). Muda o princípio 5 de `gamificacao.md` §1.1 ("recusar é sempre grátis e não tem consequência") e complementa `0033-regras-de-energia-e-jogadas.md`, `0035-cartas-e-jogadas.md` e `0040-meta-diaria.md`.
 
 ## Contexto
 

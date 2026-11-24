@@ -10,7 +10,10 @@ internal sealed record CartaComprada(Guid Id, string Codigo, int Preco, DateTime
 /// A Energia, as cartas e as Jogadas de uma pessoa, tudo calculado na leitura (docs/gamificacao.md §5.3).
 /// Dentro de uma transação que travou a linha do usuário, o saldo fica estável até o fim dela.
 /// </summary>
-/// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (decisão 0059).</param>
+/// <param name="FadigaRestante">
+/// Quantos dos próximos dias verificados ainda rendem metade da base (decisões 0059 e 0089). Com FADIGA, a pessoa
+/// não joga Provocações.
+/// </param>
 internal sealed record EstadoJogo(
     Guid UsuarioId,
     EnergiaGanha Ganha,
@@ -74,9 +77,7 @@ internal sealed record EstadoJogo(
         var rivais = await Rivais.LoadAsync(connection, transaction, usuarioId, null, cancellationToken);
         var rivaisVencidos = rivais.Count(r => r.EscolhedorId == usuarioId && r.Situacao == ResultadoRival.Venceu);
         var dias = await LoadDiasVerificadosAsync(connection, transaction, usuarioId, cancellationToken);
-        var fadiga = Fadiga.Calcular(
-            jogadas.Select(j => Fadiga.GetGatilho(j, usuarioId)).OfType<DateTimeOffset>(),
-            dias);
+        var fadiga = Fadiga.Calcular(jogadas, dias, usuarioId);
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
@@ -233,7 +234,7 @@ internal sealed record EstadoJogo(
     /// anuladas depois de verificadas (o <c>verified_at</c> fica): o dia gasta a carga de FADIGA, mas só rende
     /// se ainda tiver uma atividade <c>Verificada</c>.
     /// </summary>
-    private static async Task<List<DiaVerificado>> LoadDiasVerificadosAsync(
+    public static async Task<List<DiaVerificado>> LoadDiasVerificadosAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction? transaction,
         Guid usuarioId,

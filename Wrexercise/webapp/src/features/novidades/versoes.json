@@ -1,5 +1,17 @@
 [
   {
+    "versao": "1.9.0",
+    "data": "2026-11-24",
+    "novidades": [
+      "Agora o grupo vê na praça quem está sem gás 🪫",
+      "Com FADIGA, você não joga Provocações até recarregar treinando",
+      "Recusou de novo cansado? A FADIGA sobe 1 treino, até 5",
+      "Cumpriu uma carta recebida? Recarrega 1 treino da FADIGA na hora ⚡",
+      "Carta recusada devolve tudo a quem jogou, com revanche sem esperar 24h",
+      "Aceitou e não cumpriu: FADIGA de 2 treinos, não 3"
+    ]
+  },
+  {
     "versao": "1.8.0",
     "data": "2026-11-23",
     "novidades": [

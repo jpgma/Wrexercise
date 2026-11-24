@@ -18,7 +18,7 @@ These were decided before anyone used the app, and several ADRs say to look agai
 - The consensus formula and the 48 h review window (0012, 0015). Is anything ever rejected, or does everything sit in EmRevisao?
 - Daily and proportional goals (0040, 0043, 0045). 0045 notes the rule changed after only two days with no real use.
 - Prints (0060): the date comes from the screenshot file name on Android, Windows and macOS. iPhone prints still get `FotoSemData`; reading PNG `eXIf`/XMP waits for a real iPhone file to test with. Android Chrome's photo picker renames files, so those prints only get the "Print" label from the screen size.
-- FADIGA (0059): an expired card counts as a refusal, so someone who doesn't open the app gets FADIGA from cards they never saw. Watch for abuse (sending cards to inactive people).
+- FADIGA (0059): an expired card counts as a refusal, so someone who doesn't open the app gets FADIGA from cards they never saw. Watch for abuse (sending cards to inactive people). Since 0089, the expiry still gives 3 charges, the group sees the battery, and the person cannot play challenge cards until they train; only refusals stack.
 - Jogo: the early-morning bonus may encourage training at dawn instead of consistency (gamificacao §12.3). The Enfeite clutter with 10 people on a 360 px screen still needs checking (§12.4). Achievement limits of 10 per type should be revisited with real data (§12.5).
 - gamificacao §13 lists success criteria. How to judge them is now written there ("Como julgar"): `metricas.bat` once a month for criteria 1 and 2, and talking to the group for 3 to 5.
 

@@ -119,9 +119,10 @@ internal static class CalculoEnergia
 
     /// <summary>
     /// Quem enviou uma carta recusada, não cumprida ou expirada recebe metade do preço de volta, arredondada para
-    /// baixo (decisão 0087). Na Fusão, metade da soma das duas Provocações.
+    /// baixo (decisão 0087). Na Fusão, metade da soma das duas Provocações. A recusa, desde a decisão 0089,
+    /// devolve o preço inteiro.
     /// </summary>
-    public static int GetDevolucao(int preco) => preco / 2;
+    public static int GetDevolucao(int preco, bool inteira = false) => inteira ? preco : preco / 2;
 
     /// <summary>
     /// Quem cumpriu ganha 1 × o preço, ou 2 × com a APOSTA; quem enviou recebe o preço de volta (decisão 0074).

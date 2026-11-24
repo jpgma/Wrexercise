@@ -1,12 +1,7 @@
 import { useState } from "react";
 import { ApiError, getErrorMessage } from "@/services/api";
 import { IconeCarta } from "./CartaJogo";
-import {
-  getCodigos,
-  getDevolucao,
-  getVez,
-  objetivoCurto,
-} from "./textosCartas";
+import { getCodigos, getVez, objetivoCurto } from "./textosCartas";
 import {
   type CodigoProvocacao,
   type CodigoResposta,
@@ -17,6 +12,8 @@ import {
 } from "./useCartas";
 import {
   avisoFadigaAplicada,
+  fadigaCargas,
+  fadigaTeto,
   marcarFadigaVista,
   useEnergia,
 } from "./useEnergia";
@@ -160,8 +157,12 @@ export function PainelResposta({
   const responder = useResponderJogada(grupoId);
   const loja = useLoja();
   const energia = useEnergia();
-  // FADIGA não acumula nem renova: com ela ativa, recusar não muda nada (decisão 0059).
-  const comFadiga = (energia.data?.fadigaRestante ?? 0) > 0;
+  // Com FADIGA ativa, recusar soma 1 treino, até 5 (decisão 0089).
+  const fadigaRestante = energia.data?.fadigaRestante ?? 0;
+  const comFadiga = fadigaRestante > 0;
+  const fadigaDepois = comFadiga
+    ? Math.min(fadigaTeto, fadigaRestante + 1)
+    : fadigaCargas;
   const encerrada =
     responder.error instanceof ApiError &&
     responder.error.code === "JOGADA_ENCERRADA";
@@ -178,9 +179,9 @@ export function PainelResposta({
     // Chegada mostraria "expirou" em vez da resposta.
     responder.mutateAsync({ id: jogada.id, resposta, ...extra }).then(
       () => {
-        if (resposta === "Recusada" && !comFadiga) {
+        if (resposta === "Recusada") {
           // O aviso já aparece aqui: o da mudança da FADIGA não deve repetir.
-          marcarFadigaVista(3);
+          marcarFadigaVista(fadigaDepois);
         }
         onRespondida({
           aceitou: resposta === "Aceita",
@@ -189,7 +190,7 @@ export function PainelResposta({
             : resposta === "Aceita"
               ? "Carta aceita. Bora treinar!"
               : comFadiga
-                ? "Carta recusada. Você já está com FADIGA, então nada muda."
+                ? `Carta recusada. FADIGA: agora são ${fadigaDepois} treinos com −50% EN.`
                 : avisoFadigaAplicada,
         });
       },
@@ -243,18 +244,18 @@ export function PainelResposta({
         disabled={responder.isPending}
         onClick={() => enviar("Recusada")}
       >
-        {comFadiga
-          ? "Recusar · você já está com FADIGA"
-          : "Recusar · FADIGA: 3 treinos com −50% EN"}
+        {!comFadiga
+          ? `Recusar · FADIGA: ${fadigaCargas} treinos com −50% EN`
+          : fadigaRestante >= fadigaTeto
+            ? `Recusar · FADIGA já no máximo (${fadigaTeto})`
+            : `Recusar · FADIGA +1: ${fadigaDepois} treinos com −50% EN`}
       </button>
       <p className="mt-1 text-center text-xs text-muted">
         {jogada.desafioDuplo
           ? "Recusando, o desafio devolvido acaba."
-          : `Recusando, quem enviou recebe metade de volta: +${getDevolucao(
-              jogada.cartaFusao
-                ? [jogada.carta.preco, jogada.cartaFusao.preco]
-                : [jogada.carta.preco],
-            )} EN.`}
+          : `Recusando, quem enviou recebe tudo de volta (+${
+              jogada.carta.preco + (jogada.cartaFusao?.preco ?? 0)
+            } EN) e ganha uma revanche. E você fica sem jogar Provocações até recarregar.`}
       </p>
       <AceitarComResposta
         jogada={jogada}

@@ -97,8 +97,10 @@ export function CabecalhoJogada({ jogada }: { jogada: Jogada }) {
         )}
         {!jogada.recebida && jogada.devolucao > 0 && (
           <p className="mt-1 text-xs text-muted">
-            A carta não volta para a Mão, mas metade do preço voltou pra você em
-            EN.
+            {jogada.situacao === "Recusada" &&
+            jogada.devolucao >= jogada.carta.preco
+              ? `A carta não volta para a Mão, mas o preço inteiro voltou pra você: +${jogada.devolucao} EN.`
+              : `A carta não volta para a Mão, mas metade do preço voltou pra você: +${jogada.devolucao} EN.`}
           </p>
         )}
         {jogada.recebida && aposta && !encerrada && (

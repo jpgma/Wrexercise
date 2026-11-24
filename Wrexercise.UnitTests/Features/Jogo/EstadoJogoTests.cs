@@ -162,10 +162,11 @@ public class EstadoJogoTests
         Assert.Equal(70, CalculoEnergia.GetRecompensa(jogada.ToRecompensa(comoDestinatario: false)));
     }
 
-    // Decisão 0087: a carta recusada, não cumprida ou expirada devolve metade do preço a quem enviou.
+    // Decisão 0087: a carta não cumprida ou expirada devolve metade do preço a quem enviou. A recusa, desde a
+    // decisão 0089, devolve o preço inteiro.
 
     [Theory]
-    [InlineData(SituacaoJogada.Recusada, 15)]
+    [InlineData(SituacaoJogada.Recusada, 30)]
     [InlineData(SituacaoJogada.Falhou, 15)]
     [InlineData(SituacaoJogada.Expirada, 15)]
     [InlineData(SituacaoJogada.Enviada, 0)]

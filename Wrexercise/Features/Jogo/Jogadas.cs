@@ -29,9 +29,11 @@ internal sealed record JogadaCarregada(
     Guid? CartaFusaoId = null,
     int PrecoFusao = 0,
     DateTimeOffset? FalhouEm = null,
-    bool JaCumpre = false)
+    bool JaCumpre = false,
+    DateTimeOffset? ConcluidaEm = null)
 {
-    public JogadaLimite ToLimite() => new(RemetenteId, DestinatarioId, Estado.EnviadaEm, Situacao);
+    public JogadaLimite ToLimite() =>
+        new(RemetenteId, DestinatarioId, Estado.EnviadaEm, Situacao, Estado.RespondidaEm);
 
     /// <summary>Se a carta é uma das Provocações desta Jogada: a jogada ou a segunda de uma Fusão.</summary>
     public bool UsaCarta(Guid cartaId) => CartaId == cartaId || CartaFusaoId == cartaId;
@@ -62,15 +64,19 @@ internal sealed record JogadaCarregada(
 
     /// <summary>
     /// A Energia que volta para quem enviou quando a carta não é cumprida (decisão 0087): metade do preço, ou da
-    /// soma na Fusão. Só para quem comprou a Provocação: a Jogada do DESAFIO DUPLO não devolve nada. A carta que
-    /// voltou para a Mão pela regra antiga também não.
+    /// soma na Fusão. A recusa devolve o preço inteiro (decisão 0089). Só para quem comprou a Provocação: a Jogada
+    /// do DESAFIO DUPLO não devolve nada. A carta que voltou para a Mão pela regra antiga também não.
     /// </summary>
     public int Devolucao =>
         IsCartaDoRemetente
         && Situacao is SituacaoJogada.Recusada or SituacaoJogada.Falhou or SituacaoJogada.Expirada
         && !VoltouPelaRegraAntiga
-            ? CalculoEnergia.GetDevolucao(Preco + PrecoFusao)
+            ? CalculoEnergia.GetDevolucao(Preco + PrecoFusao, IsRecusaComRevanche)
             : 0;
+
+    /// <summary>Recusada desde a decisão 0089: devolve o preço inteiro e libera a Revanche.</summary>
+    public bool IsRecusaComRevanche =>
+        Situacao == SituacaoJogada.Recusada && Estado.RespondidaEm >= Fadiga.InicioRegras2;
 }
 
 /// <summary>O que fica fixado no objetivo de uma Jogada: a duração-alvo e o tipo a evitar.</summary>
@@ -194,10 +200,20 @@ internal static class Jogadas
                     l.CartaFusaoId,
                     l.PrecoFusao,
                     falhouEm,
-                    situacao == SituacaoJogada.Enviada && ObjetivoCarta.JaCumpre(l.Estado, candidatas));
+                    situacao == SituacaoJogada.Enviada && ObjetivoCarta.JaCumpre(l.Estado, candidatas),
+                    situacao == SituacaoJogada.Concluida ? GetConcluidaEm(l.Estado, candidatas) : null);
             })
             .ToList();
     }
+
+    /// <summary>
+    /// Quando a Jogada concluída foi cumprida, para a redenção da FADIGA (decisão 0089): a primeira verificação
+    /// entre os treinos que contam. Na dúvida fica mais cedo, o que só faz a Energia crescer.
+    /// </summary>
+    private static DateTimeOffset? GetConcluidaEm(JogadaEstado estado, IReadOnlyList<AtividadeJogada> candidatas) =>
+        ObjetivoCarta.GetVez(estado, candidatas)
+            .Where(a => a.Verificada && a.VerificadaEm is not null)
+            .Min(a => a.VerificadaEm);
 
     /// <summary>
     /// As atividades que podem cumprir cada Jogada aceita ou ainda sem resposta: não rejeitadas nem anuladas, do
@@ -213,7 +229,7 @@ internal static class Jogadas
     {
         await using var command = new NpgsqlCommand($"""
             SELECT j.id, a.started_at AT TIME ZONE g.fuso_horario, a.tipo, a.duracao_segundos,
-                a.situacao_verificacao = 'Verificada', a.created_at, {AntesDoAceiteSql("a")}
+                a.situacao_verificacao = 'Verificada', a.created_at, {AntesDoAceiteSql("a")}, a.verified_at
             FROM jogadas j
             JOIN grupos g ON g.id = j.grupo_id
             JOIN atividades a ON a.usuario_id = j.destinatario_id AND a.grupo_id = j.grupo_id
@@ -243,7 +259,8 @@ internal static class Jogadas
                 reader.GetInt32(3),
                 reader.GetBoolean(4),
                 TimestampLeitura.FromReader(reader, 5),
-                reader.GetBoolean(6)));
+                reader.GetBoolean(6),
+                reader.IsDBNull(7) ? null : TimestampLeitura.FromReader(reader, 7)));
         }
 
         return atividades;

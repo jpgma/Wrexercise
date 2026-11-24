@@ -67,6 +67,12 @@ internal static class JogarCarta
             return erroCartas;
         }
 
+        // Decisão 0089: quem está com FADIGA não joga Provocação, nem Fusão. Respostas continuam liberadas.
+        if (estado.FadigaRestante > 0)
+        {
+            return ErrosJogo.FadigaAtiva(estado.FadigaRestante);
+        }
+
         var jogadas = await Jogadas.LoadAsync(connection, transaction, remetenteId, destinatarioId, cancellationToken);
         var agora = await Jogadas.LoadAgoraAsync(connection, transaction, grupoId, cancellationToken);
         if (LimitesJogada.Verificar(remetenteId, destinatarioId, jogadas.Select(j => j.ToLimite()).ToList(), agora.Utc)

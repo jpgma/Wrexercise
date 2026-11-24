@@ -32,7 +32,7 @@ import {
   tiposCutucada,
 } from "./textosCutucada";
 import { useCutucar } from "./useCutucar";
-import type { MembroCena } from "./useCena";
+import type { FadigaMembro, MembroCena } from "./useCena";
 import { getRelacaoRival, useRivais } from "./useRivais";
 
 const textoRival = {
@@ -47,6 +47,26 @@ function getTextoSono(desde: string): string {
     Math.floor((Date.now() - new Date(desde).getTime()) / 86_400_000),
   );
   return `Dormindo há ${dias} dias`;
+}
+
+/**
+ * Por que o colega está sem gás (decisão 0089): "recusou +20 MIN da Ana". Sem a carta (Jogada de outro
+ * grupo), só o motivo.
+ */
+function getMotivoFadiga(fadiga: FadigaMembro): string | null {
+  const daCarta = fadiga.carta
+    ? `${fadiga.carta}${fadiga.remetenteNome ? ` de ${primeiroNome(fadiga.remetenteNome)}` : ""}`
+    : null;
+  switch (fadiga.motivo) {
+    case "Recusa":
+      return daCarta ? `Recusou ${daCarta}` : "Recusou uma carta";
+    case "Falha":
+      return daCarta ? `Não cumpriu ${daCarta}` : "Não cumpriu uma carta";
+    case "Expiracao":
+      return daCarta ? `Deixou ${daCarta} vencer` : "Deixou uma carta vencer";
+    default:
+      return null;
+  }
 }
 
 /** "Ao vivo há 25 min": desde quando treina, contado do início. */
@@ -219,7 +239,10 @@ export function PainelFoco({
           >
             {membro.nomeExibicao}
           </h2>
-          {(rival || membro.dormindoDesde || membro.treinoAoVivo) && (
+          {(rival ||
+            membro.dormindoDesde ||
+            membro.treinoAoVivo ||
+            membro.fadiga) && (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {rival && (
                 <p className="chip chip-game">
@@ -246,7 +269,27 @@ export function PainelFoco({
                   {getTextoSono(membro.dormindoDesde)}
                 </p>
               )}
+              {membro.fadiga && (
+                <p className="chip chip-danger">
+                  <img
+                    src="/fadiga.png"
+                    alt=""
+                    width={12}
+                    height={12}
+                    className="shrink-0 [image-rendering:pixelated]"
+                  />
+                  Sem gás ·{" "}
+                  {membro.fadiga.restantes === 1
+                    ? "1 treino pra recarregar"
+                    : `${membro.fadiga.restantes} treinos pra recarregar`}
+                </p>
+              )}
             </div>
+          )}
+          {membro.fadiga && getMotivoFadiga(membro.fadiga) && (
+            <p className="mt-1 text-xs text-muted">
+              {getMotivoFadiga(membro.fadiga)}
+            </p>
           )}
         </div>
         {vitrine.length > 0 && (

@@ -4,6 +4,7 @@ namespace Wrexercise.Features.Jogo;
 /// <param name="DormindoDesde">Só com a pose <c>dormindo</c>: o início do sono, mostrado no Foco.</param>
 /// <param name="Cutucadas">Só com a pose <c>dormindo</c>: as cutucadas recebidas nas últimas 24 horas.</param>
 /// <param name="CutucadoPorMimEm">Só com a pose <c>dormindo</c>: quando quem vê cutucou este membro nas últimas 24 horas.</param>
+/// <param name="Fadiga">A FADIGA do membro, que todo o grupo vê (decisão 0089), ou <c>null</c>.</param>
 internal sealed record MembroCenaResponse(
     Guid UsuarioId,
     string NomeExibicao,
@@ -12,7 +13,15 @@ internal sealed record MembroCenaResponse(
     DateTimeOffset? DormindoDesde,
     CutucadasMembroResponse? Cutucadas = null,
     DateTimeOffset? CutucadoPorMimEm = null,
-    TreinoAoVivoResponse? TreinoAoVivo = null);
+    TreinoAoVivoResponse? TreinoAoVivo = null,
+    FadigaMembroResponse? Fadiga = null);
+
+/// <summary>A bateria fraca de um colega (decisão 0089): as cargas e o motivo, com a carta e quem a mandou.</summary>
+/// <param name="Restantes">Quantos treinos verificados faltam para recarregar (1 a 5).</param>
+/// <param name="Motivo"><c>Recusa</c>, <c>Falha</c> ou <c>Expiracao</c>.</param>
+/// <param name="Carta">O nome da carta, como "+20 MIN" ou "+10 MIN + VARIEDADE" na Fusão.</param>
+/// <param name="RemetenteNome">Quem mandou a carta.</param>
+internal sealed record FadigaMembroResponse(int Restantes, string? Motivo, string? Carta, string? RemetenteNome);
 
 /// <summary>
 /// O treino ao vivo de um membro (ADR 0078). <c>TorcidaPorMimEm</c>: quando quem vê torceu por último, para o

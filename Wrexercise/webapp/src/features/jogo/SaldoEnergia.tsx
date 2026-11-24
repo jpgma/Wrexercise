@@ -43,10 +43,18 @@ export function FadigaExplicada() {
           Seu {treinos} metade da EN. A Energia que você já tem não muda, e o
           treino conta normalmente no desafio.
         </p>
-        <p className="mt-3 text-sm text-muted">
-          A FADIGA vem de recusar uma carta, não cumprir no próximo treino ou
-          deixar o prazo vencer.
+        <p className="mt-3 text-sm">
+          Sem gás, você não joga Provocações até recarregar, e o grupo vê a
+          bateria fraca na praça.
         </p>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted">
+          <li>
+            Recusar uma carta: 3 treinos, ou +1 se já estiver cansado (até 5).
+          </li>
+          <li>Deixar o prazo vencer: 3 treinos.</li>
+          <li>Aceitar e não cumprir: 2 treinos.</li>
+          <li>Cumprir uma carta recebida recarrega 1 treino na hora ⚡</li>
+        </ul>
       </Dialog>
     </>
   );
@@ -104,7 +112,10 @@ const origens: { chave: keyof DetalhamentoEnergia; rotulo: string }[] = [
   { chave: "jogadas", rotulo: "Cartas cumpridas" },
   { chave: "rivais", rotulo: "Rivais vencidos" },
   { chave: "despertador", rotulo: "Colegas acordados com a Cutucada" },
-  { chave: "devolucoes", rotulo: "Cartas não cumpridas (metade de volta)" },
+  {
+    chave: "devolucoes",
+    rotulo: "Cartas não cumpridas (metade de volta; recusadas, tudo)",
+  },
   { chave: "fadiga", rotulo: "FADIGA (treinos com −50%)" },
 ];
 

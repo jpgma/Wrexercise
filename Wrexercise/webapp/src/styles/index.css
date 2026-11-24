@@ -718,6 +718,62 @@
     }
   }
 
+  /*
+   * FADIGA na praça (decisão 0089), sem arte nova: o avatar fica sem cor e mais lento, de vez em quando
+   * pinga uma gota de suor, e a bateria pisca quando recarrega um pouco.
+   */
+  .sprite-cansado {
+    filter: saturate(0.5) brightness(0.92);
+  }
+
+  .sprite-cansado.sprite-repete {
+    animation-duration: calc(var(--quadros) * var(--ms) * 1.6);
+  }
+
+  .gota-suor {
+    animation: gota-suor 5s ease-in infinite;
+    opacity: 0;
+  }
+
+  @keyframes gota-suor {
+    0% {
+      opacity: 0;
+      transform: translateY(0);
+    }
+    6% {
+      opacity: 1;
+    }
+    22% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  .bateria-recarga {
+    animation: bateria-recarga 450ms steps(2) 4;
+  }
+
+  @keyframes bateria-recarga {
+    50% {
+      opacity: 0.2;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gota-suor,
+    .bateria-recarga {
+      animation: none;
+    }
+
+    .gota-suor {
+      opacity: 1;
+    }
+  }
+
   /* A bola de vôlei do treino ao vivo sobe e desce enquanto vai de um a outro (ADR 0082). */
   .bola-arco {
     animation: bola-arco var(--ms) linear 1;

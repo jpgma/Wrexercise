@@ -1,6 +1,6 @@
 # 0087 — Meia devolução da carta não cumprida
 
-**Status:** DECIDIDA. Muda, em `0074-carta-jogada-nao-volta.md`, o custo da carta não cumprida: quem enviou recebe metade do preço de volta. Reabre a alternativa "reembolso parcial" que a `0074` descartou, pelo motivo abaixo. A carta jogada continua não voltando para a Mão, e a recompensa de 1 × na carta cumprida, a FADIGA (`0059`) e os limites de envio (`0069`) continuam os mesmos. Detalhes em `../gamificacao.md` §5.1, §6.2 e §6.4.
+**Status:** DECIDIDA. Muda, em `0074-carta-jogada-nao-volta.md`, o custo da carta não cumprida: quem enviou recebe metade do preço de volta. Reabre a alternativa "reembolso parcial" que a `0074` descartou, pelo motivo abaixo. A carta jogada continua não voltando para a Mão, e a recompensa de 1 × na carta cumprida, a FADIGA (`0059`) e os limites de envio (`0069`) continuam os mesmos. Detalhes em `../gamificacao.md` §5.1, §6.2 e §6.4. Desde `0089-fadiga-visivel-e-recusa-com-peso.md`, a carta **recusada** devolve o preço inteiro (a Revanche); a falha e a expiração continuam com metade.
 
 ## Contexto
 

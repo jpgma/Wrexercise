@@ -24,6 +24,8 @@ type SpriteAvatarProps = {
   style?: CSSProperties;
   /** Chamado ao fim de uma animação que toca uma vez. */
   onFim?: () => void;
+  /** Com FADIGA (decisão 0089): sem cor e mais lento. */
+  cansado?: boolean;
 };
 
 export function SpriteAvatar({
@@ -36,6 +38,7 @@ export function SpriteAvatar({
   className = "",
   style,
   onFim,
+  cansado = false,
 }: SpriteAvatarProps) {
   // Uma folha sem a linha da animação (a de 129 linhas não tem as dos esportes, e a de 97, nem as de
   // dormir) toca a `reserva` da animação, ou mostra `parado`, parado, quando ela não tem reserva.
@@ -56,7 +59,7 @@ export function SpriteAvatar({
   return (
     <span
       aria-hidden="true"
-      className={`sprite-avatar ${parar ? "" : repete ? "sprite-repete" : "sprite-uma-vez"} ${className}`}
+      className={`sprite-avatar ${parar ? "" : repete ? "sprite-repete" : "sprite-uma-vez"} ${cansado ? "sprite-cansado" : ""} ${className}`}
       onAnimationEnd={onFim}
       style={
         {

@@ -28,11 +28,15 @@ export type Energia = {
 
 const energiaKey = ["jogo", "energia"] as const;
 
-/** Um treino com FADIGA rende metade da base de 10 EN. */
-export const baseComFadiga = 5;
+/** As cargas da recusa e o máximo com o acúmulo (decisão 0089). */
+export const fadigaCargas = 3;
+export const fadigaTeto = 5;
 
-export const avisoFadigaAplicada =
-  "FADIGA! Seus próximos 3 treinos renderão metade da EN.";
+export const avisoFadigaAplicada = getAvisoFadigaAplicada(fadigaCargas);
+
+function getAvisoFadigaAplicada(treinos: number): string {
+  return `FADIGA! Seus próximos ${treinos} treinos renderão metade da EN, e você fica sem jogar Provocações até recarregar.`;
+}
 
 export function useEnergia() {
   return useQuery({
@@ -62,13 +66,17 @@ export function marcarFadigaVista(restante: number) {
 }
 
 function getAvisoFadiga(antes: number, agora: number): string {
-  if (agora > antes) return avisoFadigaAplicada;
+  if (agora > antes) {
+    return antes === 0
+      ? getAvisoFadigaAplicada(agora)
+      : `FADIGA: agora são ${agora} treinos com −50% EN.`;
+  }
   if (agora === 0) {
-    return "FADIGA REMOVIDA! Seus treinos voltaram a render EN normalmente.";
+    return "⚡ Recarregado! Seus treinos voltaram a render EN normalmente.";
   }
   const treinos =
     agora === 1 ? "1 treino restante" : `${agora} treinos restantes`;
-  return `+${baseComFadiga} EN · FADIGA: ${treinos}`;
+  return `⚡ Recarregando · FADIGA: ${treinos}`;
 }
 
 /**
