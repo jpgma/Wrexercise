@@ -94,7 +94,8 @@ export function useConvocacao(grupoId: string, convocacaoId: string) {
 
 export function usePreviaConvocacao(grupoId: string, cartaId: string | null) {
   return useQuery({
-    queryKey: ["jogo", "convocacoes", grupoId, "previa", cartaId],
+    // Fora da chave das Convocações: convocar gasta a carta, e a prévia não deve buscar de novo.
+    queryKey: ["jogo", "previa-convocacao", grupoId, cartaId],
     enabled: cartaId !== null,
     queryFn: ({ signal }) =>
       getJson<PreviaConvocacao>(

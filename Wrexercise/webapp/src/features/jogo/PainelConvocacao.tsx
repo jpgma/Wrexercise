@@ -16,7 +16,8 @@ export function getTempoRestante(expiraEm: string, agora = Date.now()): string {
   const ms = new Date(expiraEm).getTime() - agora;
   const horas = Math.floor(ms / 3_600_000);
   if (horas >= 24) {
-    const dias = Math.floor(horas / 24);
+    // Arredondado: logo depois de convocar, são "7 dias", não "6".
+    const dias = Math.round(horas / 24);
     return dias === 1 ? "1 dia restante" : `${dias} dias restantes`;
   }
   return horas >= 1 ? `${horas} h restantes` : "menos de 1 h";
@@ -38,7 +39,7 @@ export function RostosConvocacao({ convocacao }: { convocacao: Convocacao }) {
   return (
     <ul className="flex flex-wrap gap-1.5">
       {convocacao.participantes.map((p) => (
-        <li key={p.usuarioId} className="relative">
+        <li key={p.usuarioId} className="relative flex">
           <Avatar nome={p.nomeExibicao} id={p.usuarioId} size={32} />
           <span className="sr-only">
             {p.nomeExibicao}
@@ -227,8 +228,9 @@ export function MinhaParte({
       {conteudo}
       {anfitriao && (
         <p className="mt-1 text-xs text-muted">
-          Já voltaram +{c.devolucao} EN da carta (+{c.devolucaoPorPessoa} EN por
-          pessoa da galera).
+          {c.devolucao
+            ? `Já voltaram +${c.devolucao} EN da carta (+${c.devolucaoPorPessoa} EN por pessoa da galera).`
+            : `Cada pessoa da galera devolve +${c.devolucaoPorPessoa} EN da carta, seja qual for o resultado.`}
         </p>
       )}
       {responder.isError && (

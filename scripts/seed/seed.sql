@@ -70,6 +70,14 @@ DELETE FROM rivais
 WHERE grupo_id IN (SELECT id FROM velhos_grupos) OR desafio_id IN (SELECT id FROM velhos_desafios)
    OR escolhedor_id IN (SELECT id FROM velhos_usuarios) OR rival_id IN (SELECT id FROM velhos_usuarios);
 
+-- Cutucadas e torcidas de quem semeou, ou no grupo do seed; os avisos delas saem em cascata.
+DELETE FROM cutucadas
+WHERE grupo_id IN (SELECT id FROM velhos_grupos)
+   OR autor_id IN (SELECT id FROM velhos_usuarios) OR destinatario_id IN (SELECT id FROM velhos_usuarios);
+
+DELETE FROM torcidas
+WHERE usuario_id IN (SELECT id FROM velhos_usuarios) OR atividade_id IN (SELECT id FROM velhas_atividades);
+
 -- Um só DELETE: a Jogada original e o DESAFIO DUPLO que aponta para ela saem juntos.
 DELETE FROM jogadas
 WHERE grupo_id IN (SELECT id FROM velhos_grupos)
@@ -77,6 +85,17 @@ WHERE grupo_id IN (SELECT id FROM velhos_grupos)
    OR carta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios))
    OR carta_resposta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios))
    OR carta_fusao_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios));
+
+-- Convocações (ADR 0091): as do grupo, as de quem semeou e as que gastaram uma carta do seed. Os
+-- convidados saem antes, e os avisos delas saem em cascata.
+CREATE TEMP TABLE velhas_convocacoes ON COMMIT DROP AS
+SELECT c.id FROM convocacoes c
+WHERE c.grupo_id IN (SELECT id FROM velhos_grupos) OR c.anfitriao_id IN (SELECT id FROM velhos_usuarios)
+   OR c.carta_id IN (SELECT id FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios));
+
+DELETE FROM participantes_convocacao
+WHERE convocacao_id IN (SELECT id FROM velhas_convocacoes) OR usuario_id IN (SELECT id FROM velhos_usuarios);
+DELETE FROM convocacoes WHERE id IN (SELECT id FROM velhas_convocacoes);
 
 DELETE FROM cartas WHERE usuario_id IN (SELECT id FROM velhos_usuarios);
 

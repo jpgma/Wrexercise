@@ -4,3 +4,8 @@
 -- A Energia ganha com Jogadas concluídas some junto, como no estado semeado.
 -- Um só DELETE: a Jogada original e o DESAFIO DUPLO que aponta para ela saem juntos.
 DELETE FROM jogadas WHERE grupo_id = '5eed0000-0000-4000-8000-0000000000a0';
+
+-- As Convocações do grupo também saem (ADR 0091): a carta Global volta para a Mão, e a Energia delas some.
+DELETE FROM participantes_convocacao
+WHERE convocacao_id IN (SELECT id FROM convocacoes WHERE grupo_id = '5eed0000-0000-4000-8000-0000000000a0');
+DELETE FROM convocacoes WHERE grupo_id = '5eed0000-0000-4000-8000-0000000000a0';

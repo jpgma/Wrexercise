@@ -28,6 +28,10 @@ export function getProximoPasso(jogadas: Jogada[], loja: Loja): string | null {
     !getLimiteEnvio(jogadas) && loja.mao.some((c) => c.tipo === "Provocacao");
   if (podeJogar) return "Toque num colega pra jogar uma carta.";
 
+  // A carta Global se joga tocando nela, não num colega (decisão 0091).
+  if (loja.mao.some((c) => c.tipo === "Global"))
+    return "Toque no TODO MUNDO pra convocar a galera.";
+
   if (loja.mao.length >= loja.limiteMao) return null;
   const vazia = loja.mao.length === 0 ? "Sua Mão está vazia. " : "";
   const maisBarata = Math.min(...loja.catalogo.map((c) => c.preco));
