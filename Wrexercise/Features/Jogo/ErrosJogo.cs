@@ -58,6 +58,11 @@ internal static class ErrosJogo
         "JOGADA_NAO_ENCONTRADA",
         "Jogada não encontrada.");
 
+    public static IResult ConvocacaoNaoEncontrada() => ApiProblem.Create(
+        StatusCodes.Status404NotFound,
+        "CONVOCACAO_NAO_ENCONTRADA",
+        "Convocação não encontrada.");
+
     public static IResult Limite(string codigo) => ApiProblem.Create(
         StatusCodes.Status409Conflict,
         codigo,

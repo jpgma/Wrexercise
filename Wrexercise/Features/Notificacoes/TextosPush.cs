@@ -31,6 +31,7 @@ internal static class TextosPush
         "ComecouTreinar",
         "TreinoLongo",
         "TreinoAppConcluido",
+        "Convocacao",
     ];
 
     public static string GetTexto(AvisoPush aviso)
@@ -54,6 +55,7 @@ internal static class TextosPush
             "Torcida" => $"{nome} está torcendo por você 📣",
             "TreinoLongo" => "Ainda treinando? Termine ou ajuste o seu treino",
             "TreinoAppConcluido" => "Seu treino do Movr acabou. Põe as fotos e termine aqui 📸",
+            "Convocacao" => $"{nome} jogou o TODO MUNDO: a galera foi convocada! Tô dentro?",
             _ => "Você tem uma nova notificação",
         };
     }

@@ -32,6 +32,14 @@ public class CalculoEnergiaTests
     [Fact]
     public void SemNada_NaoGanhaEnergia() => Assert.Equal(0, CalculoEnergia.Calcular([], []).Total);
 
+    [Fact]
+    public void Convocacoes_EntramNoTotal()
+    {
+        var ganha = CalculoEnergia.Calcular([], [], convocacoes: 105);
+        Assert.Equal(105, ganha.Convocacoes);
+        Assert.Equal(105, ganha.Total);
+    }
+
     // Decisão 0088: o desafio cancelado mantém a Energia das semanas cumpridas até o cancelamento.
 
     [Fact]

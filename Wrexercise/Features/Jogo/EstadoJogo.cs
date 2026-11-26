@@ -19,7 +19,8 @@ internal sealed record EstadoJogo(
     EnergiaGanha Ganha,
     IReadOnlyList<CartaComprada> Cartas,
     IReadOnlyList<JogadaCarregada> Jogadas,
-    int FadigaRestante = 0)
+    int FadigaRestante = 0,
+    IReadOnlyList<ConvocacaoCarregada>? Convocacoes = null)
 {
     /// <summary>Usar uma carta não muda o saldo: o custo entrou na compra.</summary>
     public int Saldo => Ganha.Total - Cartas.Sum(c => c.Preco);
@@ -36,11 +37,12 @@ internal sealed record EstadoJogo(
     /// <summary>
     /// Uma Provocação é gasta ao ser jogada, seja qual for o resultado (decisão 0074); uma Resposta, quando é
     /// usada (docs/gamificacao.md §6.2). A Jogada devolvida pelo DESAFIO DUPLO usa a Provocação original, que a
-    /// Jogada original já gastou.
+    /// Jogada original já gastou. Uma carta Global é gasta quando cria a Convocação (decisão 0091).
     /// </summary>
     public bool IsGasta(Guid cartaId) =>
         Jogadas.Any(j => j.CartaRespostaId == cartaId
-            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && !j.VoltouPelaRegraAntiga));
+            || (j.UsaCarta(cartaId) && j.IsCartaDoRemetente && !j.VoltouPelaRegraAntiga))
+        || (Convocacoes ?? []).Any(c => c.Fatos.CartaId == cartaId);
 
     /// <summary>
     /// Trava as linhas dos usuários até o fim da transação, sempre na mesma ordem, para evitar deadlock.
@@ -77,7 +79,8 @@ internal sealed record EstadoJogo(
         var rivais = await Rivais.LoadAsync(connection, transaction, usuarioId, null, cancellationToken);
         var rivaisVencidos = rivais.Count(r => r.EscolhedorId == usuarioId && r.Situacao == ResultadoRival.Venceu);
         var dias = await LoadDiasVerificadosAsync(connection, transaction, usuarioId, cancellationToken);
-        var fadiga = Fadiga.Calcular(jogadas, dias, usuarioId);
+        var convocacoes = await Jogo.Convocacoes.LoadDoUsuarioAsync(connection, transaction, usuarioId, cancellationToken);
+        var fadiga = Fadiga.Calcular(jogadas, dias, usuarioId, convocacoes);
 
         var recompensas = jogadas
             .Where(j => j.Situacao == SituacaoJogada.Concluida)
@@ -89,9 +92,13 @@ internal sealed record EstadoJogo(
 
         var despertares = await LoadDespertaresAsync(connection, transaction, usuarioId, cancellationToken);
 
+        // Decisão 0091: a recompensa de quem cumpriu a Convocação e a devolução do anfitrião.
+        var energiaConvocacoes = convocacoes.Sum(c => c.GetEnergia(usuarioId));
+
         var ganha = CalculoEnergia.Calcular(
-            atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga, despertares, devolucoes);
-        return new EstadoJogo(usuarioId, ganha, cartas, jogadas, fadiga.Restantes);
+            atividades, desafios, recompensas, rivaisVencidos, fadiga.DiasComFadiga, despertares, devolucoes,
+            energiaConvocacoes);
+        return new EstadoJogo(usuarioId, ganha, cartas, jogadas, fadiga.Restantes, convocacoes);
     }
 
     /// <summary>

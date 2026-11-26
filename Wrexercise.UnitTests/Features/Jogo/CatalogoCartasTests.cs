@@ -43,4 +43,21 @@ public class CatalogoCartasTests
         Assert.Equal(pode, CatalogoCartas.PodeFundir(CatalogoCartas.Find(a)!, CatalogoCartas.Find(b)!));
         Assert.Equal(pode, CatalogoCartas.PodeFundir(CatalogoCartas.Find(b)!, CatalogoCartas.Find(a)!));
     }
+
+    [Fact]
+    public void TodoMundo_EGlobalECustaCentoECinquenta()
+    {
+        var carta = CatalogoCartas.Find(CodigoCarta.TodoMundo)!;
+        Assert.Equal(TipoCarta.Global, carta.Tipo);
+        Assert.Equal(150, carta.Preco);
+        Assert.Empty(CatalogoCartas.GetEquivalentes(carta.Codigo));
+    }
+
+    [Fact]
+    public void TodoMundo_NaoEntraEmFusao()
+    {
+        var global = CatalogoCartas.Find(CodigoCarta.TodoMundo)!;
+        Assert.False(CatalogoCartas.PodeFundir(global, CatalogoCartas.Find(CodigoCarta.Variedade)!));
+        Assert.False(CatalogoCartas.PodeFundir(CatalogoCartas.Find(CodigoCarta.Variedade)!, global));
+    }
 }

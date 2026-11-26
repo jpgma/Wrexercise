@@ -450,6 +450,18 @@ Duas Provocações diferentes jogadas juntas, numa Jogada só (`decisoes/0070-fu
 - **Animação:** as duas cartas recuam, batem uma na outra com um clarão e faíscas em pixel art (`fusao.png`), tremem e ficam juntas, brilhando, com o selo "FUSÃO". No arremesso, as duas voam juntas, e as faíscas estouram em quem recebe, com "FUSÃO!". Com movimento reduzido, o par aparece já fundido, sem faíscas.
 - **Na Mesa:** a mini-carta mostra os dois ícones. Os detalhes mostram os dois nomes, o selo "FUSÃO", o objetivo combinado e o aviso de tudo ou nada.
 
+### 6.6. Cartas Globais e a Convocação
+
+Uma carta `Global` vale para o grupo inteiro (`decisoes/0091-cartas-globais-todo-mundo.md`). A primeira é o **TODO MUNDO** (150 EN): "Essa semana todo mundo vai de [treino]!".
+
+- **Na Loja e na Mão:** como as outras cartas, ocupa uma vaga da Mão. Não entra em Fusão nem aceita Resposta. Fora do Foco, tocar nela abre "Convocar a galera": o tipo de treino (todos, menos `Outro` e `Esporte`), quantos colegas serão convidados, as recompensas e o botão "Convocar a galera". A carta é gasta ao criar a Convocação.
+- **Convocar:** só no modo Jogo e sem FADIGA. Uma Convocação dentro do prazo por grupo. Os convidados são o anfitrião e os membros no modo Jogo naquele instante. O prazo é de 7 dias, contados da criação. Cada convidado recebe a notificação `Convocacao`.
+- **Responder:** "Tô dentro!" ou "Dessa vez não · FADIGA", até o prazo, uma vez. Depois de aceitar, "Sair · FADIGA", enquanto não houver treino que conte. O convite não trava o app nem o registro de treino.
+- **Cumprir:** um treino `Verificada` do tipo, no grupo, que começou dentro dos 7 dias. Vale o treino de antes do aceite, se a pessoa aceitar no prazo. A verificação pode vir depois do prazo.
+- **FADIGA**, como numa Provocação recebida (§5.4): recusar = recusa, deixar sem resposta = expiração, sair ou não cumprir = falha. Cumprir tira 1 carga. O anfitrião não ganha FADIGA na própria Convocação.
+- **Energia:** quem cumpre ganha 30 EN, o anfitrião também. O preço volta para o anfitrião dividido entre os outros convidados: cada resultado final devolve uma parte (com 2 outros, 75 EN cada), e tudo resolvido devolve os 150 EN.
+- **Na praça:** acima da Mão, o painel da Convocação ativa (ou da última encerrada há até 3 dias): o treino, quem convocou, o tempo restante, "N de M concluíram", os rostos com ✓ e a parte de quem vê. "Detalhes" abre `/grupos/{id}/convocacoes/{convocacaoId}`, com a galera e as "Convocações anteriores". Ninguém é exposto por recusar: o resultado aparece como "Dessa vez não".
+
 ## 7. Missões semanais
 
 - Toda semana (de segunda a domingo, no fuso do grupo), cada pessoa recebe de 2 a 3 missões, sorteadas de uma lista fixa no código. O sorteio é determinístico por usuário e semana, então não precisa ser gravado.

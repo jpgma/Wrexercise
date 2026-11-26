@@ -19,9 +19,14 @@ internal enum MotivoFadiga
     Expiracao,
 }
 
-/// <summary>Um momento em que uma Provocação recebida deu FADIGA.</summary>
+/// <summary>Um momento em que uma Provocação recebida, ou uma Convocação (decisão 0091), deu FADIGA.</summary>
 /// <param name="JogadaId">A Jogada que causou, para mostrar o motivo ao grupo.</param>
-internal sealed record GatilhoFadiga(DateTimeOffset Em, MotivoFadiga Motivo, Guid? JogadaId = null);
+/// <param name="ConvocacaoId">A Convocação que causou, quando não foi uma Jogada.</param>
+internal sealed record GatilhoFadiga(
+    DateTimeOffset Em,
+    MotivoFadiga Motivo,
+    Guid? JogadaId = null,
+    Guid? ConvocacaoId = null);
 
 /// <param name="DiasComFadiga">Os dias pagos que renderam só metade da base.</param>
 /// <param name="Restantes">Quantos dos próximos dias verificados ainda vão render metade (0 a <see cref="Fadiga.Teto"/>).</param>
@@ -175,16 +180,25 @@ internal static class Fadiga
     public static DateTimeOffset? GetCumprida(JogadaCarregada jogada, Guid usuarioId) =>
         jogada.DestinatarioId == usuarioId && jogada.Situacao == SituacaoJogada.Concluida ? jogada.ConcluidaEm : null;
 
-    /// <summary>A FADIGA de uma pessoa a partir das Jogadas dela e dos dias verificados.</summary>
+    /// <summary>
+    /// A FADIGA de uma pessoa a partir das Jogadas dela, das Convocações em que foi convidada (decisão 0091) e dos
+    /// dias verificados.
+    /// </summary>
     public static ResultadoFadiga Calcular(
         IEnumerable<JogadaCarregada> jogadas,
         IEnumerable<DiaVerificado> dias,
-        Guid usuarioId)
+        Guid usuarioId,
+        IEnumerable<ConvocacaoCarregada>? convocacoes = null)
     {
         var lista = jogadas.ToList();
+        var convocadas = (convocacoes ?? []).ToList();
         return Calcular(
-            lista.Select(j => GetGatilho(j, usuarioId)).OfType<GatilhoFadiga>(),
+            lista.Select(j => GetGatilho(j, usuarioId))
+                .Concat(convocadas.Select(c => c.GetGatilho(usuarioId)))
+                .OfType<GatilhoFadiga>(),
             dias,
-            lista.Select(j => GetCumprida(j, usuarioId)).OfType<DateTimeOffset>());
+            lista.Select(j => GetCumprida(j, usuarioId))
+                .Concat(convocadas.Select(c => c.GetCumprida(usuarioId)))
+                .OfType<DateTimeOffset>());
     }
 }

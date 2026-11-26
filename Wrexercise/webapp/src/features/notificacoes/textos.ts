@@ -1,3 +1,4 @@
+import { tipoAtividadeLabels, type TipoAtividade } from "@/features/atividades";
 import { getTipoCutucada } from "@/features/jogo";
 import type { Notificacao } from "./useNotificacoes";
 
@@ -76,6 +77,12 @@ export function getTextoNotificacao({
       return "Ainda treinando? Termine ou ajuste o seu treino";
     case "TreinoAppConcluido":
       return "Seu treino do Movr acabou. Põe as fotos e termine aqui 📸";
+    case "Convocacao": {
+      const treino = tipoAtividadeLabels[situacao as TipoAtividade];
+      return treino
+        ? `${primeiroNome(atorNome)} jogou o TODO MUNDO: essa semana todo mundo vai de ${treino}! Tô dentro?`
+        : `${primeiroNome(atorNome)} jogou o TODO MUNDO: a galera foi convocada! Tô dentro?`;
+    }
   }
 }
 

@@ -45,6 +45,7 @@ internal sealed record CenaResponse(Guid GrupoId, IReadOnlyList<MembroCenaRespon
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo ou zero.</param>
 /// <param name="Despertador">O que rendeu acordar colegas com a Cutucada.</param>
 /// <param name="Devolucoes">Metade do preço das cartas enviadas e não cumpridas (decisão 0087).</param>
+/// <param name="Convocacoes">As recompensas e as devoluções das Convocações (decisão 0091).</param>
 internal sealed record EnergiaDetalhamentoResponse(
     int Atividades,
     int Bonus,
@@ -55,7 +56,8 @@ internal sealed record EnergiaDetalhamentoResponse(
     int Rivais,
     int Fadiga = 0,
     int Despertador = 0,
-    int Devolucoes = 0);
+    int Devolucoes = 0,
+    int Convocacoes = 0);
 
 /// <param name="FadigaRestante">Quantos dos próximos dias verificados ainda rendem metade da base (0 a 3).</param>
 internal sealed record EnergiaResponse(int Saldo, EnergiaDetalhamentoResponse Detalhamento, int FadigaRestante = 0);
@@ -193,3 +195,56 @@ internal sealed record MeuAvatarResponse(
 internal sealed record AvataresResponse(IReadOnlyList<AvatarMembroResponse> Avatares);
 
 internal sealed record FolhaEnviadaResponse(string Folha);
+
+/// <summary>Uma pessoa convidada para a Convocação (decisão 0091).</summary>
+/// <param name="Situacao">A participação calculada (<see cref="SituacaoConvocacao"/>).</param>
+internal sealed record ParticipanteConvocacaoResponse(Guid UsuarioId, string NomeExibicao, string Situacao, bool Anfitriao);
+
+/// <summary>Uma Convocação do grupo, do ponto de vista de quem consulta.</summary>
+/// <param name="Situacao"><c>Ativa</c>, <c>AguardandoVerificacao</c> ou <c>Encerrada</c>.</param>
+/// <param name="MinhaSituacao">A participação de quem consulta, ou <c>null</c> se não foi convidado.</param>
+/// <param name="MinhaRecompensa">A Energia que quem consulta ganhou cumprindo o objetivo.</param>
+/// <param name="Devolucao">Só para o anfitrião: a Energia que já voltou da carta.</param>
+/// <param name="DevolucaoPorPessoa">Só para o anfitrião: a parte do preço que cada convidado devolve.</param>
+/// <param name="PodeSair">Se quem consulta pode desistir agora.</param>
+internal sealed record ConvocacaoResponse(
+    Guid Id,
+    Guid GrupoId,
+    string Codigo,
+    string Nome,
+    string TipoAtividade,
+    Guid AnfitriaoId,
+    string AnfitriaoNome,
+    DateTimeOffset CriadaEm,
+    DateTimeOffset ExpiraEm,
+    string Situacao,
+    int Concluidas,
+    string? MinhaSituacao,
+    int MinhaRecompensa,
+    int? Devolucao,
+    int? DevolucaoPorPessoa,
+    bool PodeSair,
+    IReadOnlyList<ParticipanteConvocacaoResponse> Participantes);
+
+/// <param name="Destaque">A Convocação ativa, ou a última encerrada há até 3 dias, para o painel da praça.</param>
+/// <param name="Recentes">As Convocações mais recentes do grupo, com a do destaque.</param>
+internal sealed record ConvocacoesResponse(ConvocacaoResponse? Destaque, IReadOnlyList<ConvocacaoResponse> Recentes);
+
+/// <summary>O que o TODO MUNDO vai pedir, antes de convocar.</summary>
+/// <param name="Tipos">Os tipos de treino que o anfitrião pode escolher.</param>
+/// <param name="Convidados">Quantos colegas no modo Jogo serão convidados, sem o anfitrião.</param>
+/// <param name="Bloqueio">O código do erro que impede convocar agora, ou <c>null</c>.</param>
+/// <param name="Mensagem">O texto do bloqueio, para a interface.</param>
+internal sealed record PreviaConvocacaoResponse(
+    IReadOnlyList<string> Tipos,
+    int Convidados,
+    int Recompensa,
+    int DevolucaoPorPessoa,
+    int DuracaoDias,
+    string? Bloqueio,
+    string? Mensagem);
+
+internal sealed record ConvocarRequest(Guid? CartaId, string? Tipo);
+
+/// <param name="Decisao"><c>Aceita</c>, <c>Recusada</c> ou <c>Desistiu</c>.</param>
+internal sealed record ResponderConvocacaoRequest(string? Decisao);

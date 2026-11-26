@@ -153,6 +153,14 @@ export const router = createBrowserRouter([
                 },
               },
               {
+                path: "/grupos/:id/convocacoes/:convocacaoId",
+                lazy: async () => {
+                  const { ConvocacaoPage } =
+                    await import("@/pages/ConvocacaoPage");
+                  return { Component: ConvocacaoPage };
+                },
+              },
+              {
                 path: "/grupos/:id/convidar",
                 lazy: async () => {
                   const { ConvidarPage } = await import("@/pages/ConvidarPage");

@@ -111,6 +111,7 @@ const origens: { chave: keyof DetalhamentoEnergia; rotulo: string }[] = [
   { chave: "desafios", rotulo: "Desafios concluídos" },
   { chave: "jogadas", rotulo: "Cartas cumpridas" },
   { chave: "rivais", rotulo: "Rivais vencidos" },
+  { chave: "convocacoes", rotulo: "TODO MUNDO (missões e devoluções)" },
   { chave: "despertador", rotulo: "Colegas acordados com a Cutucada" },
   {
     chave: "devolucoes",

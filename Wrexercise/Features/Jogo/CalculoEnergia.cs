@@ -24,6 +24,7 @@ internal sealed record RecompensaJogada(int Preco, bool ComoDestinatario, bool A
 /// <param name="Fadiga">O que a FADIGA deixou de render, como valor negativo (decisão 0059).</param>
 /// <param name="Despertador">O que rendeu acordar colegas com a Cutucada (decisão 0063).</param>
 /// <param name="Devolucoes">Metade do preço das cartas enviadas e não cumpridas (decisão 0087).</param>
+/// <param name="Convocacoes">As recompensas e as devoluções das Convocações (decisão 0091).</param>
 internal sealed record EnergiaGanha(
     int Atividades,
     int Bonus,
@@ -34,10 +35,12 @@ internal sealed record EnergiaGanha(
     int Rivais = 0,
     int Fadiga = 0,
     int Despertador = 0,
-    int Devolucoes = 0)
+    int Devolucoes = 0,
+    int Convocacoes = 0)
 {
     public int Total =>
-        Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga + Despertador + Devolucoes;
+        Atividades + Bonus + Metas + Sequencias + Desafios + Jogadas + Rivais + Fadiga + Despertador + Devolucoes
+        + Convocacoes;
 }
 
 /// <summary>
@@ -90,6 +93,7 @@ internal static class CalculoEnergia
     /// <param name="diasComFadiga">Os dias pagos que rendem só metade da base (<see cref="Fadiga"/>).</param>
     /// <param name="despertares">Quantos colegas cutucados voltaram a treinar (<see cref="Despertador"/>).</param>
     /// <param name="devolucoes">A soma das devoluções das cartas enviadas e não cumpridas (<see cref="GetDevolucao"/>).</param>
+    /// <param name="convocacoes">A Energia das Convocações (<see cref="ConvocacaoCarregada.GetEnergia"/>).</param>
     public static EnergiaGanha Calcular(
         IReadOnlyList<AtividadeEnergia> atividades,
         IReadOnlyList<DesafioDaPessoa> desafios,
@@ -97,7 +101,8 @@ internal static class CalculoEnergia
         int rivaisVencidos = 0,
         int diasComFadiga = 0,
         int despertares = 0,
-        int devolucoes = 0)
+        int devolucoes = 0,
+        int convocacoes = 0)
     {
         var melhorSequencia = desafios
             .Select(d => CalculoSemanaDesafio.GetMelhorSequencia(d.SemanasCumpridas))
@@ -114,7 +119,8 @@ internal static class CalculoEnergia
             rivaisVencidos * ResultadoRival.Energia,
             -diasComFadiga * Fadiga.Desconto,
             despertares * PorDespertar,
-            devolucoes);
+            devolucoes,
+            convocacoes);
     }
 
     /// <summary>

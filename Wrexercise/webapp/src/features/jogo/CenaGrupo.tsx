@@ -24,6 +24,7 @@ import { IconeCarta } from "./CartaJogo";
 import { CachorroAndando, EnfeiteNoChao } from "./EnfeiteNoChao";
 import { getChaoDosEnfeites, posicionarEnfeites } from "./enfeitesNaPraca";
 import { MaoJogo, type SelecaoMao } from "./MaoJogo";
+import { PainelConvocacao } from "./PainelConvocacao";
 import { ObjetosPraca, vaoDaPorta } from "./ObjetosPraca";
 import { getAnimacaoDoTreino } from "./AvatarTreino";
 import { SpriteAvatar } from "./SpriteAvatar";
@@ -1274,21 +1275,24 @@ function Praca({
       ) : focoProprio ? (
         <VitrineFoco />
       ) : (
-        <MaoJogo
-          key={alvo?.usuarioId ?? ""}
-          grupoId={grupoId}
-          alvo={alvo ?? null}
-          podeRival={
-            !!alvo &&
-            (rivais.data?.candidatos.includes(alvo.usuarioId) ?? false)
-          }
-          recolhida={emAcao}
-          selecao={selecao}
-          onSelecao={escolher}
-          onArremessar={arremessar}
-          onRival={rivalizar}
-          onArrasto={setArrasto}
-        />
+        <>
+          {!alvo && <PainelConvocacao grupoId={grupoId} />}
+          <MaoJogo
+            key={alvo?.usuarioId ?? ""}
+            grupoId={grupoId}
+            alvo={alvo ?? null}
+            podeRival={
+              !!alvo &&
+              (rivais.data?.candidatos.includes(alvo.usuarioId) ?? false)
+            }
+            recolhida={emAcao}
+            selecao={selecao}
+            onSelecao={escolher}
+            onArremessar={arremessar}
+            onRival={rivalizar}
+            onArrasto={setArrasto}
+          />
+        </>
       )}
       <p aria-live="polite" className="sr-only">
         {foco.efeito?.tipo === "impacto" && alvo

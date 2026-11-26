@@ -79,24 +79,31 @@ internal static class ObterCena
         foreach (var membro in membros.Where(m => m.ModoJogo))
         {
             var jogadas = await Jogadas.LoadAsync(connection, null, membro.UsuarioId, membro.UsuarioId, cancellationToken);
-            if (!jogadas.Any(j => Fadiga.GetGatilho(j, membro.UsuarioId) is not null))
+            var convocacoes =
+                await Convocacoes.LoadDoUsuarioAsync(connection, null, membro.UsuarioId, cancellationToken);
+            if (!jogadas.Any(j => Fadiga.GetGatilho(j, membro.UsuarioId) is not null)
+                && !convocacoes.Any(c => c.GetGatilho(membro.UsuarioId) is not null))
             {
                 continue;
             }
 
             var dias = await EstadoJogo.LoadDiasVerificadosAsync(connection, null, membro.UsuarioId, cancellationToken);
-            var fadiga = Fadiga.Calcular(jogadas, dias, membro.UsuarioId);
+            var fadiga = Fadiga.Calcular(jogadas, dias, membro.UsuarioId, convocacoes);
             if (fadiga.Restantes == 0)
             {
                 continue;
             }
 
             var jogada = jogadas.FirstOrDefault(j => j.Id == fadiga.Causa?.JogadaId && j.GrupoId == grupoId);
+            var convocacao = convocacoes.FirstOrDefault(c =>
+                c.Id == fadiga.Causa?.ConvocacaoId && c.Fatos.GrupoId == grupoId);
             fadigas[membro.UsuarioId] = new FadigaMembroResponse(
                 fadiga.Restantes,
                 fadiga.Causa?.Motivo.ToString(),
-                jogada is null ? null : GetNomeCarta(jogada),
-                jogada is null ? null : nomes.GetValueOrDefault(jogada.RemetenteId));
+                jogada is not null ? GetNomeCarta(jogada)
+                    : convocacao is not null ? CatalogoCartas.Find(convocacao.Fatos.Codigo)?.Nome : null,
+                jogada is not null ? nomes.GetValueOrDefault(jogada.RemetenteId)
+                    : convocacao is not null ? nomes.GetValueOrDefault(convocacao.Fatos.AnfitriaoId) : null);
         }
 
         return fadigas;

@@ -4,6 +4,9 @@ internal static class TipoCarta
 {
     public const string Provocacao = "Provocacao";
     public const string Resposta = "Resposta";
+
+    /// <summary>Vale para o grupo inteiro, não para uma pessoa (decisão 0091).</summary>
+    public const string Global = "Global";
 }
 
 internal static class CodigoCarta
@@ -17,6 +20,7 @@ internal static class CodigoCarta
     public const string Aposta = "Aposta";
     public const string PrazoExtra = "PrazoExtra";
     public const string MudancaDePlanos = "MudancaDePlanos";
+    public const string TodoMundo = "TodoMundo";
 }
 
 internal sealed record Carta(string Codigo, string Nome, string Tipo, int Preco, string Efeito);
@@ -47,6 +51,8 @@ internal static class CatalogoCartas
             "Você aceita com 24 horas a mais de prazo."),
         new(CodigoCarta.MudancaDePlanos, "MUDANÇA DE PLANOS", TipoCarta.Resposta, 25,
             "Você aceita, mas troca o objetivo por outro do mesmo nível."),
+        new(CodigoCarta.TodoMundo, "TODO MUNDO", TipoCarta.Global, 150,
+            "Essa semana todo mundo vai de um treino que você escolhe. Quem cumprir ganha +30 EN."),
     ];
 
     public static Carta? Find(string? codigo) => Todas.FirstOrDefault(c => c.Codigo == codigo);

@@ -8,12 +8,17 @@ export type CodigoProvocacao =
 export type CodigoResposta =
   "DesafioDuplo" | "Aposta" | "PrazoExtra" | "MudancaDePlanos";
 
-export type CodigoCarta = CodigoProvocacao | CodigoResposta;
+/** As cartas Globais valem para o grupo inteiro (decisão 0091). */
+export type CodigoGlobal = "TodoMundo";
+
+export type CodigoCarta = CodigoProvocacao | CodigoResposta | CodigoGlobal;
+
+export type TipoCarta = "Provocacao" | "Resposta" | "Global";
 
 export type Carta = {
   codigo: CodigoCarta;
   nome: string;
-  tipo: "Provocacao" | "Resposta";
+  tipo: TipoCarta;
   preco: number;
   efeito: string;
 };

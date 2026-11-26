@@ -30,7 +30,8 @@ internal static class ObterEnergia
                     ganha.Rivais,
                     ganha.Fadiga,
                     ganha.Despertador,
-                    ganha.Devolucoes),
+                    ganha.Devolucoes,
+                    ganha.Convocacoes),
                 estado.FadigaRestante),
             AppJsonContext.Default.EnergiaResponse);
     }

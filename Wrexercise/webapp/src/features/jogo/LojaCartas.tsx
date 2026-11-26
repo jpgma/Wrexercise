@@ -2,7 +2,7 @@ import { Zap } from "lucide-react";
 import { SectionTitle } from "@/components/PageHeader";
 import { useToast } from "@/components/Toast";
 import { getErrorMessage } from "@/services/api";
-import { CartaJogo } from "./CartaJogo";
+import { CartaJogo, nomeTipoCarta } from "./CartaJogo";
 import { type Carta, useComprarCarta, useLoja } from "./useCartas";
 
 function ItemLoja({
@@ -22,10 +22,15 @@ function ItemLoja({
     <li className="card flex gap-4 p-4">
       <CartaJogo carta={carta} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="badge self-start bg-surface-muted text-foreground shadow-none">
-          {carta.tipo === "Provocacao" ? "Provocação" : "Resposta"}
+        <span
+          className={`badge self-start shadow-none ${carta.tipo === "Global" ? "bg-reward text-on-reward" : "bg-surface-muted text-foreground"}`}
+        >
+          {nomeTipoCarta[carta.tipo]}
         </span>
         <p className="mt-2 text-sm">{carta.efeito}</p>
+        {carta.tipo === "Global" && (
+          <p className="mt-1 text-xs text-muted">Dura 7 dias.</p>
+        )}
         <div className="mt-auto pt-3">
           {comprar.isError && (
             <p role="alert" className="form-error mb-2">
@@ -146,6 +151,13 @@ export function LojaCartas() {
         titulo="Respostas"
         descricao="Use ao aceitar uma Provocação. A carta é gasta quando você a usa."
         cartas={catalogo.filter((c) => c.tipo === "Resposta")}
+        saldo={saldo}
+        maoCheia={maoCheia}
+      />
+      <SecaoLoja
+        titulo="Globais"
+        descricao="Valem para a galera toda: toque na carta da Mão para convocar o grupo. Cada pessoa da galera devolve uma parte do preço, cumprindo ou não."
+        cartas={catalogo.filter((c) => c.tipo === "Global")}
         saldo={saldo}
         maoCheia={maoCheia}
       />

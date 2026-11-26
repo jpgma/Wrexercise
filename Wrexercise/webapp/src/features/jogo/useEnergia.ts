@@ -17,6 +17,8 @@ export type DetalhamentoEnergia = {
   despertador: number;
   /** Metade do preço das cartas enviadas e não cumpridas (decisão 0087). */
   devolucoes: number;
+  /** As recompensas e as devoluções das Convocações (decisão 0091). */
+  convocacoes: number;
 };
 
 export type Energia = {

@@ -3,6 +3,7 @@ import { type CSSProperties, type ReactNode, useRef, useState } from "react";
 import { Link } from "react-router";
 import { CartaJogo } from "./CartaJogo";
 import { ComoJogar } from "./ComoJogar";
+import { ConvocarGalera } from "./ConvocarGalera";
 import { MesaJogadas } from "./MesaJogadas";
 import { getProximoPasso } from "./proximoPasso";
 import { FadigaExplicada, SaldoEnergia } from "./SaldoEnergia";
@@ -272,8 +273,13 @@ export function MaoJogo({
     !bloqueio &&
     recebe &&
     temRevanche(jogadas.data ?? [], alvo.usuarioId);
+  // A carta Global vale para o grupo, não para o colega em Foco: joga-se fora do Foco (decisão 0091).
+  // A FADIGA e os outros bloqueios aparecem na janela de convocar, que pergunta ao servidor.
   const jogavel = (c: CartaMao) =>
-    recebe && !bloqueio && c.tipo === "Provocacao";
+    c.tipo === "Global"
+      ? !alvo
+      : recebe && !bloqueio && c.tipo === "Provocacao";
+  const [convocando, setConvocando] = useState<CartaMao | null>(null);
   const total = mao.length + (comRival ? 1 : 0) + (mao.length < limite ? 1 : 0);
   // Fora do Foco o leque é mais fechado: a Mão está guardada, não em jogo.
   const abertura = alvo ? 4 : 2;
@@ -328,6 +334,10 @@ export function MaoJogo({
    * funde a ela; tocar numa das duas a tira do par.
    */
   const selecionar = (carta: CartaMao) => {
+    if (carta.tipo === "Global") {
+      onSelecao(null);
+      return setConvocando(carta);
+    }
     if (carta.id === escolhida?.id)
       return onSelecao(fundida ? { tipo: "carta", carta: fundida } : null);
     if (carta.id === fundida?.id && escolhida)
@@ -487,9 +497,11 @@ export function MaoJogo({
               selo={
                 carta.tipo === "Resposta"
                   ? "Resposta"
-                  : funde
-                    ? "Fundir"
-                    : undefined
+                  : carta.tipo === "Global"
+                    ? "Global"
+                    : funde
+                      ? "Fundir"
+                      : undefined
               }
               fusao={fusao}
               inclinacao={inclinacaoDe(i)}
@@ -521,6 +533,11 @@ export function MaoJogo({
         )}
       </ul>
       <MesaJogadas grupoId={grupoId} filtro={alvo?.usuarioId} />
+      <ConvocarGalera
+        grupoId={grupoId}
+        carta={convocando}
+        onClose={() => setConvocando(null)}
+      />
     </section>
   );
 }

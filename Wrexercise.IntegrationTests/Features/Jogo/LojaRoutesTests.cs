@@ -24,15 +24,16 @@ public sealed class LojaRoutesTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Loja_MostraProvocacoesERespostas()
+    public async Task Loja_MostraProvocacoesRespostasEGlobais()
     {
         var ana = await _host.CreateUsuarioAsync();
 
         var loja = await JogoTestes.GetLojaAsync(ana);
 
-        Assert.Equal(9, loja.Catalogo.Count);
+        Assert.Equal(10, loja.Catalogo.Count);
         Assert.Equal(5, loja.Catalogo.Count(c => c.Tipo == TipoCarta.Provocacao));
         Assert.Equal(4, loja.Catalogo.Count(c => c.Tipo == TipoCarta.Resposta));
+        Assert.Equal(1, loja.Catalogo.Count(c => c.Tipo == TipoCarta.Global));
         Assert.Equal(LimitesJogada.CartasNaMao, loja.LimiteMao);
         Assert.Empty(loja.Mao);
     }

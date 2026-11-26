@@ -20,7 +20,9 @@ export type Notificacao = {
     | "Torcida"
     | "TreinoLongo"
     | "TreinoAppConcluido"
-    | "CartaNaoCumprida";
+    | "CartaNaoCumprida"
+    /** Alguém jogou o TODO MUNDO no grupo; `situacao` traz o tipo de treino (decisão 0091). */
+    | "Convocacao";
   /** Nas notificações de Jogadas, vem `jogadaId` no lugar de `atividadeId`; no Rival e na Cutucada, nenhum dos dois. */
   atividadeId: string | null;
   jogadaId: string | null;

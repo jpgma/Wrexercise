@@ -10,6 +10,7 @@ export {
   useEmChegada,
 } from "./ChegadaCarta";
 export { ConviteJogo } from "./ConviteJogo";
+export { DetalheConvocacao } from "./DetalheConvocacao";
 export { EnergiaPerfil } from "./SaldoEnergia";
 export { LojaCartas } from "./LojaCartas";
 export { EditorAvatar } from "./EditorAvatar";
