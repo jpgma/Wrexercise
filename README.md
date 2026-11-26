@@ -32,6 +32,7 @@ Para testar localmente o mesmo que vai para produção (Native AOT, PostgreSQL e
 
 ```powershell
 .\run.bat         # constrói, migra e sobe em http://localhost
+.\run.bat --rebuild  # igual, mas reconstrói a imagem sem cache do Docker (também: rebuild)
 .\run.bat --tunnel  # igual, e publica em https://wx-dev.jpgmaraujo.com.br
 .\run.bat --tunnel-maquina  # igual, num túnel só desta máquina: https://wx-<nome da máquina>.jpgmaraujo.com.br
 .\run.bat logs    # acompanha os logs da aplicação
@@ -224,4 +225,4 @@ Com o banco sem nenhum usuário, o app mostra a tela de configuração inicial (
 
 ### Novos membros
 
-A primeira conta cria o primeiro grupo. Depois disso, o cadastro só funciona por convite: o Proprietário ou um Administrador gera um link de convite na tela do grupo, e quem o recebe cria a conta por ele. Cada link vale para uma pessoa, por 7 dias. Ver `docs/decisoes/0008-grupos-e-convites.md`.
+A primeira conta cria o primeiro grupo. Depois disso, o cadastro só funciona por convite: o Proprietário ou um Administrador gera um link de convite na tela do grupo, e quem o recebe cria a conta por ele. Cada grupo tem um link ativo, que vale por 7 dias e serve a quem o receber, até ser substituído ou revogado. Ver `docs/decisoes/0008-grupos-e-convites.md`.

@@ -105,7 +105,7 @@ internal static class CorrecaoDuracao
 
 /// <summary>
 /// ADR 0054: o autor apaga a própria atividade logo depois de registrá-la, para desfazer um registro em
-/// dobro ou com erro. Só enquanto ninguém a contestou: com Suspeito ou Rejeitar ela já está em revisão.
+/// dobro ou com erro, nos primeiros 15 minutos (ADR 0073).
 /// </summary>
 internal static class ExclusaoAtividade
 {

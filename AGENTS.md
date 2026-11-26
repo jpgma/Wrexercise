@@ -44,7 +44,7 @@ Rode `--full` ao mexer em SQL, migrações, `Program.cs`, `deploy/` ou dependên
 
 Use exatamente estas grafias:
 
-`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`, `EmAndamento`, `Torcida`, `Parceria`, `AoVivo`, `Marco`, `Percurso`, `Recorde`, `Janela`, `Devolucao`, `Revanche`.
+`Usuario`, `Sessao`, `Autenticacao`, `Cadastro`, `Redefinicao`, `Grupo`, `Membro`, `Papel`, `Proprietario`, `Administrador`, `Convite`, `Desafio`, `Participante`, `Meta`, `MetaPorTipo`, `Semana`, `Atividade`, `Evidencia`, `Comprovacao`, `Revisor`, `Revisao`, `Reacao`, `Comentario`, `Kudos`, `Suspeito`, `Rejeitar`, `Rejeicao`, `Progresso`, `Classificacao`, `Sequencia`, `Conquista`, `Feed`, `Notificacao`, `Jogo`, `Cena`, `Avatar`, `Energia`, `Loja`, `Carta`, `Provocacao`, `Resposta`, `Jogada`, `Mao`, `Mesa`, `Enfeite`, `Vitrine`, `Missao`, `Rival`, `ConfiguracaoInicial`, `Foco`, `Aviso`, `Foto`, `Video`, `Fadiga`, `Cutucada`, `Integracao`, `AppConectado`, `Rascunho`, `Correcao`, `Fusao`, `Chegada`, `Versao`, `Novidade`, `EmAndamento`, `Torcida`, `Parceria`, `AoVivo`, `Marco`, `Percurso`, `Recorde`, `Janela`, `Devolucao`, `Revanche`, `Prazo`.
 
 Treino ao vivo (ADR 0078): a pessoa começa o treino agora ("Começar treino") e termina depois ("Terminar treino" ou "Cancelar treino"). Enquanto isso, a atividade fica `EmAndamento`: não conta para nada, ninguém avalia, e o grupo vê o Avatar treinando na praça com a bolha "AO VIVO". O cronômetro fica em `/grupos/{id}/treino`. `Torcida`: um colega torce por quem treina ao vivo ("Torcer", uma vez a cada 10 minutos). `Parceria`: o bônus por treinar ao vivo junto com um colega ("Treinar junto"). `AoVivo`: o bônus do treino começado ao vivo. `Marco`: os 15, 30, 45, 60, 90, 120 e 180 minutos do cronômetro, quando o Avatar comemora. Cada tipo tem a sua animação, e na praça o Avatar usa o Enfeite do tipo que está no chão, dá voltas (Corrida, Caminhada, Ciclismo), reveza na barra (Calistenia) ou troca passes (Futebol, Vôlei) (ADR 0082). Na interface: "Começar agora", "Já treinei", "AO VIVO", "Manter a tela acesa".
 
@@ -101,7 +101,7 @@ Wrexercise/                 # aplicação: API e frontend
 Wrexercise.UnitTests/       # regras puras e testes de arquitetura
 Wrexercise.IntegrationTests/   # HTTP e SQL contra o PostgreSQL
 deploy/  scripts/  docs/
-pixel-art/                  # scripts Python que geram a arte do Jogo (avatar-base/, praca/, ambiente/, jpgma/, base-masculino/, seed-avatares/; ver docs/avatar-kit.md)
+pixel-art/                  # scripts Python que geram a arte do Jogo (avatar-base/, praca/, ambiente/, jpgma/, base-masculino/, seed-avatares/, cartas/, enfeites/, fadiga/, fusao/; ver docs/avatar-kit.md)
 ```
 
 Arte em pixel do Jogo: use a skill `.claude/skills/pixel-art-studio/` (ver `docs/avatar-kit.md`). Cada arte tem um `pixel-art/<slug>/build.py` versionado; nunca edite o PNG à mão. Arquivos `.aseprite`/`.ase` usam sempre o plugin `pixel-plugin` (configuração em `docs/avatar-kit.md` §6).
@@ -110,7 +110,7 @@ Especificações com Spec Kit: as skills `speckit-*` em `.claude/skills/` (`/spe
 
 Não recrie `src/`, `tests/` ou `web/`: projetos ficam na raiz e o frontend fica em `Wrexercise/webapp/`. Ver `docs/decisoes/0004-estrutura-do-repositorio.md`.
 
-Fatias planejadas, criadas apenas na fase correspondente de `docs/arquitetura.md` §18: `Autenticacao`, `Usuarios`, `Grupos`, `Convites`, `Desafios`, `Atividades`, `Reacoes`, `Progresso`, `Feed`, `Notificacoes`, `Jogo` (opcional, fases em `docs/gamificacao.md`).
+Fatias, criadas na fase correspondente de `docs/arquitetura.md` §18: `Autenticacao`, `Usuarios`, `Grupos`, `Convites`, `Desafios`, `Atividades`, `Reacoes`, `Progresso`, `Notificacoes`, `Integracoes`, `Jogo` (fases em `docs/gamificacao.md`) e `Health`. `Feed` não tem pasta própria: as listas de atividades ficam em `Atividades`.
 
 - Não crie pastas, arquivos ou dependências antes de precisar deles.
 - Uma fatia não acessa detalhes internos de outra. Para obter dados de outra fatia, faça uma consulta SQL explícita ou use um contrato pequeno e estável (ver `Wrexercise/AGENTS.md`). Um teste de arquitetura e uma regra de ESLint verificam isso.

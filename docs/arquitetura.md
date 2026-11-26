@@ -339,6 +339,10 @@ wrexercise/
 │
 ├── AGENTS.md                  # regras do repositório
 ├── Wrexercise.slnx
+├── Directory.Build.props      # propriedades comuns (TargetFramework, avisos como erro)
+├── Directory.Packages.props   # versões centralizadas dos pacotes NuGet
+├── global.json                # versão do SDK do .NET
+├── pixel-art/                 # scripts Python que geram a arte do Jogo
 │
 ├── Wrexercise/                # aplicação: API e frontend
 │   ├── Program.cs
@@ -351,7 +355,9 @@ wrexercise/
 │   │   ├── Errors/
 │   │   ├── Json/
 │   │   ├── Authentication/
-│   │   └── Files/
+│   │   ├── Files/
+│   │   ├── Push/
+│   │   └── StaticFiles/
 │   │
 │   ├── Features/
 │   │   ├── Health/
@@ -363,23 +369,35 @@ wrexercise/
 │   │   ├── Atividades/
 │   │   ├── Reacoes/
 │   │   ├── Progresso/
-│   │   └── Feed/
+│   │   ├── Notificacoes/
+│   │   ├── Integracoes/
+│   │   └── Jogo/
 │   │
 │   ├── webapp/                # código-fonte do frontend
 │   │   ├── public/
 │   │   ├── src/
 │   │   │   ├── components/
 │   │   │   ├── features/
-│   │   │   │   ├── autenticacao/
-│   │   │   │   ├── grupos/
-│   │   │   │   ├── desafios/
 │   │   │   │   ├── atividades/
-│   │   │   │   └── feed/
+│   │   │   │   ├── autenticacao/
+│   │   │   │   ├── convites/
+│   │   │   │   ├── desafios/
+│   │   │   │   ├── feed/
+│   │   │   │   ├── grupos/
+│   │   │   │   ├── integracoes/
+│   │   │   │   ├── jogo/
+│   │   │   │   ├── notificacoes/
+│   │   │   │   ├── novidades/
+│   │   │   │   ├── percurso/
+│   │   │   │   ├── progresso/
+│   │   │   │   ├── reacoes/
+│   │   │   │   └── usuarios/
 │   │   │   ├── pages/
 │   │   │   ├── navigation/
 │   │   │   ├── services/
 │   │   │   ├── styles/
 │   │   │   └── main.tsx
+│   │   ├── sw.js              # Service Worker, escrito à mão (ver §6.1)
 │   │   └── package.json
 │   │
 │   └── wwwroot/               # gerado a partir de webapp/, fora do git
@@ -390,8 +408,13 @@ wrexercise/
 ├── deploy/
 │   ├── compose.yaml
 │   ├── compose.dev.yaml
+│   ├── compose.tunnel.yaml
 │   ├── Caddyfile
-│   └── Dockerfile
+│   ├── Dockerfile
+│   ├── backup.sh
+│   ├── nuvem.sh
+│   ├── remote-termux.sh
+│   └── metricas.sql
 │
 ├── scripts/
 │   ├── verify.sh
@@ -410,6 +433,8 @@ wrexercise/
 ```
 
 A estrutura é descrita em `docs/decisoes/0004-estrutura-do-repositorio.md`.
+
+Não há fatia `Feed` no backend: o feed do grupo é a lista de atividades da fatia `Atividades` (`ListarAtividades`).
 
 As pastas de funcionalidades são criadas na fase correspondente (§18), não antecipadamente. A convenção de nomes está em `docs/decisoes/0002-convencao-de-nomes.md`.
 
@@ -443,6 +468,9 @@ Quando uma funcionalidade precisar de dados de outra, preferir uma consulta expl
 | TanStack Query | Estado remoto |
 | React Hook Form | Formulários |
 | Zod | Validação |
+| Lucide | Ícones, empacotados no bundle |
+| Fontsource | Fontes, empacotadas no bundle (subconjunto latino) |
+| Mediabunny | Conversão de vídeo no navegador (ADR 0058) |
 
 O frontend será uma SPA compilada e servida pelo próprio backend.
 
@@ -875,6 +903,10 @@ A classificação inicial deverá priorizar:
 1. Semanas com meta cumprida.
 2. Total de dias verificados (sessões).
 3. Sequência de semanas cumpridas.
+4. Tempo verificado (soma das durações).
+5. Quantidade de atividades verificadas.
+
+Quem empata em todos os critérios divide a posição; o nome só ordena a lista dentro do empate. Ver `decisoes/0090-classificacao-clara-e-justa.md`, que revisa a 0013.
 
 Evitar sistemas artificiais de pontuação no MVP.
 
@@ -900,9 +932,31 @@ atividades
 evidencias_atividade
 revisores_atividade
 reacoes_atividade
+comentarios                (antes comentarios_revisao, migração 020)
+torcidas
 historico_revisao
 correcoes_duracao
+avisos_atividade
+percursos
+pontos_percurso
+metas_tipo_desafio
+
+redefinicoes_senha
+notificacoes
+push_subscriptions
+
+cartas
+jogadas
+avatares
+rivais
+cutucadas
+
+codigos_integracao
+apps_conectados
+rascunhos_atividade
 ```
+
+As tabelas são criadas pelas migrações de `Infrastructure/Database/Migrations/`. A lista acima cita as principais; `participantes_desafio` foi removida pela migração 009.
 
 ### 9.2. Restrições importantes
 
@@ -934,12 +988,14 @@ Exemplo:
 ```text
 Infrastructure/Database/Migrations/
 ├── 001-create-usuarios.sql
-├── 002-create-grupos.sql
-├── 003-create-desafios.sql
-├── 004-create-atividades.sql
-├── 005-create-reacoes.sql
-└── 006-create-sessoes.sql
+├── 002-create-sessoes-autenticacao.sql
+├── 003-create-grupos.sql
+├── 004-create-convites-grupo.sql
+├── 005-create-desafios.sql
+└── 006-create-atividades.sql
 ```
+
+A lista completa está na pasta.
 
 O executor é descrito em `docs/decisoes/0001-migracoes-sql.md`.
 
@@ -963,7 +1019,10 @@ POST /api/autenticacao/sair
 GET  /api/autenticacao/sessao
 POST /api/autenticacao/registrar
 POST /api/autenticacao/redefinir-senha
+GET  /api/autenticacao/configuracao-inicial
+POST /api/autenticacao/configuracao-inicial
 PUT  /api/usuarios/eu
+PUT  /api/usuarios/eu/modo-inicio
 POST /api/usuarios/eu/senha
 ```
 
@@ -1010,12 +1069,21 @@ Permissões e regras em `docs/decisoes/0009-desafios.md` e `docs/decisoes/0016-u
 GET  /api/grupos/{id}/atividades
 POST /api/grupos/{id}/atividades
 GET  /api/grupos/{id}/atividades/para-avaliar
+POST /api/grupos/{id}/atividades/em-andamento
 GET  /api/atividades/recentes
+GET  /api/atividades/em-andamento
 GET  /api/atividades/{id}
+DELETE /api/atividades/{id}
+PUT  /api/atividades/{id}/duracao
+POST /api/atividades/{id}/terminar
+GET  /api/atividades/{id}/mapa/{dx}/{dy}
 POST /api/atividades/{id}/evidencias
 GET  /api/atividades/{id}/evidencias/{evidenciaId}
 GET  /api/atividades/{id}/evidencias/{evidenciaId}/miniatura
+GET  /api/atividades/{id}/evidencias/{evidenciaId}/mapa/{dx}/{dy}
 ```
+
+O treino ao vivo usa `POST .../em-andamento` para começar, `POST .../terminar` para terminar e `DELETE /api/atividades/{id}` para cancelar (ADR 0078). `PUT .../duracao` é a Correção (ADR 0068).
 
 A lista do grupo aceita `?filtro=Minhas|Pendentes|Verificadas|EmRevisao` e `?autorId=`, aplicados no servidor para não quebrar a paginação por cursor. `para-avaliar` devolve o que ainda espera a reação de quem consulta, dentro da janela de 48 horas. Enquanto essa fila não estiver vazia, o `POST` recusa com `409 AVALIACOES_PENDENTES` (`docs/decisoes/0041-avaliar-antes-de-registrar.md`); as duas rotas usam o mesmo filtro SQL (`ConsultasAtividade.FiltroParaAvaliar`). A criação usa somente JSON; o upload de evidências usa `multipart/form-data` em rota separada. Depois do prazo da verificação, o autor ainda anexa fotos e vídeos, que entram como "Adicionada depois" e não mudam a verificação (`docs/decisoes/0083-fotos-depois-e-comentarios-com-midia.md`). Permissões e regras em `docs/decisoes/0011-atividades.md`. No treino ao vivo de Corrida, Caminhada e Ciclismo, o Percurso tem rotas próprias: `POST /api/atividades/{id}/percurso/pontos` (lotes de pontos do GPS), `GET /api/atividades/{id}/percurso`, os tiles em `/percurso/mapa/{z}/{x}/{y}` e a imagem em `POST /percurso/imagem` (`docs/decisoes/0084-percurso-gps-no-treino-ao-vivo.md`). No treino começado pelo Movr, quem grava é o Movr, que manda os pontos por `PUT /api/integracoes/treinos/{externalId}/percurso/pontos`; os números vêm do algoritmo v1 (`MetricasPercurso.cs`), o mesmo do Movr (`docs/decisoes/0085-percurso-enviado-pelo-movr.md`).
 
@@ -1048,6 +1116,7 @@ Regras em `docs/decisoes/0020-notificacoes-no-aplicativo.md`, `0048-enxugamento-
 PUT  /api/atividades/{id}/reacao
 GET  /api/atividades/{id}/reacoes
 POST /api/atividades/{id}/revisao
+POST /api/atividades/{id}/torcida
 GET  /api/atividades/{id}/comentarios
 POST /api/atividades/{id}/comentarios
 POST /api/atividades/{id}/comentarios/midia
@@ -1063,6 +1132,65 @@ Não permitir que o autor reaja à própria atividade.
 
 Permissões e regras em `docs/decisoes/0012-verificacao-comunitaria.md`.
 
+### 10.6. Jogo
+
+```http
+GET    /api/grupos/{id}/cena
+GET    /api/grupos/{id}/jogadas
+POST   /api/grupos/{id}/jogadas
+GET    /api/grupos/{id}/jogadas/previa
+POST   /api/grupos/{id}/jogadas/vistas
+GET    /api/grupos/{id}/rivais
+POST   /api/grupos/{id}/rivais
+POST   /api/grupos/{id}/rivais/vistos
+POST   /api/grupos/{id}/cutucadas
+DELETE /api/grupos/{id}/membros/{usuarioId}/avatar
+GET    /api/jogo/energia
+GET    /api/jogo/loja
+POST   /api/jogo/cartas
+GET    /api/jogo/avatares
+GET    /api/jogo/avatar
+PUT    /api/jogo/avatar/vitrine
+POST   /api/jogo/enfeites/vistos
+PUT    /api/jogo/avatar/folha
+DELETE /api/jogo/avatar/folha
+GET    /api/avatares/{arquivo}
+GET    /api/jogadas/pendentes
+PUT    /api/jogadas/{id}/resposta
+```
+
+O modo Jogo é opcional (§18, fase 9). A folha de avatar enviada é um PNG validado no servidor (`Infrastructure/Files/ValidacaoFolhaAvatar.cs`). Ver `docs/gamificacao.md`.
+
+### 10.7. Integrações
+
+Rotas com a sessão do navegador:
+
+```http
+POST   /api/integracoes/autorizacoes
+GET    /api/rascunhos/{id}
+GET    /api/rascunhos/{id}/imagem
+GET    /api/apps-conectados
+DELETE /api/apps-conectados/{id}
+```
+
+Rotas do app conectado, sem cookie, com token próprio (`RequireTokenApp`):
+
+```http
+POST   /api/integracoes/token
+DELETE /api/integracoes/token
+GET    /api/integracoes/rascunhos/{externalId}
+PUT    /api/integracoes/rascunhos/{externalId}
+GET    /api/integracoes/grupos
+PUT    /api/integracoes/treinos/{externalId}
+GET    /api/integracoes/treinos/{externalId}
+DELETE /api/integracoes/treinos/{externalId}
+PUT    /api/integracoes/treinos/{externalId}/fim
+PUT    /api/integracoes/treinos/{externalId}/percurso/pontos
+PUT    /api/integracoes/treinos/{externalId}/resumo
+```
+
+Quem posta o rascunho é sempre a pessoa, no formulário. O app só prepara o rascunho e começa o treino ao vivo. Ver `docs/decisoes/0065-integracao-movr-rascunhos.md` e `docs/decisoes/0081-treino-ao-vivo-pelo-movr.md`.
+
 ---
 
 ## 11. Evidências e arquivos
@@ -1077,6 +1205,7 @@ Estrutura sugerida:
 /dados/
 ├── postgres/
 ├── avatares/        # folhas de avatar importadas (nome aleatório .png); limpeza diária dos arquivos sem dono
+├── mapas/           # cache dos tiles do mapa do Percurso (ADR 0080); fora do backup, refaz-se sozinho
 └── evidencias/
     ├── 2026/
     │   ├── 11/
@@ -1087,7 +1216,7 @@ Requisitos:
 
 - Limite de 5 MB por imagem e 25 MB por vídeo (ADR 0058).
 - Validar extensão e conteúdo real.
-- Aceitar JPEG, PNG e WebP, e vídeos MP4 com H.264 e AAC de 2 a 61 segundos. O servidor lê as caixas do MP4 sem biblioteca (`Infrastructure/Files/LeitorMp4.cs`) e nunca decodifica a mídia.
+- Aceitar JPEG, PNG e WebP, e vídeos MP4 com H.264 e AAC de 2 a 61 segundos. Um arquivo MOV passa pela mesma detecção, pela caixa `ftyp`. O servidor lê as caixas do MP4 sem biblioteca (`Infrastructure/Files/LeitorMp4.cs`) e nunca decodifica a mídia.
 - Gerar nomes aleatórios.
 - Não utilizar nomes enviados pelo cliente como caminhos.
 - Não expor diretórios de armazenamento diretamente.
@@ -1296,7 +1425,7 @@ volumes:
 
 As versões das imagens deverão ser fixadas em versões ou digests testados antes da implantação.
 
-O exemplo é uma configuração inicial. O arquivo em uso é `deploy/compose.yaml`.
+O exemplo é uma configuração inicial. O arquivo em uso é `deploy/compose.yaml`, que também define o serviço `backup` (sob demanda, perfil `backup`, ver `deploy/backup.sh`) e o volume `mapas`. A publicação pelo túnel da Cloudflare usa `deploy/compose.tunnel.yaml`, sobre o `compose.yaml`.
 
 A senha do banco e os demais segredos deverão estar fora do repositório.
 
@@ -1330,7 +1459,7 @@ Testes de integração para:
 
 ### 17.2. Frontend
 
-Testes para:
+Hoje o frontend não tem testes automatizados. A verificação usa Prettier, ESLint, `tsc` e o build (`scripts/verify.sh`). Os itens abaixo são o alvo:
 
 - Login persistente.
 - Navegação.

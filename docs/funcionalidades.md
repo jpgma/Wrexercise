@@ -94,7 +94,9 @@ The Settings page ("Configurações") has these functions:
 - Change the password. The user must type the current password. The system then closes all the other login sessions of the user.
 - Turn on or turn off the notifications on this device (see 11.1).
 - Install the application (see 13.1).
-- Log out.
+- Disconnect a connected app, for example Movr (see 7.1.1).
+- Open the list of what is new in each version (see 13.4).
+- Log out. The application asks for confirmation first.
 
 The user cannot change the e-mail.
 
@@ -311,7 +313,7 @@ The user cannot change the e-mail.
   - If the recipient meets only one goal, the play is not complete. A fusion that is `Recusada`, `Expirada` or `Falhou` gives fatigue to the recipient. The sender loses the two cards for all results (ADR 0074). If the play is `Falhou` or `Expirada`, the sender gets half of the sum back (ADR 0087). If the play is `Recusada`, the sender gets all of the sum back (ADR 0089).
   - Answer cards: `PrazoExtra` adds 24 hours. `Aposta` doubles the sum of the prices but not the 20% (165 EN in the example). `DesafioDuplo` sends the two cards and the two goals back to the sender. `MudancaDePlanos` is not permitted (`CARTA_INVALIDA`, 400).
 - Deadline, in the time zone of the group: 48 hours after the play. `FimDeSemana`: the end of the next Sunday (a play on a Sunday ends on the next Sunday). `AntesDas8`: 08:00 on the second day after the play.
-- The recipient answers with `PUT /api/jogadas/{id}/resposta` and `{ "resposta": "Aceita" }` or `{ "resposta": "Recusada" }`. The answer is free, but a refusal gives fatigue to the recipient (see 3.3.3). After a refusal, the app shows "FADIGA! Seus próximos 3 treinos renderão metade da EN.". If the user already has fatigue, it shows that nothing changes. Only the recipient can answer, and only before the deadline. Errors: `JOGADA_NAO_ENCONTRADA` (404), `JOGADA_ENCERRADA` (409). The sender gets the notification `CartaAceita` or `CartaRecusada`. The answer also sets `vista_em` (the card is seen) and marks the notification `CartaRecebida` of this card as read. If an activity already meets the goal and is `Verificada`, the acceptance completes the play at once, and the sender gets the notification `JogadaConcluida`.
+- The recipient answers with `PUT /api/jogadas/{id}/resposta` and `{ "resposta": "Aceita" }` or `{ "resposta": "Recusada" }`. The answer is free, but a refusal gives fatigue to the recipient (see 3.3.3). After a refusal, the app shows "FADIGA! Seus próximos 3 treinos renderão metade da EN, e você fica sem jogar Provocações até recarregar.". If the user already has fatigue, it shows "Carta recusada. FADIGA: agora são N treinos com −50% EN." instead. Only the recipient can answer, and only before the deadline. Errors: `JOGADA_NAO_ENCONTRADA` (404), `JOGADA_ENCERRADA` (409). The sender gets the notification `CartaAceita` or `CartaRecusada`. The answer also sets `vista_em` (the card is seen) and marks the notification `CartaRecebida` of this card as read. If an activity already meets the goal and is `Verificada`, the acceptance completes the play at once, and the sender gets the notification `JogadaConcluida`.
 - `GET /api/jogadas/pendentes` returns the received plays of the current user that wait for an answer, in all groups where the user is a member, the oldest first: `{ "jogadas": [{ "id": "…", "grupoId": "…", "enviadaEm": "…", "expiraEm": "…" }] }`. A user without a session gets 401.
 - To accept with an answer card, the recipient adds `"cartaRespostaId": "…"`. With `MudancaDePlanos`, the recipient also adds `"objetivo": "FimDeSemana"`. Only one answer card for each play. A refusal cannot use a card (`DADOS_INVALIDOS`, 400). Errors: `CARTA_NAO_ENCONTRADA` (404, the card is not in the hand of the recipient or is spent), `CARTA_INVALIDA` (400, the card is not an answer card, or `objetivo` without `MudancaDePlanos`), `OBJETIVO_INVALIDO` (400), `SEM_DESAFIO_ATIVO` (409), `DESAFIO_DUPLO_INVALIDO` (409), `DESTINATARIO_FORA_DO_JOGO` (409, the sender is not in the mode `Jogo`), `REMETENTE_FORA_DO_GRUPO` (409).
 - `MudancaDePlanos` changes the goal only in the same price range: `Mais10Min`, `Variedade` and `FimDeSemana` are equivalent; `Mais20Min` and `AntesDas8` are equivalent. `Mais10Min` and `Mais20Min` need an active challenge. The target duration and the type to avoid of the new goal are fixed when the recipient accepts. For `Variedade`, the reference activity is the last activity of the recipient in the group that is not `Rejeitada` or `Anulada`. The new deadline is the later of the current deadline and the deadline of the new goal from the time of the play. The rewards use the price of the challenge card.
@@ -532,7 +534,7 @@ The system calculates the status from the dates. No person and no scheduled task
 
 ### 6.4. Featured challenge
 
-The group pages and the home page show one challenge. It is the active challenge. If there is no active challenge, it is the next scheduled challenge.
+The group pages and the home page show one challenge. It is the active challenge. If there is no active challenge, it is the next scheduled challenge. If there is no active or scheduled challenge, it is the most recent ended challenge. A cancelled challenge is shown only when the group has no other challenge.
 
 ## 7. Activities
 
@@ -635,7 +637,7 @@ A member can start a workout now and finish it later (ADR 0078). The record of a
 In a live workout of the types `Corrida`, `Caminhada` and `Ciclismo`, the application records the GPS route (ADR 0084). The route does not count for progress, ranking, Energy or cards.
 
 - Start. With "Começar agora" and one of these types, the checkbox is "Gravar o percurso e mostrar ao grupo", with the text "Mapa, distância e ritmo. O grupo não vê os primeiros e os últimos 200 m. Desmarcado, o GPS fica desligado." The checkbox is selected by default. Then "Começar treino" shows "Ligando o GPS…", asks for the permission, and sends `{ "tipo", "gravarPercurso": true }` without a position. The server creates the route only for these types. Movr can also ask for a route when it starts the workout (7.1.2, ADR 0085). With a route, the server does not keep the start location of 7.1.2.
-- Record. Only the device that started the workout records, with the GPS at high accuracy. Another device shows "Gravar neste aparelho". In a workout of Movr (`app` is `Movr`), Movr records the route (with the watch GPS when it has one) and sends the points each 30 seconds and before the end. No browser records: the timer page shows "O Movr está gravando o percurso deste treino.", the distance from the server, and no "Gravar neste aparelho" and no "Modo bolso". The device does not keep points with an accuracy worse than 30 m, and keeps a point each 3 seconds or each 5 m. It keeps the points in the device (IndexedDB) until the server receives them. Each 30 seconds, and when the page shows again, it sends them: `POST /api/atividades/{id}/percurso/pontos` with `{ "pontos": [{ "seq", "em", "latitude", "longitude", "precisao", "altitude", "segmento" }] }`, 1 to 500 points. The response has `ultimoSeq`, `distanciaMetros` and `totalPontos`. The same batch again does not add points. The server ignores points that are not valid (accuracy worse than 30 m, 0,0, a time more than 60 seconds before the start or after now). Only the author can send (`403 ACESSO_NEGADO`), only while the workout is `EmAndamento` (`409 TREINO_NAO_EM_ANDAMENTO`), and only with a route (`404 PERCURSO_NAO_ENCONTRADO`). A route has a maximum of 20 000 points (`409 PERCURSO_CHEIO`). A maximum of 20 batches for each minute.
+- Record. Only the device that started the workout records, with the GPS at high accuracy. Another device shows "Gravar neste aparelho". In a workout of Movr (`app` is `Movr`), Movr records the route (with the watch GPS when it has one) and sends the points each 30 seconds and before the end. No browser records: the timer page shows "O Movr está gravando o percurso deste treino.", the distance from the server, and no "Gravar neste aparelho" and no "Modo bolso". The device does not keep points with an accuracy worse than 30 m, and keeps a point each 3 seconds or each 5 m. It keeps the points in the device (IndexedDB) until the server receives them. Each 30 seconds, and when the page shows again, it sends them: `POST /api/atividades/{id}/percurso/pontos` with `{ "pontos": [{ "seq", "em", "latitude", "longitude", "precisao", "altitude", "segmento" }] }`, 1 to 500 points. The response has `ultimoSeq`, `distanciaMetros` and `totalPontos`. The same batch again does not add points. The server ignores points that are not valid (accuracy worse than 30 m, 0,0, a time more than 60 seconds before the start or more than 60 seconds after now). Only the author can send (`403 ACESSO_NEGADO`), only while the workout is `EmAndamento` (`409 TREINO_NAO_EM_ANDAMENTO`), and only with a route (`404 PERCURSO_NAO_ENCONTRADO`). A route has a maximum of 20 000 points (`409 PERCURSO_CHEIO`). A maximum of 20 batches for each minute.
 - A browser does not give the GPS position when the screen is off or the app is in the background. Thus, each return to the page starts a new segment. The gap between two segments shows as a dashed line.
 - Drawing (server, from the raw points). The map ignores inaccurate points, points out of the period of the workout, a time that goes back, and jumps that are not possible for the type (6 m/s for `Caminhada`, 10 m/s for `Corrida`, 25 m/s for `Ciclismo`). Three correct points in sequence after a jump start a new segment. A gap of more than 30 seconds starts a new segment.
 - Numbers (server, from the raw points in the period of the workout, in the order of `seq`). The route algorithm v1 is the same as in Movr (ADR 0085), and the browser uses a copy for the live estimate:
@@ -674,7 +676,7 @@ In a live workout of the types `Corrida`, `Caminhada` and `Ciclismo`, the applic
   - The browser sends the field `print=true`. The server ignores it on a video.
 - The browser makes each image smaller before it sends it: a maximum of 1600 pixels on the longest side, JPEG quality 0.82.
 - The browser also makes a thumbnail: 240 pixels, JPEG quality 0.6. The browser removes the image metadata, for example the location, from the file that it sends.
-- The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original file.
+- The browser prepares each image when the user selects it. If the browser cannot process an image, it does not send it. The form shows "Não foi possível processar uma das fotos. Tente outra imagem." The browser never sends the original image file.
 - Before it removes the metadata, the browser reads these data from the original file and sends them in separate fields (see 7.5):
   - The date and time when the photo was taken (EXIF `DateTimeOriginal`). If there is no EXIF date, the browser sends the date of the file, with the origin `Arquivo`. A photo from the in-app camera has the origin `Camera`.
   - If the file name is the name of a screenshot with a date and a time, the browser sends that date with the origin `Print`, before the EXIF date. Examples: `Screenshot_20261114-083012.png`, `Screenshot_20261114_083012_Strava.jpg`, `Screenshot_2026-11-14-08-30-12-345_com.strava.jpg`, `Captura de Tela 2026-11-14 às 08.30.12.png`. The time is the time of the device. iPhone screenshots do not have the date in the name.
@@ -910,7 +912,7 @@ Members that are equal in all 5 criteria have the same position. The next positi
 The application does not use points.
 
 - Only verified activities change the ranking. An activity counts for the week of its start date, also when the verification comes after the end of that week. The current week counts as a completed week when the user completes the goal.
-- Each item shows the position, the portrait, the first name, the number of completed weeks, the number of verified days and the streak (🔥, from 2 weeks). A tap on an item opens the page of the member.
+- Each item shows the position, the portrait, the first name, the number of completed weeks, the number of verified days and the streak (a flame icon, from 2 weeks). A tap on an item opens the page of the member.
 - Each item has `semanasDisputadas`: the number of weeks, up to the current week, in which the member counts (see 9.1 and the rule for a late member). When a member has fewer weeks than the member with the most weeks, the item shows "X de Y semanas" ("2 de 3 semanas"). The weeks before the first full week of the member count as not completed.
 - Below the name, a short text tells why the member is above the next member. The text uses the first criterion that is different: "1 semana à frente de Bia", "Empate em semanas, 3 dias a mais que você", "Empate em semanas e dias, sequência maior que Caio", "Empate em semanas, dias e sequência, 1h 20min a mais de treino que Bia" or "Empate até no tempo, 2 atividades a mais que Bia". When the two members have the same position, the text is "Empate em tudo com Duda: mesma posição". The last item has no text. The item does not show the total time or the number of activities.
 - Below the ranking, a closed section "Como funciona a classificação" shows the 5 criteria in order, an example, and these rules: days above the goal count, an activity verified late counts for its week, the current week counts when the goal is complete, the streak loses the current week only when the week ends without the goal, a late member starts at the first full week, and a full tie gives the same position. The section shows also when the ranking is empty.
@@ -932,9 +934,11 @@ The profile shows the data of the current user in all his or her groups:
 - Total of verified activities.
 - Total time.
 - Best streak.
-- Chart of the last 8 weeks, from Monday to Sunday. The current week comes from the time zone of the groups of the user. If the groups have different time zones, the first time zone that starts a new week is used. The chart does not show a goal line, because each group can have a different goal.
+- The date when the user joined Wrexercise: "No Wrexercise desde".
+- Chart of the last 8 weeks, from Monday to Sunday. The current week comes from the time zone of the groups of the user. If the groups have different time zones, the first time zone that starts a new week is used. The chart does not show a goal line, because each group can have a different goal. A lighter part of each bar shows the registered activities that are not verified yet.
+- In the mode `Jogo`, the Energia of the user (see 3.3.3).
 - Achievements.
-- List of groups.
+- List of groups, with the button to create a group and the invitation form.
 
 ### 10.2. Member page
 
@@ -977,7 +981,7 @@ The system makes a notification for these events:
 | A member records an activity. | The reviewers. | `NovaAtividade` |
 | A reviewer gives his or her first reaction to an activity. A changed reaction does not make a new notification. | The author. | `Reacao` |
 | A member writes a comment. | The author and the persons who wrote comments, but not the writer. | `Comentario` |
-| The activity becomes `Rejeitada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
+| The activity becomes `Rejeitada`, `Anulada` or `EmRevisao`. | The author. | `SituacaoAlterada` |
 | The activity becomes `EmRevisao`. | The administrators, but not the author. | `Disputa` |
 | A member plays a card to the user. | The recipient. | `CartaRecebida` |
 | The recipient accepts the card. | The sender. | `CartaAceita` |
@@ -1025,16 +1029,20 @@ The system makes a notification for these events:
 
 | Page | Path | Content |
 |---|---|---|
+| First setup | `/configuracao-inicial` | Account of the first user, when the application has no user. See 3.1.1. |
 | Login | `/entrar` | E-mail and password. |
 | Create account | `/criar-conta` | Account data and invitation link. |
 | Invitation | `/convite#token` | Preview of the group and "Aceitar convite". |
 | Reset password | `/redefinir-senha#token` | New password. |
 | Root | `/` | Opens the home page of the first group. If the user has no group, it shows the options to create a group or to use an invitation. |
 | Home ("Início") | `/grupos/:id/inicio` | Greeting, bell, weekly progress ring, days of the week, message about activities to examine, recent activities. In the mode `Jogo`: segmented ring around the avatar, header text that changes between greeting and progress, scene. |
-| Group ("Grupo") | `/grupos/:id` | Group goal for the week, progress of each member, disputes (administrators), members, feed, "Sair do grupo". |
+| Group ("Grupo") | `/grupos/:id` | Challenge card with the rules, ranking ("Classificação"), progress of each member, disputes (administrators), members, feed, "Sair do grupo". |
 | Activities | `/grupos/:id/atividades` | Group feed with filters. |
 | Record activity | `/grupos/:id/atividades/nova` | Activity form. |
 | Activity | `/atividades/:id` | Details, evidence, reactions, administrative review, comments. |
+| Import draft | `/importar/:id` | Form to post a draft of a connected app. See 7.1.1. |
+| Connect Movr | `/integracoes/movr/autorizar` | Consent screen of a connected app. See 7.1.1. |
+| Live workout | `/grupos/:id/treino` | Timer of the live workout and its route. See 7.1.2. |
 | Review | `/grupos/:id/revisar/:atividadeId` | One activity to examine and a link to the next. |
 | Member | `/grupos/:id/membros/:usuarioId` | Member page and the administration functions. |
 | Invite | `/grupos/:id/convidar` | Invitation link. |
@@ -1042,6 +1050,8 @@ The system makes a notification for these events:
 | Challenge | `/desafios/:id` | Goal, period, weekly progress, ranking, history, edit, cancel. |
 | Create group | `/grupos/novo` | Group form. |
 | Profile | `/perfil` | See 10.1. |
+| Avatar | `/perfil/avatar` | Change the sprite sheet and the showcase. See 3.3.5 and 3.3.6. |
+| What's new | `/perfil/novidades` | All versions and their changes. See 13.4. |
 | Settings | `/perfil/configuracoes` | See 3.3. |
 | Notifications | `/notificacoes` | See 11. |
 | Shop ("Loja") | `/jogo/loja` | See 3.3.4. |
@@ -1073,7 +1083,7 @@ The system makes a notification for these events:
 
 ### 13.2. Offline use
 
-- The service worker keeps only the files of the application. It does not keep data from the API, images or thumbnails.
+- The service worker keeps only the public files of the application, such as the code and the art of the `Jogo`. It does not keep data from the API, evidence or thumbnails.
 - Without a connection, the application shows "Você está sem conexão" on all pages.
 - Without a connection, the user can open only the pages that he or she opened before in the same version.
 - Without a connection, write operations fail immediately. The application does not keep them for later.
@@ -1114,7 +1124,7 @@ These functions are for the operator. They are not in the interface.
 - `deploy/remote-termux.sh restore [AAAAMMDD-HHMMSS]` stops the application and puts back the database, the avatars and the evidence files from Google Drive. Without a date, it uses the newest backup.
 - `run.bat testar-restauracao [AAAAMMDD-HHMMSS]` tests the Google Drive backup on Windows. It does not change the phone. It downloads the daily file (the newest one, or the one of the date) and the evidence files. It puts them back in a separate, empty Docker project (`wrexercise-restauracao`) with only `db` and `app`, and applies the migrations of the current code. Then the `backup` service (`deploy/backup.sh verificar`) makes sure that `/ready` answers, shows the number of users, groups, challenges, activities, reactions, evidence files and avatars, and makes sure that each evidence file, thumbnail and avatar in the database is on the disk. It also compares the SHA-256 of each evidence file with the value in the database. At the end, it deletes the decrypted data. If a step fails, it keeps the data in `%LOCALAPPDATA%\Wrexercise\restauracao` and shows how to delete it: `run.bat testar-restauracao limpar`. It uses the `rclone` and the `rclone.conf` of `run.bat configurar-backup`. `WX_REMOTO` replaces the remote `wx-cripto`, as in `deploy/nuvem.sh`.
 - `run.bat` starts the application on Windows. `run.bat --tunnel` makes the application available on the internet at `wx-dev.jpgmaraujo.com.br` through the Cloudflare tunnel `wx-dev`. This is for tests only. `run.bat --tunnel-maquina` does the same through a tunnel for this computer only, at `wx-<computer name>.jpgmaraujo.com.br`. Use it when a different computer also uses `wx-dev`: two connectors on one tunnel divide the requests between the two computers.
-- `run.bat --ssh` puts the application on an Android phone through SSH. It asks for the host, the port (8022 by default), the Termux user name from `whoami` and the SSH key. It saves the answers in `%LOCALAPPDATA%\Wrexercise\ssh`. The phone runs the database, the application and its own Cloudflare tunnel as native Termux processes, with no `proxy`, no Docker and no virtual machine. Open sign-up stays off. The phone starts the processes again after a restart. The operator needs an SSH key without a password and `sshd` running in Termux. Termux is the only target. The Galaxy A14 is the production environment. It serves `https://wx.jpgmaraujo.com.br` through the Cloudflare tunnel `wx`.
+- `run.bat --ssh` puts the application on an Android phone through SSH. It asks for the host, the port (8022 by default), the Termux user name from `whoami` and the SSH key. It saves the answers in `%LOCALAPPDATA%\jpgma\a14.env`. `stats.bat`, `metricas.bat` and `erros.bat` use the same file. The phone runs the database, the application and its own Cloudflare tunnel as native Termux processes, with no `proxy`, no Docker and no virtual machine. Open sign-up stays off. The phone starts the processes again after a restart. The operator needs an SSH key without a password and `sshd` running in Termux. Termux is the only target. The Galaxy A14 is the production environment. It serves `https://wx.jpgmaraujo.com.br` through the Cloudflare tunnel `wx`.
   - It reads the application version from `versoes.json` and writes the version and the image tag to `app/versao.txt` on the phone (for example, `1.0.0 wrexercise:fb014a1-arm64`). The daily backup keeps this file.
   - After a successful deployment from a commit with no local changes, it makes the git tag `vX.Y.Z` on that commit and sends it to `origin`. It does this only if the tag does not exist. If this step fails, the deployment stays and `run.bat` shows a warning.
 - `run.bat configurar-backup` (or `--configurar-backup`) sets up all of the backup to Google Drive. It asks questions and then:
@@ -1141,13 +1151,13 @@ These functions are for the operator. They are not in the interface.
 - The application does not load fonts, icons or code from external servers.
 - An error message never shows internal details. An internal error (`500 ERRO_INTERNO`) has `referencia`: 6 random letters and numbers. The application shows "Erro interno do servidor. Código: 7F3K2Q". The server log has the same code, and `erros.bat` finds it (see `docs/decisoes/0056-erros-recentes.md`).
 - When the server refuses an evidence file, it writes one `Warning` line in the log, category `Wrexercise.EvidenciaRecusada` (ADR 0073). The line has the error code, the activity, the internal reason, the size and the content type. For a video, the reason has the codecs, the dimensions and the duration. The line never has the file name, the file content or the location.
-- `erros.bat` shows the most recent `Warning`, `Error` and `Critical` lines. It reads the current log and the log files in the backups that are on the phone, because the daily backup empties the log.
+- `erros.bat` shows the 10 most recent `Warning`, `Error` and `Critical` lines. It reads the current log and the log files in the backups that are on the phone, because the daily backup empties the log.
 
 ## 16. Features that the application does not have
 
 These features are not in the application. Some are out of scope in `docs/arquitetura.md` §19.
 
-- Edit the type, the start or the description of an activity. The author cannot edit the duration (an administrator can, see 7.7). Edit an evidence or a comment. Delete a comment. Delete an activity after 15 minutes or after a negative reaction.
+- Edit the type, the start or the description of an activity. The author cannot edit the duration (an administrator can, see 7.7). Edit an evidence or a comment. Delete a comment. Delete an activity after 15 minutes, or an activity that is `Verificada`.
 - Edit the goal or the dates of a challenge.
 - Change the name or the time zone of a group. Delete a group.
 - Change the e-mail of an account. Delete an account.

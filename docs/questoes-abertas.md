@@ -57,7 +57,7 @@ Ter uma VM funcional com Docker Compose, HTTPS e armazenamento persistente.
 
 ## Q002 — Como organizar os backups?
 
-**Status:** DECIDIDA — ver `decisoes/0022-backups.md`. `pg_dump` e `tar` diários em `BACKUP_DIR`, com 7 dias de retenção; a cópia externa é feita por pasta sincronizada.
+**Status:** DECIDIDA — ver `decisoes/0022-backups.md` e `decisoes/0046-backup-no-google-drive.md`. `pg_dump` e `tar` diários em `BACKUP_DIR`, com 7 dias de retenção; a cópia externa vai todo dia para o Google Drive (0046), sem depender de pasta sincronizada.
 
 Investigar alternativas para:
 
@@ -255,7 +255,7 @@ Manter a atividade independente do desafio e calcular sua elegibilidade separada
 
 ## Q011 — O que acontece quando alguém entra ou sai de um grupo?
 
-**Status:** DECIDIDA — ver `decisoes/0008-grupos-e-convites.md`. A participação em desafios está em `decisoes/0009-desafios.md`. O efeito sobre revisões e reações segue os princípios registrados na decisão 0008 e será detalhado na Fase 6. Participação revista em `decisoes/0016-um-desafio-por-vez.md`: automática para todo membro ativo.
+**Status:** DECIDIDA — ver `decisoes/0008-grupos-e-convites.md`. A participação em desafios está em `decisoes/0009-desafios.md`. O efeito sobre revisões e reações segue os princípios registrados na decisão 0008; a Fase 6 já implementou as reações (0012 e 0015). Participação revista em `decisoes/0016-um-desafio-por-vez.md`: automática para todo membro ativo.
 
 Definir:
 
@@ -311,7 +311,7 @@ Uma atividade com sinalização não resolvida não deve ser aprovada automatica
 
 ## Q013 — Como tratar grupos muito pequenos?
 
-**Status:** DECIDIDA — ver `decisoes/0012-verificacao-comunitaria.md` (0 revisores → verificada imediata; demais casos, fórmula de Q012).
+**Status:** DECIDIDA — ver `decisoes/0012-verificacao-comunitaria.md` (0 revisores → verificada imediata; demais casos, fórmula de Q012). A recomendação abaixo, de exigir dois revisores, não foi adotada: um grupo de uma pessoa pode treinar.
 
 Investigar o comportamento com:
 
@@ -440,7 +440,7 @@ Toda consulta deve passar por uma operação autenticada da API.
 
 ## Q019 — Uma atividade poderá ter várias evidências?
 
-**Status:** DECIDIDA — ver `decisoes/0011-atividades.md`. Até 3 evidências por atividade; um arquivo por requisição de upload.
+**Status:** DECIDIDA — ver `decisoes/0011-atividades.md` e `decisoes/0078-treino-ao-vivo.md`. A 0011 fixou 3 evidências por atividade; a 0078 elevou o limite para 10, fotos ou vídeos em qualquer mistura. Um arquivo por requisição de upload.
 
 Investigar:
 
@@ -598,7 +598,7 @@ Não introduzir cache distribuído ou materializações complexas para dez usuá
 
 ## Q027 — Como limitar requisições?
 
-**Status:** PARCIALMENTE DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. Há limites por IP para autenticação, envio de evidência, comentários e folha de avatar. Criação de atividade, reações e feed não têm limite próprio; acrescentar só se aparecer abuso.
+**Status:** PARCIALMENTE DECIDIDA — ver `decisoes/0055-questoes-resolvidas-pela-implementacao.md`. Há limites por IP para autenticação, envio de evidência, pontos do percurso, integração com o Movr, comentários e folha de avatar. Criação de atividade, reações e feed não têm limite próprio; acrescentar só se aparecer abuso.
 
 Definir limites para:
 
@@ -730,7 +730,7 @@ A interface deve distinguir progresso confirmado de progresso provisório.
 
 ## Q034 — Como será a folha de avatar em 8 direções?
 
-**Status:** PROPOSTA — ver `decisoes/0039-avatar-em-8-direcoes.md`. Andamento: o base masculino é a folha padrão, a folha tem as 12 animações do Jogo (432×4656), e a importação aceita só esse formato (seção "Andamento" do ADR).
+**Status:** PROPOSTA — ver `decisoes/0039-avatar-em-8-direcoes.md`. Andamento: o base masculino é a folha padrão, a folha já tem as animações do Jogo e as dos esportes (`decisoes/0082-esportes-e-animacoes-por-tipo.md`), e a importação aceita as alturas 4656, 6192 e 10800 px (`Wrexercise/Infrastructure/Files/ValidacaoFolhaAvatar.cs`; seção "Andamento" do ADR).
 
 A folha atual é de lado (256×384, células de 32×32, espelhada para a esquerda). A proposta é trocar por personagens vistos de cima, em 8 direções, gerados no PixelLab.
 
@@ -771,7 +771,7 @@ Questões sem impacto sobre o MVP podem permanecer adiadas.
 
 ## 12. Prioridade de investigação
 
-### Situação em 2026-11-13
+### Situação em 2026-11-26
 
 Continuam abertas ou parciais:
 
@@ -780,9 +780,11 @@ Continuam abertas ou parciais:
 - Q026: consultas SQL. Só se algo ficar lento.
 - Q027: limites para criação de atividade, reações e feed. Só se aparecer abuso.
 - Q029: exclusão de conta e de grupo, retenção de evidências e backups.
+- Q030: retenção das imagens (Q029) e dados nos backups.
 - Q031: seletor manual de tema.
 - Q033: visualizações adicionais de progresso.
 - Q034: avatar em 8 direções (andamento no ADR 0039).
+- Q035: Rival vencido num desafio cancelado (código ainda ignora esses desafios).
 
 As listas abaixo são o plano original e ficam como histórico.
 

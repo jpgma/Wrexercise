@@ -110,7 +110,7 @@ As interações acontecem no centro do círculo. Como tudo é assíncrono, cada 
 | Jogada concluída | O destinatário faz `comemorando` e a carta vira com o carimbo CONCLUÍDA. |
 | Jogada expirada | A carta some com o carimbo EXPIRADA. Nenhum avatar reage. |
 | Rivais da semana | Quem escolhe vê na hora, e o Rival na primeira visita: os dois avançam um passo e fazem `provocar`. Quando o resultado é final, quem escolheu vê o vencedor fazer `comemorando`. |
-| Missão concluída | `comemorando` com um brilho em CSS. |
+| Missão concluída (G5, ainda não implementada) | `comemorando` com um brilho em CSS. |
 | Enfeite novo (vista só pelo dono) | `comemorando`, e o Enfeite cai no chão com o mesmo brilho (§9.2), mesmo que o tamanho do grupo o esconda fora da encenação. |
 
 - O movimento vertical usa o mesmo `andar` de lado, com um balanço de 1 a 2 px. O deslizamento na vertical é aceito como estilo.
@@ -218,13 +218,13 @@ Todo o bundle é CC0, com o arquivo `LICENSE` junto dos sprites. Nada é carrega
 
 | Peça | Tamanho | Quantidade |
 |---|---|---:|
-| Folhas padrão de avatar (pele clara, morena e negra; corpo masculino e feminino) | 256×384 | 6 |
+| Folha padrão de avatar (base masculino, em 8 direções; `avatar-formato.md` §6) | 432×10800, indexada | 1 |
 | Praça (vista em ¾, quadra urbana; ver §1.3), com céu transparente | 180×200 (mestre 1×, mostrado em 2×, ou seja, 360×400) | 1 |
 | Objetos soltos da praça (barra de calistenia, caixotes, floreiras) e porta aberta | folha `praca-objetos.png`, recortes de tamanhos variados | 6 |
 | Moldura de carta (mesma forma, acento coral ou violeta; ver §1.3) | 24×32 | 2 (Provocação, Resposta) |
 | Ícone de carta | 32×32 | 9 |
 | Faíscas da Fusão (folha `fusao.png`, `pixel-art/fusao/build.py`; §6.5) | 32×32 por quadro, mostrado em 2× | 6 quadros |
-| Enfeite (atlas `enfeites.png`: 4 quadros por linha, objeto apoiado na base da célula; o quadro 1 é o ícone) | 40×40 por quadro, mostrado em 2× | 19 linhas (§9.1) |
+| Enfeite (atlas `enfeites.png`: 4 quadros por linha, objeto apoiado na base da célula; o quadro 1 é o ícone) | 40×40 por quadro, mostrado em 2× | 25 linhas de Enfeite (§9.1); o atlas tem 28 linhas, com as de apoio (extras e derivados) |
 
 ## 5. Energia
 
@@ -240,7 +240,7 @@ Energia (EN) é a moeda do Jogo. É única por usuário, somando todos os grupos
 | Sequência de 8 semanas | 50 |
 | Sequência de 12 semanas | 100 |
 | Desafio concluído | 75 |
-| Missão semanal concluída (§7) | 5 a 15 |
+| Missão semanal concluída (§7, G5, ainda não implementada) | 5 a 15 |
 | Rival da semana vencido (§8), em cada grupo | 15 |
 | Despertador: colega cutucado (§3.5) que volta com uma atividade verificada, registrada depois da cutucada e iniciada até 24 horas depois dela | 5 por atividade que o acordou |
 | Jogada concluída, para quem recebeu (§6.4) | 1 × o preço da carta (2 × com APOSTA) |
@@ -297,7 +297,7 @@ Regras que garantem um saldo estável:
 - Uma Jogada só rende Energia quando fica `Concluida`, e isso depende de uma atividade `Verificada`. Esse crédito também nunca desaparece.
 - Por isso a Energia ganha **só cresce**, e o saldo nunca fica negativo se cada compra verificar `saldo >= preço`.
 - Exceção (decisão 0068): quando um administrador corrige a duração de uma atividade e o dia deixa de alcançar a meta, a Energia que dependia dele sai, e o saldo pode ficar negativo até a pessoa ganhar mais.
-- Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação perdida numa Jogada recusada, `Falhou` ou expirada (§6.2) não volta inteira: quem enviou recebe só metade do preço de volta (§6.4, `decisoes/0087-meia-devolucao-da-carta.md`).
+- Usar uma carta não muda o saldo: o custo entrou na compra. Uma Provocação perdida numa Jogada `Falhou` ou expirada (§6.2) não volta inteira: quem enviou recebe só metade do preço de volta. Numa Jogada recusada, recebe o preço inteiro (§6.4, `decisoes/0087-meia-devolucao-da-carta.md`, `decisoes/0089-fadiga-visivel-e-recusa-com-peso.md`).
 - Atividades de grupos que a pessoa deixou continuam valendo, como as conquistas.
 - A FADIGA (§5.4) só reduz dias verificados **depois** do gatilho, então também não tira Energia já ganha.
 
@@ -423,8 +423,8 @@ O catálogo fica no código, sem tabela. Cada carta tem nome, tipo, preço e efe
 - A mesma atividade pode concluir várias Jogadas e missões.
 - **Prazo:** 48 horas a partir do envio. FIM DE SEMANA vale até o fim do próximo domingo (enviada num domingo, vale até o domingo seguinte). ANTES DAS 8 vale até as 08:00 do segundo dia depois do envio, para que sempre haja duas manhãs. PRAZO EXTRA soma 24 horas, uma vez por Jogada. Tudo no fuso do grupo.
 - **Recompensas** (§5.1): ao ficar `Concluida`, o destinatário ganha 1 × o preço da carta e o remetente recebe 1 × o preço de volta (`decisoes/0074-carta-jogada-nao-volta.md`). A regra vale também para as Jogadas concluídas antes da mudança, porque a Energia é calculada na leitura. Com APOSTA, a parte do destinatário dobra (2 × o preço), o que rende de 5 a 20 EN líquidos a mais, ou custa os 25 EN da carta. Na Jogada criada por DESAFIO DUPLO, as recompensas usam o preço da Provocação original.
-- **Custo para quem enviou:** a Provocação é gasta ao ser jogada (§6.2). Se a Jogada fica `Concluida`, a recompensa de 1 × devolve o preço e a carta sai de graça. Se fica `Recusada`, `Falhou` ou `Expirada`, quem enviou perde a carta e o preço dela (30 a 45 EN), menos a devolução de metade (ver **Devolução** abaixo). Se a atividade for rejeitada ou anulada depois da conclusão, a Jogada deixa de estar `Concluida` e a recompensa some; a carta não volta. Quem enviou recebe a notificação `CartaNaoCumprida` (só na lista), e a Mesa mostra o selo "+N EN de volta" e "A carta não volta para a Mão, mas metade do preço voltou pra você em EN.".
-- **Devolução** (`decisoes/0087-meia-devolucao-da-carta.md`): quando a Jogada fica `Recusada`, `Falhou` ou `Expirada`, quem enviou recebe metade do preço de volta, arredondada para baixo. Na Fusão, recebe metade da soma. Exemplos: +10 MIN 30 → 15; +20 MIN 45 → 22; VARIEDADE 35 → 17; FIM DE SEMANA 35 → 17; ANTES DAS 8 40 → 20. APOSTA também devolve metade, sem caso especial. Uma Jogada devolvida por DESAFIO DUPLO não devolve nada, porque quem devolveu não comprou a Provocação. Em `Concluida`, nada muda: quem enviou recebe 1 × o preço. A carta continua sem voltar para a Mão. A devolução vale desde `EstadoJogo.InicioCartaPermanente` (19/11/2026, 10:00, UTC−3). Antes disso, a carta voltava para a Mão e não havia devolução.
+- **Custo para quem enviou:** a Provocação é gasta ao ser jogada (§6.2). Se a Jogada fica `Concluida`, a recompensa de 1 × devolve o preço e a carta sai de graça. Se fica `Falhou` ou `Expirada`, quem enviou perde a carta e o preço dela (30 a 45 EN), menos a devolução de metade. Se fica `Recusada`, a devolução é o preço inteiro, e a carta sai de graça (ver **Devolução** abaixo). Se a atividade for rejeitada ou anulada depois da conclusão, a Jogada deixa de estar `Concluida` e a recompensa some; a carta não volta. Quem enviou recebe a notificação `CartaNaoCumprida` (só na lista), e a Mesa mostra o selo "+N EN de volta" e "A carta não volta para a Mão, mas metade do preço voltou pra você em EN.".
+- **Devolução** (`decisoes/0087-meia-devolucao-da-carta.md`): quando a Jogada fica `Falhou` ou `Expirada`, quem enviou recebe metade do preço de volta, arredondada para baixo. Quando fica `Recusada`, recebe o preço inteiro desde `Fadiga.InicioRegras2` (24/11/2026, decisão 0089); antes, recebia metade. Na Fusão, recebe metade da soma. Exemplos: +10 MIN 30 → 15; +20 MIN 45 → 22; VARIEDADE 35 → 17; FIM DE SEMANA 35 → 17; ANTES DAS 8 40 → 20. APOSTA também devolve metade, sem caso especial. Uma Jogada devolvida por DESAFIO DUPLO não devolve nada, porque quem devolveu não comprou a Provocação. Em `Concluida`, nada muda: quem enviou recebe 1 × o preço. A carta continua sem voltar para a Mão. A devolução vale desde `EstadoJogo.InicioCartaPermanente` (19/11/2026, 10:00, UTC−3). Antes disso, a carta voltava para a Mão e não havia devolução.
 - **Custo para quem recebeu:** uma Jogada `Recusada`, `Expirada` ou `Falhou` dá FADIGA a quem recebeu (§5.4).
 - **`Falhou` para quem enviou:** como na expiração, a carta está perdida (§6.2), com a devolução de metade do preço e a notificação `CartaNaoCumprida`. A Mesa mostra o selo "Não cumprida".
 
@@ -437,7 +437,7 @@ Duas Provocações diferentes jogadas juntas, numa Jogada só (`decisoes/0070-fu
   - A duração de +10 MIN e +20 MIN, numa Fusão, é a dessa atividade: não se somam as atividades do dia.
   - +10 MIN com +20 MIN pede a duração mínima do desafio + 30 minutos.
   - A duração-alvo e o tipo a evitar são fixados no envio, como nas outras Jogadas (§6.1).
-- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. O próximo treino depois do aceite precisa cumprir os dois (§6.4). Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e quem enviou perde as duas cartas (§6.2), com a devolução de metade da soma (§6.4).
+- **Tudo ou nada:** cumprir só um dos objetivos não rende nada. O próximo treino depois do aceite precisa cumprir os dois (§6.4). Recusar, deixar expirar ou não cumprir os dois dá FADIGA a quem recebeu (§5.4), e quem enviou perde as duas cartas (§6.2), com a devolução da soma (metade, ou tudo na recusa; §6.4).
 - **Recompensa:** quem cumpre ganha a soma dos dois preços mais 20% da soma, arredondado para baixo. Quem enviou recebe a soma de volta, sem o bônus. VARIEDADE (35) + ANTES DAS 8 (40): 90 EN e 75 EN.
 - **Prazo:** o maior entre os prazos das duas cartas (§6.4).
 - **Limites:** a Fusão ocupa uma vaga de Jogada, como qualquer outra (§6.3). Não há limite próprio.
