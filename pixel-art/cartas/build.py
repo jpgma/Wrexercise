@@ -4,11 +4,16 @@
   com "linhas de movimento" e corpo em giz. Feita para `border-image` (fatias de 10/6 px): a
   faixa e as bordas repetem a cada 8 px, então a carta pode ter qualquer tamanho.
 - Moldura da Resposta, 24×32: a mesma forma, com faixa violeta em halftone (G4).
-- Ícones 32×32 das cinco Provocações e das quatro Respostas.
+- Moldura da Global, 24×32: a mesma forma, com faixa amarela e as linhas de movimento da Provocação
+  (decisão 0091). O desenho veio de uma geração no ChatGPT, reduzida à grade de 24×32: ficou igual à
+  moldura da Provocação, em amarelo, e por isso é desenhada aqui.
+- Ícones 32×32 das cinco Provocações e das quatro Respostas, e o do TODO MUNDO (Global).
 
 Se existir fonte/icones.png (uma folha gerada no Gemini, ver prompts-gemini.md), cada ícone sai
 dela: a célula da grade de 3×3 é reduzida para 32×32 por moda de cor, com a mesma escala para
 todos, e as cores vão para a paleta. Sem a fonte, o desenho de 16×16 deste script é ampliado 2×.
+O ícone do TODO MUNDO sai de fonte/todo-mundo.png (gerado no ChatGPT sobre magenta, ver
+prompts-gemini.md), do mesmo jeito.
 
 Uso: python build.py   (gera saida/*.png e preview/*.png)
 """
@@ -23,6 +28,7 @@ from fonte_gerada import cores_do_script, recortar_grade  # noqa: E402
 from pixelstudio import Sprite  # noqa: E402
 
 FONTE = AQUI / "fonte" / "icones.png"
+FONTE_GLOBAIS = AQUI / "fonte" / "todo-mundo.png"
 LADO = 32  # tamanho final de cada ícone
 
 TINTA = "#14161f"  # contorno
@@ -91,6 +97,18 @@ def moldura_provocacao():
             if (x - inicio) % 8 < comprimento and y <= 8 and 2 <= x <= 21:
                 s.px(x, y, CORAL_CLARO)
 
+    return s
+
+
+def moldura_global():
+    """A carta Global (decisão 0091): faixa amarela com as linhas de movimento da Provocação."""
+    # A paleta não tem amarelo claro (o do ChatGPT viraria amarelo): as linhas de movimento ficam em giz.
+    s = moldura(AMARELO, AMARELO_ESCURO)
+    w = 24
+    for y, inicio, comprimento in [(4, 1, 6), (6, 5, 3)]:
+        for x in range(2, w - 2):
+            if (x - inicio) % 8 < comprimento and 2 <= x <= 21:
+                s.px(x, y, GIZ)
     return s
 
 
@@ -274,11 +292,27 @@ def mudanca_de_planos():
     return s
 
 
+def todo_mundo():
+    """Três atletas lado a lado, o do meio comemorando, com uma estrela em cima: a galera toda."""
+    s = icone()
+    for x0, cor in [(1, CORAL), (6, VIOLETA), (11, LIMA)]:
+        s.rect(x0 + 1, 6, x0 + 2, 7, GIZ)  # cabeça
+        s.rect(x0, 8, x0 + 3, 11, cor)  # corpo
+        s.rect(x0, 12, x0, 14, CINZA)  # pernas
+        s.rect(x0 + 3, 12, x0 + 3, 14, CINZA)
+    s.rect(5, 5, 5, 7, VIOLETA)  # braços para cima, no do meio
+    s.rect(10, 5, 10, 7, VIOLETA)
+    s.rect(7, 1, 8, 3, AMARELO)
+    s.outline(TINTA, where="outside")
+    return s
+
+
 # --- Exportação --------------------------------------------------------------
 
 molduras = {
     "carta-provocacao": moldura_provocacao(),
     "carta-resposta": moldura_resposta(),
+    "carta-global": moldura_global(),
 }
 
 # Na ordem da grade de fonte/icones.png.
@@ -307,8 +341,19 @@ else:
     for nome, fabrica in icones.items():
         fabrica().save_png(str(AQUI / "saida" / f"{nome}.png"), scale=LADO // 16)
 
+# As cartas Globais têm a própria fonte, fora da grade 3×3 (decisão 0091).
+globais = {"carta-todomundo": todo_mundo}
+if FONTE_GLOBAIS.exists():
+    cores = cores_do_script(globals(), Sprite(1, 1, palette="wrexercise").palette)
+    for nome, imagem in zip(globais, recortar_grade(FONTE_GLOBAIS, 1, 1, len(globais), LADO, cores, na_base=False)):
+        imagem.save(AQUI / "saida" / f"{nome}.png")
+    print("fonte:", FONTE_GLOBAIS.name)
+else:
+    for nome, fabrica in globais.items():
+        fabrica().save_png(str(AQUI / "saida" / f"{nome}.png"), scale=LADO // 16)
+
 folha = Sprite(LADO * 3, LADO * 3)
 for i, nome in enumerate(icones):
     folha.paste_png(AQUI / "saida" / f"{nome}.png", (i % 3) * LADO, (i // 3) * LADO)
 folha.save_png(AQUI / "preview" / "icones-4x.png", scale=4, bg="#f5f1e8")
-print(len(molduras), "molduras e", len(icones), "ícones")
+print(len(molduras), "molduras e", len(icones) + len(globais), "ícones")

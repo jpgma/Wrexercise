@@ -58,7 +58,7 @@ A especificação original pedia preferências de modalidade por pessoa, nenhuma
 
 - Migração `047-create-convocacoes.sql`: `convocacoes`, `participantes_convocacao`, o código `TodoMundo` em `cartas` e o aviso `Convocacao`.
 - `EstadoJogo` carrega as Convocações da pessoa: gastam a carta, rendem Energia e entram na FADIGA. A praça mostra "TODO MUNDO" e o anfitrião como motivo da FADIGA.
-- A arte é provisória: a moldura da Provocação puxada para o amarelo e um ícone de grupo. A arte final (`carta-global.png` e `carta-todomundo.png`) entra depois; ela deve virar `pixel-art/cartas/build.py`, como as outras, ou registrar aqui a exceção.
+- A arte (`carta-global.png` e `carta-todomundo.png`) foi gerada no ChatGPT e passa pelo `pixel-art/cartas/build.py`, como as outras: a moldura amarela fica no código (`moldura_global`), e o ícone é reduzido de `fonte/todo-mundo.png`. Os prompts estão em `pixel-art/cartas/prompts-gemini.md`.
 
 ## Casos de borda aceitos
 

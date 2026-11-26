@@ -198,3 +198,32 @@ Depois do prompt, acrescente o bloco de estilo de §2.
 4. Grava `saida/carta-*.png`, `preview/icones-4x.png` e as molduras feitas por código.
 
 O recorte é o mesmo dos Enfeites, em `pixel-art/fonte_gerada.py`.
+
+## Cartas Globais (ChatGPT)
+
+As peças da carta Global (decisão 0091) foram geradas no ChatGPT, numa conversa só, com as referências ampliadas 16× (`carta-provocacao.png`, `carta-resposta.png`, `carta-variedade.png` e `carta-aposta.png` sobre branco).
+
+- **Moldura** (`carta-global.png`): o ChatGPT devolveu a moldura da Provocação em amarelo. Reduzida à grade de 24×32, ela bate pixel a pixel com a forma do `build.py`, então fica no código (`moldura_global`), com as linhas de movimento em giz: a paleta não tem amarelo claro. Prompt:
+
+  ```text
+  Create an image: a pixel-art trading card frame in exactly the same style, size and layout as these
+  two attached reference frames (they are 24x32 pixel frames shown enlarged 16x, one coral and one
+  violet). Make a third variant in YELLOW for a special "Global" group-event card: same dark outline
+  #14161f, same chalk paper body #f5f1e8 with shading #d6d0c0 / #a9a392, but the header band and
+  accents in yellow #ffd34e with darker shade #d9a02b. Keep the centre empty. Strict pixel art on a
+  24x32 grid, rendered enlarged with each pixel as a perfect square block, hard edges, no
+  anti-aliasing, no gradients, no text, plain white background around the card.
+  ```
+
+- **Ícone do TODO MUNDO** (`fonte/todo-mundo.png` → `carta-todomundo.png`), sobre magenta, reduzido pelo `build.py` como os outros. Prompt:
+
+  ```text
+  ONE pixel-art icon in exactly the same style as these two attached reference icons (they are
+  32x32 pixel icons drawn on a 16x16 grid, shown enlarged). Subject: "TODO MUNDO" (everybody
+  together) - three small chunky athletes side by side, the middle one slightly in front with both
+  arms raised in a cheer, the other two mid-stride; shirts in coral #ff684a, violet #7957e8 and lime
+  #a8d978, skin/highlights in chalk #f5f1e8, a small yellow #ffd34e starburst above the middle one.
+  Bold 1px dark outline #14161f, flat 2-tone shading, 16x16 pixel grid, every pixel a perfect square
+  block, no anti-aliasing, no gradients, no text. Put the icon centered on a solid flat magenta
+  #FF00FF background filling the whole image.
+  ```
