@@ -200,7 +200,7 @@ public sealed class ConvocacoesRoutesTests : IAsyncLifetime
             HttpStatusCode.Conflict,
             "DECISAO_INVALIDA");
         Assert.Equal(Fadiga.Cargas, (await GetEnergiaAsync(bia)).FadigaRestante);
-        // Dois convidados: cada resultado final devolve metade do preço.
+        // Dois convidados: a parte é metade do preço (75), e a recusa devolve a parte inteira.
         Assert.Equal(energiaAna + 75, (await GetEnergiaAsync(ana)).Saldo);
 
         var aceite = await PutParticipacaoAsync(carol, grupoId, convocacao.Id, "Aceita");
@@ -211,7 +211,8 @@ public sealed class ConvocacoesRoutesTests : IAsyncLifetime
         var saida = await PutParticipacaoAsync(carol, grupoId, convocacao.Id, "Desistiu");
         Assert.Equal(HttpStatusCode.OK, saida.StatusCode);
         Assert.Equal(Fadiga.CargasFalha, (await GetEnergiaAsync(carol)).FadigaRestante);
-        Assert.Equal(energiaAna + 150, (await GetEnergiaAsync(ana)).Saldo);
+        // Quem desiste devolve só metade da parte (37): tudo resolvido, 150 − 38.
+        Assert.Equal(energiaAna + 112, (await GetEnergiaAsync(ana)).Saldo);
         Assert.Equal(0, await _host.CountAsync(
             $"SELECT count(*) FROM notificacoes WHERE convocacao_id = '{convocacao.Id}' AND read_at IS NULL"));
     }
