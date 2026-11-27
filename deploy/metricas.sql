@@ -174,20 +174,23 @@ where j.enviada_em >= now() - make_interval(days => :dias)
       where a.usuario_id = j.destinatario_id
         and a.started_at between j.enviada_em - interval '7 days' and j.enviada_em);
 -- Quem compra o quê, e as cartas ficam paradas? "Nunca jogadas" são as que não entraram em nenhuma Jogada,
--- nem como Resposta. Desde a decisão 0074 a Provocação jogada não volta: "nunca jogadas" é a Mão, fora as
--- Provocações que voltaram de Jogadas recusadas ou expiradas antes de 19/11/2026 (gamificação §6.2).
+-- nem como Resposta, nem numa Convocação. Desde a decisão 0074 a Provocação jogada não volta: "nunca jogadas" é a
+-- Mão, fora as Provocações que voltaram de Jogadas recusadas ou expiradas antes de 19/11/2026 (gamificação §6.2).
 select 'Cartas de ' || pessoa, sum(n) || ' compradas', sum(energia) || ' EN',
        'nunca jogadas: ' || coalesce(string_agg(codigo || ' ' || paradas, ', ' order by codigo) filter (where paradas > 0), '-'),
-       sum(provocacoes) || ' em Jogadas', sum(respostas) || ' usadas como Resposta'
+       sum(provocacoes) || ' em Jogadas', sum(respostas) || ' usadas como Resposta',
+       sum(convocacoes) || ' em Convocações'
 from (
     select usuario_id, pessoa, codigo, count(*) as n, sum(preco) as energia,
-           count(*) filter (where not provocacao and not resposta) as paradas,
+           count(*) filter (where not provocacao and not resposta and not convocacao) as paradas,
            count(*) filter (where provocacao) as provocacoes,
-           count(*) filter (where resposta) as respostas
+           count(*) filter (where resposta) as respostas,
+           count(*) filter (where convocacao) as convocacoes
     from (
         select c.usuario_id, split_part(u.nome_exibicao, ' ', 1) as pessoa, c.codigo, c.preco,
                exists (select 1 from jogadas j where c.id in (j.carta_id, j.carta_fusao_id)) as provocacao,
-               exists (select 1 from jogadas j where j.carta_resposta_id = c.id) as resposta
+               exists (select 1 from jogadas j where j.carta_resposta_id = c.id) as resposta,
+               exists (select 1 from convocacoes cv where cv.carta_id = c.id) as convocacao
         from cartas c
         join usuarios u on u.id = c.usuario_id
         where c.created_at >= now() - make_interval(days => :dias)
@@ -227,3 +230,109 @@ limit 30;
 select 'Rivais escolhidos', count(*), count(distinct escolhedor_id) || ' pessoas escolheram'
 from rivais
 where created_at >= now() - make_interval(days => :dias);
+
+-- ADR 0091: a Convocação do TODO MUNDO. O preço de 150 EN e a devolução pela metade pedem revisão com dados
+-- reais: o anfitrião ainda sai sempre no lucro? A galera topa, ou o convite vira FADIGA para todo mundo? O
+-- resultado de cada convidado é aproximado (o exato é calculado no app, SituacaoConvocacao): quem saiu do grupo
+-- conta pela decisão, e "falhou" inclui o treino que ainda espera verificação depois do prazo.
+select '== Convocações (ADR 0091) ==';
+
+-- Uma linha por Convocação. Devolução: a parte (preço / outros) inteira de quem concluiu ou recusou, metade de
+-- quem expirou, falhou ou desistiu; com todos resolvidos, volta também a sobra. "Anfitrião" é o saldo dele na
+-- carta: devolução + 30 se concluiu − preço. "Criada" é a Energia nova das recompensas, 30 por quem concluiu.
+with r as (
+    select c.id, c.grupo_id, c.anfitriao_id, c.tipo_atividade, c.created_at, ca.preco,
+           p.usuario_id = c.anfitriao_id as anfitriao,
+           case
+               when p.decisao = 'Aceita' and p.decidida_em < c.expira_em and exists (
+                   select 1 from atividades a
+                   where a.usuario_id = p.usuario_id and a.grupo_id = c.grupo_id and a.tipo = c.tipo_atividade
+                     and a.started_at >= c.created_at and a.started_at < c.expira_em
+                     and a.situacao_verificacao = 'Verificada') then 'concluiu'
+               when p.decisao = 'Recusada' then 'recusou'
+               when p.decisao = 'Desistiu' then 'desistiu'
+               when c.expira_em > now() then 'aberta'
+               when p.decisao is null then 'expirou'
+               else 'falhou'
+           end as resultado
+    from convocacoes c
+    join cartas ca on ca.id = c.carta_id
+    join participantes_convocacao p on p.convocacao_id = c.id
+    where c.created_at >= now() - make_interval(days => :dias)
+)
+select 'Convocação ' || to_char(x.created_at at time zone g.fuso_horario, 'YYYY-MM-DD HH24:MI'),
+       split_part(u.nome_exibicao, ' ', 1) || ' convocou ' || x.tipo_atividade,
+       'concluíram ' || x.concluiram || ' de ' || (x.outros + 1)
+           || case when x.anfitriao_concluiu then ' (anfitrião sim)' else ' (anfitrião não)' end,
+       'recusaram ' || x.recusaram || ', desistiram ' || x.desistiram || ', expiraram ' || x.expiraram
+           || ', falharam ' || x.falharam || ', em aberto ' || x.abertas,
+       'devolução ' || x.devolucao || ' de ' || x.preco || ' EN',
+       'anfitrião ' || to_char(x.devolucao + case when x.anfitriao_concluiu then 30 else 0 end - x.preco, 'SG999')
+           || ' EN' || case when x.abertas > 0 then ' até agora' else '' end,
+       'criada ' || 30 * x.concluiram || ' EN'
+from (
+    select y.*,
+           case
+               when y.inteiras + y.metades >= y.outros then y.preco - y.metades * (y.parte - y.parte / 2)
+               else y.inteiras * y.parte + y.metades * (y.parte / 2)
+           end as devolucao
+    from (
+        select id, grupo_id, anfitriao_id, tipo_atividade, created_at, preco,
+               count(*) filter (where not anfitriao) as outros,
+               preco / greatest(count(*) filter (where not anfitriao), 1) as parte,
+               count(*) filter (where not anfitriao and resultado in ('concluiu', 'recusou')) as inteiras,
+               count(*) filter (where not anfitriao and resultado in ('expirou', 'falhou', 'desistiu')) as metades,
+               count(*) filter (where resultado = 'concluiu') as concluiram,
+               coalesce(bool_or(anfitriao and resultado = 'concluiu'), false) as anfitriao_concluiu,
+               count(*) filter (where not anfitriao and resultado = 'recusou') as recusaram,
+               count(*) filter (where not anfitriao and resultado = 'desistiu') as desistiram,
+               count(*) filter (where not anfitriao and resultado = 'expirou') as expiraram,
+               count(*) filter (where not anfitriao and resultado = 'falhou') as falharam,
+               count(*) filter (where not anfitriao and resultado = 'aberta') as abertas
+        from r
+        group by id, grupo_id, anfitriao_id, tipo_atividade, created_at, preco
+    ) y
+) x
+join grupos g on g.id = x.grupo_id
+join usuarios u on u.id = x.anfitriao_id
+order by x.created_at desc
+limit 30;
+
+-- O resumo, só dos convidados (o anfitrião já participa): quantos toparam, quantos cumpriram e quantos
+-- ficaram com FADIGA (recusa, expiração, falha ou desistência).
+with r as (
+    select c.id, c.grupo_id, c.anfitriao_id, c.tipo_atividade, c.created_at, ca.preco,
+           p.usuario_id = c.anfitriao_id as anfitriao,
+           case
+               when p.decisao = 'Aceita' and p.decidida_em < c.expira_em and exists (
+                   select 1 from atividades a
+                   where a.usuario_id = p.usuario_id and a.grupo_id = c.grupo_id and a.tipo = c.tipo_atividade
+                     and a.started_at >= c.created_at and a.started_at < c.expira_em
+                     and a.situacao_verificacao = 'Verificada') then 'concluiu'
+               when p.decisao = 'Recusada' then 'recusou'
+               when p.decisao = 'Desistiu' then 'desistiu'
+               when c.expira_em > now() then 'aberta'
+               when p.decisao is null then 'expirou'
+               else 'falhou'
+           end as resultado
+    from convocacoes c
+    join cartas ca on ca.id = c.carta_id
+    join participantes_convocacao p on p.convocacao_id = c.id
+    where c.created_at >= now() - make_interval(days => :dias)
+)
+select 'Convocações', count(distinct id) || ' criadas',
+       count(*) filter (where not anfitriao) || ' convites',
+       coalesce(round(100.0 * count(*) filter (where not anfitriao and resultado in ('concluiu', 'desistiu', 'falhou'))
+           / nullif(count(*) filter (where not anfitriao and resultado <> 'aberta'), 0)) || '% aceitos', '-'),
+       coalesce(round(100.0 * count(*) filter (where not anfitriao and resultado = 'concluiu')
+           / nullif(count(*) filter (where not anfitriao and resultado <> 'aberta'), 0)) || '% cumpridos', '-'),
+       count(*) filter (where not anfitriao and resultado in ('recusou', 'expirou', 'falhou', 'desistiu'))
+           || ' com FADIGA',
+       'tipos: ' || coalesce((
+           select string_agg(tipo_atividade || ' ' || n || ' (' || concluiram || ' concluíram)', ', ' order by n desc)
+           from (
+               select tipo_atividade, count(distinct id) as n, count(*) filter (where resultado = 'concluiu') as concluiram
+               from r
+               group by tipo_atividade
+           ) t), '-')
+from r;
