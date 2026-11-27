@@ -83,7 +83,9 @@ function Conteudo({
             {p.convidados > 0 && (
               <li>
                 Você recebe +{p.devolucaoPorPessoa} EN de volta por pessoa da
-                galera, seja qual for o resultado.
+                galera que cumprir ou recusar, e +
+                {Math.floor(p.devolucaoPorPessoa / 2)} EN de quem aceitar e não
+                cumprir ou deixar passar.
               </li>
             )}
           </ul>

@@ -156,7 +156,7 @@ export function LojaCartas() {
       />
       <SecaoLoja
         titulo="Globais"
-        descricao="Valem para a galera toda: toque na carta da Mão para convocar o grupo. Cada pessoa da galera devolve uma parte do preço, cumprindo ou não."
+        descricao="Valem para a galera toda: toque na carta da Mão para convocar o grupo. Cada pessoa da galera devolve uma parte do preço: inteira se cumprir ou recusar, metade se não cumprir."
         cartas={catalogo.filter((c) => c.tipo === "Global")}
         saldo={saldo}
         maoCheia={maoCheia}

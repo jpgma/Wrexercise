@@ -229,8 +229,8 @@ export function MinhaParte({
       {anfitriao && (
         <p className="mt-1 text-xs text-muted">
           {c.devolucao
-            ? `Já voltaram +${c.devolucao} EN da carta (+${c.devolucaoPorPessoa} EN por pessoa da galera).`
-            : `Cada pessoa da galera devolve +${c.devolucaoPorPessoa} EN da carta, seja qual for o resultado.`}
+            ? `Já voltaram +${c.devolucao} EN da carta (+${c.devolucaoPorPessoa} EN por quem cumpre ou recusa, metade por quem não cumpre).`
+            : `Cada pessoa da galera devolve +${c.devolucaoPorPessoa} EN da carta se cumprir ou recusar, e +${Math.floor((c.devolucaoPorPessoa ?? 0) / 2)} EN se não cumprir.`}
         </p>
       )}
       {responder.isError && (

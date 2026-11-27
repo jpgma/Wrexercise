@@ -459,7 +459,7 @@ Uma carta `Global` vale para o grupo inteiro (`decisoes/0091-cartas-globais-todo
 - **Responder:** "Tô dentro!" ou "Dessa vez não · FADIGA", até o prazo, uma vez. Depois de aceitar, "Sair · FADIGA", enquanto não houver treino que conte. O convite não trava o app nem o registro de treino.
 - **Cumprir:** um treino `Verificada` do tipo, no grupo, que começou dentro dos 7 dias. Vale o treino de antes do aceite, se a pessoa aceitar no prazo. A verificação pode vir depois do prazo.
 - **FADIGA**, como numa Provocação recebida (§5.4): recusar = recusa, deixar sem resposta = expiração, sair ou não cumprir = falha. Cumprir tira 1 carga. O anfitrião não ganha FADIGA na própria Convocação.
-- **Energia:** quem cumpre ganha 30 EN, o anfitrião também. O preço volta para o anfitrião dividido entre os outros convidados: cada resultado final devolve uma parte (com 2 outros, 75 EN cada), e tudo resolvido devolve os 150 EN.
+- **Energia:** quem cumpre ganha 30 EN, o anfitrião também. O preço volta para o anfitrião dividido entre os outros convidados (com 3 outros, 50 EN cada): quem cumpre, recusa ou sai do grupo devolve a parte inteira; quem deixa expirar, falha ou desiste devolve metade (25 EN), como na Devolução da Provocação. Tudo resolvido, volta também a sobra da divisão. Assim, escolher um treino que a galera não faz custa Energia ao anfitrião.
 - **Na praça:** acima da Mão, o painel da Convocação ativa (ou da última encerrada há até 3 dias): o treino, quem convocou, o tempo restante, "N de M concluíram", os rostos com ✓ e a parte de quem vê. "Detalhes" abre `/grupos/{id}/convocacoes/{convocacaoId}`, com a galera e as "Convocações anteriores". Ninguém é exposto por recusar: o resultado aparece como "Dessa vez não".
 
 ## 7. Missões semanais

@@ -68,14 +68,17 @@ internal sealed record ConvocacaoCarregada(
 
     /// <summary>
     /// O que voltou para o anfitrião: o preço dividido entre os outros convidados, uma parte para cada resultado
-    /// final. A sobra da divisão vem com o último, para que tudo resolvido devolva o preço inteiro.
+    /// final. Quem cumpre, recusa ou sai do grupo devolve a parte inteira; quem deixa expirar, falha ou desiste,
+    /// só metade (como a devolução da Provocação, decisão 0087). A sobra da divisão vem com o último.
     /// </summary>
     public int Devolucao
     {
         get
         {
-            var outros = Resultados.Where(r => r.UsuarioId != Fatos.AnfitriaoId).ToList();
-            return SituacaoConvocacao.GetDevolucao(Fatos.Preco, outros.Count, outros.Count(r => r.IsFinal));
+            var outros = Resultados.Where(r => r.UsuarioId != Fatos.AnfitriaoId && r.IsFinal).ToList();
+            var metades = outros.Count(r => SituacaoConvocacao.IsDevolucaoPelaMetade(r.Situacao));
+            return SituacaoConvocacao.GetDevolucao(
+                Fatos.Preco, Resultados.Count - 1, outros.Count - metades, metades);
         }
     }
 
@@ -241,17 +244,24 @@ internal static class SituacaoConvocacao
         return (Falhou, resolvida > fatos.ExpiraEm ? resolvida : fatos.ExpiraEm);
     }
 
+    /// <summary>Resultados que devolvem só metade da parte ao anfitrião: expirar, falhar ou desistir.</summary>
+    public static bool IsDevolucaoPelaMetade(string situacao) => situacao is Expirada or Falhou or Desistiu;
+
     /// <summary>
-    /// A devolução ao anfitrião: <c>floor(preço / outros)</c> por resultado final, e o preço inteiro quando todos
-    /// os outros têm resultado final.
+    /// A devolução ao anfitrião: a parte, <c>floor(preço / outros)</c>, por resultado final inteiro e metade dela
+    /// (arredondada para baixo) por resultado pela metade. Com todos os outros resolvidos, a sobra da divisão
+    /// também volta: o preço inteiro, menos o que ficou nas metades.
     /// </summary>
-    public static int GetDevolucao(int preco, int outros, int finais)
+    public static int GetDevolucao(int preco, int outros, int inteiras, int metades)
     {
-        if (outros <= 0 || finais <= 0)
+        if (outros <= 0 || inteiras + metades <= 0)
         {
             return 0;
         }
 
-        return finais >= outros ? preco : finais * (preco / outros);
+        var parte = preco / outros;
+        return inteiras + metades >= outros
+            ? preco - metades * (parte - parte / 2)
+            : inteiras * parte + metades * (parte / 2);
     }
 }

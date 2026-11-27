@@ -210,10 +210,30 @@ public class SituacaoConvocacaoTests
             [],
             Prazo.AddHours(1));
 
-        // Falhou, Desistiu, Expirada e ForaDoGrupo: todos finais, o preço volta inteiro.
-        Assert.Equal(150, c.Devolucao);
-        Assert.Equal(150, c.GetEnergia(Anfitriao));
+        // Falhou, Desistiu e Expirada devolvem metade da parte (37 → 18); ForaDoGrupo, a parte inteira.
+        // Todos finais: 150 − 3 × 19 = 93.
+        Assert.Equal(93, c.Devolucao);
+        Assert.Equal(93, c.GetEnergia(Anfitriao));
         Assert.Equal(0, c.GetEnergia(Bia));
+    }
+
+    [Fact]
+    public void Devolucao_MetadeDeQuemNaoCumpre()
+    {
+        // Três outros convidados: 50 cada; quem não cumpre devolve 25.
+        Assert.Equal(25, Avaliar([P(Bia, "Desistiu", 2), P(Caio), P(Guid.NewGuid())], [], Hora(3)).Devolucao);
+        Assert.Equal(50, Avaliar([P(Bia, "Recusada", 2), P(Caio), P(Guid.NewGuid())], [], Hora(3)).Devolucao);
+
+        // Ninguém responde: as três expiram, 150 − 3 × 25.
+        Assert.Equal(75, Avaliar([P(Bia), P(Caio), P(Guid.NewGuid())], [], Prazo.AddHours(1)).Devolucao);
+
+        // O anfitrião e Bia cumprem; os outros dois aceitam e falham: 150 − 2 × 25, mais os 30 do anfitrião.
+        var c = Avaliar(
+            [P(Bia, "Aceita", 1), P(Caio, "Aceita", 1), P(Guid.NewGuid(), "Aceita", 1)],
+            [A(Anfitriao, "Verificada", 5), A(Bia, "Verificada", 5)],
+            Prazo.AddHours(1));
+        Assert.Equal(100, c.Devolucao);
+        Assert.Equal(130, c.GetEnergia(Anfitriao));
     }
 
     [Fact]
@@ -221,16 +241,23 @@ public class SituacaoConvocacaoTests
         Assert.Equal(0, Avaliar([P(Bia, "Aceita", 1)], [A(Bia, "AguardandoFeedback")], Prazo.AddHours(1)).Devolucao);
 
     [Theory]
-    [InlineData(2, 1, 75)]
-    [InlineData(2, 2, 150)]
-    [InlineData(9, 1, 16)]
-    [InlineData(9, 8, 128)]
-    [InlineData(9, 9, 150)]
-    [InlineData(10, 9, 135)]
-    [InlineData(1, 0, 0)]
-    [InlineData(0, 0, 0)]
-    public void GetDevolucao_PisoESobraNoUltimo(int outros, int finais, int esperado) =>
-        Assert.Equal(esperado, SituacaoConvocacao.GetDevolucao(150, outros, finais));
+    [InlineData(2, 1, 0, 75)]
+    [InlineData(2, 2, 0, 150)]
+    [InlineData(9, 1, 0, 16)]
+    [InlineData(9, 8, 0, 128)]
+    [InlineData(9, 9, 0, 150)]
+    [InlineData(10, 9, 0, 135)]
+    [InlineData(1, 0, 0, 0)]
+    [InlineData(0, 0, 0, 0)]
+    [InlineData(2, 0, 1, 37)]
+    [InlineData(2, 1, 1, 112)]
+    [InlineData(2, 0, 2, 74)]
+    [InlineData(3, 2, 1, 125)]
+    [InlineData(3, 0, 3, 75)]
+    [InlineData(9, 0, 1, 8)]
+    [InlineData(9, 8, 1, 142)]
+    public void GetDevolucao_PisoMetadeESobraNoUltimo(int outros, int inteiras, int metades, int esperado) =>
+        Assert.Equal(esperado, SituacaoConvocacao.GetDevolucao(150, outros, inteiras, metades));
 
     [Fact]
     public void Fadiga_ConvocacaoRecusadaDaCargasECumpridaTiraUma()
